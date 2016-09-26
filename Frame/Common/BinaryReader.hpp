@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -19,9 +19,9 @@ namespace moon
 	class BinaryReader
 	{
 	public:
-		using TPointer = std::shared_ptr<T>;
+		using TPointer = T*;
 
-		BinaryReader(const TPointer& t)
+		explicit BinaryReader(TPointer t)
 			:m_t(t),m_data(t->Data()), m_readpos(0), m_size(t->Size())
 		{
 		}

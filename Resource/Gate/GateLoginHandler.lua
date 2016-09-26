@@ -94,7 +94,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 
 		assert(serialNum == sn and  accountID == act,"login check")
 
-		if loginret == "OK" then
+		if loginret == "Ok" then
 
 			Log.Trace("4.login find login data accountID[%u] ", act);
 
@@ -104,7 +104,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 			Log.Trace("6.login success [accountID %u]  ", act);
 		end
 
-		local s2clogin = { ret = "AccountNotExsit",accountID = act }
+		local s2clogin = { ret = loginret,accountID = act }
 		local s2cmsg = SerializeUtil.Serialize(MsgID.MSG_S2C_LOGIN_RESULT,"NetMessage.S2CLogin",s2clogin)
 
 		thisModule:SendNetMessage(sessionID,s2cmsg)

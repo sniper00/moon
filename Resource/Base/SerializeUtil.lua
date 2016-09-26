@@ -16,7 +16,7 @@ SerializeUtil.Serialize = function (msgID,pkg,t)
 	mw:WriteUint16(msgID)
 
 	assert(nil ~= t," must not be nil ")
-	protobuf.encode(pkg,t)
+	encode = protobuf.encode(pkg,t)
 	mw:WriteString(encode)
 
 	return msg,mw

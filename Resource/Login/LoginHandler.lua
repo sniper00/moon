@@ -58,7 +58,7 @@ function LoginHandler:OnRequestLogin(userCtx, data)
 	local accountID = data:ReadUint64()
 	local password = data:ReadString()
 
-	local ret = "OK"
+	local ret = "Ok"
 
 
 	if self.accountDatas:IsOnline(accountID) then

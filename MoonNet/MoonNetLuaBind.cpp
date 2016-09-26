@@ -111,7 +111,7 @@ MoonNetLuaBind& MoonNetLuaBind::BindBinaryWriter()
 {
 	using MessageWriter = BinaryWriter<Message>;
 	lua.new_usertype<MessageWriter>("MessageWriter"
-		, sol::constructors<sol::types<const MessageWriter::TPointer&>>()
+		, sol::constructors<sol::types<MessageWriter::TPointer>>()
 		, "Size", &MessageWriter::Size
 		, "WriteString", &MessageWriter::Write<std::string>
 		, "WriteInt8", &MessageWriter::Write<int8_t>
@@ -135,7 +135,7 @@ MoonNetLuaBind& MoonNetLuaBind::BindBinaryReader()
 {
 	using MessageReader = BinaryReader<Message>;
 	lua.new_usertype<MessageReader>("MessageReader"
-		, sol::constructors<sol::types<const MessageReader::TPointer&>>()
+		, sol::constructors<sol::types<MessageReader::TPointer>>()
 		, "Size", &MessageReader::Size
 		, "Bytes", &MessageReader::Bytes
 		, "ReadString", &MessageReader::ReadString
@@ -206,9 +206,14 @@ MoonNetLuaBind& MoonNetLuaBind::BindMessage()
 
 		);
 
-	lua.set_function("CreateMessage", [](size_t size = 64) {
-		return ObjectCreateHelper<Message>::Create(size);
+	lua.set_function("CreateMessage", []() {
+		return  new Message();
 	});
+
+	lua.set_function("CreateMessageWithSize", [](size_t size) {
+		return  new Message(size);
+	});
+
 	return *this;
 }
 
@@ -239,9 +244,8 @@ MoonNetLuaBind& MoonNetLuaBind::BindModule()
 		, "GetID", &ModuleLua::GetID
 		, "SetEnableUpdate", &ModuleLua::SetEnableUpdate
 		, "IsEnableUpdate", &ModuleLua::IsEnableUpdate
-		, "SendMessage", &ModuleLua::SendMessage
-		, "BroadcastMessage", &ModuleLua::BroadcastMessage
-		, "PushMessage", &ModuleLua::PushMessage
+		, "Send", &ModuleLua::Send
+		, "Broadcast", &ModuleLua::Broadcast
 		);
 	return *this;
 }
@@ -254,8 +258,8 @@ MoonNetLuaBind& MoonNetLuaBind::BindModuleManager()
 		, "GetMachineID", &ModuleManager::GetMachineID
 		, "CreateModule", &ModuleManager::CreateModule<ModuleLua>
 		, "RemoveModule", &ModuleManager::RemoveModule
-		, "SendMessage", &ModuleManager::SendMessage
-		, "BroadcastMessage", &ModuleManager::BroadcastMessage
+		, "Send", &ModuleManager::Send
+		, "Broadcast", &ModuleManager::Broadcast
 		, "Run", &ModuleManager::Run
 		, "Stop", &ModuleManager::Stop
 		);

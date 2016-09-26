@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -30,22 +30,31 @@ namespace moon
 		m_Sender = 0;
 		m_ReceiverRPCID = 0;
 		m_SenderRPCID = 0;
+		m_AccountID = 0;
+		m_PlayerID = 0;
 
 		m_Data = ObjectCreateHelper<MemoryStream>::Create(capacity, headreserved);
 
-		//LOG_TRACE("message new %x",(size_t)(this));
+		//CONSOLE_TRACE("message new %x",(size_t)(this));
 	}
 
 	Message::Message(const MemoryStreamPtr& msd)
 	{
 		m_Data = msd;
-
-		//LOG_TRACE("message new %x with ms", (size_t)(this));
+		m_Type = (uint8_t)EMessageType::Unknown;
+		m_Flag = 0;
+		m_Receiver = 0;
+		m_Sender = 0;
+		m_ReceiverRPCID = 0;
+		m_SenderRPCID = 0;
+		m_AccountID = 0;
+		m_PlayerID = 0;
+		//CONSOLE_TRACE("message new %x with ms", (size_t)(this));
 	}
 
 	Message::~Message()
 	{
-		//LOG_TRACE("message release %x", (size_t)(this));
+		//CONSOLE_TRACE("message release %x", (size_t)(this));
 	}
 
 	ModuleID Message::GetSender() const

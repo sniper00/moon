@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -67,22 +67,21 @@ namespace moon
 		return m_ModuleImp->EnableUpdate;
 	}
 
-	void Module::BroadcastMessage(const MessagePtr& msg)
+	void Module::Broadcast(Message* msg)
 	{
-		m_ModuleImp->Manager->BroadcastMessage(GetID(), msg);
+		m_ModuleImp->Manager->Broadcast(GetID(), msg);
 	}
 
-	void Module::SendMessage(ModuleID receiver, const MessagePtr& msg)
+	void Module::Send(ModuleID receiver, Message* msg)
 	{
 		//if send Message to self , add to MessageQueue directly.
 		if (receiver == GetID())
 		{
-			msg->SetSender(GetID());
 			msg->SetReceiver(GetID());
-			PushMessage(msg);
+			PushMessage(MessagePtr(msg));
 			return;
 		}
-		m_ModuleImp->Manager->SendMessage(GetID(), receiver, msg);
+		m_ModuleImp->Manager->Send(GetID(),receiver, msg);
 	}
 
 	void Module::SetManager(ModuleManager* mgr)
@@ -118,7 +117,7 @@ namespace moon
 			return false;
 		auto& msg = mq.front();
 		assert(GetID() == msg->GetReceiver() || msg->GetReceiver() == 0);
-		OnMessage(msg);
+		OnMessage(msg.get());
 		mq.pop_front();
 		return mq.size() != 0;
 	}

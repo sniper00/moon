@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -13,8 +13,8 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
 	DECLARE_SHARED_PTR(Module)
-	DECLARE_SHARED_PTR(Message)
 	DECLARE_SHARED_PTR(Worker)
+	class Message;
 
 	//Module 管理类，负责Module的创建，调度，移除
 	class ModuleManager
@@ -59,7 +59,7 @@ namespace moon
 		* @receiver 接收者id
 		* @msg 消息内容
 		*/
-		void			SendMessage(ModuleID sender, ModuleID receiver,const MessagePtr& msg);
+		void			Send(ModuleID sender, ModuleID receiver,Message* msg);
 
 		/**
 		* 向所有Module（除了发送者）广播消息
@@ -67,7 +67,7 @@ namespace moon
 		* @sender 发送者id
 		* @msg 消息内容
 		*/
-		void			BroadcastMessage(ModuleID sender,const MessagePtr& msg);
+		void			Broadcast(ModuleID sender,Message* msg);
 
 		/**
 		* 启动所有Worker线程

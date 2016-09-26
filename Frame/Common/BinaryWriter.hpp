@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -14,11 +14,10 @@ namespace moon
 	class BinaryWriter
 	{
 	public:
-		using TPointer = std::shared_ptr<T>;
+		using TPointer = T*;
 		using StreamType = typename T::StreamType;
-		using StreamPointerType = std::shared_ptr<StreamType>;
 
-		explicit BinaryWriter(const TPointer& t)
+		explicit BinaryWriter(TPointer t)
 			:m_ms(t->ToStream())
 		{
 		}
@@ -39,14 +38,19 @@ namespace moon
 		}
 
 		template<typename TData>
-		void Write(const TData& t, typename std::enable_if<!std::is_same<TData,std::string>::value>::type* = nullptr)
+		void Write(const TData& t)
+		{
+			WriteImp(t);
+		}
+
+		template<typename TData>
+		void WriteImp(const TData & t)
 		{
 			static_assert(std::is_pod<TData>::value, "type T must be pod.");
 			m_ms.WriteBack(&t, 0, 1);
 		}
 
-		template<typename TData>
-		void Write(const TData& str, typename std::enable_if<std::is_same<TData, std::string>::value>::type* = nullptr)
+		void WriteImp(const std::string & str)
 		{
 			m_ms.WriteBack(str.data(), 0, str.size() + 1);
 		}
@@ -84,6 +88,8 @@ namespace moon
 	protected:
 		StreamType&			m_ms;
 	};
+
+
 
 };
 

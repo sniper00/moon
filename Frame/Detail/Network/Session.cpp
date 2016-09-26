@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -250,24 +250,24 @@ namespace moon
 
 	void Session::OnConnect()
 	{
-		MemoryStreamPtr msd = ObjectCreateHelper<MemoryStream>::Create(64);
-		BinaryWriter<MemoryStream> bw(msd);
+		MemoryStreamPtr ms = ObjectCreateHelper<MemoryStream>::Create(64);
+		BinaryWriter<MemoryStream> bw(ms.get());
 		bw << GetRemoteIP();
 		bw << GetRemotePort();
 		bw << (uint16_t)m_State;
 		bw << m_ErrorCode.message();
-		m_Delegate(ESocketMessageType::Connect, GetID(), msd);
+		m_Delegate(ESocketMessageType::Connect, GetID(), ms);
 	}
 
 	void Session::OnClose()
 	{
-		MemoryStreamPtr msd = ObjectCreateHelper<MemoryStream>::Create(64);
-		BinaryWriter<MemoryStream> bw(msd);
+		MemoryStreamPtr ms = ObjectCreateHelper<MemoryStream>::Create(64);
+		BinaryWriter<MemoryStream> bw(ms.get());
 		bw << GetRemoteIP();
 		bw << GetRemotePort();
 		bw << (uint16_t)m_State;
 		bw << m_ErrorCode.message();
-		m_Delegate(ESocketMessageType::Close, GetID(),msd);
+		m_Delegate(ESocketMessageType::Close, GetID(), ms);
 		m_Service.RemoveSession(GetID());
 	}
 

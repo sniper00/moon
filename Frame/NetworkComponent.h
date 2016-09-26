@@ -36,7 +36,7 @@ namespace moon
 
 		SessionID SyncConnect(const std::string& ip, const std::string& port);
 
-		void SendNetMessage(SessionID sessionID, const MessagePtr& msg);
+		void SendNetMessage(SessionID sessionID, Message* msg);
 
 		/**
 		* 强制关闭一个网络连接
@@ -49,7 +49,7 @@ namespace moon
 		* 网络消息处理回掉
 		*
 		*/
-		std::function<void(const MessagePtr&)> OnNetMessage;
+		std::function<void(Message*)> OnNetMessage;
 
 	//protected:
 		void OnEnter();

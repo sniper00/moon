@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -25,7 +25,6 @@ namespace moon
 		ToClient//发送给客户端的数据
 	};
 
-	DECLARE_SHARED_PTR(Message)
 	DECLARE_SHARED_PTR(MemoryStream)
 
 	//Module 消息

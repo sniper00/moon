@@ -23,17 +23,20 @@ function Module:GetOtherModule(name)
 end
 
 function Module:_SendMessage(recevier,msg)
- 	nativeModule:SendMessage(recevier,msg)
+ 	nativeModule:Send(recevier,msg)
 end
 
 function Module:_Broadcast(msg)
- 	nativeModule:BroadcastMessage(msg)
+ 	nativeModule:Broadcast(msg)
 end
 
-function Module:Send(receiver,msg,rpcid)
+function Module:Send(receiver,msg,rpcid,msgType)
 	rpcid = rpcid or 0
-    msg:SetType(EMessageType.ModuleData)
-    msg:SetReceiverRPC(rpcid)
+	msgType = msgType or EMessageType.ModuleData
+    msg:SetType(msgType)
+    if 0 ~= rpcid then
+    	msg:SetReceiverRPC(rpcid)
+	end
     self:_SendMessage(receiver,msg)
     Log.Trace("Send receiver[%u] , rpcid [%u]",receiver,rpcid)
 end
@@ -122,10 +125,6 @@ function Module:DispatchMessage(msg)
 	Log.Trace("Handler message %d", msgID)
 
 	return true
-end
-
-function Module:PushMessage(msg)
-	nativeModule:PushMessage(msg)
 end
 
 function Module:GetID()

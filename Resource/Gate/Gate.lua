@@ -8,7 +8,7 @@ local protobuf  = require "protobuf"
 local Module    = require("Module")
 local Network   = require("Network")
 local Connects  = require("Connect")
-local msgID     = require("MsgID")
+local MsgID     = require("MsgID")
 local GateHandler = require("GateHandler")
 local GateLoginHandler = require("GateLoginHandler")
 local LoginDatas = require("LoginDatas")
@@ -24,6 +24,7 @@ function Gate:ctor()
 
     self.worldModule = 0
     self.loginModule = 0
+    self.ID          = 0
 
     Log.Trace("ctor Gate")
 
@@ -35,8 +36,8 @@ function Gate:ctor()
 end
 
 function Gate:Init(config)
-
-    Gate.super.SetGateModule(self,Gate.super.GetID(self))
+    self.ID = Gate.super.GetID(self)
+    Gate.super.SetGateModule(self,self.ID)
 
     self.net = Network.new()
     self.net:Init(1)
@@ -56,8 +57,7 @@ function Gate:Init(config)
 end
 
 function Gate:OnNetMessage(msg)
-    msg:SetReceiver(Gate.super.GetID(self))
-    Gate.super.PushMessage(self, msg)
+    Gate.super.Send(self,self.ID,msg,0,msg:GetType())
 end
 
 function Gate:OnMessage(msg)
