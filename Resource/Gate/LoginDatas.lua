@@ -21,7 +21,6 @@ end
 
 function LoginDatas:Add(serialNum, accountID, sessionID)
 	assert(self.logindatas[serialNum] == nil,"login data already exist")
-
 	local d = {}
 	d.serialNum = serialNum
 	d.accountID = accountID

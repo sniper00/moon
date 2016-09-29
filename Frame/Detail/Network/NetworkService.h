@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -60,7 +60,7 @@ namespace moon
 		* @socketID
 		* @buffer_ptr 数据
 		*/
-		void			SendMessage(SessionID sessionID, const MemoryStreamPtr& msg);
+		void			Send(SessionID sessionID, const MemoryStreamPtr& msg);
 
 		/**
 		* 关闭某个socket连接

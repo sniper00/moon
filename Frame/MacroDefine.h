@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -29,7 +29,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
-#include <queue>
 #include <array>
 
 #include <memory>
@@ -119,8 +118,6 @@ bool contains_key(const TMap& map, typename TMap::key_type key)
 using ModuleID = uint32_t;
 using SessionID = uint32_t;
 
-using moduleid_t = uint32_t;
-using sessionid_t = uint32_t;
 
 
 

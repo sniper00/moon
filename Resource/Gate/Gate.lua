@@ -8,7 +8,7 @@ local protobuf  = require "protobuf"
 local Module    = require("Module")
 local Network   = require("Network")
 local Connects  = require("Connect")
-local msgID     = require("MsgID")
+local MsgID     = require("MsgID")
 local GateHandler = require("GateHandler")
 local GateLoginHandler = require("GateLoginHandler")
 local LoginDatas = require("LoginDatas")
@@ -24,6 +24,7 @@ function Gate:ctor()
 
     self.worldModule = 0
     self.loginModule = 0
+    self.ID          = 0
 
     Log.Trace("ctor Gate")
 
@@ -35,8 +36,8 @@ function Gate:ctor()
 end
 
 function Gate:Init(config)
-
-    Gate.super.SetGateModule(self,Gate.super.GetID(self))
+    self.ID = Gate.super.GetID(self)
+    Gate.super.SetGateModule(self,self.ID)
 
     self.net = Network.new()
     self.net:Init(1)
@@ -56,8 +57,7 @@ function Gate:Init(config)
 end
 
 function Gate:OnNetMessage(msg)
-    msg:SetReceiver(Gate.super.GetID(self))
-    Gate.super.PushMessage(self, msg)
+    Gate.super.Send(self,self.ID,msg,0,msg:GetType())
 end
 
 function Gate:OnMessage(msg)
@@ -67,7 +67,7 @@ function Gate:OnMessage(msg)
         self:ClientData(msg)
     elseif msg:GetType() == EMessageType.NetworkClose then
         self:ClientClose(msg)
-    elseif msg:GetType() == EMessageType.ModuleData then
+    elseif msg:GetType() == EMessageType.ModuleData or msg:GetType() == EMessageType.ModuleRPC then
         self:ModuleData(msg)
     elseif msg:GetType() == EMessageType.ToClient then
         self:ToClientData(msg)
@@ -75,8 +75,8 @@ function Gate:OnMessage(msg)
 end
 
 function Gate:ClientConnect(msg)
-    local br = MessageReader.new(msg)
-    Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
+    local mr = MessageReader.new(msg)
+    Log.ConsoleTrace("CLIENT CONNECT: %s",mr:ReadString())
 end
 
 function Gate:ClientData(msg)
@@ -91,9 +91,8 @@ function Gate:ClientData(msg)
         return
     end
 
-    local br = MessageReader.new(msg)
-
-    local msgID = br:ReadInt16()
+    local mr = MessageReader.new(msg)
+    local msgID = mr:ReadUint16()
 
     if msgID > MsgID.MSG_MUST_HAVE_PLAYERID then
         Log.ConsoleWarn("Illegal Msg: client not login msgID[%u].",msgID)
@@ -117,8 +116,8 @@ function Gate:ClientData(msg)
 end
 
 function Gate:ClientClose(msg)
-    local br = MessageReader.new(msg)
-    Log.ConsoleTrace("CLIENT CLOSE: %s",br:ReadString())
+    local mr = MessageReader.new(msg)
+    Log.ConsoleTrace("CLIENT CLOSE: %s",mr:ReadString())
 
     local sessionID = msg:GetSessionID()
 
@@ -144,11 +143,12 @@ end
 
 function Gate:ToClientData(msg)
     local sessionID = 0
-    if msg:HasAccountID() then
-        local conn = self.connexts.FindByAccount(msg:GetAccountID())
+    if msg:IsPlayerID() then
+    	local conn = self.connexts.FindByPlayer(msg:GetPlayerID())
         sessionID = conn.sessionID
-    elseif msg:HasPlayerID() then
-        local conn = self.connexts.FindByPlayer(msg:GetPlayerID())
+    else
+        local conn = self.connexts.FindByAccount(msg:GetAccountID())
+        assert(nil ~= conn)
         sessionID = conn.sessionID
     end
 

@@ -245,7 +245,6 @@
     <ClInclude Include="..\..\Frame\Common\MemoryStream.hpp" />
     <ClInclude Include="..\..\Frame\Common\ObjectPool.hpp" />
     <ClInclude Include="..\..\Frame\Common\Path.hpp" />
-    <ClInclude Include="..\..\Frame\Common\Singleton.hpp" />
     <ClInclude Include="..\..\Frame\Common\StringUtils.hpp" />
     <ClInclude Include="..\..\Frame\Common\SyncQueue.hpp" />
     <ClInclude Include="..\..\Frame\Common\Time.hpp" />
@@ -254,6 +253,7 @@
     <ClInclude Include="..\..\Frame\Common\Timer\TimerWheel.hpp" />
     <ClInclude Include="..\..\Frame\Common\TupleUtils.hpp" />
     <ClInclude Include="..\..\Frame\Common\noncopyable.hpp" />
+    <ClInclude Include="..\..\Frame\Common\singleton.hpp" />
     <ClInclude Include="..\..\Frame\Component.h" />
     <ClInclude Include="..\..\Frame\Detail\Log\Log.h" />
     <ClInclude Include="..\..\Frame\Detail\Module\Worker.h" />

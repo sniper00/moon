@@ -70,19 +70,6 @@ MoonNetLuaBind & MoonNetLuaBind::BindLog()
 	lua.set_function("LOGV", [](bool bconsole, LogLevel lv, const std::string& content) {
 		Log::LogV(bconsole, lv, content.data());
 	});
-
-	//sol::table tb = lua.create_named_table("Log");
-	//tb.set_function("Trace", [](const std::string& str) { LOG_TRACE(str.data());});
-	//tb.set_function("Debug", [](const std::string& str) { LOG_DEBUG(str.data());});
-	//tb.set_function("Info", [](const std::string& str) { LOG_INFO(str.data());});
-	//tb.set_function("Warn", [](const std::string& str) { LOG_WARN(str.data());});
-	//tb.set_function("Error", [](const std::string& str) { LOG_ERROR(str.data());});
-
-	//tb.set_function("ConsoleTrace", [](const std::string& str) { CONSOLE_TRACE(str.data());});
-	//tb.set_function("ConsoleDebug", [](const std::string& str) { CONSOLE_DEBUG(str.data());});
-	//tb.set_function("ConsoleInfo", [](const std::string& str) { CONSOLE_INFO(str.data());});
-	//tb.set_function("ConsoleWarn", [](const std::string& str) { CONSOLE_WARN(str.data());});
-	//tb.set_function("ConsoleError", [](const std::string& str) { CONSOLE_ERROR(str.data());});
 	return *this;
 }
 
@@ -109,23 +96,23 @@ MoonNetLuaBind& MoonNetLuaBind::BindMemoryStream()
 
 MoonNetLuaBind& MoonNetLuaBind::BindBinaryWriter()
 {
-	using MessageWriter = BinaryWriter<Message>;
-	lua.new_usertype<MessageWriter>("MessageWriter"
-		, sol::constructors<sol::types<const MessageWriter::TPointer&>>()
-		, "Size", &MessageWriter::Size
-		, "WriteString", &MessageWriter::Write<std::string>
-		, "WriteInt8", &MessageWriter::Write<int8_t>
-		, "WriteUint8", &MessageWriter::Write<uint8_t>
-		, "WriteInt16", &MessageWriter::Write<int16_t>
-		, "WriteUint16", &MessageWriter::Write<uint16_t>
-		, "WriteInt32", &MessageWriter::Write<int32_t>
-		, "WriteUint32", &MessageWriter::Write<uint32_t>
-		, "WriteInt64", &MessageWriter::Write<int64_t>
-		, "WriteUint64", &MessageWriter::Write<uint64_t>
-		, "WriteInteger", &MessageWriter::Write<int64_t>
-		, "WriteFloat", &MessageWriter::Write<float>
-		, "WriteDouble", &MessageWriter::Write<double>
-		, "WriteNumber", &MessageWriter::Write<double>
+	using Type = BinaryWriter<Message>;
+	lua.new_usertype<Type>("MessageWriter"
+		, sol::constructors<sol::types<Type::TPointer>>()
+		, "Size", &Type::Size
+		, "WriteString", &Type::Write<std::string>
+		, "WriteInt8", &Type::Write<int8_t>
+		, "WriteUint8", &Type::Write<uint8_t>
+		, "WriteInt16", &Type::Write<int16_t>
+		, "WriteUint16", &Type::Write<uint16_t>
+		, "WriteInt32", &Type::Write<int32_t>
+		, "WriteUint32", &Type::Write<uint32_t>
+		, "WriteInt64", &Type::Write<int64_t>
+		, "WriteUint64", &Type::Write<uint64_t>
+		, "WriteInteger", &Type::Write<int64_t>
+		, "WriteFloat", &Type::Write<float>
+		, "WriteDouble", &Type::Write<double>
+		, "WriteNumber", &Type::Write<double>
 		);
 
 	return *this;
@@ -133,24 +120,24 @@ MoonNetLuaBind& MoonNetLuaBind::BindBinaryWriter()
 
 MoonNetLuaBind& MoonNetLuaBind::BindBinaryReader()
 {
-	using MessageReader = BinaryReader<Message>;
-	lua.new_usertype<MessageReader>("MessageReader"
-		, sol::constructors<sol::types<const MessageReader::TPointer&>>()
-		, "Size", &MessageReader::Size
-		, "Bytes", &MessageReader::Bytes
-		, "ReadString", &MessageReader::ReadString
-		, "ReadInt8", &MessageReader::Read<int8_t>
-		, "ReadUint8", &MessageReader::Read<uint8_t>
-		, "ReadInt16", &MessageReader::Read<int16_t>
-		, "ReadUint16", &MessageReader::Read<uint16_t>
-		, "ReadInt32", &MessageReader::Read<int32_t>
-		, "ReadUint32", &MessageReader::Read<uint32_t>
-		, "ReadInt64", &MessageReader::Read<int64_t>
-		, "ReadUint64", &MessageReader::Read<uint64_t>
-		, "ReadInteger", &MessageReader::Read<int64_t>
-		, "ReadFloat", &MessageReader::Read<float>
-		, "ReadDouble", &MessageReader::Read<double>
-		, "ReadNumber", &MessageReader::Read<double>
+	using Type = BinaryReader<Message>;
+	lua.new_usertype<Type>("MessageReader"
+		, sol::constructors<sol::types<Type::TStreamPointer>>()
+		, "Size", &Type::Size
+		, "Bytes", &Type::Bytes
+		, "ReadString", &Type::Read<std::string>
+		, "ReadInt8", &Type::Read<int8_t>
+		, "ReadUint8", &Type::Read<uint8_t>
+		, "ReadInt16", &Type::Read<int16_t>
+		, "ReadUint16", &Type::Read<uint16_t>
+		, "ReadInt32", &Type::Read<int32_t>
+		, "ReadUint32", &Type::Read<uint32_t>
+		, "ReadInt64", &Type::Read<int64_t>
+		, "ReadUint64", &Type::Read<uint64_t>
+		, "ReadInteger", &Type::Read<int64_t>
+		, "ReadFloat", &Type::Read<float>
+		, "ReadDouble", &Type::Read<double>
+		, "ReadNumber", &Type::Read<double>
 		);
 
 	return *this;
@@ -163,8 +150,8 @@ MoonNetLuaBind& MoonNetLuaBind::BindEMessageType()
 		, "NetworkData", EMessageType::NetworkData
 		, "NetworkConnect", EMessageType::NetworkConnect
 		, "NetworkClose", EMessageType::NetworkClose
-		, "NetTypeEnd", EMessageType::NetTypeEnd
 		, "ModuleData", EMessageType::ModuleData
+		, "ModuleRPC",EMessageType::ModuleRPC
 		, "ToClient", EMessageType::ToClient
 	);
 
@@ -175,40 +162,34 @@ MoonNetLuaBind& MoonNetLuaBind::BindMessage()
 {
 	lua.new_usertype<Message>("Message"
 		, sol::call_constructor, sol::no_constructor
-		, "HasSessionID", &Message::HasSessionID
+		, "HasSessionID", &Message::IsSessionID
 		, "GetSessionID", &Message::GetSessionID
-		, "SetSessionID", &Message::SetSessionID
-
 		, "GetSender", &Message::GetSender
 		, "SetSender", &Message::SetSender
 		, "SetReceiver", &Message::SetReceiver
 		, "GetReceiver", &Message::GetReceiver
-
-		, "HasAccountID", &Message::HasAccountID
 		, "SetAccountID", &Message::SetAccountID
 		, "GetAccountID", &Message::GetAccountID
-
-		, "HasPlayerID", &Message::HasPlayerID
+		, "HasPlayerID", &Message::IsPlayerID
 		, "SetPlayerID", &Message::SetPlayerID
 		, "GetPlayerID", &Message::GetPlayerID
-
-		, "HasSenderRPC", &Message::HasSenderRPC
-		, "SetSenderRPC", &Message::SetSenderRPC
-		, "GetSenderRPC", &Message::GetSenderRPC
-
-		, "HasReceiverRPC", &Message::HasReceiverRPC
-		, "SetReceiverRPC", &Message::SetReceiverRPC
-		, "GetReceiverRPC", &Message::GetReceiverRPC
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+		, "SetRPCID", &Message::SetRPCID
+		, "GetRPCID", &Message::GetRPCID
+		, "HasRPCID", &Message::HasRPCID
 		, "SetType", &Message::SetType
 		, "GetType", &Message::GetType
 		, "Size", &Message::Size
-
+		, "Clone",&Message::Clone
 		);
 
-	lua.set_function("CreateMessage", [](size_t size = 64) {
-		return ObjectCreateHelper<Message>::Create(size);
+	lua.set_function("CreateMessage", []() {
+		return  new Message();
 	});
+
+	lua.set_function("CreateMessageWithSize", [](size_t size) {
+		return  new Message(size);
+	});
+
 	return *this;
 }
 
@@ -239,9 +220,8 @@ MoonNetLuaBind& MoonNetLuaBind::BindModule()
 		, "GetID", &ModuleLua::GetID
 		, "SetEnableUpdate", &ModuleLua::SetEnableUpdate
 		, "IsEnableUpdate", &ModuleLua::IsEnableUpdate
-		, "SendMessage", &ModuleLua::SendMessage
-		, "BroadcastMessage", &ModuleLua::BroadcastMessage
-		, "PushMessage", &ModuleLua::PushMessage
+		, "Send", &ModuleLua::Send
+		, "Broadcast", &ModuleLua::Broadcast
 		);
 	return *this;
 }
@@ -254,8 +234,8 @@ MoonNetLuaBind& MoonNetLuaBind::BindModuleManager()
 		, "GetMachineID", &ModuleManager::GetMachineID
 		, "CreateModule", &ModuleManager::CreateModule<ModuleLua>
 		, "RemoveModule", &ModuleManager::RemoveModule
-		, "SendMessage", &ModuleManager::SendMessage
-		, "BroadcastMessage", &ModuleManager::BroadcastMessage
+		, "Send", &ModuleManager::Send
+		, "Broadcast", &ModuleManager::Broadcast
 		, "Run", &ModuleManager::Run
 		, "Stop", &ModuleManager::Stop
 		);

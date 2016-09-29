@@ -67,10 +67,10 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 	Log.Trace("2.Login username[%s] password[%s] accountID[%u] sessionID[%d] add to login data ", s.username,s.password ,accountID,sessionID)
 
 	-- send to login module
-	local smsg,smsgw = SerializeUtil.SerializeEx(MsgID.MSG_C2S_REQ_LOGIN)
-	smsgw:WriteUint64(serialNum)
-	smsgw:WriteUint64(accountID)
-	smsgw:WriteString(s.password)
+	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_C2S_REQ_LOGIN)
+	mw:WriteUint64(serialNum)
+	mw:WriteUint64(accountID)
+	mw:WriteString(s.password)
 
 	if self.loginModule == 0 then
 		self.loginModule = thisModule:GetOtherModule("login")
@@ -94,7 +94,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 
 		assert(serialNum == sn and  accountID == act,"login check")
 
-		if loginret == "OK" then
+		if loginret == "Ok" then
 
 			Log.Trace("4.login find login data accountID[%u] ", act);
 
@@ -104,7 +104,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 			Log.Trace("6.login success [accountID %u]  ", act);
 		end
 
-		local s2clogin = { ret = "AccountNotExsit",accountID = act }
+		local s2clogin = { ret = loginret,accountID = act }
 		local s2cmsg = SerializeUtil.Serialize(MsgID.MSG_S2C_LOGIN_RESULT,"NetMessage.S2CLogin",s2clogin)
 
 		thisModule:SendNetMessage(sessionID,s2cmsg)

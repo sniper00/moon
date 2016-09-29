@@ -17,7 +17,7 @@ public:
 
 	void								OnExit() override;
 
-	void								OnMessage(const moon::MessagePtr&) override;
+	void								OnMessage(moon::Message*) override;
 private:
 	struct ModuleLuaImp;
 	std::unique_ptr<ModuleLuaImp> m_ModuleLuaImp;

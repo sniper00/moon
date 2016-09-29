@@ -17,10 +17,10 @@ namespace moon
 
 		void OnNetMessage(ESocketMessageType type, SessionID sessionID, const MemoryStreamPtr& data)
 		{
-			auto msg =  ObjectCreateHelper<Message>::Create(data);
-			BinaryWriter<Message> bw(msg);
+			auto msg = new Message(data);
 			msg->SetSessionID(sessionID);
 
+			BinaryWriter<Message> bw(msg);
 			switch (type)
 			{
 			case ESocketMessageType::Connect:
@@ -41,18 +41,16 @@ namespace moon
 			default:
 				break;
 			}
-
-			NetMsgQueue.EmplaceBack(msg);
+			NetMsgQueue.PushBack(msg);
 		}
 
 		std::shared_ptr<NetWorkFrame>		Net;
-		SyncQueue<MessagePtr>					NetMsgQueue;
+		SyncQueue<Message*>						NetMsgQueue;
 	};
 
 	NetworkComponent::NetworkComponent()
 	{
 	}
-
 
 	NetworkComponent::~NetworkComponent()
 	{
@@ -83,10 +81,11 @@ namespace moon
 		return m_NetworkComponentImp->Net->SyncConnect(ip, port);
 	}
 
-	void NetworkComponent::SendNetMessage(SessionID sessionID, const MessagePtr& msg)
+	void NetworkComponent::SendNetMessage(SessionID sessionID, Message* msg)
 	{
 		Assert(nullptr != m_NetworkComponentImp, "NetworkComponent::SendNetMessage: Network not init");
 		m_NetworkComponentImp->Net->Send(sessionID, msg->ToStreamPointer());
+		SAFE_DELETE(msg);
 	}
 
 	void NetworkComponent::Close(SessionID sessionID)

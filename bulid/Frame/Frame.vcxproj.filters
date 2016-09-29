@@ -54,9 +54,6 @@
     <ClInclude Include="..\..\Frame\Common\Path.hpp">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Frame\Common\Singleton.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Frame\Common\StringUtils.hpp">
       <Filter>Common</Filter>
     </ClInclude>
@@ -79,6 +76,9 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Frame\Common\noncopyable.hpp">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Frame\Common\singleton.hpp">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Frame\Component.h" />

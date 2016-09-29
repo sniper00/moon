@@ -180,7 +180,7 @@ void ModuleLua::Update(uint32_t interval)
 	}
 }
 
-void ModuleLua::OnMessage(const moon::MessagePtr& msg)
+void ModuleLua::OnMessage(moon::Message* msg)
 {
 	if (!IsOk())
 		return;

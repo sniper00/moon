@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -16,10 +16,10 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
 	class ModuleManager;
+	class Message;
 
-	DECLARE_SHARED_PTR(Message)
 	DECLARE_SHARED_PTR(Module)
-
+	DECLARE_SHARED_PTR(Message)
 	//工作线程
 	class Worker:public LoopThread,public AsyncEvent, noncopyable
 	{
@@ -55,12 +55,12 @@ namespace moon
 		/**
 		* 消息分发
 		*/
-		void DispatchMessage(const MessagePtr&msg);
+		void DispatchMessage(const MessagePtr& msg);
 
 		/**
 		* 向该Worker中的所有Module广播消息
 		*/
-		void BroadcastMessage(const MessagePtr& msg);
+		void Broadcast(const MessagePtr& msg);
 
 		int	GetMessageFps();
 
@@ -71,7 +71,7 @@ namespace moon
 		void			Update(uint32_t interval);
 	private:
 		uint8_t																			m_WorkerID;
-		std::unordered_map<ModuleID, ModulePtr>	m_Modules;
+		std::unordered_map<ModuleID, ModulePtr>			m_Modules;
 		//模块处理队列
 		std::deque<Module*>													m_HandleQueue;
 

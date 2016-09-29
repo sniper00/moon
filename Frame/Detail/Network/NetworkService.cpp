@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -71,7 +71,7 @@ void NetworkService::CheckTimeOut(uint32_t timeoutInterval)
 	});
 }
 
-void NetworkService::SendMessage(SessionID sessionID, const MemoryStreamPtr& msg)
+void NetworkService::Send(SessionID sessionID, const MemoryStreamPtr& msg)
 {
 	m_IoService.post([this, sessionID, msg]()
 	{

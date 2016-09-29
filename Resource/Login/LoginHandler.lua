@@ -31,10 +31,10 @@ function LoginHandler:Start()
 end
 
 function LoginHandler:OnServerStart(userCtx, data)
-	local msg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
+	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
 	mw:WriteString(thisModule:GetName())
 	mw:WriteUint32(thisModule:GetID())
-	thisModule:Broadcast(msg)
+	thisModule:Broadcast(smsg)
 	Log.ConsoleTrace("Login Module: server start")
 end
 
@@ -58,7 +58,7 @@ function LoginHandler:OnRequestLogin(userCtx, data)
 	local accountID = data:ReadUint64()
 	local password = data:ReadString()
 
-	local ret = "OK"
+	local ret = "Ok"
 
 
 	if self.accountDatas:IsOnline(accountID) then
@@ -78,8 +78,8 @@ function LoginHandler:OnRequestLogin(userCtx, data)
 	mw:WriteUint64(serialNum)
 	mw:WriteUint64(accountID)
 
-	Log.Trace("login module send to gate rpcID [%u]",userCtx.senderRPC)
-	thisModule:Send(thisModule:GetGateModule(),msg,userCtx.senderRPC)
+	Log.Trace("login module send to gate rpcID [%u]",userCtx.rpcID or 0)
+	thisModule:Send(thisModule:GetGateModule(),msg,userCtx.rpcID)
 
 end
 

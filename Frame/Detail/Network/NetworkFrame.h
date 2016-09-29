@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -21,7 +21,7 @@ namespace moon
 		/**
 		* NetWorkFrame 构造函数
 		* @handler 网络事件回掉（connect, recevie, close)
-		* @net_thread_num 网络线程数量
+		* @threadNum 网络线程数量
 		* 注意：如果开启了多个网络线程，那么handler 回掉函数是非线程安全的。
 		*/
 		NetWorkFrame(const NetMessageDelegate& handler, uint8_t threadNum = 1);
@@ -47,7 +47,7 @@ namespace moon
 		* @port 端口
 		* @return 返回链接的 socketID, 成功 socketID.value != 0, 失败socketID.value = 0
 		*/
-		SessionID			SyncConnect(const std::string& ip, const std::string& port);
+		SessionID					SyncConnect(const std::string& ip, const std::string& port);
 
 		/**
 		* 向某个链接发送数据, 这个函数是线程安全的
@@ -96,7 +96,7 @@ namespace moon
 		void							PostAccept();
 
 		/**
-		* 超时检测线程函数
+		* 超时检测线程函数(测试）
 		*/
 		void							CheckTimeOut(uint32_t interval);
 	protected:

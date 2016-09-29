@@ -18,10 +18,10 @@ end
 
 function GateHandler:OnServerStart(userCtx, data)
 	Log.ConsoleTrace("Gate Module: server start")
-	local msg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
+	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
 	mw:WriteString(thisModule:GetName())
 	mw:WriteUint32(thisModule:GetID())
-	thisModule:Broadcast(msg)
+	thisModule:Broadcast(smsg)
 end
 
 function GateHandler:OnModuleStart(userCtx, data)

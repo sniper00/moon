@@ -15,7 +15,7 @@ ifeq ($(config),debug_win32)
   TARGETDIR = ../../bin/Debug
   TARGET = $(TARGETDIR)/MoonNet.exe
   OBJDIR = obj/Win32/Debug
-  DEFINES += -DDEBUG
+  DEFINES += -DDEBUG -DSOL_CHECK_ARGUMENTS
   INCLUDES += -I../../Frame -I../../Third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -42,7 +42,7 @@ ifeq ($(config),debug_x64)
   TARGETDIR = ../../bin/Debug
   TARGET = $(TARGETDIR)/MoonNet.exe
   OBJDIR = obj/x64/Debug
-  DEFINES += -DDEBUG
+  DEFINES += -DDEBUG -DSOL_CHECK_ARGUMENTS
   INCLUDES += -I../../Frame -I../../Third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -69,7 +69,7 @@ ifeq ($(config),debug_linux)
   TARGETDIR = ../../bin/Debug
   TARGET = $(TARGETDIR)/MoonNet
   OBJDIR = obj/Linux/Debug
-  DEFINES += -DDEBUG
+  DEFINES += -DDEBUG -DSOL_CHECK_ARGUMENTS
   INCLUDES += -I../../Frame -I../../Third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)

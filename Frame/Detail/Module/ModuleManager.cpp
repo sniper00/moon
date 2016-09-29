@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -85,26 +85,34 @@ namespace moon
 		}
 	}
 
-	void ModuleManager::SendMessage(ModuleID sender, ModuleID receiver,const MessagePtr& msg)
+	void ModuleManager::Send(ModuleID sender, ModuleID receiver,Message* msg)
 	{
+		assert(!msg->IsReadOnly()&&"can not send the same message twice");
+		msg->SetReadOnly();
+
 		Assert((msg->GetType() != EMessageType::Unknown),"sending unknown type message");
 		msg->SetSender(sender);
 		msg->SetReceiver(receiver);
 		uint8_t workerID = GetWorkerID(receiver);
 		if (workerID < m_Workers.size())
 		{
-			m_Workers[workerID]->DispatchMessage(msg);
+			m_Workers[workerID]->DispatchMessage(MessagePtr(msg));
 		}
 	}
 
-	void ModuleManager::BroadcastMessage(ModuleID sender,const MessagePtr& msg)
+	void ModuleManager::Broadcast(ModuleID sender,Message* msg)
 	{
+		assert(!msg->IsReadOnly() && "can not send the same message twice");
+		msg->SetReadOnly();
+
 		Assert((msg->GetType() != EMessageType::Unknown), "sending unknown type message");
 		msg->SetSender(sender);
 		msg->SetReceiver(0);
+
+		auto tmp = MessagePtr(msg);
 		for (auto& w : m_Workers)
-		{
-			w->BroadcastMessage(msg);
+		{	
+			w->Broadcast(tmp);
 		}
 	}
 

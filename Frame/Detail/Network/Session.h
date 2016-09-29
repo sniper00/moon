@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -14,7 +14,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	DECLARE_SHARED_PTR(memory_stream);
 	DECLARE_SHARED_PTR(Session);
 
 	constexpr int32_t			IO_BUFFER_SIZE = 8192;
@@ -133,7 +132,7 @@ namespace moon
 		//消息处理函数对象
 		NetMessageDelegate&			m_Delegate;
 
-		NetworkService&					m_Service;
+		NetworkService&						m_Service;
 
 		asio::ip::tcp::socket					m_Socket;
 		//异步接收缓冲区

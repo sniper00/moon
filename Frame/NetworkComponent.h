@@ -3,12 +3,13 @@
 
 namespace moon
 {
-	DECLARE_SHARED_PTR(Message)
+	class Message;
 
 	class NetworkComponent
 	{
 	public:
 		NetworkComponent();
+
 		~NetworkComponent();
 
 		/**
@@ -16,7 +17,7 @@ namespace moon
 		*
 		* @thread_num 网络线程数
 		*/
-		void InitNet(int netThreadNum);
+		void InitNet(int threadNum);
 
 		/**
 		* 网络监听的地址
@@ -24,7 +25,7 @@ namespace moon
 		* @ip
 		* @port
 		*/
-		bool	Listen(const std::string& ip, const std::string& port);
+		bool				Listen(const std::string& ip, const std::string& port);
 
 		/**
 		* 异步连接服务器（可连接多个）
@@ -32,11 +33,18 @@ namespace moon
 		* @ip
 		* @port
 		*/
-		void	Connect(const std::string& ip, const std::string& port);
+		void				Connect(const std::string& ip, const std::string& port);
 
-		SessionID SyncConnect(const std::string& ip, const std::string& port);
+		/**
+		* 同步连接服务器
+		*
+		* @ip
+		* @port
+		* @return 服务器连接id
+		*/
+		SessionID		SyncConnect(const std::string& ip, const std::string& port);
 
-		void SendNetMessage(SessionID sessionID, const MessagePtr& msg);
+		void				SendNetMessage(SessionID sessionID, Message* msg);
 
 		/**
 		* 强制关闭一个网络连接
@@ -45,18 +53,18 @@ namespace moon
 		*/
 		void	Close(SessionID sessionID);
 
-		/**
-		* 网络消息处理回掉
-		*
-		*/
-		std::function<void(const MessagePtr&)> OnNetMessage;
-
-	//protected:
+	public:
 		void OnEnter();
 
 		void Update(uint32_t interval);
 
 		void OnExit();
+
+	public:
+		/**
+		* 网络消息处理回掉
+		*/
+		std::function<void(Message*)> OnNetMessage;
 	private:
 		struct  NetworkComponentImp;
 		std::shared_ptr<NetworkComponentImp>		m_NetworkComponentImp;

@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -30,11 +30,9 @@ namespace moon
 		void								SetEnableUpdate(bool);
 		bool								IsEnableUpdate();
 
-		void								SendMessage(ModuleID receiver, const MessagePtr& msg);
+		void								Send(ModuleID receiver, Message* msg);
 
-		void								BroadcastMessage(const MessagePtr& msg);
-
-		void								PushMessage(const MessagePtr& msg);
+		void								Broadcast(Message* msg);
 
 	protected:
 		virtual bool					Init(const std::string& config) { return true; };
@@ -45,7 +43,7 @@ namespace moon
 
 		virtual void					OnExit() {}
 
-		virtual void					OnMessage(const MessagePtr&) {}
+		virtual void					OnMessage(Message*) {}
 	protected:
 		size_t							GetMQSize();
 		void								SetID(ModuleID moduleID);
@@ -54,6 +52,8 @@ namespace moon
 		void								Exit();
 		void								SetOK(bool v);
 		bool								IsOk();
+
+		void								PushMessage(const MessagePtr& msg);
 		/**
 		*	check Message queue,handle a Message,if Message queue size >0,return true else return false
 		*	@return 

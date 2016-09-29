@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -97,7 +97,7 @@ namespace moon
 		});
 	}
 
-	void Worker::BroadcastMessage(const MessagePtr& msg)
+	void Worker::Broadcast(const MessagePtr& msg)
 	{
 		Post([this, msg]() {
 			for (auto& iter : m_Modules)

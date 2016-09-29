@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -15,6 +15,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "Common/LoopThread.hpp"
 #include "Common/TupleUtils.hpp"
 #include "Common/SyncQueue.hpp"
+#include "Common/StringUtils.hpp"
 
 namespace moon
 {
@@ -53,8 +54,6 @@ namespace moon
 		uint8_t																			net_thread_num;
 
 		bool																				bOpen;
-
-		SyncQueue<MemoryStreamPtr>							    MessageQueue;
 	};
 
 	NetWorkFrame::NetWorkFrame(const NetMessageDelegate& netMessageDelegate, uint8_t threadNum)
@@ -91,15 +90,13 @@ namespace moon
 		asio::ip::tcp::endpoint endpoint = *resolver.resolve(query,m_Imp->errorCode);
 		if (m_Imp->errorCode)
 		{
-			CONSOLE_TRACE("resolve endpoint failed:%s . address:%s  port:%s.", m_Imp->errorCode.message().c_str(), ip.c_str(), port.c_str());
-			return;
+			throw std::runtime_error(string_utils::format("resolve endpoint failed:%s . address:%s  port:%s.", m_Imp->errorCode.message().c_str(), ip.c_str(), port.c_str()).data());
 		}
 
 		m_Imp->acceptor.open(endpoint.protocol(), m_Imp->errorCode);
 		if (m_Imp->errorCode)
 		{
-			CONSOLE_TRACE("acceptor.open failed:%s . address:%s  port:%s.", m_Imp->errorCode.message().c_str(), ip.c_str(), port.c_str());
-			return;
+			throw std::runtime_error(string_utils::format("acceptor.open failed:%s . address:%s  port:%s.", m_Imp->errorCode.message().c_str(), ip.c_str(), port.c_str()).data());
 		}
 
 		// Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
@@ -200,7 +197,7 @@ namespace moon
 
 	void NetWorkFrame::Send(SessionID sessionID, const MemoryStreamPtr& msg)
 	{
-		m_Imp->servicepool.SendMessage(sessionID, msg);
+		m_Imp->servicepool.Send(sessionID, msg);
 	}
 
 	void moon::NetWorkFrame::CloseSession(SessionID sessionID, ESocketState state)

@@ -1,6 +1,6 @@
 /****************************************************************************
 
-Git <https://github.com/sniper00/moon_net>
+Git <https://github.com/sniper00/MoonNetLua>
 E-Mail <hanyongtao@live.com>
 Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -61,13 +61,13 @@ void NetworkServicePool::Stop()
 	}
 }
 
-void moon::NetworkServicePool::SendMessage(SessionID sessionID, const MemoryStreamPtr& msg)
+void moon::NetworkServicePool::Send(SessionID sessionID, const MemoryStreamPtr& msg)
 {
 	uint8_t servicesid = (sessionID >> 24)&0xFF;
 	auto iter = m_Services.find(servicesid);
 	if (iter != m_Services.end())
 	{
-		iter->second->SendMessage(sessionID, msg);
+		iter->second->Send(sessionID, msg);
 	}
 }
 

@@ -10,15 +10,13 @@ function  tst( ... )
 end
 
 SerializeUtil.Serialize = function (msgID,pkg,t)
-
 	local msg = CreateMessage()
+	assert(nil ~= t," must not be nil ")
+	encode = protobuf.encode(pkg,t)
+
 	local mw  = MessageWriter.new(msg)
 	mw:WriteUint16(msgID)
-
-	assert(nil ~= t," must not be nil ")
-	protobuf.encode(pkg,t)
 	mw:WriteString(encode)
-
 	return msg,mw
 end
 
@@ -26,7 +24,6 @@ SerializeUtil.SerializeEx = function (msgID)
 	local msg = CreateMessage()
 	local mw  = MessageWriter.new(msg)
 	mw:WriteUint16(msgID)
-
 	return msg,mw
 end
 

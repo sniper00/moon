@@ -23,19 +23,27 @@ function Module:GetOtherModule(name)
 end
 
 function Module:_SendMessage(recevier,msg)
- 	nativeModule:SendMessage(recevier,msg)
+ 	nativeModule:Send(recevier,msg)
 end
 
 function Module:_Broadcast(msg)
- 	nativeModule:BroadcastMessage(msg)
+ 	nativeModule:Broadcast(msg)
 end
 
-function Module:Send(receiver,msg,rpcid)
+function Module:Send(receiver,msg,rpcid,msgType)
 	rpcid = rpcid or 0
-    msg:SetType(EMessageType.ModuleData)
-    msg:SetReceiverRPC(rpcid)
+	
+    if 0 ~= rpcid then
+    	msg:SetRPCID(rpcid)
+    	msgType = msgType or EMessageType.ModuleRPC
+    else
+    	msgType = msgType or EMessageType.ModuleData
+	end
+
+	msg:SetType(msgType)
+
     self:_SendMessage(receiver,msg)
-    Log.Trace("Send receiver[%u] , rpcid [%u]",receiver,rpcid)
+    Log.Trace("Send receiver[%u] ,msgType[%d] rpcid [%u]",receiver,msgType,rpcid)
 end
 
 function Module:SendRPC(receiver,msg,cb)
@@ -43,7 +51,7 @@ function Module:SendRPC(receiver,msg,cb)
 	msg:SetType(EMessageType.ModuleData)
 	self.RPCIncreID = 	self.RPCIncreID +1
 	local id = self.RPCIncreID
-	msg:SetSenderRPC(id)
+	msg:SetRPCID(id)
 	self.RPCHandlers[id] = cb
 	self:_SendMessage(receiver,msg)
 	Log.Trace("SendRpc  rpcid[%u]", id)
@@ -71,24 +79,31 @@ function Module:RegisterMessageCB(msgID,f)
 end
 
 function Module:DispatchMessage(msg)
-	if msg:HasReceiverRPC() then	
-		local receiverRPC = msg:GetReceiverRPC()
-		local f = self.RPCHandlers[receiverRPC]
-		if nil ~= f then
-			f(msg)
-			Log.Trace("DispatchMessage Rpc[%u] success", receiverRPC)
-			return true
+	if msg:GetType() == EMessageType.ModuleRPC  then
+		if msg:HasRPCID() then	
+			local rpcID = msg:GetRPCID()
+			local f = self.RPCHandlers[rpcID]
+			if nil ~= f then
+				f(msg)
+				self.RPCHandlers[rpcID] = nil
+				Log.Trace("DispatchMessage Rpc[%u] success", rpcID)
+				return true
+			end
+			Log.Warn("DispatchMessage Rpc[%u] failed", rpcID)
+			return false
 		end
-		Log.Warn("DispatchMessage Rpc[%u] failed", receiverRPC)
+		Log.Warn("DispatchMessage Rpc failed, has no rcp id")
 		return false
 	end
 
-	local br = MessageReader.new(msg)
-	local msgID = br:ReadUint16()
+
+	local mr = MessageReader.new(msg)
+
+	local msgID = mr:ReadUint16()
 
 	if msgID == MsgID.MSG_S2S_CLIENT_CLOSE then
-		local accountID = br:ReadUint64()
-		local playerID = br:ReadUint64()
+		local accountID = mr:ReadUint64()
+		local playerID = mr:ReadUint64()
 		Module.super.OnClientClose(self,accountID,playerID)
 		return true
 	end
@@ -105,27 +120,20 @@ function Module:DispatchMessage(msg)
 		UserCtx.sessionID = msg:GetSessionID()
 	end
 
-	if msg:HasAccountID() then
+	if msg:HasPlayerID() then
+		UserCtx.playerID = msg:GetPlayerID()
+	else
 		UserCtx.accountID = msg:GetAccountID()
 	end
 
-	if msg:HasPlayerID() then
-		UserCtx.playerID = msg:GetPlayerID()
+	if msg:HasRPCID() then
+		UserCtx.rpcID = msg:GetRPCID()
 	end
 
-	if msg:HasSenderRPC() then
-		UserCtx.senderRPC = msg:GetSenderRPC()
-	end
-
-	f(UserCtx,br)
+	f(UserCtx,mr)
 
 	Log.Trace("Handler message %d", msgID)
-
 	return true
-end
-
-function Module:PushMessage(msg)
-	nativeModule:PushMessage(msg)
 end
 
 function Module:GetID()
