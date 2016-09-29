@@ -19,7 +19,7 @@ namespace moon
 	{
 		Init();
 		m_Data = ObjectCreateHelper<MemoryStream>::Create(capacity, headreserved);
-		CONSOLE_TRACE("message new %x",(size_t)(this));
+		//CONSOLE_TRACE("message new %x",(size_t)(this));
 	}
 
 	Message::Message(const MemoryStreamPtr& ms)
@@ -27,12 +27,12 @@ namespace moon
 		Init();
 
 		m_Data = ms;
-		CONSOLE_TRACE("message new %x with ms", (size_t)(this));
+		//CONSOLE_TRACE("message new %x with ms", (size_t)(this));
 	}
 
 	Message::~Message()
 	{
-		CONSOLE_TRACE("message release %x", (size_t)(this));
+		//CONSOLE_TRACE("message release %x", (size_t)(this));
 	}
 
 	ModuleID Message::GetSender() const
