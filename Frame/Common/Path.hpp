@@ -37,6 +37,23 @@ namespace moon
 			}
 		}
 
+		static std::string GetCurrentDir()
+		{
+			char path[1024] = { 0 };
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+			if (!GetCurrentDirectoryA(1024, path))
+			{
+				throw std::runtime_error("GetModuleFileName failed");
+			}		
+#else
+			if (!getcwd(path, 1024))
+			{
+				throw std::runtime_error("getcwd failed");
+			}
+#endif
+			return std::string(path);
+		}
+
 		static bool Exist(const std::string& path)
 		{
 #if TARGET_PLATFORM == PLATFORM_WINDOWS

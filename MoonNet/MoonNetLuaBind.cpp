@@ -10,7 +10,7 @@
 #include "Module.h"
 #include "ModuleLua.h"
 #include "ModuleManager.h"
-#include "NetworkComponent.h"
+#include "Network.h"
 
 #include "Detail/Log/Log.h"
 
@@ -53,6 +53,7 @@ MoonNetLuaBind & MoonNetLuaBind::BindPath()
 	tb.set_function("GetExtension", Path::GetExtension);
 	tb.set_function("GetName", Path::GetName);
 	tb.set_function("GetNameWithoutExtension", Path::GetNameWithoutExtension);
+	tb.set_function("GetCurrentDir", Path::GetCurrentDir);
 	return *this;
 }
 
@@ -76,70 +77,6 @@ MoonNetLuaBind & MoonNetLuaBind::BindLog()
 MoonNetLuaBind& MoonNetLuaBind::BindThreadSleep()
 {
 	lua.set_function("Sleep", [](int64_t ms) { thread_sleep(ms); });
-	return *this;
-}
-
-MoonNetLuaBind& MoonNetLuaBind::BindMemoryStream()
-{
-	lua.new_usertype<MemoryStream>("MemoryStream"
-		, sol::call_constructor, sol::no_constructor
-		, "Size", &MemoryStream::Size
-		, "Clear", &MemoryStream::Clear
-		);
-
-	lua.set_function("CreateMemoryStream", [](size_t size) {
-		return ObjectCreateHelper<MemoryStream>::Create(size);
-	});
-
-	return *this;
-}
-
-MoonNetLuaBind& MoonNetLuaBind::BindBinaryWriter()
-{
-	using Type = BinaryWriter<Message>;
-	lua.new_usertype<Type>("MessageWriter"
-		, sol::constructors<sol::types<Type::TPointer>>()
-		, "Size", &Type::Size
-		, "WriteString", &Type::Write<std::string>
-		, "WriteInt8", &Type::Write<int8_t>
-		, "WriteUint8", &Type::Write<uint8_t>
-		, "WriteInt16", &Type::Write<int16_t>
-		, "WriteUint16", &Type::Write<uint16_t>
-		, "WriteInt32", &Type::Write<int32_t>
-		, "WriteUint32", &Type::Write<uint32_t>
-		, "WriteInt64", &Type::Write<int64_t>
-		, "WriteUint64", &Type::Write<uint64_t>
-		, "WriteInteger", &Type::Write<int64_t>
-		, "WriteFloat", &Type::Write<float>
-		, "WriteDouble", &Type::Write<double>
-		, "WriteNumber", &Type::Write<double>
-		);
-
-	return *this;
-}
-
-MoonNetLuaBind& MoonNetLuaBind::BindBinaryReader()
-{
-	using Type = BinaryReader<Message>;
-	lua.new_usertype<Type>("MessageReader"
-		, sol::constructors<sol::types<Type::TStreamPointer>>()
-		, "Size", &Type::Size
-		, "Bytes", &Type::Bytes
-		, "ReadString", &Type::Read<std::string>
-		, "ReadInt8", &Type::Read<int8_t>
-		, "ReadUint8", &Type::Read<uint8_t>
-		, "ReadInt16", &Type::Read<int16_t>
-		, "ReadUint16", &Type::Read<uint16_t>
-		, "ReadInt32", &Type::Read<int32_t>
-		, "ReadUint32", &Type::Read<uint32_t>
-		, "ReadInt64", &Type::Read<int64_t>
-		, "ReadUint64", &Type::Read<uint64_t>
-		, "ReadInteger", &Type::Read<int64_t>
-		, "ReadFloat", &Type::Read<float>
-		, "ReadDouble", &Type::Read<double>
-		, "ReadNumber", &Type::Read<double>
-		);
-
 	return *this;
 }
 
@@ -168,17 +105,18 @@ MoonNetLuaBind& MoonNetLuaBind::BindMessage()
 		, "SetSender", &Message::SetSender
 		, "SetReceiver", &Message::SetReceiver
 		, "GetReceiver", &Message::GetReceiver
-		, "SetAccountID", &Message::SetAccountID
-		, "GetAccountID", &Message::GetAccountID
-		, "HasPlayerID", &Message::IsPlayerID
-		, "SetPlayerID", &Message::SetPlayerID
-		, "GetPlayerID", &Message::GetPlayerID
+		, "SetUserID", &Message::SetUserID
+		, "GetUserID", &Message::GetUserID
+		, "SetSubUserID", &Message::SetSubUserID
+		, "GetSubUserID", &Message::GetSubUserID
 		, "SetRPCID", &Message::SetRPCID
 		, "GetRPCID", &Message::GetRPCID
 		, "HasRPCID", &Message::HasRPCID
 		, "SetType", &Message::SetType
 		, "GetType", &Message::GetType
 		, "Size", &Message::Size
+		, "Bytes",&Message::Bytes
+		, "WriteData",&Message::WriteData
 		, "Clone",&Message::Clone
 		);
 
@@ -193,22 +131,22 @@ MoonNetLuaBind& MoonNetLuaBind::BindMessage()
 	return *this;
 }
 
-MoonNetLuaBind& MoonNetLuaBind::BindNetworkComponent()
+MoonNetLuaBind& MoonNetLuaBind::BindNetwork()
 {
-	lua.new_usertype<NetworkComponent>("NetworkComponent"
+	lua.new_usertype<Network>("Network"
 		, sol::call_constructor, sol::no_constructor
-		, "InitNet", &NetworkComponent::InitNet
-		, "Listen", &NetworkComponent::Listen
-		, "SyncConnect", &NetworkComponent::SyncConnect
-		, "Connect", &NetworkComponent::Connect
-		, "SendNetMessage", &NetworkComponent::SendNetMessage
-		, "OnEnter", &NetworkComponent::OnEnter
-		, "Update", &NetworkComponent::Update
-		, "OnExit", &NetworkComponent::OnExit
-		, "OnHandleNetMessage", &NetworkComponent::OnNetMessage
+		, "InitNet", &Network::InitNet
+		, "Listen", &Network::Listen
+		, "SyncConnect", &Network::SyncConnect
+		, "Connect", &Network::Connect
+		, "SendNetMessage", &Network::SendNetMessage
+		, "Start", &Network::Start
+		, "Update", &Network::Update
+		, "Destory", &Network::Destory
+		, "OnHandleNetMessage", &Network::OnNetMessage
 		);
 
-	lua.set_function("CreateNetwork", []() {return std::make_shared<NetworkComponent>();});
+	lua.set_function("CreateNetwork", []() {return std::make_shared<Network>();});
 	return *this;
 }
 
@@ -222,6 +160,7 @@ MoonNetLuaBind& MoonNetLuaBind::BindModule()
 		, "IsEnableUpdate", &ModuleLua::IsEnableUpdate
 		, "Send", &ModuleLua::Send
 		, "Broadcast", &ModuleLua::Broadcast
+		, "Exit", &ModuleLua::Exit
 		);
 	return *this;
 }

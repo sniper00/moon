@@ -179,7 +179,7 @@ OBJECTS := \
 	$(OBJDIR)/Message.o \
 	$(OBJDIR)/Module.o \
 	$(OBJDIR)/ModuleManager.o \
-	$(OBJDIR)/NetworkComponent.o \
+	$(OBJDIR)/Network.o \
 	$(OBJDIR)/Worker.o \
 	$(OBJDIR)/NetworkFrame.o \
 	$(OBJDIR)/NetworkService.o \
@@ -260,7 +260,7 @@ $(OBJDIR)/Module.o: ../../Frame/Detail/Module/Module.cpp
 $(OBJDIR)/ModuleManager.o: ../../Frame/Detail/Module/ModuleManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/NetworkComponent.o: ../../Frame/Detail/Module/NetworkComponent.cpp
+$(OBJDIR)/Network.o: ../../Frame/Detail/Module/Network.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Worker.o: ../../Frame/Detail/Module/Worker.cpp

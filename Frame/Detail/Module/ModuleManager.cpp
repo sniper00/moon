@@ -76,43 +76,47 @@ namespace moon
 		return m_MachineID;
 	}
 
-	void ModuleManager::RemoveModule(ModuleID actorID)
+	void ModuleManager::RemoveModule(ModuleID id)
 	{
-		uint8_t workerID = GetWorkerID(actorID);
+		uint8_t workerID = GetWorkerID(id);
 		if (workerID < m_Workers.size())
 		{		
-			m_Workers[workerID]->RemoveModule(actorID);
+			m_Workers[workerID]->RemoveModule(id);
 		}
 	}
 
-	void ModuleManager::Send(ModuleID sender, ModuleID receiver,Message* msg)
+	void ModuleManager::Send(ModuleID sender, ModuleID receiver, Message* pmsg)
 	{
-		assert(!msg->IsReadOnly()&&"can not send the same message twice");
-		msg->SetReadOnly();
+		Assert((pmsg->GetType() != EMessageType::Unknown), "sending unknown type message");
 
-		Assert((msg->GetType() != EMessageType::Unknown),"sending unknown type message");
+		Assert(!pmsg->IsReadOnly(), "the same message can only send one times, use message::clone");
+		pmsg->SetReadOnly();
+
+		auto msg = MessagePtr(pmsg);
 		msg->SetSender(sender);
 		msg->SetReceiver(receiver);
+
 		uint8_t workerID = GetWorkerID(receiver);
 		if (workerID < m_Workers.size())
 		{
-			m_Workers[workerID]->DispatchMessage(MessagePtr(msg));
+			m_Workers[workerID]->DispatchMessage(msg);
 		}
 	}
 
-	void ModuleManager::Broadcast(ModuleID sender,Message* msg)
+	void ModuleManager::Broadcast(ModuleID sender, Message* pmsg)
 	{
-		assert(!msg->IsReadOnly() && "can not send the same message twice");
-		msg->SetReadOnly();
+		Assert((pmsg->GetType() != EMessageType::Unknown), "sending unknown type message");
 
-		Assert((msg->GetType() != EMessageType::Unknown), "sending unknown type message");
+		Assert(!pmsg->IsReadOnly(), "the same message can only send one times, use message::clone");
+		pmsg->SetReadOnly();
+
+		auto msg = MessagePtr(pmsg);
 		msg->SetSender(sender);
 		msg->SetReceiver(0);
 
-		auto tmp = MessagePtr(msg);
 		for (auto& w : m_Workers)
 		{	
-			w->Broadcast(tmp);
+			w->Broadcast(msg);
 		}
 	}
 

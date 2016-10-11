@@ -21,17 +21,11 @@ public:
 
 	MoonNetLuaBind& BindThreadSleep();
 
-	MoonNetLuaBind& BindMemoryStream();
-
-	MoonNetLuaBind& BindBinaryWriter();
-
-	MoonNetLuaBind& BindBinaryReader();
-
 	MoonNetLuaBind& BindEMessageType();
 
 	MoonNetLuaBind& BindMessage();
 
-	MoonNetLuaBind& BindNetworkComponent();
+	MoonNetLuaBind& BindNetwork();
 
 	MoonNetLuaBind& BindModule();
 

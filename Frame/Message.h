@@ -14,23 +14,22 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
 	//Module消息类型
-	enum class EMessageType:uint8_t
+	enum class EMessageType :uint8_t
 	{
 		Unknown,
 		NetworkData,//网络数据
 		NetworkConnect,//网络连接消息
 		NetworkClose,//网络断开消息
 		ModuleData,//Module数据
-		ModuleRPC,//
+		ModuleRPC,//远程调用消息
 		ToClient//发送给客户端的数据
 	};
 
 	enum class EHeaderFlag:uint8_t
 	{
-		HasSessionID = 1 << 0,
-		HasPlayerID = 1 << 1,
-		HasRPCID = 1 << 2,
-		ReadOnly = 1<<3
+		HasSessionID	= 1 << 0,
+		HasRPCID			= 1 << 1,
+		ReadOnly			= 1 << 2
 	};
 
 	DECLARE_SHARED_PTR(MemoryStream)
@@ -51,36 +50,22 @@ namespace moon
 
 		~Message();
 
-		/**
-		* 获取消息的发送者ID，一个消息要么是Module之间通讯的消息，要么是网络消息
-		* 参考 GetSessionID
-		*/
-		
 		void									SetSender(ModuleID moduleID);
 		ModuleID							GetSender() const;
 
 		void									SetSessionID(SessionID id);
 		bool									IsSessionID() const;
 		SessionID							GetSessionID() const;
-		/**
-		* 设置消息的接收者ID
-		*/
+
 		void									SetReceiver(ModuleID moduleID);
 		ModuleID							GetReceiver() const;
 
-		void									SetAccountID(uint64_t accountID);
-		uint64_t							GetAccountID() const;
+		void									SetUserID(uint64_t userid);
+		uint64_t							GetUserID() const;
 
-		/**
-		*
-		*/
-		bool									IsPlayerID() const;
-		void									SetPlayerID(uint64_t playerID);
-		uint64_t							GetPlayerID() const;
+		void									SetSubUserID(uint64_t subUserID);
+		uint64_t							GetSubUserID() const;
 
-		/**
-		*
-		*/
 		bool									HasRPCID() const;
 		void									SetRPCID(uint64_t rpcID);
 		uint64_t							GetRPCID() const;
@@ -100,14 +85,19 @@ namespace moon
 			return m_Data->Data();
 		}
 
+		std::string							Bytes() const
+		{
+			return std::string((char*)Data(), Size());
+		}
+
+		void									WriteData(const std::string& v)
+		{
+			m_Data->WriteBack(v.data(),0, v.size());
+		}
+
 		size_t								Size() const
 		{
 			return m_Data->Size();
-		}
-
-		MemoryStream&				ToStream() const
-		{
-			return *m_Data;
 		}
 
 		MemoryStreamPtr			ToStreamPointer() const
@@ -131,7 +121,8 @@ namespace moon
 		ModuleID							m_Sender;
 		ModuleID							m_Receiver;
 		uint64_t							m_UserID;
-		uint64_t							m_RpcID;
+		uint64_t							m_SubUserID;
+		uint64_t							m_RPCID;
 		MemoryStreamPtr			m_Data;
 	};
 };

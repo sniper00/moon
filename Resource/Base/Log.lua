@@ -26,7 +26,6 @@ Log.Error = function (fmt,...)
 	LOGV(false,LogLevel.Error,string.format(fmt,table.unpack(arg))or "")
 end
 
-
 Log.ConsoleTrace = function (fmt,...)
 	local arg = { ... }
 	LOGV(true,LogLevel.Trace,string.format(fmt,table.unpack(arg))or "")

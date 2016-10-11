@@ -14,7 +14,6 @@ end
 
 function Network:Init(v)
     self.net:InitNet(v)
-    --self.net.OnHandleNetMessage = function(msg) self.OnMessage(self,msg) end
 end
 
 function Network:SetCB(f)
@@ -32,7 +31,7 @@ end
 
 function Network:Start()
    Log.Trace("Network Start")
-   self.net:OnEnter()
+   self.net:Start()
 end
 
 function Network:Update(a)
@@ -40,7 +39,7 @@ function Network:Update(a)
 end
 
 function Network:Destory()
-    self.net:OnExit()
+    self.net:Destory()
     Log.Trace("Network Stop")
 end
 

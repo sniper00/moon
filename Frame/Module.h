@@ -24,32 +24,33 @@ namespace moon
 		Module() noexcept;
 		virtual ~Module() {}
 
-		ModuleID					GetID() const;
+		ModuleID						GetID() const;
 		const std::string			GetName() const;
 
 		void								SetEnableUpdate(bool);
 		bool								IsEnableUpdate();
 
-		void								Send(ModuleID receiver, Message* msg);
+		void								Send(ModuleID receiver, Message*);
 
-		void								Broadcast(Message* msg);
+		void								Broadcast(Message*);
 
+		void								Exit();
 	protected:
 		virtual bool					Init(const std::string& config) { return true; };
 
-		virtual void					OnEnter() {}
+		virtual void					Start() {}
 
 		virtual void					Update(uint32_t interval) {}
 
-		virtual void					OnExit() {}
+		virtual void					Destory() {}
 
 		virtual void					OnMessage(Message*) {}
-	protected:
+
 		size_t							GetMQSize();
 		void								SetID(ModuleID moduleID);
 		void								SetName(const std::string& name);
 		void								SetManager(ModuleManager* mgr);
-		void								Exit();
+
 		void								SetOK(bool v);
 		bool								IsOk();
 

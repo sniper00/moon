@@ -1,19 +1,36 @@
-package.path    = 'Base/?.lua;Gate/?.lua;Login/?.lua;'
-package.cpath 	= 'Base/?.so;Base/?.dll;./?.so;./?.dll;'
+package.path    = 'Base/?.lua;Gate/?.lua;'
 
 require("functions")
 require("Log")
 
-local protobuf  = require "protobuf"
-local Module    = require("Module")
-local Network   = require("Network")
-local Connects  = require("Connect")
-local MsgID     = require("MsgID")
-local GateHandler = require("GateHandler")
+local protobuf      = require("protobuf")
+local Module        = require("Module")
+local Network       = require("Network")
+local Connects      = require("Connect")
+local MsgID         = require("MsgID")
+local BinaryReader  = require("BinaryReader")
+local GateHandler   = require("GateHandler")
 local GateLoginHandler = require("GateLoginHandler")
-local LoginDatas = require("LoginDatas")
+local LoginDatas    = require("LoginDatas")
 
 local Gate = class("Gate", Module)
+
+function LoadProtocol()
+    local curdir = Path.GetCurrentDir()
+    Path.TraverseFolder(curdir.."/Protocol",0,function (filepath,filetype)
+        if filetype == 1 then
+            if Path.GetExtension(filepath) == ".pb" then
+                Log.ConsoleTrace("LoadProtocol:%s",filepath)
+                local p = io.open(filepath,"rb")
+                local buffer = p:read "*a"
+                p:close()
+                protobuf.register(buffer)
+            end
+        end
+        return true
+    end)
+end
+
 
 function Gate:ctor()
     Gate.super.ctor(self)
@@ -26,13 +43,9 @@ function Gate:ctor()
     self.loginModule = 0
     self.ID          = 0
 
+    LoadProtocol();
+
     Log.Trace("ctor Gate")
-
-    addr = io.open("MsgLogin.pb","rb")
-    buffer = addr:read "*a"
-    addr:close()
-    protobuf.register(buffer)
-
 end
 
 function Gate:Init(config)
@@ -43,8 +56,8 @@ function Gate:Init(config)
     self.net:Init(1)
     self.net:Listen("127.0.0.1", "11111")
     self.net:SetCB(handler(self,self.OnNetMessage))
-    Gate.super.AddComponent(self, "Network", self.net)
-
+    
+    Gate.super.AddComponent(self,"Network", self.net)
     Gate.super.AddComponent(self,"Connects", Connects.new())
     Gate.super.AddComponent(self,"GateHandler", GateHandler.new())
     Gate.super.AddComponent(self,"GateLoginHandler",GateLoginHandler.new())
@@ -75,8 +88,8 @@ function Gate:OnMessage(msg)
 end
 
 function Gate:ClientConnect(msg)
-    local mr = MessageReader.new(msg)
-    Log.ConsoleTrace("CLIENT CONNECT: %s",mr:ReadString())
+    local br = BinaryReader.new(msg:Bytes())
+    Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
 end
 
 function Gate:ClientData(msg)
@@ -91,8 +104,8 @@ function Gate:ClientData(msg)
         return
     end
 
-    local mr = MessageReader.new(msg)
-    local msgID = mr:ReadUint16()
+    local br = BinaryReader.new(msg:Bytes())
+    local msgID = br:ReadUInt16()
 
     if msgID > MsgID.MSG_MUST_HAVE_PLAYERID then
         Log.ConsoleWarn("Illegal Msg: client not login msgID[%u].",msgID)
@@ -100,9 +113,9 @@ function Gate:ClientData(msg)
     end
 
     if conn.playerID ~= 0 then
-        msg:SetPlayerID(conn.playerID)
+        msg:SetUserID(conn.playerID)
     elseif conn.accountID ~=0 then
-        msg:SetAccountID(conn.accountID)
+        msg:SetSubUserID(conn.accountID)
     end
 
     if conn.sceneID ~= 0 then
@@ -116,8 +129,8 @@ function Gate:ClientData(msg)
 end
 
 function Gate:ClientClose(msg)
-    local mr = MessageReader.new(msg)
-    Log.ConsoleTrace("CLIENT CLOSE: %s",mr:ReadString())
+    local br = BinaryReader.new(msg:Bytes())
+    Log.ConsoleTrace("CLIENT CLOSE: %s",br:ReadString())
 
     local sessionID = msg:GetSessionID()
 

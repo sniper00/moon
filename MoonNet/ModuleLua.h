@@ -11,11 +11,11 @@ public:
 	
 	bool								Init(const std::string& config) override;
 
-	void								OnEnter()  override;
+	void								Start()  override;
 
 	void								Update(uint32_t interval)  override;
 
-	void								OnExit() override;
+	void								Destory() override;
 
 	void								OnMessage(moon::Message*) override;
 private:

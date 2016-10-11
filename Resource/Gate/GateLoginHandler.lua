@@ -5,6 +5,8 @@ local protobuf 			= require "protobuf"
 local MsgID 			= require("MsgID")
 local Component 		= require("Component")
 local SerializeUtil 	= require("SerializeUtil")
+local Stream 			= require("Stream")
+local BinaryReader 		= require("BinaryReader")
 
 local GateLoginHandler = class("GateLoginHandler",Component)
 
@@ -44,9 +46,12 @@ function GateLoginHandler:OnClientClose(account, player)
 
 	Log.ConsoleTrace("Client close accountID[%u] playerID[%u]",account,player)
 
-	local msg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_CLIENT_CLOSE)
-	mw:WriteUint64(account)
-	mw:WriteUint64(player)
+	local sm = Stream.new()
+	sm:WriteUInt64(account)
+	sm:WriteUInt64(player)
+
+	local msg = SerializeUtil.SerializeEx(MsgID.MSG_S2S_CLIENT_CLOSE)
+	msg:WriteData(sm:Bytes())
 
 	thisModule:Broadcast(msg)
 
@@ -67,10 +72,14 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 	Log.Trace("2.Login username[%s] password[%s] accountID[%u] sessionID[%d] add to login data ", s.username,s.password ,accountID,sessionID)
 
 	-- send to login module
-	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_C2S_REQ_LOGIN)
-	mw:WriteUint64(serialNum)
-	mw:WriteUint64(accountID)
-	mw:WriteString(s.password)
+	local sm = Stream.new()
+	sm:WriteUInt64(serialNum)
+	sm:WriteUInt64(accountID)
+	sm:WriteString(s.password)
+
+	local smsg = SerializeUtil.SerializeEx(MsgID.MSG_C2S_REQ_LOGIN)
+	smsg:WriteData(sm:Bytes())
+
 
 	if self.loginModule == 0 then
 		self.loginModule = thisModule:GetOtherModule("login")
@@ -86,10 +95,10 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 			return
 		end
 	
-		local mr = MessageReader.new(msg)
-		local loginret = mr:ReadString()
-		local sn = mr:ReadUint64()
-		local act = mr:ReadUint64()
+		local br = BinaryReader.new(msg:Bytes())
+		local loginret = br:ReadString()
+		local sn = br:ReadUInt64()
+		local act = br:ReadUInt64()
 
 
 		assert(serialNum == sn and  accountID == act,"login check")

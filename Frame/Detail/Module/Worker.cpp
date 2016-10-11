@@ -46,8 +46,8 @@ namespace moon
 		Post([this]() {
 			for (auto& iter : m_Modules)
 			{
-				iter.second->OnExit();
-				CONSOLE_TRACE("Module [%s:%u] Exit", iter.second->GetName().c_str(), iter.second->GetID());
+				iter.second->Destory();
+				CONSOLE_TRACE("Module [%s:%u] Destory", iter.second->GetName().c_str(), iter.second->GetID());
 			}
 			m_Modules.clear();
 		});
@@ -69,8 +69,8 @@ namespace moon
 		Post([this, module]() {
 			auto iter = m_Modules.find(module->GetID());
 			assert(iter == m_Modules.end());
-			CONSOLE_TRACE("Module [%s:%u] Enter", module->GetName().c_str(), module->GetID());
-			module->OnEnter();
+			CONSOLE_TRACE("Module [%s:%u] Start", module->GetName().c_str(), module->GetID());
+			module->Start();
 			m_Modules.emplace(module->GetID(), module);
 		});
 	}
@@ -80,8 +80,8 @@ namespace moon
 		Post([this, moduleID]() {
 			auto iter = m_Modules.find(moduleID);
 			assert(iter != m_Modules.end());
-			iter->second->OnExit();
-			CONSOLE_TRACE("Module [%s:%u] Exit", iter->second->GetName().c_str(), iter->second->GetID());
+			iter->second->Destory();
+			CONSOLE_TRACE("Module [%s:%u] Destory", iter->second->GetName().c_str(), iter->second->GetID());
 			m_Modules.erase(moduleID);	
 		});
 	}

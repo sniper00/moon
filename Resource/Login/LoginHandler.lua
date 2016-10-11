@@ -4,6 +4,8 @@ local SerializeUtil = require("SerializeUtil")
 local MsgID 		= require("MsgID")
 local Component 	= require("Component")
 local SerializeUtil = require("SerializeUtil")
+local Stream		= require("Stream")
+local BinaryReader = require("BinaryReader")
 
 local LoginHandler = class("LoginHandler",Component)
 
@@ -31,18 +33,25 @@ function LoginHandler:Start()
 end
 
 function LoginHandler:OnServerStart(userCtx, data)
-	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
-	mw:WriteString(thisModule:GetName())
-	mw:WriteUint32(thisModule:GetID())
-	thisModule:Broadcast(smsg)
 	Log.ConsoleTrace("Login Module: server start")
+	
+	local s = Stream.new()
+	s:WriteString(thisModule:GetName())
+	s:WriteUInt32(thisModule:GetID())
+
+	local msg = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
+	msg:WriteData(s:Bytes())
+
+	thisModule:Broadcast(msg)
 end
 
 function LoginHandler:OnModuleStart(userCtx, data)
+
 	local name = data:ReadString()
-	local id   = data:ReadUint32()
+	local id   = data:ReadUInt32()
+
 	if id ~= thisModule:GetID() then
-		Log.ConsoleTrace("Login : %s %d module start",name,id)
+		Log.ConsoleTrace("Login: %s %d module start",name,id)
 		thisModule:RegisterOtherModule(name,id)
 		if name == "world" then
 			thisModule:SetWorldModule(id)
@@ -54,8 +63,8 @@ function LoginHandler:OnModuleStart(userCtx, data)
 end
 
 function LoginHandler:OnRequestLogin(userCtx, data)
-	local serialNum = data:ReadUint64()
-	local accountID = data:ReadUint64()
+	local serialNum = data:ReadUInt64()
+	local accountID = data:ReadUInt64()
 	local password = data:ReadString()
 
 	local ret = "Ok"
@@ -73,10 +82,12 @@ function LoginHandler:OnRequestLogin(userCtx, data)
 	end
 
 	local msg = CreateMessage()
-	local mw  = MessageWriter.new(msg)
-	mw:WriteString(ret)
-	mw:WriteUint64(serialNum)
-	mw:WriteUint64(accountID)
+	local sm  = Stream.new()
+	sm:WriteString(ret)
+	sm:WriteUInt64(serialNum)
+	sm:WriteUInt64(accountID)
+
+	msg:WriteData(sm:Bytes())
 
 	Log.Trace("login module send to gate rpcID [%u]",userCtx.rpcID or 0)
 	thisModule:Send(thisModule:GetGateModule(),msg,userCtx.rpcID)

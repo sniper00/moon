@@ -1,6 +1,7 @@
 require("functions")
 local Component = require("Component")
 local MsgID     = require("MsgID")
+local BinaryReader = require("BinaryReader")
 
 local Module 	= class("Module",Component)
 
@@ -96,14 +97,12 @@ function Module:DispatchMessage(msg)
 		return false
 	end
 
-
-	local mr = MessageReader.new(msg)
-
-	local msgID = mr:ReadUint16()
+	local br   	= BinaryReader.new(msg:Bytes())
+	local msgID = br:ReadUInt16()
 
 	if msgID == MsgID.MSG_S2S_CLIENT_CLOSE then
-		local accountID = mr:ReadUint64()
-		local playerID = mr:ReadUint64()
+		local accountID = br:ReadUInt64()
+		local playerID 	= br:ReadUInt64()
 		Module.super.OnClientClose(self,accountID,playerID)
 		return true
 	end
@@ -120,17 +119,16 @@ function Module:DispatchMessage(msg)
 		UserCtx.sessionID = msg:GetSessionID()
 	end
 
-	if msg:HasPlayerID() then
-		UserCtx.playerID = msg:GetPlayerID()
-	else
-		UserCtx.accountID = msg:GetAccountID()
+	UserCtx.playerID = msg:GetSubUserID()
+	if UserCtx.playerID == 0 then
+		UserCtx.accountID = msg:GetUserID()
 	end
 
 	if msg:HasRPCID() then
 		UserCtx.rpcID = msg:GetRPCID()
 	end
 
-	f(UserCtx,mr)
+	f(UserCtx,br)
 
 	Log.Trace("Handler message %d", msgID)
 	return true

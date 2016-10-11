@@ -14,10 +14,10 @@ namespace moon
 	class BinaryWriter
 	{
 	public:
-		using TPointer = T*;
+		using TStreamPointer = T*;
 		using StreamType = typename T::StreamType;
 
-		explicit BinaryWriter(TPointer t)
+		explicit BinaryWriter(TStreamPointer t)
 			:m_ms(t->ToStream())
 		{
 		}

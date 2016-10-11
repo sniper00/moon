@@ -15,7 +15,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	class ModuleManager;
 	class Message;
 
 	DECLARE_SHARED_PTR(Module)
@@ -44,7 +43,7 @@ namespace moon
 		* 向工作线程添加Module
 		*
 		*/
-		void AddModule(const ModulePtr& act);
+		void AddModule(const ModulePtr& m);
 
 		/**
 		* 移除Module
@@ -71,7 +70,7 @@ namespace moon
 		void			Update(uint32_t interval);
 	private:
 		uint8_t																			m_WorkerID;
-		std::unordered_map<ModuleID, ModulePtr>			m_Modules;
+		std::unordered_map<ModuleID, ModulePtr>				m_Modules;
 		//模块处理队列
 		std::deque<Module*>													m_HandleQueue;
 

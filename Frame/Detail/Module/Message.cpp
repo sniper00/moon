@@ -79,32 +79,24 @@ namespace moon
 		return m_Receiver;
 	}
 
-	void Message::SetAccountID(uint64_t accountID)
+	void Message::SetUserID(uint64_t userID)
 	{
-		ClearFlag(EHeaderFlag::HasPlayerID);
-		m_UserID = accountID;
+		m_UserID = userID;
 	}
 
-	uint64_t Message::GetAccountID() const
+	uint64_t Message::GetUserID() const
 	{
 		return m_UserID;
 	}
 
-	bool Message::IsPlayerID() const
+	void Message::SetSubUserID(uint64_t subuserID)
 	{
-		return CheckFlag(EHeaderFlag::HasPlayerID);
+		m_SubUserID = subuserID;
 	}
 
-	void Message::SetPlayerID(uint64_t playerID)
+	uint64_t Message::GetSubUserID() const
 	{
-		SetFlag(EHeaderFlag::HasPlayerID);
-		m_UserID = playerID;
-	}
-
-	uint64_t Message::GetPlayerID() const
-	{
-		assert(CheckFlag(EHeaderFlag::HasPlayerID));
-		return m_UserID;
+		return m_SubUserID;
 	}
 
 	bool Message::HasRPCID() const
@@ -115,13 +107,13 @@ namespace moon
 	void Message::SetRPCID(uint64_t rpcID)
 	{
 		SetFlag(EHeaderFlag::HasRPCID);
-		m_RpcID = rpcID;
+		m_RPCID = rpcID;
 	}
 
 	uint64_t Message::GetRPCID() const
 	{
 		Assert(CheckFlag(EHeaderFlag::HasRPCID),"has no rpc id");
-		return m_RpcID;
+		return m_RPCID;
 	}
 
 	bool Message::IsReadOnly() const
@@ -150,7 +142,7 @@ namespace moon
 		msg->m_Flag = m_Flag;
 		msg->m_Receiver = m_Receiver;
 		msg->m_Sender = m_Sender;
-		msg->m_RpcID = m_RpcID;
+		msg->m_RPCID = m_RPCID;
 		msg->m_Type = m_Type;
 		msg->m_UserID = m_UserID;
 		return msg;
@@ -163,7 +155,8 @@ namespace moon
 		m_Sender = 0;
 		m_Receiver = 0;
 		m_UserID = 0;
-		m_RpcID = 0;
+		m_SubUserID = 0;
+		m_RPCID = 0;
 	}
 
 	bool Message::CheckFlag(EHeaderFlag flag) const

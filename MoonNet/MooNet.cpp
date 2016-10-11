@@ -4,6 +4,7 @@
 #include "sol.hpp"
 #include "Detail/Log/Log.h"
 #include "MoonNetLuaBind.h"
+#include "Common/Path.hpp"
 
 int main()
 {
@@ -15,10 +16,8 @@ int main()
 		luaBind.BindModuleManager()
 			.BindEMessageType()
 			.BindMessage()
-			.BindMemoryStream()
-			.BindBinaryReader()
-			.BindBinaryWriter()
 			.BindPath();
+
 		lua.script_file("main.lua");
 	}
 	catch (sol::error& e)
@@ -26,6 +25,8 @@ int main()
 		CONSOLE_ERROR("%s", e.what());
 		CONSOLE_DEBUG("Traceback: %s", Traceback(lua.lua_state()).data());
 	}
+
+	
 
 	return 0;
 }

@@ -9,12 +9,12 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 #pragma once
 
-#define PLATFORM_UNKNOWN     0
-#define PLATFORM_WINDOWS		 1
-#define PLATFORM_LINUX              2
-#define PLATFORM_MAC				 3
+#define PLATFORM_UNKNOWN			0
+#define PLATFORM_WINDOWS			1
+#define PLATFORM_LINUX					2
+#define PLATFORM_MAC						3
 
-#define TARGET_PLATFORM             PLATFORM_UNKNOWN
+#define TARGET_PLATFORM				PLATFORM_UNKNOWN
 
 // mac
 #if defined(__APPLE__) && (defined(__GNUC__) || defined(__xlC__) || defined(__xlc__))  

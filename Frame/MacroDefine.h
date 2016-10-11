@@ -43,11 +43,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-#ifdef EXPORT_MOON_NET
-#define MOON_DLL	__declspec(dllexport)
-#else
-#define MOON_DLL
-#endif
+#include <WinSock2.h>
 #define strnicmp	_strnicmp
 #ifdef  _WIN64
 typedef __int64    ssize_t;
@@ -85,15 +81,7 @@ using classname##Ptr = std::shared_ptr<classname>;
 class classname;\
 using classname##WPtr = std::weak_ptr<classname>;
 
-
-#ifdef DEBUG
-#define Assert(cnd,msg) assert((cnd)&&(msg))
-#else
 #define Assert(cnd,msg) {if(!(cnd)) throw std::runtime_error(msg);}
-#endif // DEBUG
-
-#define CHECKWARNING(cnd,msg)  {if(!(cnd)) printf(msg);printf("\r\n");}
-
 
 template <class T>
 inline bool bool_cast(const T& t)
@@ -117,6 +105,8 @@ bool contains_key(const TMap& map, typename TMap::key_type key)
 
 using ModuleID = uint32_t;
 using SessionID = uint32_t;
+
+
 
 
 

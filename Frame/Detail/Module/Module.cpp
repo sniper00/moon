@@ -22,12 +22,12 @@ namespace moon
 		{
 		}
 
-		ModuleID															ID;
+		ModuleID																ID;
 		std::string																Name;
 		std::string																Config;
 		bool																		EnableUpdate;
 		bool																		Ok;
-		ModuleManager*												Manager;
+		ModuleManager*													Manager;
 		std::deque<MessagePtr>									MessageQueue;
 	};
 
@@ -69,7 +69,7 @@ namespace moon
 
 	void Module::Broadcast(Message* msg)
 	{
-		m_ModuleImp->Manager->Broadcast(GetID(), msg);
+		m_ModuleImp->Manager->Broadcast(GetID(),msg);
 	}
 
 	void Module::Send(ModuleID receiver, Message* msg)
@@ -77,11 +77,16 @@ namespace moon
 		//if send Message to self , add to MessageQueue directly.
 		if (receiver == GetID())
 		{
-			msg->SetReceiver(GetID());
-			PushMessage(MessagePtr(msg));
+			Assert((msg->GetType() != EMessageType::Unknown), "sending unknown type message");
+			Assert(!msg->IsReadOnly(), "the same message can only send one times, use message::clone");
+			msg->SetReadOnly();
+
+			auto tmp = MessagePtr(msg);
+			tmp->SetReceiver(GetID());
+			PushMessage(tmp);
 			return;
 		}
-		m_ModuleImp->Manager->Send(GetID(),receiver, msg);
+		m_ModuleImp->Manager->Send(GetID(),receiver,msg);
 	}
 
 	void Module::SetManager(ModuleManager* mgr)

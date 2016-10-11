@@ -9,15 +9,16 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 #pragma once
 #include "MacroDefine.h"
+#include "Common/noncopyable.hpp"
 
 namespace moon
 {
-	DECLARE_SHARED_PTR(Module)
 	DECLARE_SHARED_PTR(Worker)
+	DECLARE_SHARED_PTR(Module)
 	class Message;
 
 	//Module 管理类，负责Module的创建，调度，移除
-	class ModuleManager
+	class ModuleManager:public noncopyable
 	{
 	public:
 		ModuleManager();
@@ -25,8 +26,8 @@ namespace moon
 
 		/**
 		* 初始化
-		*
-		* @workerNum 工作线程数目(至少为1)
+		* @config 初始化字符串 key-value形式 : machine_id:1;worker_num:2;
+		*	machine_id 默认值是0， worker_num（工作者线程数目） 默认值是 1
 		*/
 		void			Init(const std::string& config);
 
@@ -34,21 +35,22 @@ namespace moon
 		* 为了跨进程 Module通讯 设置MachineID,用于区分不同machine,最多可以有255个
 		* MachineID 会保存在 ModuleID的高8位
 		*
-		* @return machine id
+		* @return 初始化时所配置的machine_id,或者 0
 		*/
 		uint8_t		GetMachineID();
 
 		/**
 		* 创建Module
 		*
-		* @config 创建Module所需的配置，会传递给Module::init
+		* @config 创建Module所需的配置，会传递给Module::Init
 		*/
 		template<typename TModule>
 		void			CreateModule(const std::string& config);
+
 		/**
 		* 根据ID移除Module
 		*
-		* @id Module id
+		* @moduleID 
 		*/
 		void			RemoveModule(ModuleID moduleID);
 
@@ -64,10 +66,10 @@ namespace moon
 		/**
 		* 向所有Module（除了发送者）广播消息
 		*
-		* @sender 发送者id
-		* @msg 消息内容
+		* @sender	发送者id
+		* @msg		消息内容
 		*/
-		void			Broadcast(ModuleID sender,Message* msg);
+		void			Broadcast(ModuleID sender, Message* msg);
 
 		/**
 		* 启动所有Worker线程
@@ -90,15 +92,15 @@ namespace moon
 		/**
 		* 把Module添加到 Worker
 		* @workerid 
-		* @actor_ptr 
+		* @m
 		*/
-		void			AddModuleToWorker(uint8_t workerid,const ModulePtr& act);
+		void			AddModuleToWorker(uint8_t workerid,const ModulePtr& m);
 
 		/**
 		* 根据Module ID 获取所在的 workerID
-		* @actorID 
+		* @module id
 		*/
-		uint8_t		GetWorkerID(ModuleID actorID);
+		uint8_t		GetWorkerID(ModuleID id);
 
 	private:
 		std::atomic<uint8_t>													m_nextWorker;

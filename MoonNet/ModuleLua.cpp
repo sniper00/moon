@@ -4,6 +4,7 @@
 #include "Message.h"
 #include "Common/StringUtils.hpp"
 #include "Common/TupleUtils.hpp"
+#include "Common/Path.hpp"
 #include "Detail/Log/Log.h"
 #include "sol.hpp"
 
@@ -59,7 +60,7 @@ bool ModuleLua::Init(const std::string& config)
 	return true;
 }
 
-void ModuleLua::OnEnter()
+void ModuleLua::Start()
 {
 	sol::state& lua = m_ModuleLuaImp->lua;
 
@@ -69,13 +70,12 @@ void ModuleLua::OnEnter()
 		.BindThreadSleep()
 		.BindEMessageType()
 		.BindMessage()
-		.BindMemoryStream()
-		.BindBinaryReader()
-		.BindBinaryWriter()
-		.BindNetworkComponent()
+		.BindNetwork()
 		.BindModule()
 		.BindLog()
-		.BindUtil();
+		.BindUtil()
+		.BindPath();
+
 
 	auto& conf = m_ModuleLuaImp->KvConfig;
 	if (!contains_key(conf, "luafile"))
@@ -89,6 +89,13 @@ void ModuleLua::OnEnter()
 		try
 		{
 			auto& lua = m_ModuleLuaImp->lua;
+
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+			lua.script("package.cpath = './Lib/?.dll;'");
+#else
+			lua.script("package.cpath = './Lib/?.so;'");
+#endif
+
 			auto& conf = m_ModuleLuaImp->KvConfig;
 			lua.set("nativeModule", this);
 			sol::object obj = lua.require_file(conf["name"], conf["luafile"]);
@@ -125,6 +132,8 @@ void ModuleLua::OnEnter()
 			end
 			)");
 
+			
+
 			m_ModuleLuaImp->Init = lua["Init"];
 			m_ModuleLuaImp->Start = lua["Start"];
 			m_ModuleLuaImp->Update = lua["Update"];
@@ -145,7 +154,7 @@ void ModuleLua::OnEnter()
 	}
 }
 
-void ModuleLua::OnExit()
+void ModuleLua::Destory()
 {
 	if (!IsOk())
 		return;

@@ -81,7 +81,6 @@ namespace moon
 				auto length = static_cast<size_t>(is.tellg());
 				is.close();
 				return length;
-
 			}
 			return 0;
 		}

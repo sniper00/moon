@@ -3,6 +3,7 @@ require("functions")
 local SerializeUtil = require("SerializeUtil")
 local MsgID 		= require("MsgID")
 local Component 	= require("Component")
+local Stream		= require("Stream")
 
 
 local  GateHandler 	= class("GateHandler",Component)
@@ -18,18 +19,23 @@ end
 
 function GateHandler:OnServerStart(userCtx, data)
 	Log.ConsoleTrace("Gate Module: server start")
-	local smsg,mw = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
-	mw:WriteString(thisModule:GetName())
-	mw:WriteUint32(thisModule:GetID())
-	thisModule:Broadcast(smsg)
+	local msg = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
+
+	local s = Stream.new()
+	s:WriteString(thisModule:GetName())
+	s:WriteUInt32(thisModule:GetID())
+
+	msg:WriteData(s:Bytes())
+
+	thisModule:Broadcast(msg)
 end
 
 function GateHandler:OnModuleStart(userCtx, data)
 	local name = data:ReadString()
-	local id   = data:ReadUint32()
+	local id   = data:ReadUInt32()
 
 	if id ~= thisModule:GetID() then
-		Log.ConsoleTrace("Gate Module: %s %d module start",name,id)
+		Log.ConsoleTrace("Gate: %s %d module start",name,id)
 		thisModule:RegisterOtherModule(name,id)
 		if name == "world" then
 			thisModule:SetWorldModule(id)

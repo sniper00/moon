@@ -48,9 +48,6 @@
     <ClInclude Include="..\..\Frame\Common\MemoryStream.hpp">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Frame\Common\ObjectPool.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Frame\Common\Path.hpp">
       <Filter>Common</Filter>
     </ClInclude>
@@ -78,9 +75,6 @@
     <ClInclude Include="..\..\Frame\Common\noncopyable.hpp">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Frame\Common\singleton.hpp">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Frame\Component.h" />
     <ClInclude Include="..\..\Frame\Detail\Log\Log.h">
       <Filter>Detail\Log</Filter>
@@ -106,14 +100,11 @@
     <ClInclude Include="..\..\Frame\Detail\Network\Session.h">
       <Filter>Detail\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Frame\Detail\config.hpp">
-      <Filter>Detail</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Frame\MacroDefine.h" />
     <ClInclude Include="..\..\Frame\Message.h" />
     <ClInclude Include="..\..\Frame\Module.h" />
     <ClInclude Include="..\..\Frame\ModuleManager.h" />
-    <ClInclude Include="..\..\Frame\NetworkComponent.h" />
+    <ClInclude Include="..\..\Frame\Network.h" />
     <ClInclude Include="..\..\Frame\ObjectCreateHelper.h" />
     <ClInclude Include="..\..\Frame\PlatformConfig.h" />
   </ItemGroup>
@@ -136,7 +127,7 @@
     <ClCompile Include="..\..\Frame\Detail\Module\ModuleManager.cpp">
       <Filter>Detail\Module</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Frame\Detail\Module\NetworkComponent.cpp">
+    <ClCompile Include="..\..\Frame\Detail\Module\Network.cpp">
       <Filter>Detail\Module</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Frame\Detail\Module\Worker.cpp">
