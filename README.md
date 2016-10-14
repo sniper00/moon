@@ -12,4 +12,5 @@ Linux Platform:
 - make config=release_linux
 
 ##Run
-Copy the MooNet(.exe) lua.so/.dll protubuf.so/.dll to resource path
+Copy MooNet(.exe) lua.so/.dll to Resource path
+Copy protubuf.so/.dll  to Resource/Lib path 
