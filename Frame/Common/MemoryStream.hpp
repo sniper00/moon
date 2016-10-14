@@ -42,20 +42,11 @@ namespace moon
 		}
 
 		MemoryStream(const MemoryStream& other) = default;
-	
-
 		MemoryStream(MemoryStream&& other) = default;
-
-
-		~MemoryStream(void)
-		{
-			
-		}
 
 		void Init(size_t capacity = DEFAULT_CAPACITY, size_t headreserved = 0)
 		{
 			m_data.resize(capacity + headreserved);
-
 			m_readpos = headreserved;
 			m_writepos = headreserved;
 		}

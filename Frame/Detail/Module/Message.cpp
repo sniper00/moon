@@ -37,35 +37,11 @@ namespace moon
 
 	ModuleID Message::GetSender() const
 	{
-		bool v = CheckFlag(EHeaderFlag::HasSessionID);
-		assert(!v);
-		if (v)
-		{
-			return ModuleID();
-		}
-		return m_Sender;
-	}
-
-	void Message::SetSessionID(SessionID id)
-	{
-		SetFlag(EHeaderFlag::HasSessionID);
-		m_Sender = id;
-	}
-
-	bool Message::IsSessionID() const
-	{
-		return CheckFlag(EHeaderFlag::HasSessionID);
-	}
-
-	SessionID Message::GetSessionID() const
-	{
-		assert(CheckFlag(EHeaderFlag::HasSessionID));
 		return m_Sender;
 	}
 
 	void Message::SetSender(ModuleID moduleID)
 	{
-		ClearFlag(EHeaderFlag::HasSessionID);
 		m_Sender = moduleID;
 	}
 
@@ -79,51 +55,24 @@ namespace moon
 		return m_Receiver;
 	}
 
-	void Message::SetUserID(uint64_t userID)
+	void Message::SetUserData(const std::string & userdata)
 	{
-		m_UserID = userID;
+		m_UserData = std::move(userdata);
 	}
 
-	uint64_t Message::GetUserID() const
+	const std::string & Message::GetUserData() const
 	{
-		return m_UserID;
-	}
-
-	void Message::SetSubUserID(uint64_t subuserID)
-	{
-		m_SubUserID = subuserID;
-	}
-
-	uint64_t Message::GetSubUserID() const
-	{
-		return m_SubUserID;
-	}
-
-	bool Message::HasRPCID() const
-	{
-		return CheckFlag(EHeaderFlag::HasRPCID);
+		return m_UserData;
 	}
 
 	void Message::SetRPCID(uint64_t rpcID)
 	{
-		SetFlag(EHeaderFlag::HasRPCID);
 		m_RPCID = rpcID;
 	}
 
 	uint64_t Message::GetRPCID() const
 	{
-		Assert(CheckFlag(EHeaderFlag::HasRPCID),"has no rpc id");
 		return m_RPCID;
-	}
-
-	bool Message::IsReadOnly() const
-	{
-		return CheckFlag(EHeaderFlag::ReadOnly);
-	}
-
-	void Message::SetReadOnly()
-	{
-		SetFlag(EHeaderFlag::ReadOnly);
 	}
 
 	void Message::SetType(EMessageType type)
@@ -136,18 +85,6 @@ namespace moon
 		return (EMessageType)m_Type;
 	}
 
-	Message * Message::Clone()
-	{
-		auto msg = new Message(m_Data);
-		msg->m_Flag = m_Flag;
-		msg->m_Receiver = m_Receiver;
-		msg->m_Sender = m_Sender;
-		msg->m_RPCID = m_RPCID;
-		msg->m_Type = m_Type;
-		msg->m_UserID = m_UserID;
-		return msg;
-	}
-
 	void Message::Init()
 	{
 		m_Type = (uint8_t)EMessageType::Unknown;
@@ -157,21 +94,6 @@ namespace moon
 		m_UserID = 0;
 		m_SubUserID = 0;
 		m_RPCID = 0;
-	}
-
-	bool Message::CheckFlag(EHeaderFlag flag) const
-	{
-		return (m_Flag&static_cast<uint8_t>(flag)) != 0;
-	}
-
-	void Message::SetFlag(EHeaderFlag flag)
-	{
-		m_Flag |= (static_cast<uint8_t>(flag));
-	}
-
-	void Message::ClearFlag(EHeaderFlag flag)
-	{
-		m_Flag &= (~(static_cast<uint8_t>(flag)));
 	}
 }
 

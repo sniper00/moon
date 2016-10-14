@@ -17,7 +17,7 @@ public:
 
 	void								Destory() override;
 
-	void								OnMessage(moon::Message*) override;
+	void								OnMessage(ModuleID sender,const std::string&data, const std::string& userdata, uint64_t rpcID, uint8_t type) override;
 private:
 	struct ModuleLuaImp;
 	std::unique_ptr<ModuleLuaImp> m_ModuleLuaImp;

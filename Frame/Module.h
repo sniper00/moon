@@ -15,7 +15,7 @@ namespace moon
 	class ModuleManager;
 	DECLARE_SHARED_PTR(Message);
 
-	class  Module:public noncopyable
+	class  Module :public noncopyable
 	{
 	public:
 		friend class Worker;
@@ -24,27 +24,31 @@ namespace moon
 		Module() noexcept;
 		virtual ~Module() {}
 
-		ModuleID						GetID() const;
-		const std::string			GetName() const;
+		ModuleID 				GetID() const;
+		const std::string		GetName() const;
 
-		void								SetEnableUpdate(bool);
-		bool								IsEnableUpdate();
+		void							SetEnableUpdate(bool);
+		bool							IsEnableUpdate();
 
-		void								Send(ModuleID receiver, Message*);
+		void							Send(ModuleID receiver, const std::string& data, const std::string& userdata, uint64_t rpcID, uint8_t type);
 
-		void								Broadcast(Message*);
+		void							SendByCache(ModuleID receiver, uint32_t cacheID, const std::string& userdata, uint64_t rpcID, uint8_t type);
 
-		void								Exit();
+		void							Broadcast(const std::string& data, const std::string& userdata, uint8_t type);
+
+		uint32_t					CreateCache(const std::string& data);
+
+		void							Exit();
 	protected:
 		virtual bool					Init(const std::string& config) { return true; };
 
 		virtual void					Start() {}
 
-		virtual void					Update(uint32_t interval) {}
+		virtual void					Update(uint32_t interval);
 
 		virtual void					Destory() {}
 
-		virtual void					OnMessage(Message*) {}
+		virtual void					OnMessage(ModuleID sender, const std::string&data, const std::string& userdata, uint64_t rpcID, uint8_t type) {}
 
 		size_t							GetMQSize();
 		void								SetID(ModuleID moduleID);
@@ -57,7 +61,7 @@ namespace moon
 		void								PushMessage(const MessagePtr& msg);
 		/**
 		*	check Message queue,handle a Message,if Message queue size >0,return true else return false
-		*	@return 
+		*	@return
 		*/
 		bool								PeekMessage();
 	private:

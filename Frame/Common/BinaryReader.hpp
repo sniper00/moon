@@ -16,17 +16,9 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	template<typename TStream>
 	class BinaryReader
 	{
 	public:
-		using TStreamPointer = TStream*;
-
-		explicit BinaryReader(TStreamPointer t)
-			:m_data(t->Data()), m_readpos(0), m_size(t->Size())
-		{
-		}
-
 		BinaryReader(const uint8_t* data, size_t size)
 			:m_data(data), m_readpos(0), m_size(size)
 		{

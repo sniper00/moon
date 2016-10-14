@@ -13,6 +13,8 @@ public:
 
 	MoonNetLuaBind& BindTime();
 
+	MoonNetLuaBind& BindTimer();
+
 	MoonNetLuaBind& BindUtil();
 
 	MoonNetLuaBind& BindPath();
@@ -22,8 +24,6 @@ public:
 	MoonNetLuaBind& BindThreadSleep();
 
 	MoonNetLuaBind& BindEMessageType();
-
-	MoonNetLuaBind& BindMessage();
 
 	MoonNetLuaBind& BindNetwork();
 

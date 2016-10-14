@@ -36,11 +36,6 @@ namespace moon
 	using NetMessageDelegate = std::function<void(ESocketMessageType, SessionID, const MemoryStreamPtr&)>;
 
 	typedef uint16_t msg_size_t;
-
-	//默认超时间隔(毫秒)
-#define DEFAULT_TIMEOUT_INTERVAL     1000
-	//默认超时检测间隔 （毫秒）
-#define DEFAULT_TIMEOUTCHECK_INTERVAL 2000
 	//最大消息长度
 #define MAX_MSG_SIZE msg_size_t(-1)
 }

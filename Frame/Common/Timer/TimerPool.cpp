@@ -14,7 +14,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 using namespace moon;
 
 TimerPool::TimerPool()
-:m_tick(0),m_inc(0), m_Stop(false)
+:m_tick(0),m_inc(1), m_Stop(false)
 {
 	m_wheels.emplace_back(TimerWheel<std::vector<uint64_t>, wheel_size>());
 	m_wheels.emplace_back(TimerWheel<std::vector<uint64_t>, wheel_size>());
@@ -26,28 +26,31 @@ TimerPool::~TimerPool()
 {
 }
 
-uint32_t  moon::TimerPool::expiredOnce(int64_t duration, const timer_handler& callBack)
+uint64_t  moon::TimerPool::ExpiredOnce(int64_t duration, const timer_handler& callBack)
 {
 	if (duration < 0)
 	{
 		throw std::runtime_error("duration must >=0");
 	}
 	auto pt = std::make_shared<TimerContext>(callBack, duration);
+	pt->setID(m_inc++);
+	pt->setRepeatTimes(1);
 	return addNewTimer(pt);
 }
 
-uint32_t  moon::TimerPool::repeat(int64_t duration, int32_t times, timer_handler&& callBack)
+uint64_t  moon::TimerPool::Repeat(int64_t duration, int32_t times, const timer_handler& callBack)
 {
 	if (duration < 0)
 	{
 		throw std::runtime_error("duration must >=0");
 	}
-	auto pt = std::make_shared<TimerContext>(std::forward<timer_handler>(callBack), duration);
+	auto pt = std::make_shared<TimerContext>(callBack, duration);
+	pt->setID(m_inc++);
 	pt->setRepeatTimes(times);
 	return addNewTimer(pt);
 }
 
-void moon::TimerPool::remove(uint32_t timerid)
+void moon::TimerPool::Remove(uint64_t timerid)
 {
 	auto iter = m_timers.find(timerid);
 	if (iter != m_timers.end())
@@ -66,34 +69,13 @@ void moon::TimerPool::remove(uint32_t timerid)
 	}
 }
 
-uint32_t  moon::TimerPool::repeat(int64_t duration, int32_t times, const timer_handler& callBack)
+void TimerPool::Update()
 {
-	if (duration < 0)
+	for (auto& it : m_new)
 	{
-		throw std::runtime_error("duration must >=0");
-	}
-	auto pt = std::make_shared<TimerContext>(callBack, duration);
-	pt->setRepeatTimes(times);
-	return addNewTimer(pt);
-}
-
-uint32_t  moon::TimerPool::expiredOnce(int64_t duration, timer_handler&& callBack)
-{
-	if (duration < 0)
-	{
-		throw std::runtime_error("duration must >=0");
-	}
-	auto pt = std::make_shared<TimerContext>(std::forward<timer_handler>(callBack), duration);
-	return addNewTimer(pt);
-}
-
-void TimerPool::update()
-{
-	for (auto itnew = m_new.begin(); itnew != m_new.end() ; itnew++)
-	{
-		if((*itnew)->getRemoved())
+		if(it->getRemoved())
 			continue;
-		addTimer(*itnew);
+		addTimer(it);
 	}
 	m_new.clear();
 
@@ -143,56 +125,38 @@ void TimerPool::update()
 	}
 }
 
-uint32_t moon::TimerPool::addNewTimer(const timer_context_ptr& t)
+uint64_t moon::TimerPool::addNewTimer(const timer_context_ptr& t)
 {
+	//timer id  repeated
+	if (m_timers.find(t->getID()) != m_timers.end())
+	{
+		throw std::runtime_error("got a repeated timer id!");
+	}
 	t->setEndtime(t->getDuration() + millseconds());
-	if (t->getID() == 0)
-	{
-		//get a not used timer id.
-		while (1)
-		{
-			m_inc++;
-			auto iter = m_timers.find(m_inc);
-			if (iter == m_timers.end())
-			{
-				t->setID(m_inc);
-				break;
-			}
-		}
-	}
-	else
-	{
-		//timer id  ÒÑ¾­´æÔÚ
-		if (m_timers.find(t->getID()) != m_timers.end())
-		{
-			throw std::runtime_error("got a repeated timer id!");
-		}
-	}
 	m_new.push_back(t);
 	return t->getID();
 }
 
 // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
-uint64_t moon::TimerPool::makeKey(uint32_t id, uint32_t slots)
+uint64_t moon::TimerPool::makeKey(uint64_t id, uint32_t slots)
 {
-	return ((uint64_t(id) << 32) | slots);
+	return ((uint64_t(id) << 24) | slots);
 }
 
 void TimerPool::expired(const std::vector<uint64_t>& timers)
 {
 	for (auto it = timers.begin(); it != timers.end(); it++)
 	{
-		uint32_t id = ((*it) >> 32) & 0xFFFFFFFF;
+		uint64_t id = ((*it) >> 24);
 		auto iter = m_timers.find(id);
 		if (iter != m_timers.end())
 		{
 			auto tcx = iter->second;
-			
-			if (!tcx->getRemoved())
+			m_timers.erase(id);
+			if (!tcx->getRemoved()&& tcx->getRepeatTimes() != 0)
 			{
 				tcx->expired();
-				m_timers.erase(id);
-
+			
 				if (tcx->getRepeatTimes() == -1)
 				{
 					addNewTimer(tcx);
@@ -203,11 +167,6 @@ void TimerPool::expired(const std::vector<uint64_t>& timers)
 					addNewTimer(tcx);
 				}
 			}
-			else
-			{
-				m_timers.erase(id);
-				continue;
-			}	
 		}
 	}
 }
@@ -242,7 +201,7 @@ void TimerPool::addTimer(const timer_context_ptr& t)
 				key = makeKey(t->getID(), slots);
 				if (slot_count < wheel.size())
 				{
-					//printf("TimerPool id %u add to wheel %d slot%d\r\n",t->getID(),  i + 1, slot);
+					//printf("TimerPool id %llu add to wheel [%d] slot [%d]\r\n",t->getID(),  i + 1, slot);
 					wheel[slot].push_back(key);
 					break;
 				}
@@ -256,7 +215,7 @@ void TimerPool::addTimer(const timer_context_ptr& t)
 	{
 		m_wheels[0].front().push_back(makeKey(t->getID(),0));
 		m_timers[t->getID()] = t;
-		printf("time out.\r\n");
+		//printf("time out.\r\n");
 	}
 }
 
@@ -269,18 +228,18 @@ uint8_t moon::TimerPool::getSlot(uint64_t  key, int which_queue)
 	return (key >> (which_queue * 8)) & 0xFF;
 }
 
-void moon::TimerPool::stopAllTimer()
+void moon::TimerPool::StopAllTimer()
 {
 	m_Stop = true;
 }
 
-void moon::TimerPool::startAllTimer()
+void moon::TimerPool::StartAllTimer()
 {
 	m_Stop = false;
 }
 
 int64_t moon::TimerPool::millseconds()
 {
-	return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 

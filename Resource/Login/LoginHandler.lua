@@ -32,23 +32,21 @@ function LoginHandler:Start()
 	assert(nil ~= self.accountDatas)
 end
 
-function LoginHandler:OnServerStart(userCtx, data)
+function LoginHandler:OnServerStart(uctx,data,rpc)
 	Log.ConsoleTrace("Login Module: server start")
 	
 	local s = Stream.new()
+	s:WriteUInt16(MsgID.MSG_S2S_MODULE_START)
 	s:WriteString(thisModule:GetName())
 	s:WriteUInt32(thisModule:GetID())
 
-	local msg = SerializeUtil.SerializeEx(MsgID.MSG_S2S_MODULE_START)
-	msg:WriteData(s:Bytes())
-
-	thisModule:Broadcast(msg)
+	thisModule:Broadcast(s:Bytes())
 end
 
-function LoginHandler:OnModuleStart(userCtx, data)
-
-	local name = data:ReadString()
-	local id   = data:ReadUInt32()
+function LoginHandler:OnModuleStart(uctx,data,rpc)
+	local br   = BinaryReader.new(data)
+	local name = br:ReadString()
+	local id   = br:ReadUInt32()
 
 	if id ~= thisModule:GetID() then
 		Log.ConsoleTrace("Login: %s %d module start",name,id)
@@ -62,10 +60,11 @@ function LoginHandler:OnModuleStart(userCtx, data)
 
 end
 
-function LoginHandler:OnRequestLogin(userCtx, data)
-	local serialNum = data:ReadUInt64()
-	local accountID = data:ReadUInt64()
-	local password = data:ReadString()
+function LoginHandler:OnRequestLogin(uctx,data,rpc)
+	local br =  BinaryReader.new(data)
+	local serialNum = br:ReadUInt64()
+	local accountID = br:ReadUInt64()
+	local password = br:ReadString()
 
 	local ret = "Ok"
 
@@ -81,16 +80,14 @@ function LoginHandler:OnRequestLogin(userCtx, data)
 		end
 	end
 
-	local msg = CreateMessage()
+
 	local sm  = Stream.new()
 	sm:WriteString(ret)
 	sm:WriteUInt64(serialNum)
 	sm:WriteUInt64(accountID)
 
-	msg:WriteData(sm:Bytes())
-
-	Log.Trace("login module send to gate rpcID [%u]",userCtx.rpcID or 0)
-	thisModule:Send(thisModule:GetGateModule(),msg,userCtx.rpcID)
+	Log.Trace("login module send to gate rpcID [%u]",rpc or 0)
+	thisModule:Send(thisModule:GetGateModule(),sm:Bytes(),"",rpc)
 
 end
 

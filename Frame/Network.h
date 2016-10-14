@@ -17,7 +17,7 @@ namespace moon
 		*
 		* @threadNum 网络线程数
 		*/
-		void InitNet(int threadNum);
+		void				InitNet(int threadNum);
 
 		/**
 		* 网络监听的地址
@@ -44,30 +44,39 @@ namespace moon
 		*/
 		SessionID		SyncConnect(const std::string& ip, const std::string& port);
 
-		void				SendNetMessage(SessionID sessionID, Message* msg);
+		/**
+		* 向某个链接发送消息
+		*
+		* @sessionID
+		*/
+		void				Send(SessionID sessionID,const std::string& data);
 
 		/**
 		* 强制关闭一个网络连接
 		*
 		* @sessionID
 		*/
-		void	Close(SessionID sessionID);
+		void				Close(SessionID sessionID);
 
-	public:
-		void Start();
+		/**
+		* 设置Session的超时检测
+		* @timeout 超时时间 ，单位 s
+		*/
+		void				SetTimeout(uint32_t timeout);
 
-		void Update(uint32_t interval);
-
-		void Destory();
-
-	public:
 		/**
 		* 网络消息处理回掉
 		*/
-		std::function<void(Message*)>		OnNetMessage;
+		void				SetHandler(const std::function<void(uint32_t, const std::string&, uint8_t)>&);
+	public:
+		void				Start();
+
+		void				Update(uint32_t interval);
+
+		void				Destory();
 	private:
 		struct  NetworkImp;
-		std::shared_ptr<NetworkImp>		m_NetworkImp;
+		std::shared_ptr<NetworkImp>											m_NetworkImp;
 	};
 }
 

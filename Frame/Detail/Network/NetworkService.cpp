@@ -13,7 +13,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 using namespace moon;
 
 NetworkService::NetworkService()
-	:m_IoWork(m_IoService), m_IncreaseSessionID(0)
+	:m_IoWork(m_IoService),m_Checker(m_IoService), m_TimeOut(0),m_IncreaseSessionID(0)
 {
 
 }
@@ -63,12 +63,9 @@ void NetworkService::RemoveSession(SessionID sessionID)
 	});
 }
 
-void NetworkService::CheckTimeOut(uint32_t timeoutInterval)
+void moon::NetworkService::SetTimeout(uint32_t timeout)
 {
-	m_IoService.post([this, timeoutInterval]()
-	{
-		OnCheckTimeOut(timeoutInterval);
-	});
+	m_TimeOut = timeout;
 }
 
 void NetworkService::Send(SessionID sessionID, const MemoryStreamPtr& msg)
@@ -83,23 +80,16 @@ void NetworkService::Send(SessionID sessionID, const MemoryStreamPtr& msg)
 	});
 }
 
-void NetworkService::OnCheckTimeOut(uint32_t timeoutInterval)
-{
-	auto curSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	
-	for (auto& iter : m_Sessions)
-	{
-		int64_t diff = curSec - iter.second->GetLastRecevieTime();
-		if (diff >= timeoutInterval)
-		{
-			//投递socket连接关闭请求，此操作是异步的
-			iter.second->Close(ESocketState::Timeout);
-		}
-	}
-}
-
 void NetworkService::Run()
 {
+	if (m_TimeOut != 0)
+	{
+		m_IoService.post([this]() {
+			m_Checker.expires_from_now(std::chrono::seconds(10));
+			m_Checker.async_wait(std::bind(&NetworkService::TimeoutChecker, this, std::placeholders::_1));
+		});
+	}
+
 	m_IoService.run();
 }
 
@@ -125,6 +115,24 @@ void NetworkService::CloseSession(SessionID sessionID, ESocketState state)
 			iter->second->Close(state);
 		}
 	});
+}
+
+void moon::NetworkService::TimeoutChecker(const asio::error_code &)
+{
+	m_Checker.expires_from_now(std::chrono::seconds(10));
+	m_Checker.async_wait(std::bind(&NetworkService::TimeoutChecker, this, std::placeholders::_1));
+
+	auto curSec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+	for (auto& iter : m_Sessions)
+	{
+		int64_t diff = curSec - iter.second->GetLastRecevieTime();
+		if (diff >= m_TimeOut)
+		{
+			//投递socket连接关闭请求，此操作是异步的
+			iter.second->Close(ESocketState::Timeout);
+		}
+	}
 }
 
 

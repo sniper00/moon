@@ -1,29 +1,40 @@
 
-local protobuf = require "protobuf"
+local protobuf 		= require "protobuf"
+local Stream   		= require("Stream")
+local BinaryReader 	= require("BinaryReader")
 
-local SerializeUtil = {}
+function UInt16ToBytes(v)
+	return string.pack("=H",v)
+end
 
-SerializeUtil.Serialize = function (msgID,pkg,t)
-	local msg = CreateMessage()
+function Serialize(msgID,pkg,t)
 	assert(nil ~= t," must not be nil ")
-	encode = protobuf.encode(pkg,t)
-	msg:WriteData(UIn16ToBytes(msgID))
-	msg:WriteData(encode)
-	return msg
+	local encode = protobuf.encode(pkg,t)
+	return UInt16ToBytes(msgID)..encode
 end
 
-SerializeUtil.SerializeEx = function (msgID)
-	local msg = CreateMessage()
-	msg:WriteData(UIn16ToBytes(msgID))
-	return msg
+function Deserialize(pkg,data)
+	return protobuf.decode(pkg,data)
 end
 
-SerializeUtil.Deserialize = function(pkg,data)
-	return protobuf.decode(pkg,data:Bytes())
+function SerializeUserData(sessionid,accountid,playerid)
+	 return string.pack("=I4I8I8",sessionid,accountid,playerid)
 end
 
-SerializeUtil.Deserialize = function(pkg,data)
-	return protobuf.decode(pkg,data:Bytes())
+function DeserializeUserData(s)
+	if 0 == string.len(s) then
+		return nil
+	end
+
+	local br = BinaryReader.new(s)
+	local u = {}
+	u.sessionid = br:ReadUInt32()
+	u.accountid = br:ReadUInt64()
+	u.playerid = br:ReadUInt64()
+	return u
 end
 
-return SerializeUtil
+function UnpackMsg(data)
+	local msgID,n = string.unpack("=H",data)
+	return msgID,string.sub(data,n)
+end

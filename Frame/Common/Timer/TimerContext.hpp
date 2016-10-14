@@ -61,12 +61,12 @@ namespace moon
 			m_duration = duration;
 		}
 
-		void setID(uint32_t value)
+		void setID(uint64_t value)
 		{
 			m_id = value;
 		}
 
-		uint32_t getID()
+		uint64_t getID()
 		{
 			return m_id;
 		}
@@ -113,7 +113,7 @@ namespace moon
 		}
 	private:
 		timer_handler				m_handler;//调度器回掉
-		uint32_t						m_id;
+		uint64_t						m_id;
 		int64_t							m_endtime;
 		int64_t							m_duration;
 		int32_t							m_repeatTimes;//重复次数，-1循环

@@ -25,13 +25,6 @@ namespace moon
 		ToClient//发送给客户端的数据
 	};
 
-	enum class EHeaderFlag:uint8_t
-	{
-		HasSessionID	= 1 << 0,
-		HasRPCID			= 1 << 1,
-		ReadOnly			= 1 << 2
-	};
-
 	DECLARE_SHARED_PTR(MemoryStream)
 
 	//Module 消息
@@ -53,25 +46,14 @@ namespace moon
 		void									SetSender(ModuleID moduleID);
 		ModuleID							GetSender() const;
 
-		void									SetSessionID(SessionID id);
-		bool									IsSessionID() const;
-		SessionID							GetSessionID() const;
-
 		void									SetReceiver(ModuleID moduleID);
 		ModuleID							GetReceiver() const;
 
-		void									SetUserID(uint64_t userid);
-		uint64_t							GetUserID() const;
+		void									SetUserData(const std::string& userdata);
+		const std::string&			GetUserData() const;
 
-		void									SetSubUserID(uint64_t subUserID);
-		uint64_t							GetSubUserID() const;
-
-		bool									HasRPCID() const;
 		void									SetRPCID(uint64_t rpcID);
 		uint64_t							GetRPCID() const;
-
-		bool									IsReadOnly() const;
-		void									SetReadOnly();
 
 		/**
 		* 设置消息类型，参见 EMessageType
@@ -100,21 +82,8 @@ namespace moon
 			return m_Data->Size();
 		}
 
-		MemoryStreamPtr			ToStreamPointer() const
-		{
-			return m_Data;
-		}
-
-		Message*							Clone();
-
 	protected:
 		void									Init();
-
-		bool									CheckFlag(EHeaderFlag) const;
-
-		void									SetFlag(EHeaderFlag);
-
-		void									ClearFlag(EHeaderFlag);
 	protected:
 		uint8_t								m_Flag;
 		uint8_t								m_Type;
@@ -123,6 +92,7 @@ namespace moon
 		uint64_t							m_UserID;
 		uint64_t							m_SubUserID;
 		uint64_t							m_RPCID;
+		std::string							m_UserData;
 		MemoryStreamPtr			m_Data;
 	};
 };

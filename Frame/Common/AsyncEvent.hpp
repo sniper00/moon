@@ -44,6 +44,6 @@ namespace moon
 			return _events.Size();
 		}
 	private:
-		SyncQueue<event_handle> _events;
+		SyncQueue<event_handle,1000> _events;
 	};
 };

@@ -15,8 +15,13 @@ int main()
 		MoonNetLuaBind luaBind(lua);
 		luaBind.BindModuleManager()
 			.BindEMessageType()
-			.BindMessage()
 			.BindPath();
+
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+		lua.script("package.cpath = './Lib/?.dll;'");
+#else
+		lua.script("package.cpath = './Lib/?.so;'");
+#endif
 
 		lua.script_file("main.lua");
 	}
@@ -25,8 +30,6 @@ int main()
 		CONSOLE_ERROR("%s", e.what());
 		CONSOLE_DEBUG("Traceback: %s", Traceback(lua.lua_state()).data());
 	}
-
-	
 
 	return 0;
 }

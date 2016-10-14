@@ -54,7 +54,7 @@ namespace moon
 	{
 		if (m_Socket.is_open())
 		{
-			LOG_TRACE("Session address[%s] forced closed, state[%d]", GetRemoteIP().c_str(), (int)state);
+			CONSOLE_TRACE("Session address[%s] forced closed, state[%d]", GetRemoteIP().c_str(), (int)state);
 			m_State = state;
 			//所有异步处理将会立刻调用，并触发 asio::error::operation_aborted
 			m_Socket.shutdown(asio::ip::tcp::socket::shutdown_both, m_ErrorCode);
@@ -118,7 +118,7 @@ namespace moon
 				OnClose();
 				return;
 			}
-
+			
 			//消息不完整 继续接收消息
 			if (m_RecvMemoryStream.Size() < sizeof(msg_size_t) + size)
 			{

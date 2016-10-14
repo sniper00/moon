@@ -43,23 +43,12 @@ namespace moon
 			WriteImp(t);
 		}
 
-		template<typename TData>
-		void WriteImp(const TData & t)
-		{
-			static_assert(std::is_pod<TData>::value, "type T must be pod.");
-			m_ms.WriteBack(&t, 0, 1);
-		}
-
-		void WriteImp(const std::string & str)
-		{
-			m_ms.WriteBack(str.data(), 0, str.size() + 1);
-		}
-
+	
 		template<typename TData>
 		void WriteVector(std::vector<TData> t)
 		{
 			static_assert(std::is_pod<TData>::value, "type T must be pod.");
-			write(t.size());
+			Write(t.size());
 			for (auto& it : t)
 			{
 				write(it);
@@ -85,7 +74,19 @@ namespace moon
 			return m_ms.Size();
 		}
 
-	protected:
+	private:
+		template<typename TData>
+		void WriteImp(const TData & t)
+		{
+			static_assert(std::is_pod<TData>::value, "type T must be pod.");
+			m_ms.WriteBack(&t, 0, 1);
+		}
+
+		void WriteImp(const std::string & str)
+		{
+			m_ms.WriteBack(str.data(), 0, str.size() + 1);
+		}
+	private:
 		StreamType&			m_ms;
 	};
 

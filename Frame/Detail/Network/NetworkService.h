@@ -10,6 +10,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #pragma once
 
 #include "asio.hpp"
+#include "asio/steady_timer.hpp"
 #include "NetworkDefine.h"
 
 namespace moon
@@ -48,11 +49,11 @@ namespace moon
 		void			RemoveSession(SessionID sessionID);
 
 		/**
-		* 向io_services 投递超时检测任务
+		* 设置超时间隔
 		*
-		* @timeout 超时间隔
+		* @timeout 超时间隔 s
 		*/
-		void			CheckTimeOut(uint32_t timeoutInterval);
+		void			SetTimeout(uint32_t timeout);
 
 		/**
 		* 向某个socket连接 发送数据
@@ -78,14 +79,17 @@ namespace moon
 		PROPERTY_READWRITE(uint32_t, m_ID, ID)
 	private:
 		/**
-		* 超时检测函数（当前只用于测试）
+		* 超时检测
 		*
 		*/
-		void			OnCheckTimeOut(uint32_t timeoutInterval);
+		void			TimeoutChecker(const asio::error_code&);
+
 	private:
 		asio::io_service																m_IoService;
 		asio::io_service::work													m_IoWork;
+		asio::steady_timer														m_Checker;
 		std::unordered_map<SessionID, SessionPtr>				m_Sessions;
+		uint32_t																		m_TimeOut;
 		uint32_t																		m_IncreaseSessionID;
 	};
 }

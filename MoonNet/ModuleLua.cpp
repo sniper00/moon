@@ -1,10 +1,10 @@
 #include "ModuleLua.h"
-#include "Module.h"
 #include "MoonNetLuaBind.h"
-#include "Message.h"
 #include "Common/StringUtils.hpp"
 #include "Common/TupleUtils.hpp"
 #include "Common/Path.hpp"
+#include "Common/Timer/TimerPool.h"
+
 #include "Detail/Log/Log.h"
 #include "sol.hpp"
 
@@ -20,6 +20,7 @@ struct ModuleLua::ModuleLuaImp
 	sol::function			OnMessage;
 	std::string				Config;
 	std::unordered_map<std::string, std::string> KvConfig;
+	TimerPool			timerPool;
 };
 
 ModuleLua::ModuleLua()
@@ -40,6 +41,8 @@ bool ModuleLua::Init(const std::string& config)
 	auto vec = string_utils::split<std::string>(config, ";");
 	for (auto& it : vec)
 	{
+		string_utils::trimleft(it);
+		string_utils::trimright(it);
 		auto pairs = string_utils::split<std::string>(it, ":");
 		if (pairs.size() == 2)
 		{
@@ -69,12 +72,12 @@ void ModuleLua::Start()
 	luaBind.BindTime()
 		.BindThreadSleep()
 		.BindEMessageType()
-		.BindMessage()
 		.BindNetwork()
 		.BindModule()
 		.BindLog()
 		.BindUtil()
-		.BindPath();
+		.BindPath()
+		.BindTimer();
 
 
 	auto& conf = m_ModuleLuaImp->KvConfig;
@@ -98,6 +101,7 @@ void ModuleLua::Start()
 
 			auto& conf = m_ModuleLuaImp->KvConfig;
 			lua.set("nativeModule", this);
+			lua.set("timerPool", std::ref(m_ModuleLuaImp->timerPool));
 			sol::object obj = lua.require_file(conf["name"], conf["luafile"]);
 			if (!obj.valid())
 			{
@@ -127,8 +131,8 @@ void ModuleLua::Start()
 				return thisModule:Destory()
 			end
 
-			function  OnMessage(msg)
-				return thisModule:OnMessage(msg)
+			function  OnMessage(sender,data,userData,rpcID,msgType)
+				return thisModule:OnMessage(sender,data,userData,rpcID,msgType)
 			end
 			)");
 
@@ -172,10 +176,30 @@ void ModuleLua::Destory()
 	}
 }
 
+void ModuleLua::OnMessage(ModuleID sender,const std::string & data, const std::string & userdata, uint64_t rpcID, uint8_t type)
+{
+	if (!IsOk())
+		return;
+	try
+	{
+		m_ModuleLuaImp->OnMessage(sender,data,userdata,rpcID,type);
+	}
+	catch (sol::error& e)
+	{
+		SetOK(false);
+		Exit();
+		CONSOLE_ERROR("ModuleLua OnMessage: %s\r\n", e.what());
+		CONSOLE_DEBUG("Traceback: %s", Traceback(m_ModuleLuaImp->lua.lua_state()).data());
+	}
+}
+
 void ModuleLua::Update(uint32_t interval)
 {
 	if (!IsOk())
 		return;
+
+	Module::Update(interval);
+	m_ModuleLuaImp->timerPool.Update();
 	try
 	{
 		m_ModuleLuaImp->Update(interval);
@@ -189,20 +213,4 @@ void ModuleLua::Update(uint32_t interval)
 	}
 }
 
-void ModuleLua::OnMessage(moon::Message* msg)
-{
-	if (!IsOk())
-		return;
-	try
-	{
-		m_ModuleLuaImp->OnMessage(msg);
-	}
-	catch (sol::error& e)
-	{
-		SetOK(false);
-		Exit();
-		CONSOLE_ERROR("ModuleLua OnMessage: %s\r\n", e.what());
-		CONSOLE_DEBUG("Traceback: %s", Traceback(m_ModuleLuaImp->lua.lua_state()).data());
-	}
-}
 

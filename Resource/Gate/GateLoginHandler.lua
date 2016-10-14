@@ -1,10 +1,10 @@
 require("functions")
 require("Log")
+require("SerializeUtil")
 
 local protobuf 			= require "protobuf"
 local MsgID 			= require("MsgID")
 local Component 		= require("Component")
-local SerializeUtil 	= require("SerializeUtil")
 local Stream 			= require("Stream")
 local BinaryReader 		= require("BinaryReader")
 
@@ -47,38 +47,35 @@ function GateLoginHandler:OnClientClose(account, player)
 	Log.ConsoleTrace("Client close accountID[%u] playerID[%u]",account,player)
 
 	local sm = Stream.new()
+	sm:WriteUInt16(MsgID.MSG_S2S_CLIENT_CLOSE)
 	sm:WriteUInt64(account)
 	sm:WriteUInt64(player)
 
-	local msg = SerializeUtil.SerializeEx(MsgID.MSG_S2S_CLIENT_CLOSE)
-	msg:WriteData(sm:Bytes())
 
-	thisModule:Broadcast(msg)
+	thisModule:Broadcast(sm:Bytes())
 
 	self.connects:RemoveByAccount(account)
 end
 
-function GateLoginHandler:OnRequestLogin(userctx,data)
-	Log.Trace("Message Size: %d",data:Size())
-	local s = SerializeUtil.Deserialize("NetMessage.C2SReqLogin",data)
+function GateLoginHandler:OnRequestLogin(uctx,data,rpc)
+	Log.Trace("Message Size: %d",string.len(data))
+	local s = Deserialize("NetMessage.C2SReqLogin",data)
 
 	Log.Trace("1.Login username[%s] password[%s]", s.username,s.password)
 
 	local  serialNum  =  self.loginDatas:CreateSerialNum()
 	local  accountID  =  Util.HashString(s.username)
-	local  sessionID  =  userctx.sessionID;
-	self.loginDatas:Add(serialNum,accountID,userctx.sessionID)
+	local  sessionID  =  uctx;
+	self.loginDatas:Add(serialNum,accountID,sessionID)
 
 	Log.Trace("2.Login username[%s] password[%s] accountID[%u] sessionID[%d] add to login data ", s.username,s.password ,accountID,sessionID)
 
 	-- send to login module
 	local sm = Stream.new()
+	sm:WriteUInt16(MsgID.MSG_C2S_REQ_LOGIN)
 	sm:WriteUInt64(serialNum)
 	sm:WriteUInt64(accountID)
 	sm:WriteString(s.password)
-
-	local smsg = SerializeUtil.SerializeEx(MsgID.MSG_C2S_REQ_LOGIN)
-	smsg:WriteData(sm:Bytes())
 
 
 	if self.loginModule == 0 then
@@ -87,7 +84,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 
 	assert(thisModule:GetLoginModule() ~= 0, "can not find login module")
 
-	thisModule:SendRPC(thisModule:GetLoginModule(),smsg,  function (msg)
+	thisModule:SendRPC(thisModule:GetLoginModule(),sm:Bytes(),"",  function (data,userdata)
 		Log.Trace("3.login receive echo accountID[%u] ", accountID);
 		local ld = self.loginDatas:Find(serialNum)
 		if nil == ld then
@@ -95,7 +92,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 			return
 		end
 	
-		local br = BinaryReader.new(msg:Bytes())
+		local br = BinaryReader.new(data)
 		local loginret = br:ReadString()
 		local sn = br:ReadUInt64()
 		local act = br:ReadUInt64()
@@ -114,7 +111,7 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 		end
 
 		local s2clogin = { ret = loginret,accountID = act }
-		local s2cmsg = SerializeUtil.Serialize(MsgID.MSG_S2C_LOGIN_RESULT,"NetMessage.S2CLogin",s2clogin)
+		local s2cmsg = Serialize(MsgID.MSG_S2C_LOGIN_RESULT,"NetMessage.S2CLogin",s2clogin)
 
 		thisModule:SendNetMessage(sessionID,s2cmsg)
 
@@ -124,9 +121,10 @@ function GateLoginHandler:OnRequestLogin(userctx,data)
 	end )
 end
 
-function GateLoginHandler:OnSetPlayerID(userctx,data)
-	local accountID = data:ReadUint64()
-	local playerID = data:ReadUint64()
+function GateLoginHandler:OnSetPlayerID(uctx,data,rpc)
+	local br = BinaryReader.new(data)
+	local accountID = br:ReadUInt64()
+	local playerID  = br:ReadUInt64()
 
 	local conn = self.connects:FindByAccount(accountID)
 	if nil == conn then
@@ -137,9 +135,10 @@ function GateLoginHandler:OnSetPlayerID(userctx,data)
 	Log.Trace("set accountid[%u] playerid:%u",accountID,playerID)
 end
 
-function GateLoginHandler:OnSetSceneID(userctx,data)
-	local playerID = data:ReadUint64()
-	local sceneID = data:ReadUint64()
+function GateLoginHandler:OnSetSceneID(uctx,data,rpc)
+	local br = BinaryReader.new(data)
+	local playerID = br:ReadUInt64()
+	local sceneID = br:ReadUInt64()
 
 	local conn = self.connects:FindByPlayer(playerID)
 	if nil == conn then

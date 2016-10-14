@@ -16,9 +16,9 @@ function Network:Init(v)
     self.net:InitNet(v)
 end
 
-function Network:SetCB(f)
+function Network:SetHandler(f)
     assert(type(f)=="function")
-    self.net.OnHandleNetMessage = f;
+    self.net:SetHandler(f);
 end
 
 function Network:Listen(ip,port)
@@ -43,8 +43,13 @@ function Network:Destory()
     Log.Trace("Network Stop")
 end
 
-function Network:Send(sessionID, msg)
-    self.net:SendNetMessage(sessionID,msg)
+function Network:Send(sessionID, data)
+    self.net:Send(sessionID,data)
+end
+
+-- 超时时间 单位 s
+function Network:SetTimeout(timeout)
+  self.net:SetTimeout(timeout)
 end
 
 function Network:Native()

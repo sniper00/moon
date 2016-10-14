@@ -149,12 +149,16 @@ namespace string_utils
 	//" /t/n/r"
 	inline void						trimright(std::string &str)
 	{
-		str.erase(str.find_last_not_of(" /t/n/r" + 1));
+		str.erase(str.find_last_not_of(" \t\n\r") + 1);
 	}
 
 	inline void						trimleft(std::string &str)
 	{
-		str.erase(str.find_first_not_of(" /t/n/r" + 1));
+		auto  pos =  str.find_first_not_of(" \t\n\r");
+		if (pos != std::string::npos)
+		{
+			str.erase(0,pos);
+		}
 	}
 
 	inline void						replace(std::string& src, const std::string& old, const std::string& strnew)

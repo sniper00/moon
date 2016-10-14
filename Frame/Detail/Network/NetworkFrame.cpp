@@ -21,14 +21,11 @@ namespace moon
 {
 	struct NetWorkFrame::Imp
 	{
-		Imp(uint8_t net_thread_num)
-			:servicepool(net_thread_num),
+		Imp(uint8_t n)
+			:servicepool(n),
 			acceptor(servicepool.PollAService().GetIoService()),
 			signals(servicepool.PollAService().GetIoService()),
-			timeout(DEFAULT_TIMEOUT_INTERVAL),
-			timeoutCheckInterval(DEFAULT_TIMEOUTCHECK_INTERVAL),
-			bCheckTimeOut(false),
-			net_thread_num(net_thread_num),
+			threadNum(n),
 			bOpen(false)
 		{
 
@@ -42,16 +39,8 @@ namespace moon
 		std::string																		listenAddress;
 		//¼àÌý¶Ë¿Ú
 		std::string																		listenPort;
-		//³¬Ê±¼ì²âÏß³Ì
-		LoopThread																	timeOutThread;
-		//³¬Ê±(ºÁÃë)
-		uint32_t																		timeout;
-		//³¬Ê±¼ì²â¼ä¸ô(ºÁÃë)
-		uint32_t																		timeoutCheckInterval;
-		//ÊÇ·ñ¿ªÆô³¬Ê±¼ì²â
-		bool																				bCheckTimeOut;
-
-		uint8_t																			net_thread_num;
+		//ÍøÂçÏß³ÌÊý
+		uint8_t																			threadNum;
 
 		bool																				bOpen;
 	};
@@ -220,14 +209,6 @@ namespace moon
 
 		m_Imp->servicepool.Run();
 
-		if (m_Imp->bCheckTimeOut)
-		{
-			LOG_TRACE("NetWorkFrame start check timeout thread succeed");
-			m_Imp->timeOutThread.Interval(m_Imp->timeoutCheckInterval);
-			m_Imp->timeOutThread.onUpdate = make_bind(&NetWorkFrame::CheckTimeOut, this);
-			m_Imp->timeOutThread.Run();
-		}
-
 		PostAccept();
 
 		m_Imp->bOpen = true;
@@ -243,11 +224,6 @@ namespace moon
 		if (m_Imp->acceptor.is_open())
 		{
 			m_Imp->acceptor.close(m_Imp->errorCode);
-		}
-
-		if (m_Imp->bCheckTimeOut)
-		{
-			m_Imp->timeOutThread.Stop();
 		}
 
 		m_Imp->servicepool.Stop();
@@ -266,22 +242,14 @@ namespace moon
 		return m_Imp->errorCode.message();
 	}
 
-	void NetWorkFrame::SetTimeout(uint32_t timeout, uint32_t checkInterval)
-	{
-		m_Imp->bCheckTimeOut = true;
-		m_Imp->timeout = timeout;
-		m_Imp->timeoutCheckInterval = checkInterval;
-	}
-
-	void NetWorkFrame::CheckTimeOut(uint32_t interval)
+	void NetWorkFrame::SetTimeout(uint32_t timeout)
 	{
 		auto& servs = m_Imp->servicepool.GetServices();
 		for (auto iter = servs.begin(); iter != servs.end(); iter++)
 		{
-			iter->second->CheckTimeOut(m_Imp->timeout);
+			iter->second->SetTimeout(timeout);
 		}
 	}
-
 }
 
 

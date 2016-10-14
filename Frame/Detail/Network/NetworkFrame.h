@@ -84,21 +84,15 @@ namespace moon
 		std::string					GetErrorMessage();
 
 		/**
-		* 设置管理链接的超时检测
-		* @timeout 超时时间 ，单位 ms
-		* @checkInterval 超时检测间隔，单位 ms
+		* 设置Session的超时检测
+		* @timeout 超时时间 ，单位 s
 		*/
-		void							SetTimeout(uint32_t timeout, uint32_t checkInterval);
+		void							SetTimeout(uint32_t timeout);
 	protected:
 		/**
 		* 投递异步accept,接受网络连接
 		*/
 		void							PostAccept();
-
-		/**
-		* 超时检测线程函数(测试）
-		*/
-		void							CheckTimeOut(uint32_t interval);
 	protected:
 		struct Imp;
 		std::shared_ptr<Imp>  m_Imp;

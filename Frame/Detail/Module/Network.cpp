@@ -6,8 +6,13 @@
 #include "Common/BinaryWriter.hpp"
 #include "Message.h"
 
+
+
 namespace moon
 {
+
+	DECLARE_SHARED_PTR(Message)
+
 	struct Network::NetworkImp
 	{
 		NetworkImp(int netThreadNum)
@@ -17,10 +22,9 @@ namespace moon
 
 		void OnNetMessage(ESocketMessageType type, SessionID sessionID, const MemoryStreamPtr& data)
 		{
-			auto msg = new Message(data);
-			msg->SetSessionID(sessionID);
+			auto msg = ObjectCreateHelper<Message>::Create(data);
+			msg->SetSender(sessionID);
 
-			BinaryWriter<MemoryStream> bw(msg->ToStreamPointer().get());
 			switch (type)
 			{
 			case ESocketMessageType::Connect:
@@ -45,7 +49,8 @@ namespace moon
 		}
 
 		std::shared_ptr<NetWorkFrame>		Net;
-		SyncQueue<Message*>						NetMsgQueue;
+		std::function<void(uint32_t, const std::string&, uint8_t)>OnMessage;
+		SyncQueue<MessagePtr,1000>			NetMsgQueue;
 	};
 
 	Network::Network()
@@ -81,11 +86,12 @@ namespace moon
 		return m_NetworkImp->Net->SyncConnect(ip, port);
 	}
 
-	void Network::SendNetMessage(SessionID sessionID, Message* msg)
+	void Network::Send(SessionID sessionID,const std::string& data)
 	{
 		Assert(nullptr != m_NetworkImp, "Network::SendNetMessage: Network not init");
-		m_NetworkImp->Net->Send(sessionID, msg->ToStreamPointer());
-		SAFE_DELETE(msg);
+		auto s = ObjectCreateHelper<MemoryStream>::Create(data.size());
+		s->WriteBack(data.data(), 0, data.size());
+		m_NetworkImp->Net->Send(sessionID, s);
 	}
 
 	void Network::Close(SessionID sessionID)
@@ -93,6 +99,18 @@ namespace moon
 		Assert(nullptr != m_NetworkImp, "Network::Close: Network not init");
 
 		m_NetworkImp->Net->CloseSession(sessionID, ESocketState::ForceClose);
+	}
+
+	void Network::SetTimeout(uint32_t timeout)
+	{
+		Assert(nullptr != m_NetworkImp, "Network::Close: Network not init");
+
+		m_NetworkImp->Net->SetTimeout(timeout);
+	}
+
+	void Network::SetHandler(const std::function<void(uint32_t, const std::string&, uint8_t)>& h)
+	{
+		m_NetworkImp->OnMessage = h;
 	}
 
 	void Network::Start()
@@ -108,12 +126,12 @@ namespace moon
 		if (nullptr == m_NetworkImp)
 			return;
 
-		if (OnNetMessage != nullptr)
+		if (m_NetworkImp->OnMessage != nullptr)
 		{
 			auto msgs = m_NetworkImp->NetMsgQueue.Move();
 			for (auto& it : msgs)
 			{
-				OnNetMessage(it);
+				m_NetworkImp->OnMessage(it->GetSender(),it->Bytes(),(uint8_t)it->GetType());
 			}
 		}
 	}

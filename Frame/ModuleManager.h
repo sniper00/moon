@@ -15,7 +15,7 @@ namespace moon
 {
 	DECLARE_SHARED_PTR(Worker)
 	DECLARE_SHARED_PTR(Module)
-	class Message;
+	DECLARE_SHARED_PTR(MemoryStream)
 
 	//Module 管理类，负责Module的创建，调度，移除
 	class ModuleManager:public noncopyable
@@ -61,7 +61,9 @@ namespace moon
 		* @receiver 接收者id
 		* @msg 消息内容
 		*/
-		void			Send(ModuleID sender, ModuleID receiver,Message* msg);
+		void			Send(ModuleID sender, ModuleID receiver,const std::string& data, const std::string& userdata, uint64_t rpcID,uint8_t type);
+
+		void			SendEx(ModuleID sender, ModuleID receiver, const MemoryStreamPtr& data,const std::string& userdata,uint64_t rpcID, uint8_t type);
 
 		/**
 		* 向所有Module（除了发送者）广播消息
@@ -69,7 +71,7 @@ namespace moon
 		* @sender	发送者id
 		* @msg		消息内容
 		*/
-		void			Broadcast(ModuleID sender, Message* msg);
+		void			Broadcast(ModuleID sender, const std::string& data,const std::string& userdata,uint8_t type);
 
 		/**
 		* 启动所有Worker线程

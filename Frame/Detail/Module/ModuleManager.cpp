@@ -13,11 +13,14 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "Module.h"
 #include "Detail/Log/Log.h"
 #include "Common/StringUtils.hpp"
+#include "ObjectCreateHelper.h"
 
 namespace moon
 {
 	ModuleManager::ModuleManager()
-		:m_nextWorker(0),  m_IncreaseModuleID(1), m_MachineID(1)
+		:m_nextWorker(0)
+		,m_IncreaseModuleID(1)
+		,m_MachineID(1)
 	{
 
 	}
@@ -42,7 +45,7 @@ namespace moon
 		}
 
 		int workerNum;
-	
+
 		if (contains_key(kv_config, "worker_num"))
 		{
 			workerNum = string_utils::string_convert<int>(kv_config["worker_num"]);
@@ -80,21 +83,40 @@ namespace moon
 	{
 		uint8_t workerID = GetWorkerID(id);
 		if (workerID < m_Workers.size())
-		{		
+		{
 			m_Workers[workerID]->RemoveModule(id);
 		}
 	}
 
-	void ModuleManager::Send(ModuleID sender, ModuleID receiver, Message* pmsg)
+	void ModuleManager::Send(ModuleID sender, ModuleID receiver, const std::string & data, const std::string & userdata, uint64_t rpcID, uint8_t type)
 	{
-		Assert((pmsg->GetType() != EMessageType::Unknown), "sending unknown type message");
+		Assert((type != (uint8_t)EMessageType::Unknown), "send unknown type message!");
 
-		Assert(!pmsg->IsReadOnly(), "the same message can only send one times, use message::clone");
-		pmsg->SetReadOnly();
-
-		auto msg = MessagePtr(pmsg);
+		auto msg = ObjectCreateHelper<Message>::Create(data.size());
 		msg->SetSender(sender);
 		msg->SetReceiver(receiver);
+		msg->WriteData(data);
+		msg->SetUserData(userdata);
+		msg->SetRPCID(rpcID);
+		msg->SetType(EMessageType(type));
+	
+		uint8_t workerID = GetWorkerID(receiver);
+		if (workerID < m_Workers.size())
+		{
+			m_Workers[workerID]->DispatchMessage(msg);
+		}
+	}
+
+	void ModuleManager::SendEx(ModuleID sender, ModuleID receiver, const MemoryStreamPtr & data, const std::string & userdata, uint64_t rpcID, uint8_t type)
+	{
+		Assert((type != (uint8_t)EMessageType::Unknown), "send unknown type message!");
+
+		auto msg = ObjectCreateHelper<Message>::Create(data);
+		msg->SetSender(sender);
+		msg->SetReceiver(receiver);
+		msg->SetUserData(userdata);
+		msg->SetRPCID(rpcID);
+		msg->SetType(EMessageType(type));
 
 		uint8_t workerID = GetWorkerID(receiver);
 		if (workerID < m_Workers.size())
@@ -103,19 +125,19 @@ namespace moon
 		}
 	}
 
-	void ModuleManager::Broadcast(ModuleID sender, Message* pmsg)
+	void ModuleManager::Broadcast(ModuleID sender, const std::string & data, const std::string & userdata, uint8_t type)
 	{
-		Assert((pmsg->GetType() != EMessageType::Unknown), "sending unknown type message");
+		Assert((type != (uint8_t)EMessageType::Unknown), "send unknown type message!");
 
-		Assert(!pmsg->IsReadOnly(), "the same message can only send one times, use message::clone");
-		pmsg->SetReadOnly();
-
-		auto msg = MessagePtr(pmsg);
+		auto msg = ObjectCreateHelper<Message>::Create(data.size());
 		msg->SetSender(sender);
 		msg->SetReceiver(0);
+		msg->WriteData(data);
+		msg->SetUserData(userdata);
+		msg->SetType(EMessageType(type));
 
 		for (auto& w : m_Workers)
-		{	
+		{
 			w->Broadcast(msg);
 		}
 	}
@@ -153,7 +175,7 @@ namespace moon
 		return 0;
 	}
 
-	void ModuleManager::AddModuleToWorker(uint8_t workerid,const ModulePtr& module)
+	void ModuleManager::AddModuleToWorker(uint8_t workerid, const ModulePtr& module)
 	{
 		for (auto& wk : m_Workers)
 		{
@@ -169,5 +191,6 @@ namespace moon
 	{
 		return ((actorID >> 16) & 0xFF);
 	}
+
 };
 

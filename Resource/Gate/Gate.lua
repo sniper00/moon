@@ -2,8 +2,9 @@ package.path    = 'Base/?.lua;Gate/?.lua;'
 
 require("functions")
 require("Log")
+require("ConfigLoader")
+require("SerializeUtil")
 
-local protobuf      = require("protobuf")
 local Module        = require("Module")
 local Network       = require("Network")
 local Connects      = require("Connect")
@@ -13,23 +14,8 @@ local GateHandler   = require("GateHandler")
 local GateLoginHandler = require("GateLoginHandler")
 local LoginDatas    = require("LoginDatas")
 
-local Gate = class("Gate", Module)
 
-function LoadProtocol()
-    local curdir = Path.GetCurrentDir()
-    Path.TraverseFolder(curdir.."/Protocol",0,function (filepath,filetype)
-        if filetype == 1 then
-            if Path.GetExtension(filepath) == ".pb" then
-                Log.ConsoleTrace("LoadProtocol:%s",filepath)
-                local p = io.open(filepath,"rb")
-                local buffer = p:read "*a"
-                p:close()
-                protobuf.register(buffer)
-            end
-        end
-        return true
-    end)
-end
+local Gate = class("Gate", Module)
 
 
 function Gate:ctor()
@@ -52,10 +38,16 @@ function Gate:Init(config)
     self.ID = Gate.super.GetID(self)
     Gate.super.SetGateModule(self,self.ID)
 
+    local kvconfig = string.parsekv(config)
+
+    kvconfig.netthread = kvconfig.netthread or "1"
+    assert(kvconfig.ip,"Gate ip is nil!")
+    assert(kvconfig.port,"Gate port is nil!")
+
     self.net = Network.new()
-    self.net:Init(1)
-    self.net:Listen("127.0.0.1", "11111")
-    self.net:SetCB(handler(self,self.OnNetMessage))
+    self.net:Init(tonumber(kvconfig.netthread))
+    self.net:Listen(kvconfig.ip,kvconfig.port)
+    self.net:SetHandler(handler(self,self.OnNetMessage))
     
     Gate.super.AddComponent(self,"Network", self.net)
     Gate.super.AddComponent(self,"Connects", Connects.new())
@@ -67,56 +59,52 @@ function Gate:Init(config)
     self.gateLoginHandler = Gate.super.GetComponent(self,"GateLoginHandler")
 
     Log.Trace("Gate Module Init: %s",config)
+
 end
 
-function Gate:OnNetMessage(msg)
-    Gate.super.Send(self,self.ID,msg,0,msg:GetType())
+function Gate:OnNetMessage(sessionid,data,msgtype)
+    self:OnMessage(sessionid,data,"",0,msgtype)
 end
 
-function Gate:OnMessage(msg)
-    if msg:GetType() == EMessageType.NetworkConnect then
-        self:ClientConnect(msg)
-    elseif msg:GetType() == EMessageType.NetworkData then
-        self:ClientData(msg)
-    elseif msg:GetType() == EMessageType.NetworkClose then
-        self:ClientClose(msg)
-    elseif msg:GetType() == EMessageType.ModuleData or msg:GetType() == EMessageType.ModuleRPC then
-        self:ModuleData(msg)
-    elseif msg:GetType() == EMessageType.ToClient then
-        self:ToClientData(msg)
+function Gate:OnMessage(sender,data,userdata,rpcid,msgtype)
+    if msgtype == EMessageType.NetworkConnect then
+        self:ClientConnect(data)
+    elseif msgtype == EMessageType.NetworkData then
+        self:ClientData(sender,data,msgtype)
+    elseif msgtype == EMessageType.NetworkClose then
+        self:ClientClose(sender,data)
+    elseif msgtype == EMessageType.ModuleData or msgtype == EMessageType.ModuleRPC then
+        self:ModuleData(sender,data,userdata,rpcid,msgtype)
+    elseif msgtype == EMessageType.ToClient then
+        self:ToClientData(data,userdata)
     end
 end
 
-function Gate:ClientConnect(msg)
-    local br = BinaryReader.new(msg:Bytes())
+function Gate:ClientConnect(data)
+    local br = BinaryReader.new(data)
     Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
 end
 
-function Gate:ClientData(msg)
-    if Gate.super.DispatchMessage(self, msg) then
+function Gate:ClientData(sessionid,data,msgtype)
+    
+    if Gate.super.DispatchMessage(self,sessionid,data,nil,0,msgtype) then
         return
     end
 
-    local sessionID = msg:GetSessionID()
-    local conn = self.connects:Find(sessionID)
+    local conn = self.connects:Find(sessionid)
     if nil == conn then
         Log.ConsoleWarn("Illegal Msg: client not connected.")
         return
     end
 
-    local br = BinaryReader.new(msg:Bytes())
-    local msgID = br:ReadUInt16()
+    local msgID,n = string.unpack("=H",data)
 
     if msgID > MsgID.MSG_MUST_HAVE_PLAYERID then
         Log.ConsoleWarn("Illegal Msg: client not login msgID[%u].",msgID)
         return
     end
 
-    if conn.playerID ~= 0 then
-        msg:SetUserID(conn.playerID)
-    elseif conn.accountID ~=0 then
-        msg:SetSubUserID(conn.accountID)
-    end
+    --------------------------------------------------------
 
     if conn.sceneID ~= 0 then
 
@@ -128,15 +116,13 @@ function Gate:ClientData(msg)
     end
 end
 
-function Gate:ClientClose(msg)
-    local br = BinaryReader.new(msg:Bytes())
+function Gate:ClientClose(sessionid,data)
+    local br = BinaryReader.new(data)
     Log.ConsoleTrace("CLIENT CLOSE: %s",br:ReadString())
 
-    local sessionID = msg:GetSessionID()
+    self.gateLoginHandler:OnSessionClose(sessionid)
 
-    self.gateLoginHandler:OnSessionClose(sessionID)
-
-    local conn = self.connects:Find(sessionID)
+    local conn = self.connects:Find(sessionid)
     if nil == conn then
         return
     end
@@ -150,11 +136,11 @@ function Gate:ClientClose(msg)
     end
 end
 
-function Gate:ModuleData(msg)
-    Gate.super.DispatchMessage(self, msg)
+function Gate:ModuleData(sender,data,userdata,rpcid,msgtype)
+    Gate.super.DispatchMessage(self,sender,data,userdata,rpcid,msgtype)
 end
 
-function Gate:ToClientData(msg)
+function Gate:ToClientData(data,userdata)
     local sessionID = 0
     if msg:IsPlayerID() then
     	local conn = self.connexts.FindByPlayer(msg:GetPlayerID())
@@ -168,12 +154,13 @@ function Gate:ToClientData(msg)
     if 0 == sessionID then
         return
     end
-
-    self.net:SendNetMessage(sessionID, msg)
+    print("send to client--",sessionID)
+    self.net:Send(sessionID,data)
 end
 
-function  Gate:SendNetMessage(sessionID,msg)
-    self.net:Send(sessionID,msg)
+function  Gate:SendNetMessage(sessionID,data)
+    Log.Trace("send to client %u, data len %d",sessionID,string.len(data))
+    self.net:Send(sessionID,data)
 end
 
 function Gate:SetWorldModule(moduleid)

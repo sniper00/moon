@@ -1,9 +1,11 @@
 require("functions")
-local Component = require("Component")
-local MsgID     = require("MsgID")
-local BinaryReader = require("BinaryReader")
+require("SerializeUtil")
 
-local Module 	= class("Module",Component)
+local Component 	= require("Component")
+local MsgID     	= require("MsgID")
+local BinaryReader 	= require("BinaryReader")
+
+local Module 		= class("Module",Component)
 
 function Module:ctor()
     Module.super.ctor(self)
@@ -23,44 +25,46 @@ function Module:GetOtherModule(name)
     return self.OtherModules[name]
 end
 
-function Module:_SendMessage(recevier,msg)
- 	nativeModule:Send(recevier,msg)
+function Module:_Send(recevier,data,userdata,rpc,msgtype)
+ 	nativeModule:Send(recevier,data,userdata,rpc,msgtype)
 end
 
-function Module:_Broadcast(msg)
- 	nativeModule:Broadcast(msg)
+function Module:_Broadcast(data,userdata,msgtype)
+ 	nativeModule:Broadcast(data,userdata,msgtype)
 end
 
-function Module:Send(receiver,msg,rpcid,msgType)
-	rpcid = rpcid or 0
-	
-    if 0 ~= rpcid then
-    	msg:SetRPCID(rpcid)
-    	msgType = msgType or EMessageType.ModuleRPC
+function Module:Send(receiver,data,userdata,rpc,msgtype)
+
+	userdata 	= userdata or ""
+	rpc 		= rpc or 0
+
+    if 0 ~= rpc then
+    	msgtype = msgtype or EMessageType.ModuleRPC
     else
-    	msgType = msgType or EMessageType.ModuleData
+    	msgtype = msgtype or EMessageType.ModuleData
 	end
 
-	msg:SetType(msgType)
+    self:_Send(receiver,data,userdata,rpc,msgtype)
 
-    self:_SendMessage(receiver,msg)
-    Log.Trace("Send receiver[%u] ,msgType[%d] rpcid [%u]",receiver,msgType,rpcid)
+    Log.Trace("Send receiver[%u] ,msgType[%d] rpcid [%u]",receiver,msgtype,rpc)
 end
 
-function Module:SendRPC(receiver,msg,cb)
-	assert(nil ~= cb,"rpc callback must not be null")
-	msg:SetType(EMessageType.ModuleData)
-	self.RPCIncreID = 	self.RPCIncreID +1
-	local id = self.RPCIncreID
-	msg:SetRPCID(id)
-	self.RPCHandlers[id] = cb
-	self:_SendMessage(receiver,msg)
+function Module:SendRPC(receiver,data,userdata,cb)
+	assert(nil ~= cb,type(cb) == "function","rpc callback must not be null")
+
+	self.RPCIncreID 		= self.RPCIncreID +1
+	local 		id 			= self.RPCIncreID
+	self.RPCHandlers[id] 	= cb
+
+	self:_Send(receiver,data,userdata,id,EMessageType.ModuleData)
+	
 	Log.Trace("SendRpc  rpcid[%u]", id)
 end
 
-function Module:Broadcast(msg,msgType)
- 	msg:SetType(EMessageType.ModuleData)
- 	self:_Broadcast(msg)
+function Module:Broadcast(data,userdata,msgtype)
+	msgtype = msgtype or EMessageType.ModuleData
+	userdata = userdata or ""
+ 	self:_Broadcast(data,userdata,msgtype)
 end
 
 function Module:SendToAccount(accountID,msg)
@@ -79,28 +83,27 @@ function Module:RegisterMessageCB(msgID,f)
 	self.MsgHandlers[msgID] = f
 end
 
-function Module:DispatchMessage(msg)
-	if msg:GetType() == EMessageType.ModuleRPC  then
-		if msg:HasRPCID() then	
-			local rpcID = msg:GetRPCID()
-			local f = self.RPCHandlers[rpcID]
+function Module:DispatchMessage(sender,data,userdata,rpc,msgtype)
+	if msgtype == EMessageType.ModuleRPC  then
+		if rpc ~=0 then	
+			local f = self.RPCHandlers[rpc]
 			if nil ~= f then
-				f(msg)
-				self.RPCHandlers[rpcID] = nil
-				Log.Trace("DispatchMessage Rpc[%u] success", rpcID)
+				f(data,userData)
+				self.RPCHandlers[rpc] = nil
+				Log.Trace("DispatchMessage Rpc[%u] success", rpc)
 				return true
 			end
-			Log.Warn("DispatchMessage Rpc[%u] failed", rpcID)
+			Log.Warn("DispatchMessage Rpc[%u] failed", rpc)
 			return false
 		end
 		Log.Warn("DispatchMessage Rpc failed, has no rcp id")
 		return false
 	end
 
-	local br   	= BinaryReader.new(msg:Bytes())
-	local msgID = br:ReadUInt16()
+	local msgID,msgData = UnpackMsg(data)
 
 	if msgID == MsgID.MSG_S2S_CLIENT_CLOSE then
+		local br = BinaryReader.new(msgData)
 		local accountID = br:ReadUInt64()
 		local playerID 	= br:ReadUInt64()
 		Module.super.OnClientClose(self,accountID,playerID)
@@ -113,24 +116,14 @@ function Module:DispatchMessage(msg)
 		return false
 	end
 
-	local UserCtx = {}
-
-	if msg:HasSessionID() then
-		UserCtx.sessionID = msg:GetSessionID()
+	local uctx = sender
+	if nil ~= userdata then
+		uctx = DeserializeUserData(userdata)
 	end
 
-	UserCtx.playerID = msg:GetSubUserID()
-	if UserCtx.playerID == 0 then
-		UserCtx.accountID = msg:GetUserID()
-	end
+	f(uctx,msgData,rpc)
 
-	if msg:HasRPCID() then
-		UserCtx.rpcID = msg:GetRPCID()
-	end
-
-	f(UserCtx,br)
-
-	Log.Trace("Handler message %d", msgID)
+	--Log.Trace("Handler message %d", msgID)
 	return true
 end
 

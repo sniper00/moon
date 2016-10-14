@@ -654,4 +654,20 @@ function newConst( const_table )    --生成常量表功能
     return t
 end
 
+function string.parsekv(str)
+    local ret = {}
+    local tmp = string.split(str,';')
+    for __,s in pairs(tmp) do
+       local t = string.split(s,':')
+       if #t == 2 then
+        local k = t[1]
+        local v = t[2]
+        k = string.trim(k)
+        v = string.trim(v)
+        ret[k] = v
+       end
+    end
+    return ret
+end
+
 

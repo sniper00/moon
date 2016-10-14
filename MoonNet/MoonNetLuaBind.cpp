@@ -4,12 +4,13 @@
 #include "Common/BinaryWriter.hpp"
 #include "Common/BinaryReader.hpp"
 #include "Common/Path.hpp"
-
+#include "Common/Timer/TimerPool.h"
 #include "Message.h"
 #include "ObjectCreateHelper.h"
+
+#include "ModuleManager.h"
 #include "Module.h"
 #include "ModuleLua.h"
-#include "ModuleManager.h"
 #include "Network.h"
 
 #include "Detail/Log/Log.h"
@@ -32,6 +33,21 @@ MoonNetLuaBind& MoonNetLuaBind::BindTime()
 {
 	lua.set_function("GetSecond", time::second);
 	lua.set_function("GetMillsecond", time::millsecond);
+
+	return *this;
+}
+
+MoonNetLuaBind & MoonNetLuaBind::BindTimer()
+{
+	lua.new_usertype<TimerPool>("TimerPool"
+		, sol::call_constructor, sol::no_constructor
+		, "ExpiredOnce", &TimerPool::ExpiredOnce
+		, "Repeat", &TimerPool::Repeat
+		, "Remove", &TimerPool::Remove
+		, "StopAllTimer", &TimerPool::StopAllTimer
+		, "StartAllTimer", &TimerPool::StartAllTimer
+		);
+
 	return *this;
 }
 
@@ -95,42 +111,6 @@ MoonNetLuaBind& MoonNetLuaBind::BindEMessageType()
 	return *this;
 }
 
-MoonNetLuaBind& MoonNetLuaBind::BindMessage()
-{
-	lua.new_usertype<Message>("Message"
-		, sol::call_constructor, sol::no_constructor
-		, "HasSessionID", &Message::IsSessionID
-		, "GetSessionID", &Message::GetSessionID
-		, "GetSender", &Message::GetSender
-		, "SetSender", &Message::SetSender
-		, "SetReceiver", &Message::SetReceiver
-		, "GetReceiver", &Message::GetReceiver
-		, "SetUserID", &Message::SetUserID
-		, "GetUserID", &Message::GetUserID
-		, "SetSubUserID", &Message::SetSubUserID
-		, "GetSubUserID", &Message::GetSubUserID
-		, "SetRPCID", &Message::SetRPCID
-		, "GetRPCID", &Message::GetRPCID
-		, "HasRPCID", &Message::HasRPCID
-		, "SetType", &Message::SetType
-		, "GetType", &Message::GetType
-		, "Size", &Message::Size
-		, "Bytes",&Message::Bytes
-		, "WriteData",&Message::WriteData
-		, "Clone",&Message::Clone
-		);
-
-	lua.set_function("CreateMessage", []() {
-		return  new Message();
-	});
-
-	lua.set_function("CreateMessageWithSize", [](size_t size) {
-		return  new Message(size);
-	});
-
-	return *this;
-}
-
 MoonNetLuaBind& MoonNetLuaBind::BindNetwork()
 {
 	lua.new_usertype<Network>("Network"
@@ -139,11 +119,11 @@ MoonNetLuaBind& MoonNetLuaBind::BindNetwork()
 		, "Listen", &Network::Listen
 		, "SyncConnect", &Network::SyncConnect
 		, "Connect", &Network::Connect
-		, "SendNetMessage", &Network::SendNetMessage
+		, "Send", &Network::Send
 		, "Start", &Network::Start
 		, "Update", &Network::Update
 		, "Destory", &Network::Destory
-		, "OnHandleNetMessage", &Network::OnNetMessage
+		, "SetHandler", &Network::SetHandler
 		);
 
 	lua.set_function("CreateNetwork", []() {return std::make_shared<Network>();});

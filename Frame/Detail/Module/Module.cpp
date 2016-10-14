@@ -10,25 +10,30 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "Module.h"
 #include "Message.h"
 #include "ModuleManager.h"
+#include "ObjectCreateHelper.h"
 
 namespace moon
 {
 	struct Module::ModuleImp
 	{
 		ModuleImp()
-			:EnableUpdate(false)
+			:ID(0)
+			,IncreCacheID(1)
+			,EnableUpdate(false)
 			,Manager(nullptr)
 			,Ok(true)
 		{
 		}
 
 		ModuleID																ID;
+		uint32_t																IncreCacheID;
 		std::string																Name;
 		std::string																Config;
 		bool																		EnableUpdate;
 		bool																		Ok;
 		ModuleManager*													Manager;
 		std::deque<MessagePtr>									MessageQueue;
+		std::unordered_map<uint32_t, MemoryStreamPtr> CacheDatas;
 	};
 
 	Module::Module() noexcept
@@ -67,26 +72,62 @@ namespace moon
 		return m_ModuleImp->EnableUpdate;
 	}
 
-	void Module::Broadcast(Message* msg)
-	{
-		m_ModuleImp->Manager->Broadcast(GetID(),msg);
-	}
-
-	void Module::Send(ModuleID receiver, Message* msg)
+	void Module::Send(ModuleID receiver, const std::string & data, const std::string & userdata, uint64_t rpcID, uint8_t type)
 	{
 		//if send Message to self , add to MessageQueue directly.
 		if (receiver == GetID())
 		{
-			Assert((msg->GetType() != EMessageType::Unknown), "sending unknown type message");
-			Assert(!msg->IsReadOnly(), "the same message can only send one times, use message::clone");
-			msg->SetReadOnly();
+			Assert((type != (uint8_t)EMessageType::Unknown), "send unknown type message!");
 
-			auto tmp = MessagePtr(msg);
-			tmp->SetReceiver(GetID());
-			PushMessage(tmp);
+			auto msg = ObjectCreateHelper<Message>::Create(data.size());
+			msg->SetSender(GetID());
+			msg->SetReceiver(GetID());
+			msg->WriteData(data);
+			msg->SetUserData(userdata);
+			msg->SetRPCID(rpcID);
+			msg->SetType(EMessageType(type));
+
+			PushMessage(msg);
 			return;
 		}
-		m_ModuleImp->Manager->Send(GetID(),receiver,msg);
+		m_ModuleImp->Manager->Send(GetID(), receiver, data, userdata, rpcID, type);
+	}
+
+	void Module::SendByCache(ModuleID receiver, uint32_t cacheID, const std::string & userdata, uint64_t rpcID, uint8_t type)
+	{
+		auto iter = m_ModuleImp->CacheDatas.find(cacheID);
+		if (iter == m_ModuleImp->CacheDatas.end())
+			return;
+		auto& ms = iter->second;
+		//if send Message to self , add to MessageQueue directly.
+		if (receiver == GetID())
+		{
+			Assert((type != (uint8_t)EMessageType::Unknown), "send unknown type message!");
+
+			auto msg = ObjectCreateHelper<Message>::Create(ms);
+			msg->SetSender(GetID());
+			msg->SetReceiver(GetID());
+			msg->SetUserData(userdata);
+			msg->SetType(EMessageType(type));
+			msg->SetRPCID(rpcID);
+
+			PushMessage(msg);
+			return;
+		}
+		m_ModuleImp->Manager->SendEx(GetID(), receiver,ms, userdata, rpcID, type);
+	}
+
+	void Module::Broadcast(const std::string& data, const std::string& userdata,uint8_t type)
+	{
+		m_ModuleImp->Manager->Broadcast(GetID(),data, userdata, type);
+	}
+
+	uint32_t Module::CreateCache(const std::string & data)
+	{
+		auto ms = ObjectCreateHelper<MemoryStream>::Create(data.size());
+		auto cacheID = m_ModuleImp->IncreCacheID++;
+		m_ModuleImp->CacheDatas.emplace(cacheID, ms);
+		return cacheID;
 	}
 
 	void Module::SetManager(ModuleManager* mgr)
@@ -97,6 +138,12 @@ namespace moon
 	void Module::Exit()
 	{
 		m_ModuleImp->Manager->RemoveModule(GetID());
+	}
+
+	void Module::Update(uint32_t interval)
+	{
+		m_ModuleImp->IncreCacheID = 1;
+		m_ModuleImp->CacheDatas.clear();
 	}
 
 	void Module::SetOK(bool v)
@@ -122,7 +169,7 @@ namespace moon
 			return false;
 		auto& msg = mq.front();
 		assert(GetID() == msg->GetReceiver() || msg->GetReceiver() == 0);
-		OnMessage(msg.get());
+		OnMessage(msg->GetSender(),msg->Bytes(),msg->GetUserData(),msg->GetRPCID(),(uint8_t)msg->GetType());
 		mq.pop_front();
 		return mq.size() != 0;
 	}

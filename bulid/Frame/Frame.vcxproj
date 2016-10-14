@@ -139,7 +139,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -153,7 +153,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -167,7 +167,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -181,7 +181,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -200,7 +200,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -219,7 +219,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\Frame;..\..\asio-1.10.6\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -244,6 +244,7 @@
     <ClInclude Include="..\..\Frame\Common\LoopThread.hpp" />
     <ClInclude Include="..\..\Frame\Common\MemoryStream.hpp" />
     <ClInclude Include="..\..\Frame\Common\Path.hpp" />
+    <ClInclude Include="..\..\Frame\Common\Singleton.hpp" />
     <ClInclude Include="..\..\Frame\Common\StringUtils.hpp" />
     <ClInclude Include="..\..\Frame\Common\SyncQueue.hpp" />
     <ClInclude Include="..\..\Frame\Common\Time.hpp" />

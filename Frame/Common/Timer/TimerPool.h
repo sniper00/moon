@@ -36,9 +36,7 @@ namespace moon
 		*  typedef   std::function<void()> timer_handler;
 		* 返回计时器ID
 		*/
-		uint32_t  expiredOnce(int64_t duration,const timer_handler& callBack);
-
-		uint32_t  expiredOnce(int64_t duration,timer_handler&& callBack);
+		uint64_t  ExpiredOnce(int64_t duration,const timer_handler& callBack);
 
 		/**
 		* 添加重复执行的计时器
@@ -49,37 +47,35 @@ namespace moon
 		*  typedef   std::function<void()> timer_handler;
 		* 返回计时器ID
 		*/
-		uint32_t  repeat(int64_t duration, int32_t times, timer_handler&& callBack);
-
-		uint32_t  repeat(int64_t duration, int32_t times, const timer_handler& callBack);
+		uint64_t  Repeat(int64_t duration, int32_t times, const timer_handler& callBack);
 
 		/**
 		* 移除一个计时器
 		*
 		* @timerid 计时器 ID
 		*/
-		void remove(uint32_t timerid);
+		void Remove(uint64_t timerid);
 		
 		//逻辑线程需要调用这个函数，驱动计时器
-		void update();
+		void Update();
 
-		void stopAllTimer();
+		void StopAllTimer();
 
-		void startAllTimer();
+		void StartAllTimer();
 
 		static int64_t millseconds();
 	private:
-		uint32_t 	addNewTimer(const timer_context_ptr& t);
-		void		addTimer(const timer_context_ptr& t);
-		void		expired(const std::vector<uint64_t>& timers);
-		uint64_t	makeKey(uint32_t id, uint32_t  slots);
+		uint64_t 	addNewTimer(const timer_context_ptr& t);
+		void			addTimer(const timer_context_ptr& t);
+		void			expired(const std::vector<uint64_t>& timers);
+		uint64_t	makeKey(uint64_t id, uint32_t  slots);
 		uint8_t		getSlot(uint64_t  key, int which_queue);	
 	private:
 		std::vector < TimerWheel<std::vector<uint64_t>, wheel_size>> m_wheels;
-		std::unordered_map<uint32_t, timer_context_ptr>		m_timers;
+		std::unordered_map<uint64_t, timer_context_ptr>			m_timers;
 		std::vector<timer_context_ptr>										m_new;
 		int64_t																				m_tick;
-		uint32_t																			m_inc;
+		uint64_t																			m_inc;
 		bool																					m_Stop;
 	};
 }

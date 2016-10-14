@@ -23,8 +23,8 @@ function Login:Init(config)
 	Log.Trace("Module Init: %s",config)
 end
 
-function Login:OnMessage(msg)
-	Login.super.DispatchMessage(self, msg)
+function Login:OnMessage(sender,data,userdata,rpcid,msgtype)
+	Login.super.DispatchMessage(self, sender,data,userdata,rpcid,msgtype)
 end
 
 

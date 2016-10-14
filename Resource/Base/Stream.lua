@@ -4,10 +4,6 @@ local Stream = class("Stream")
 
 local DEFAULT_CAPACITY = 64
 
-function UIn16ToBytes(v)
-	return string.pack("=H",v)
-end
-
 function Stream:ctor(capacity)
 	capacity =capacity or DEFAULT_CAPACITY
 	self.buf = {}
