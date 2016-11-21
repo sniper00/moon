@@ -19,32 +19,32 @@ function LoginDatas:CreateSerialNum()
 	return self.LoginIncreSerialNum 
 end
 
-function LoginDatas:Add(serialNum, accountID, sessionID)
+function LoginDatas:Add(serialnum, accountid, sessionid)
 	assert(self.logindatas[serialNum] == nil,"login data already exist")
 	local d = {}
-	d.serialNum = serialNum
-	d.accountID = accountID
-	d.sessionID = sessionID
-	self.logindatas[serialNum] = d
-	self.sessions[sessionID] = d
+	d.serialnum = serialnum
+	d.accountid = accountid
+	d.sessionid = sessionid
+	self.logindatas[serialnum] = d
+	self.sessions[sessionid] = d
 end
 
-function  LoginDatas:Remove(serialNum)
-	local d = self.logindatas[serialNum]
+function  LoginDatas:Remove(serialnum)
+	local d = self.logindatas[serialnum]
 	if nil ~= d then
-		self.logindatas[serialNum] = nil
-		self.sessions[d.sessionID] = nil
+		self.logindatas[serialnum] = nil
+		self.sessions[d.sessionid] = nil
 		return true
 	else
 		return false
 	end
 end
 
-function  LoginDatas:RemoveBySession(sessionID)
-	local d = self.sessions[sessionID]
+function  LoginDatas:RemoveBySession(sessionid)
+	local d = self.sessions[sessionid]
 	if nil ~= d then
-		self.logindatas[d.serialNum] = nil
-		self.sessions[sessionID] = nil
+		self.logindatas[d.serialnum] = nil
+		self.sessions[sessionid] = nil
 		return true
 	else
 		return false
@@ -52,12 +52,12 @@ function  LoginDatas:RemoveBySession(sessionID)
 end
 
 
-function LoginDatas:Find( serialNum )
-	return self.logindatas[serialNum] 
+function LoginDatas:Find( serialnum )
+	return self.logindatas[serialnum] 
 end
 
-function LoginDatas:FindBySessionID(sessionID)
-	return self.sessions[sessionID]
+function LoginDatas:FindBySessionID(sessionid)
+	return self.sessions[sessionid]
 end
 
 return LoginDatas

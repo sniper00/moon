@@ -1,30 +1,48 @@
 package.path = 'Base/?.lua;Gate/?.lua;Login/?.lua;'
 
 require("SerializeUtil")
+require("gate.c")
 
-local MsgID 	= require("MsgID")
+local MsgID = require("MsgID")
 
-local mgr = ModuleManager.new()
-mgr:Init("machine_id:1;worker_num:1;")
-mgr:CreateModule(
+pool:init("machineid:1;service_worker_num:2;")
+
+pool:run()
+
+-- local gt = Gate.Create()
+-- pool:new_native_service(gt,
+-- 	[[
+-- 	name:gate;
+-- 	netthread:4;
+-- 	ip:127.0.0.1;
+-- 	port:11111;
+-- 	]],true)
+
+pool:new_service(
 	[[
 	name:gate;
 	luafile:Gate/Gate.lua;
-	netthread:1;
+	netthread:4;
+	timeout:0;
 	ip:127.0.0.1;
 	port:11111;
-	]])
+	]],true)
 
-mgr:CreateModule(
+pool:new_service(
 	[[
 	name:login;
 	luafile:Login/Login.lua;
-	]])
+	]],true)
 
-mgr:Broadcast(0,UInt16ToBytes(MsgID.MSG_S2S_SERVER_START),"",EMessageType.ModuleData)
+pool:new_service(
+	[[
+	name:monitor;
+	luafile:Monitor/Monitor.lua;
+	]],false)
 
-mgr:Run()
+pool:broadcast(0,UInt16ToBytes(MsgID.MSG_S2S_SERVER_START))
 
 local name = io.read()
 
-mgr:Stop()
+
+pool:stop()

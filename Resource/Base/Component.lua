@@ -29,7 +29,6 @@ function Component:SetOwner(owner)
 	self.owner = owner
 end
 
-
 function Component:AddComponent(name,cpt)
 	assert(self.components[name] == nil,string.format("Component named [%s] already exist!",name))
 	self.components[name]= cpt
@@ -46,10 +45,10 @@ function Component:Start()
 	end
 end
 
-function Component:Update(interval)
+function Component:Update()
 	for i,v in pairs(self.components) do
 		if v:IsEnableUpdate() then
-			v:Update(interval)
+			v:Update()
 		end
 	end
 end

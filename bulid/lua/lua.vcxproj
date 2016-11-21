@@ -146,7 +146,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;LUA_BUILD_AS_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <CompileAs>CompileAsC</CompileAs>
@@ -162,7 +162,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;LUA_BUILD_AS_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <CompileAs>CompileAsC</CompileAs>
@@ -178,7 +178,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;LUA_USE_LINUX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <CompileAs>CompileAsC</CompileAs>
@@ -195,7 +195,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;LUA_BUILD_AS_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -216,7 +216,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;LUA_BUILD_AS_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -237,7 +237,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;LUA_USE_LINUX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -255,66 +255,66 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Third\liblua\lapi.h" />
-    <ClInclude Include="..\..\Third\liblua\lauxlib.h" />
-    <ClInclude Include="..\..\Third\liblua\lcode.h" />
-    <ClInclude Include="..\..\Third\liblua\lctype.h" />
-    <ClInclude Include="..\..\Third\liblua\ldebug.h" />
-    <ClInclude Include="..\..\Third\liblua\ldo.h" />
-    <ClInclude Include="..\..\Third\liblua\lfunc.h" />
-    <ClInclude Include="..\..\Third\liblua\lgc.h" />
-    <ClInclude Include="..\..\Third\liblua\llex.h" />
-    <ClInclude Include="..\..\Third\liblua\llimits.h" />
-    <ClInclude Include="..\..\Third\liblua\lmem.h" />
-    <ClInclude Include="..\..\Third\liblua\lobject.h" />
-    <ClInclude Include="..\..\Third\liblua\lopcodes.h" />
-    <ClInclude Include="..\..\Third\liblua\lparser.h" />
-    <ClInclude Include="..\..\Third\liblua\lprefix.h" />
-    <ClInclude Include="..\..\Third\liblua\lstate.h" />
-    <ClInclude Include="..\..\Third\liblua\lstring.h" />
-    <ClInclude Include="..\..\Third\liblua\ltable.h" />
-    <ClInclude Include="..\..\Third\liblua\ltm.h" />
-    <ClInclude Include="..\..\Third\liblua\lua.h" />
-    <ClInclude Include="..\..\Third\liblua\luaconf.h" />
-    <ClInclude Include="..\..\Third\liblua\lualib.h" />
-    <ClInclude Include="..\..\Third\liblua\lundump.h" />
-    <ClInclude Include="..\..\Third\liblua\lvm.h" />
-    <ClInclude Include="..\..\Third\liblua\lzio.h" />
+    <ClInclude Include="..\..\third\liblua\lapi.h" />
+    <ClInclude Include="..\..\third\liblua\lauxlib.h" />
+    <ClInclude Include="..\..\third\liblua\lcode.h" />
+    <ClInclude Include="..\..\third\liblua\lctype.h" />
+    <ClInclude Include="..\..\third\liblua\ldebug.h" />
+    <ClInclude Include="..\..\third\liblua\ldo.h" />
+    <ClInclude Include="..\..\third\liblua\lfunc.h" />
+    <ClInclude Include="..\..\third\liblua\lgc.h" />
+    <ClInclude Include="..\..\third\liblua\llex.h" />
+    <ClInclude Include="..\..\third\liblua\llimits.h" />
+    <ClInclude Include="..\..\third\liblua\lmem.h" />
+    <ClInclude Include="..\..\third\liblua\lobject.h" />
+    <ClInclude Include="..\..\third\liblua\lopcodes.h" />
+    <ClInclude Include="..\..\third\liblua\lparser.h" />
+    <ClInclude Include="..\..\third\liblua\lprefix.h" />
+    <ClInclude Include="..\..\third\liblua\lstate.h" />
+    <ClInclude Include="..\..\third\liblua\lstring.h" />
+    <ClInclude Include="..\..\third\liblua\ltable.h" />
+    <ClInclude Include="..\..\third\liblua\ltm.h" />
+    <ClInclude Include="..\..\third\liblua\lua.h" />
+    <ClInclude Include="..\..\third\liblua\luaconf.h" />
+    <ClInclude Include="..\..\third\liblua\lualib.h" />
+    <ClInclude Include="..\..\third\liblua\lundump.h" />
+    <ClInclude Include="..\..\third\liblua\lvm.h" />
+    <ClInclude Include="..\..\third\liblua\lzio.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Third\liblua\lapi.c" />
-    <ClCompile Include="..\..\Third\liblua\lauxlib.c" />
-    <ClCompile Include="..\..\Third\liblua\lbaselib.c" />
-    <ClCompile Include="..\..\Third\liblua\lbitlib.c" />
-    <ClCompile Include="..\..\Third\liblua\lcode.c" />
-    <ClCompile Include="..\..\Third\liblua\lcorolib.c" />
-    <ClCompile Include="..\..\Third\liblua\lctype.c" />
-    <ClCompile Include="..\..\Third\liblua\ldblib.c" />
-    <ClCompile Include="..\..\Third\liblua\ldebug.c" />
-    <ClCompile Include="..\..\Third\liblua\ldo.c" />
-    <ClCompile Include="..\..\Third\liblua\ldump.c" />
-    <ClCompile Include="..\..\Third\liblua\lfunc.c" />
-    <ClCompile Include="..\..\Third\liblua\lgc.c" />
-    <ClCompile Include="..\..\Third\liblua\linit.c" />
-    <ClCompile Include="..\..\Third\liblua\liolib.c" />
-    <ClCompile Include="..\..\Third\liblua\llex.c" />
-    <ClCompile Include="..\..\Third\liblua\lmathlib.c" />
-    <ClCompile Include="..\..\Third\liblua\lmem.c" />
-    <ClCompile Include="..\..\Third\liblua\loadlib.c" />
-    <ClCompile Include="..\..\Third\liblua\lobject.c" />
-    <ClCompile Include="..\..\Third\liblua\lopcodes.c" />
-    <ClCompile Include="..\..\Third\liblua\loslib.c" />
-    <ClCompile Include="..\..\Third\liblua\lparser.c" />
-    <ClCompile Include="..\..\Third\liblua\lstate.c" />
-    <ClCompile Include="..\..\Third\liblua\lstring.c" />
-    <ClCompile Include="..\..\Third\liblua\lstrlib.c" />
-    <ClCompile Include="..\..\Third\liblua\ltable.c" />
-    <ClCompile Include="..\..\Third\liblua\ltablib.c" />
-    <ClCompile Include="..\..\Third\liblua\ltm.c" />
-    <ClCompile Include="..\..\Third\liblua\lundump.c" />
-    <ClCompile Include="..\..\Third\liblua\lutf8lib.c" />
-    <ClCompile Include="..\..\Third\liblua\lvm.c" />
-    <ClCompile Include="..\..\Third\liblua\lzio.c" />
+    <ClCompile Include="..\..\third\liblua\lapi.c" />
+    <ClCompile Include="..\..\third\liblua\lauxlib.c" />
+    <ClCompile Include="..\..\third\liblua\lbaselib.c" />
+    <ClCompile Include="..\..\third\liblua\lbitlib.c" />
+    <ClCompile Include="..\..\third\liblua\lcode.c" />
+    <ClCompile Include="..\..\third\liblua\lcorolib.c" />
+    <ClCompile Include="..\..\third\liblua\lctype.c" />
+    <ClCompile Include="..\..\third\liblua\ldblib.c" />
+    <ClCompile Include="..\..\third\liblua\ldebug.c" />
+    <ClCompile Include="..\..\third\liblua\ldo.c" />
+    <ClCompile Include="..\..\third\liblua\ldump.c" />
+    <ClCompile Include="..\..\third\liblua\lfunc.c" />
+    <ClCompile Include="..\..\third\liblua\lgc.c" />
+    <ClCompile Include="..\..\third\liblua\linit.c" />
+    <ClCompile Include="..\..\third\liblua\liolib.c" />
+    <ClCompile Include="..\..\third\liblua\llex.c" />
+    <ClCompile Include="..\..\third\liblua\lmathlib.c" />
+    <ClCompile Include="..\..\third\liblua\lmem.c" />
+    <ClCompile Include="..\..\third\liblua\loadlib.c" />
+    <ClCompile Include="..\..\third\liblua\lobject.c" />
+    <ClCompile Include="..\..\third\liblua\lopcodes.c" />
+    <ClCompile Include="..\..\third\liblua\loslib.c" />
+    <ClCompile Include="..\..\third\liblua\lparser.c" />
+    <ClCompile Include="..\..\third\liblua\lstate.c" />
+    <ClCompile Include="..\..\third\liblua\lstring.c" />
+    <ClCompile Include="..\..\third\liblua\lstrlib.c" />
+    <ClCompile Include="..\..\third\liblua\ltable.c" />
+    <ClCompile Include="..\..\third\liblua\ltablib.c" />
+    <ClCompile Include="..\..\third\liblua\ltm.c" />
+    <ClCompile Include="..\..\third\liblua\lundump.c" />
+    <ClCompile Include="..\..\third\liblua\lutf8lib.c" />
+    <ClCompile Include="..\..\third\liblua\lvm.c" />
+    <ClCompile Include="..\..\third\liblua\lzio.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

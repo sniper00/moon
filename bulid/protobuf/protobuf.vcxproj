@@ -146,7 +146,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <AdditionalOptions>/TP %(AdditionalOptions)</AdditionalOptions>
@@ -162,7 +162,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <AdditionalOptions>/TP %(AdditionalOptions)</AdditionalOptions>
@@ -178,7 +178,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
     </ClCompile>
@@ -194,7 +194,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -215,7 +215,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -236,7 +236,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\Third\liblua;..\..\Third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\third\liblua;..\..\third;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -253,34 +253,34 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Third\protobuf\alloc.h" />
-    <ClInclude Include="..\..\Third\protobuf\array.h" />
-    <ClInclude Include="..\..\Third\protobuf\bootstrap.h" />
-    <ClInclude Include="..\..\Third\protobuf\context.h" />
-    <ClInclude Include="..\..\Third\protobuf\descriptor.pbc.h" />
-    <ClInclude Include="..\..\Third\protobuf\map.h" />
-    <ClInclude Include="..\..\Third\protobuf\pattern.h" />
-    <ClInclude Include="..\..\Third\protobuf\pbc-lua.h" />
-    <ClInclude Include="..\..\Third\protobuf\pbc.h" />
-    <ClInclude Include="..\..\Third\protobuf\proto.h" />
-    <ClInclude Include="..\..\Third\protobuf\stringpool.h" />
-    <ClInclude Include="..\..\Third\protobuf\varint.h" />
+    <ClInclude Include="..\..\third\protobuf\alloc.h" />
+    <ClInclude Include="..\..\third\protobuf\array.h" />
+    <ClInclude Include="..\..\third\protobuf\bootstrap.h" />
+    <ClInclude Include="..\..\third\protobuf\context.h" />
+    <ClInclude Include="..\..\third\protobuf\descriptor.pbc.h" />
+    <ClInclude Include="..\..\third\protobuf\map.h" />
+    <ClInclude Include="..\..\third\protobuf\pattern.h" />
+    <ClInclude Include="..\..\third\protobuf\pbc-lua.h" />
+    <ClInclude Include="..\..\third\protobuf\pbc.h" />
+    <ClInclude Include="..\..\third\protobuf\proto.h" />
+    <ClInclude Include="..\..\third\protobuf\stringpool.h" />
+    <ClInclude Include="..\..\third\protobuf\varint.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Third\protobuf\alloc.c" />
-    <ClCompile Include="..\..\Third\protobuf\array.c" />
-    <ClCompile Include="..\..\Third\protobuf\bootstrap.c" />
-    <ClCompile Include="..\..\Third\protobuf\context.c" />
-    <ClCompile Include="..\..\Third\protobuf\decode.c" />
-    <ClCompile Include="..\..\Third\protobuf\map.c" />
-    <ClCompile Include="..\..\Third\protobuf\pattern.c" />
-    <ClCompile Include="..\..\Third\protobuf\pbc-lua53.c" />
-    <ClCompile Include="..\..\Third\protobuf\proto.c" />
-    <ClCompile Include="..\..\Third\protobuf\register.c" />
-    <ClCompile Include="..\..\Third\protobuf\rmessage.c" />
-    <ClCompile Include="..\..\Third\protobuf\stringpool.c" />
-    <ClCompile Include="..\..\Third\protobuf\varint.c" />
-    <ClCompile Include="..\..\Third\protobuf\wmessage.c" />
+    <ClCompile Include="..\..\third\protobuf\alloc.c" />
+    <ClCompile Include="..\..\third\protobuf\array.c" />
+    <ClCompile Include="..\..\third\protobuf\bootstrap.c" />
+    <ClCompile Include="..\..\third\protobuf\context.c" />
+    <ClCompile Include="..\..\third\protobuf\decode.c" />
+    <ClCompile Include="..\..\third\protobuf\map.c" />
+    <ClCompile Include="..\..\third\protobuf\pattern.c" />
+    <ClCompile Include="..\..\third\protobuf\pbc-lua53.c" />
+    <ClCompile Include="..\..\third\protobuf\proto.c" />
+    <ClCompile Include="..\..\third\protobuf\register.c" />
+    <ClCompile Include="..\..\third\protobuf\rmessage.c" />
+    <ClCompile Include="..\..\third\protobuf\stringpool.c" />
+    <ClCompile Include="..\..\third\protobuf\varint.c" />
+    <ClCompile Include="..\..\third\protobuf\wmessage.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lua\lua.vcxproj">

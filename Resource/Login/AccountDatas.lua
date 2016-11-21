@@ -32,9 +32,8 @@ function AccountDatas:IsOnline( accountID )
 	local a = self:FindAccountInfo(accountID)
 	if a ~= nil then
 		if a.bOnline then
-		end
-		
-		return a.bOnline
+			return a.bOnline
+		end			
 	end
 	return false
 end

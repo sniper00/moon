@@ -18,6 +18,11 @@ function Stream:Resize(size)
 	end
 end
 
+function Stream:Clear()
+	self.wpos = 1
+	self.rpos = 1
+end
+
 function Stream:WriteableSize()
 	return #self.buf - (self.wpos -1)
 end

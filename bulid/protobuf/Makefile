@@ -16,7 +16,7 @@ ifeq ($(config),debug_win32)
   TARGET = $(TARGETDIR)/protobuf.dll
   OBJDIR = obj/Win32/Debug
   DEFINES += -DDEBUG -D_USRDLL
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g /TP
@@ -43,7 +43,7 @@ ifeq ($(config),debug_x64)
   TARGET = $(TARGETDIR)/protobuf.dll
   OBJDIR = obj/x64/Debug
   DEFINES += -DDEBUG -D_USRDLL
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g /TP
@@ -70,7 +70,7 @@ ifeq ($(config),debug_linux)
   TARGET = $(TARGETDIR)/protobuf.so
   OBJDIR = obj/Linux/Debug
   DEFINES += -DDEBUG
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -fPIC
@@ -97,7 +97,7 @@ ifeq ($(config),release_win32)
   TARGET = $(TARGETDIR)/protobuf.dll
   OBJDIR = obj/Win32/Release
   DEFINES += -DNDEBUG -D_USRDLL
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O2 /TP
@@ -124,7 +124,7 @@ ifeq ($(config),release_x64)
   TARGET = $(TARGETDIR)/protobuf.dll
   OBJDIR = obj/x64/Release
   DEFINES += -DNDEBUG -D_USRDLL
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 /TP
@@ -151,7 +151,7 @@ ifeq ($(config),release_linux)
   TARGET = $(TARGETDIR)/protobuf.so
   OBJDIR = obj/Linux/Release
   DEFINES += -DNDEBUG
-  INCLUDES += -I../../Third/liblua -I../../Third
+  INCLUDES += -I../../third/liblua -I../../third
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -fPIC
@@ -244,46 +244,46 @@ $(GCH): $(PCH)
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
-$(OBJDIR)/alloc.o: ../../Third/protobuf/alloc.c
+$(OBJDIR)/alloc.o: ../../third/protobuf/alloc.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/array.o: ../../Third/protobuf/array.c
+$(OBJDIR)/array.o: ../../third/protobuf/array.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/bootstrap.o: ../../Third/protobuf/bootstrap.c
+$(OBJDIR)/bootstrap.o: ../../third/protobuf/bootstrap.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/context.o: ../../Third/protobuf/context.c
+$(OBJDIR)/context.o: ../../third/protobuf/context.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/decode.o: ../../Third/protobuf/decode.c
+$(OBJDIR)/decode.o: ../../third/protobuf/decode.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/map.o: ../../Third/protobuf/map.c
+$(OBJDIR)/map.o: ../../third/protobuf/map.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/pattern.o: ../../Third/protobuf/pattern.c
+$(OBJDIR)/pattern.o: ../../third/protobuf/pattern.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/pbc-lua53.o: ../../Third/protobuf/pbc-lua53.c
+$(OBJDIR)/pbc-lua53.o: ../../third/protobuf/pbc-lua53.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/proto.o: ../../Third/protobuf/proto.c
+$(OBJDIR)/proto.o: ../../third/protobuf/proto.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/register.o: ../../Third/protobuf/register.c
+$(OBJDIR)/register.o: ../../third/protobuf/register.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/rmessage.o: ../../Third/protobuf/rmessage.c
+$(OBJDIR)/rmessage.o: ../../third/protobuf/rmessage.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/stringpool.o: ../../Third/protobuf/stringpool.c
+$(OBJDIR)/stringpool.o: ../../third/protobuf/stringpool.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/varint.o: ../../Third/protobuf/varint.c
+$(OBJDIR)/varint.o: ../../third/protobuf/varint.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/wmessage.o: ../../Third/protobuf/wmessage.c
+$(OBJDIR)/wmessage.o: ../../third/protobuf/wmessage.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

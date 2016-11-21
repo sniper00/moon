@@ -11,53 +11,47 @@ ifndef verbose
 endif
 
 ifeq ($(config),debug_win32)
-  Frame_config = debug_win32
   lua_config = debug_win32
   protobuf_config = debug_win32
-  MoonNet_config = debug_win32
+  xnet_config = debug_win32
+  server_config = debug_win32
 endif
 ifeq ($(config),debug_x64)
-  Frame_config = debug_x64
   lua_config = debug_x64
   protobuf_config = debug_x64
-  MoonNet_config = debug_x64
+  xnet_config = debug_x64
+  server_config = debug_x64
 endif
 ifeq ($(config),debug_linux)
-  Frame_config = debug_linux
   lua_config = debug_linux
   protobuf_config = debug_linux
-  MoonNet_config = debug_linux
+  xnet_config = debug_linux
+  server_config = debug_linux
 endif
 ifeq ($(config),release_win32)
-  Frame_config = release_win32
   lua_config = release_win32
   protobuf_config = release_win32
-  MoonNet_config = release_win32
+  xnet_config = release_win32
+  server_config = release_win32
 endif
 ifeq ($(config),release_x64)
-  Frame_config = release_x64
   lua_config = release_x64
   protobuf_config = release_x64
-  MoonNet_config = release_x64
+  xnet_config = release_x64
+  server_config = release_x64
 endif
 ifeq ($(config),release_linux)
-  Frame_config = release_linux
   lua_config = release_linux
   protobuf_config = release_linux
-  MoonNet_config = release_linux
+  xnet_config = release_linux
+  server_config = release_linux
 endif
 
-PROJECTS := Frame lua protobuf MoonNet
+PROJECTS := lua protobuf xnet server
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
-
-Frame:
-ifneq (,$(Frame_config))
-	@echo "==== Building Frame ($(Frame_config)) ===="
-	@${MAKE} --no-print-directory -C Frame -f Makefile config=$(Frame_config)
-endif
 
 lua:
 ifneq (,$(lua_config))
@@ -71,17 +65,23 @@ ifneq (,$(protobuf_config))
 	@${MAKE} --no-print-directory -C protobuf -f Makefile config=$(protobuf_config)
 endif
 
-MoonNet: Frame lua
-ifneq (,$(MoonNet_config))
-	@echo "==== Building MoonNet ($(MoonNet_config)) ===="
-	@${MAKE} --no-print-directory -C MoonNet -f Makefile config=$(MoonNet_config)
+xnet:
+ifneq (,$(xnet_config))
+	@echo "==== Building xnet ($(xnet_config)) ===="
+	@${MAKE} --no-print-directory -C xnet -f Makefile config=$(xnet_config)
+endif
+
+server: lua xnet
+ifneq (,$(server_config))
+	@echo "==== Building server ($(server_config)) ===="
+	@${MAKE} --no-print-directory -C server -f Makefile config=$(server_config)
 endif
 
 clean:
-	@${MAKE} --no-print-directory -C Frame -f Makefile clean
 	@${MAKE} --no-print-directory -C lua -f Makefile clean
 	@${MAKE} --no-print-directory -C protobuf -f Makefile clean
-	@${MAKE} --no-print-directory -C MoonNet -f Makefile clean
+	@${MAKE} --no-print-directory -C xnet -f Makefile clean
+	@${MAKE} --no-print-directory -C server -f Makefile clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -97,9 +97,9 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   Frame"
 	@echo "   lua"
 	@echo "   protobuf"
-	@echo "   MoonNet"
+	@echo "   xnet"
+	@echo "   server"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

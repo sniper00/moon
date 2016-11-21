@@ -1,12 +1,10 @@
 package.path    = 'Base/?.lua;Gate/?.lua;'
-
 require("functions")
 require("Log")
 require("ConfigLoader")
 require("SerializeUtil")
 
-local Module        = require("Module")
-local Network       = require("Network")
+local Service       = require("Service")
 local Connects      = require("Connect")
 local MsgID         = require("MsgID")
 local BinaryReader  = require("BinaryReader")
@@ -15,18 +13,21 @@ local GateLoginHandler = require("GateLoginHandler")
 local LoginDatas    = require("LoginDatas")
 
 
-local Gate = class("Gate", Module)
+local Gate = class("Gate", Service)
 
+local messageCount = 0
 
 function Gate:ctor()
+    Log.SetTag("Gate")
+
     Gate.super.ctor(self)
 
     self.connects = nil
     self.net = nil
     self.gateLoginHandler = nil
 
-    self.worldModule = 0
-    self.loginModule = 0
+    self.worldService = 0
+    self.loginService = 0
     self.ID          = 0
 
     LoadProtocol();
@@ -36,20 +37,14 @@ end
 
 function Gate:Init(config)
     self.ID = Gate.super.GetID(self)
-    Gate.super.SetGateModule(self,self.ID)
+    Gate.super.SetGateService(self,self.ID)
 
-    local kvconfig = string.parsekv(config)
+    local ip =  Gate.super.GetConfig(self,"ip")
+    local port = Gate.super.GetConfig(self,"port")
 
-    kvconfig.netthread = kvconfig.netthread or "1"
-    assert(kvconfig.ip,"Gate ip is nil!")
-    assert(kvconfig.port,"Gate port is nil!")
+    Gate.super.Listen(self,ip,port)
 
-    self.net = Network.new()
-    self.net:Init(tonumber(kvconfig.netthread))
-    self.net:Listen(kvconfig.ip,kvconfig.port)
-    self.net:SetHandler(handler(self,self.OnNetMessage))
-    
-    Gate.super.AddComponent(self,"Network", self.net)
+
     Gate.super.AddComponent(self,"Connects", Connects.new())
     Gate.super.AddComponent(self,"GateHandler", GateHandler.new())
     Gate.super.AddComponent(self,"GateLoginHandler",GateLoginHandler.new())
@@ -58,49 +53,59 @@ function Gate:Init(config)
     self.connects = Gate.super.GetComponent(self,"Connects")
     self.gateLoginHandler = Gate.super.GetComponent(self,"GateLoginHandler")
 
-    Log.Trace("Gate Module Init: %s",config)
+    Log.Trace("Gate Service Init: %s",config)
 
+    -- Timer:Repeat(1000,-1,function ()
+    --     Log.ConsoleTrace("Msg Counter: %d",messageCount)
+    --     messageCount = 0
+    -- end)
 end
 
-function Gate:OnNetMessage(sessionid,data,msgtype)
-    self:OnMessage(sessionid,data,"",0,msgtype)
-end
+local onf =  Gate.super.OnMessage
 
-function Gate:OnMessage(sender,data,userdata,rpcid,msgtype)
-    if msgtype == EMessageType.NetworkConnect then
-        self:ClientConnect(data)
-    elseif msgtype == EMessageType.NetworkData then
-        self:ClientData(sender,data,msgtype)
-    elseif msgtype == EMessageType.NetworkClose then
-        self:ClientClose(sender,data)
-    elseif msgtype == EMessageType.ModuleData or msgtype == EMessageType.ModuleRPC then
-        self:ModuleData(sender,data,userdata,rpcid,msgtype)
-    elseif msgtype == EMessageType.ToClient then
-        self:ToClientData(data,userdata)
+function Gate:OnMessage(msg,msgtype)
+    if msgtype == MessageType.NetworkConnect then
+         self:ClientConnect(msg)
+    elseif msgtype == MessageType.NetworkData then
+        self:ClientData(msg)
+    elseif msgtype == MessageType.NetworkClose then
+        self:ClientClose(msg)
+    elseif msgtype == MessageType.ToClient then
+        self:ToClientData(msg)
+    else
+        onf(self,msg,msgtype)
     end
 end
 
-function Gate:ClientConnect(data)
+function Gate:ClientConnect(msg)
+    local data = msg:bytes()
+
     local br = BinaryReader.new(data)
     Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
 end
 
-function Gate:ClientData(sessionid,data,msgtype)
-    
-    if Gate.super.DispatchMessage(self,sessionid,data,nil,0,msgtype) then
+local mfunc = Gate.super.OnMessageServiceData
+
+function Gate:ClientData(msg)
+    messageCount = messageCount+1
+
+    local sessionid = msg:sender()
+    local data = msg:bytes()
+    local msgid,msgdata = UnpackMsg(data)
+
+    local handled = mfunc(self,sessionid,msgid,msgdata,nil,0,MessageType.NetworkData)
+    if handled then      
         return
     end
 
     local conn = self.connects:Find(sessionid)
     if nil == conn then
-        Log.ConsoleWarn("Illegal Msg: client not connected.")
+        Log.ConsoleWarn("Illegal Msg: client not authenticated.")
         return
     end
 
-    local msgID,n = string.unpack("=H",data)
-
-    if msgID > MsgID.MSG_MUST_HAVE_PLAYERID then
-        Log.ConsoleWarn("Illegal Msg: client not login msgID[%u].",msgID)
+    if msgid > MsgID.MSG_MUST_HAVE_PLAYERID then
+        Log.ConsoleWarn("Illegal Msg: client not login msgID[%u].",msgid)
         return
     end
 
@@ -109,16 +114,18 @@ function Gate:ClientData(sessionid,data,msgtype)
     if conn.sceneID ~= 0 then
 
     else
-        if self.worldModule == nil then
-            self.worldModule = Gate.super.GetOtherModule("World")
-            assert(nil ~= self.worldModule)
+        if self.worldService == nil then
+            self.worldService = Gate.super.GetOtherService("World")
+            assert(nil ~= self.worldService)
         end
     end
 end
 
-function Gate:ClientClose(sessionid,data)
+function Gate:ClientClose(msg)
+    local data = msg:bytes()
+    local sessionid = msg:sender()
     local br = BinaryReader.new(data)
-    Log.ConsoleTrace("CLIENT CLOSE: %s",br:ReadString())
+    Log.ConsoleTrace("CLIENT CLOSE: %s %s  %s",br:ReadString(),br:ReadString(),br:ReadString())
 
     self.gateLoginHandler:OnSessionClose(sessionid)
 
@@ -127,57 +134,60 @@ function Gate:ClientClose(sessionid,data)
         return
     end
 
-    Gate.super.OnClientClose(self,conn.accountID, conn.playerID)
+    Gate.super.OnClientClose(self,conn.accountid, conn.playerid)
 
-    if self.connects:Remove(sessionID) then
+    if self.connects:Remove(sessionid) then
 
     else
-        assert(0)
+        assert(false)
     end
 end
 
-function Gate:ModuleData(sender,data,userdata,rpcid,msgtype)
-    Gate.super.DispatchMessage(self,sender,data,userdata,rpcid,msgtype)
-end
-
-function Gate:ToClientData(data,userdata)
+function Gate:ToClientData(msg)
+    local userdata = msg:GetUserData()
+    local uctx = DeserializeUserData(userdata)
     local sessionID = 0
-    if msg:IsPlayerID() then
-    	local conn = self.connexts.FindByPlayer(msg:GetPlayerID())
-        sessionID = conn.sessionID
+    if uctx.playerid ~= 0 then
+    	local conn = self.connects:FindByPlayer(uctx.playerid)
+        sessionID = conn.sessionid
     else
-        local conn = self.connexts.FindByAccount(msg:GetAccountID())
+        local conn = self.connects:FindByAccount(uctx.accountid)
         assert(nil ~= conn)
-        sessionID = conn.sessionID
+        sessionID = conn.sessionid
     end
 
-    if 0 == sessionID then
-        return
-    end
+    --if nil == sessionID or 0 == sessionID then
+    --    return
+    --end
+
     print("send to client--",sessionID)
-    self.net:Send(sessionID,data)
+    self.net:Send(sessionID,msg)
 end
 
 function  Gate:SendNetMessage(sessionID,data)
-    Log.Trace("send to client %u, data len %d",sessionID,string.len(data))
-    self.net:Send(sessionID,data)
+    local msgid = UnpackMsg(data)
+    --Log.Trace("send to client %u, data len %d,msgid%d",sessionID,string.len(data),msgid)
+    nativeService:net_send(sessionID,data,string.len(data))
 end
 
-function Gate:SetWorldModule(moduleid)
-    self.worldModule = moduleid
+function Gate:SetWorldService(moduleid)
+    self.worldService = moduleid
 end
 
-function Gate:GetWorldModule()
-    return self.worldModule
+function Gate:GetWorldService()
+    return self.worldService
 end
 
-
-function Gate:SetLoginModule(moduleid)
-    self.loginModule = moduleid
+function Gate:SetLoginService(moduleid)
+    self.loginService = moduleid
 end
 
-function Gate:GetLoginModule()
-    return self.loginModule
+function Gate:GetLoginService()
+    return self.loginService
+end
+
+function Gate:OnError(msg)
+    
 end
 
 return Gate
