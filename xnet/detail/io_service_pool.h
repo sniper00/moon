@@ -11,11 +11,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "asio/steady_timer.hpp"
 #include "config.h"
 
-namespace asio
-{
-	class io_service;
-};
-
 namespace moon
 {
 	DECLARE_SHARED_PTR(io_worker)
@@ -23,7 +18,7 @@ namespace moon
 	class io_service_pool
 	{
 	public:
-		using io_worker_container_t = std::unordered_map<uint8_t, io_worker_ptr_t>;
+		using io_worker_container_t = std::vector<io_worker_ptr_t>;
 		using thread_pool = std::vector<std::thread>;
 
 		io_service_pool(uint8_t pool_size);
@@ -38,9 +33,10 @@ namespace moon
 
 		asio::io_service& io_service();
 
+		void	set_network_handle(const network_handle_t& handle);
 	private:
-		std::unordered_map<uint8_t, io_worker_ptr_t> workers_;
-		typename io_worker_container_t::iterator			next_worker_;
-		thread_pool															thread_pool_;
+		std::vector<io_worker_ptr_t> workers_;
+		typename io_worker_container_t::iterator next_worker_;
+		thread_pool thread_pool_;
 	};
 }

@@ -32,18 +32,19 @@ function Service:_Send(recevier,data,userctx,rpc,msgtype)
  	nativeService:send(recevier,data,userctx,rpc,msgtype)
 end
 
-function Service:_Broadcast(data)
- 	nativeService:broadcast(data)
+function Service:Broadcast(data,msgtype)
+	msgtype = msgtype or message_type.service_send
+ 	nativeService:broadcast(data,msgtype)
 end
 
 function Service:Send(receiver,data,userctx,rpc,msgtype)
 	userctx = userctx or ""
-	rpc 		= rpc or 0
+	rpc 	= rpc or 0
 
     if 0 ~= rpc then
-    	msgtype = msgtype or MessageType.ServiceRPC
+    	msgtype = msgtype or message_type.service_response
     else
-    	msgtype = msgtype or MessageType.ServiceData
+    	msgtype = msgtype or message_type.service_send
 	end
 
     self:_Send(receiver,data,userctx,rpc,msgtype)
@@ -61,12 +62,8 @@ function Service:SendRPC(receiver,data,cb)
 
 	local 		id 			= self.RPCIncreID
 	self.RPCHandlers[id] 	= cb
-	self:_Send(receiver,data,"",id,MessageType.ServiceData)
+	self:_Send(receiver,data,"",id,message_type.service_send)
 	--Log.Trace("SendRpc  rpcid[%u] receiver[%u]",id,receiver)
-end
-
-function Service:Broadcast(data)
- 	self:_Broadcast(data)
 end
 
 function Service:SendToAccount(accountID,data)
@@ -76,7 +73,7 @@ function Service:SendToAccount(accountID,data)
 end
 
 function Service:SendToPlayer(playerID,data)
- 	local msgtype = MessageType.ToClient
+ 	local msgtype = message_type.service_client
  	local userctx = SerializeUserData(0,0,playerID)
  	self:_Send(self:GetGateService(),data,userctx,0,msgtype)
 end
@@ -92,10 +89,10 @@ end
 function Service:OnMessage(msg,msgtype)
 	local data = msg:bytes()
 	local rpc = msg:rpc()
-	local msgtype = msg:type()
-	if msgtype == MessageType.ServiceRPC then
+	--Log.ConsoleTrace("OnMessage type %d", msgtype)
+	if msgtype == message_type.service_response then
 		self:OnMessageRpc(data,rpc)
-	elseif msgtype == MessageType.ServiceData or  msgtype == MessageType.NetworkData or msgtype == MessageType.ServiceBroadcast then
+	else
 		local sender = msg:sender()
 		local userctx = msg:userctx()
 		local msgid,msgdata = UnpackMsg(data)
@@ -107,7 +104,7 @@ function Service:OnMessageRpc(data,rpc)
 	if rpc ~=0 then	
 		local f = self.RPCHandlers[rpc]
 		if nil ~= f then
-			f(data,userData)
+			f(data)
 			self.RPCHandlers[rpc] = nil
 			--Log.Trace("DispatchMessage Rpc[%u] success", rpc)
 			return
@@ -118,11 +115,12 @@ function Service:OnMessageRpc(data,rpc)
 end
 
 function Service:OnMessageServiceData(sender,msgid,msgdata,userdata,rpc,msgtype)
-	--Log.Trace("OnMessageServiceData sender%u  MsgID %d begin",sender, msgid)
+	--Log.ConsoleTrace("OnMessageServiceData	sender%d MsgID %d",sender, msgid)
 	if msgid == MsgID.MSG_S2S_CLIENT_CLOSE then
 		local br = BinaryReader.new(msgdata)
 		local accountID = br:ReadUInt64()
 		local playerID 	= br:ReadUInt64()
+	--	Log.ConsoleTrace("Client Close	accountID%u",accountID)
 		Service.super.OnClientClose(self,accountID,playerID)
 		return true
 	end

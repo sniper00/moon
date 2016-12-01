@@ -16,7 +16,8 @@ struct LuaService::Imp
 	sol::function			Update;
 	sol::function			Destory;
 	sol::function			OnMessage;
-	sol::function			ToClientData;
+	sol::function			OnNetwork;
+	sol::function			OnSystem;
 	moon::timer			timer_;
 };
 
@@ -70,7 +71,8 @@ bool LuaService::init(const std::string& config)
 		.BindUtil()
 		.BindPath()
 		.BindTimer()
-		.BindMessage();
+		.BindMessage()
+		.BindHttp();
 
 	{
 		try
@@ -103,24 +105,30 @@ bool LuaService::init(const std::string& config)
 			end
 
 			function Start()
-				return thisService:Start()
+				thisService:Start()
 			end
 
 			function Update()
-				return thisService:Update()
+				thisService:Update()
 			end
 
 			function  Destory()
-				return thisService:Destory()
+				thisService:Destory()
 			end
 
 			function  OnMessage(msg,msgtype)
-				return thisService:OnMessage(msg,msgtype)
+				thisService:OnMessage(msg,msgtype)
 			end
 
-			function  ToClientData(msg)
-				if thisService.ToClientData ~= nil then
-					thisService:ToClientData(msg)
+			function  OnNetwork(msg,msgtype)
+				if thisService.OnNetwork ~= nil then
+					thisService:OnNetwork(msg,msgtype)
+				end
+			end
+
+			function  OnSystem(msg,msgtype)
+				if thisService.OnSystem ~= nil then
+					thisService:OnSystem(msg,msgtype)
 				end
 			end
 			)");
@@ -130,16 +138,19 @@ bool LuaService::init(const std::string& config)
 			imp_->Update = lua["Update"];
 			imp_->Destory = lua["Destory"];
 			imp_->OnMessage = lua["OnMessage"];
-			imp_->ToClientData = lua["ToClientData"];
+			imp_->OnNetwork = lua["OnNetwork"];
+			imp_->OnSystem = lua["OnSystem"];
+
 			Assert(imp_->Init.valid()
 				&& imp_->Start.valid()
 				&& imp_->Update.valid()
 				&& imp_->Destory.valid()
 				&& imp_->OnMessage.valid()
-				&& imp_->ToClientData.valid(), "5 functions!");
+				&& imp_->OnNetwork.valid()
+				&& imp_->OnSystem.valid()
+				,"8 functions!");
 
-			imp_->Init(config);
-			return true;
+			return imp_->Init(config);
 		}
 		catch (sol::error& e)
 		{
@@ -157,8 +168,7 @@ void LuaService::start()
 	service::start();
 
 	try
-	{
-		
+	{	
 		imp_->Start();
 	}
 	catch (sol::error& e)
@@ -187,37 +197,37 @@ void LuaService::on_message(message* msg)
 	if (exit())
 		return;
 
-	if (msg->type() == MTYPE_CLIENT)
+	try
 	{
-		try
+		auto type = msg->type();
+
+		if (type > (message_type::service_begin) && type < (message_type::service_end))
 		{
-			imp_->ToClientData(msg);
+			imp_->OnMessage(msg, msg->type());
 		}
-		catch (sol::error& e)
+		else if (type > (message_type::network_begin) && type < (message_type::network_end))
 		{
-			error(moon::format("LuaService ToClientData:%s \n Traceback:%s", e.what(), Traceback(imp_->lua.lua_state()).data()));
+			imp_->OnNetwork(msg, msg->type());
+		}
+		else if (type > (message_type::system_begin) && type < (message_type::system_end))
+		{
+			imp_->OnSystem(msg, msg->type());
 		}
 	}
-	else
+	catch (sol::error& e)
 	{
-		try
-		{
-			imp_->OnMessage(msg,msg->type());
-		}
-		catch (sol::error& e)
-		{
-			error(moon::format("LuaService OnMessage:%s \n Traceback:%s", e.what(), Traceback(imp_->lua.lua_state()).data()));
-		}
+		error(moon::format("LuaService OnMessage:%s \n Traceback:%s", e.what(), Traceback(imp_->lua.lua_state()).data()));
 	}
 }
 
 void LuaService::error(const std::string & msg)
 {
 	auto id = serviceid();
-	buffer buf;
-	buf.write_back(&id,0,1);
-	buf.write_back(name().data(), 0, name().size() + 1);
-	//broadcast(std::string((char*)buf.data(), buf.size()));
+	auto m = message::create();
+	auto str = moon::format(R"({"service_id":%u,"name":"%s"})",id,name().data());
+	m->to_buffer()->write_back(str.data(), 0, str.size()+1);
+	m->set_type(message_type::system_service_crash);
+	broadcast_ex(m);
 	exit(true);
 	log::logstring(true,LogLevel::Error,"native",msg.data());
 }

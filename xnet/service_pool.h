@@ -13,7 +13,7 @@ namespace moon
 {
 	DECLARE_SHARED_PTR(service);
 
-	class XNET_DLL  service_pool
+	class XNET_DLL  service_pool final
 	{
 	public:
 		service_pool();
@@ -36,8 +36,9 @@ namespace moon
 
 		void send(const message_ptr_t& msg);
 
-		void broadcast(uint32_t sender, const std::string& data);
-		void broadcast_ex(uint32_t sender, const buffer_ptr_t& data);
+		void broadcast(uint32_t sender, const std::string& data, message_type type);
+
+		void broadcast_ex(uint32_t sender, const message_ptr_t& msg);
 	private:
 		struct service_pool_imp;
 		service_pool_imp*   imp_;

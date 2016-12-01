@@ -12,42 +12,54 @@ endif
 
 ifeq ($(config),debug_win32)
   lua_config = debug_win32
+  cjson_config = debug_win32
   protobuf_config = debug_win32
   xnet_config = debug_win32
+  mysql_proxy_config = debug_win32
   server_config = debug_win32
 endif
 ifeq ($(config),debug_x64)
   lua_config = debug_x64
+  cjson_config = debug_x64
   protobuf_config = debug_x64
   xnet_config = debug_x64
+  mysql_proxy_config = debug_x64
   server_config = debug_x64
 endif
 ifeq ($(config),debug_linux)
   lua_config = debug_linux
+  cjson_config = debug_linux
   protobuf_config = debug_linux
   xnet_config = debug_linux
+  mysql_proxy_config = debug_linux
   server_config = debug_linux
 endif
 ifeq ($(config),release_win32)
   lua_config = release_win32
+  cjson_config = release_win32
   protobuf_config = release_win32
   xnet_config = release_win32
+  mysql_proxy_config = release_win32
   server_config = release_win32
 endif
 ifeq ($(config),release_x64)
   lua_config = release_x64
+  cjson_config = release_x64
   protobuf_config = release_x64
   xnet_config = release_x64
+  mysql_proxy_config = release_x64
   server_config = release_x64
 endif
 ifeq ($(config),release_linux)
   lua_config = release_linux
+  cjson_config = release_linux
   protobuf_config = release_linux
   xnet_config = release_linux
+  mysql_proxy_config = release_linux
   server_config = release_linux
 endif
 
-PROJECTS := lua protobuf xnet server
+PROJECTS := lua cjson protobuf xnet mysql_proxy server
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -57,6 +69,12 @@ lua:
 ifneq (,$(lua_config))
 	@echo "==== Building lua ($(lua_config)) ===="
 	@${MAKE} --no-print-directory -C lua -f Makefile config=$(lua_config)
+endif
+
+cjson: lua
+ifneq (,$(cjson_config))
+	@echo "==== Building cjson ($(cjson_config)) ===="
+	@${MAKE} --no-print-directory -C cjson -f Makefile config=$(cjson_config)
 endif
 
 protobuf: lua
@@ -71,6 +89,12 @@ ifneq (,$(xnet_config))
 	@${MAKE} --no-print-directory -C xnet -f Makefile config=$(xnet_config)
 endif
 
+mysql_proxy: lua xnet
+ifneq (,$(mysql_proxy_config))
+	@echo "==== Building mysql_proxy ($(mysql_proxy_config)) ===="
+	@${MAKE} --no-print-directory -C native_service/mysql_proxy -f Makefile config=$(mysql_proxy_config)
+endif
+
 server: lua xnet
 ifneq (,$(server_config))
 	@echo "==== Building server ($(server_config)) ===="
@@ -79,8 +103,10 @@ endif
 
 clean:
 	@${MAKE} --no-print-directory -C lua -f Makefile clean
+	@${MAKE} --no-print-directory -C cjson -f Makefile clean
 	@${MAKE} --no-print-directory -C protobuf -f Makefile clean
 	@${MAKE} --no-print-directory -C xnet -f Makefile clean
+	@${MAKE} --no-print-directory -C native_service/mysql_proxy -f Makefile clean
 	@${MAKE} --no-print-directory -C server -f Makefile clean
 
 help:
@@ -98,8 +124,10 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   lua"
+	@echo "   cjson"
 	@echo "   protobuf"
 	@echo "   xnet"
+	@echo "   mysql_proxy"
 	@echo "   server"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

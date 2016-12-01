@@ -23,7 +23,7 @@ namespace moon
 		, time_out_(time_out)
 		, running_(false)
 	{
-		handle_ = std::bind(&network::handle_message, this, std::placeholders::_1);
+		
 	}
 
 	network::~network()
@@ -31,14 +31,15 @@ namespace moon
 		stop();
 	}
 
-	void network::set_queue_size(size_t size)
+	void network::set_max_queue_size(size_t size)
 	{
-		message_queue_.set_max_size(size);
+		queue_.set_max_size(size);
 	}
 
 	void network::set_network_handle(const network_handle_t & handle)
 	{
-		network_handle_ = handle;
+		handle_ = handle;
+		pool_.set_network_handle(handle);
 	}
 
 	void network::run()
@@ -50,6 +51,10 @@ namespace moon
 		{
 			return;
 		}
+
+		pool_.set_network_handle([this](const message_ptr_t& m) {
+			queue_.push_back(m);
+		});
 
 		pool_.run();
 		start_accept();
@@ -65,8 +70,6 @@ namespace moon
 		{
 			acceptor_.close(error_code_);
 		}
-
-		message_queue_.exit();
 
 		pool_.stop();
 		running_ = false;
@@ -119,7 +122,6 @@ namespace moon
 			return;
 		auto& worker = pool_.get_io_worker();
 		auto s = worker->create_session(time_out_);
-		s->set_socket_handle(handle_);
 
 		acceptor_.async_accept(s->socket(), [this, s, &worker](const asio::error_code& e) {
 			if (!ok())
@@ -137,11 +139,6 @@ namespace moon
 		});
 	}
 
-	void network::handle_message(const message_ptr_t & msg)
-	{
-		message_queue_.push_back(msg);
-	}
-
 	void network::async_connect(const std::string & ip, const std::string & port)
 	{
 		asio::ip::tcp::resolver resolver(pool_.io_service());
@@ -155,8 +152,6 @@ namespace moon
 
 		auto& worker = pool_.get_io_worker();
 		auto s = worker->create_session(time_out_);
-		s->set_socket_handle(handle_);
-
 		asio::async_connect(s->socket(), endpoint_iterator,
 			[this, s, &worker, ip, port](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
 		{
@@ -184,7 +179,6 @@ namespace moon
 
 		auto& worker = pool_.get_io_worker();
 		auto s = worker->create_session(time_out_);
-		s->set_socket_handle(handle_);
 
 		asio::connect(s->socket(), endpoint_iterator, error_code_);
 		if (error_code_)
@@ -216,10 +210,10 @@ namespace moon
 
 	void network::update()
 	{
-		auto datas = message_queue_.move();
-		for (auto& it : datas)
+		auto datas = queue_.move();
+		for (auto& d : datas)
 		{
-			network_handle_(it);
+			handle_(d);
 		}
 	}
 
@@ -232,6 +226,4 @@ namespace moon
 	{
 		return (!error_code_);
 	}
-
-
 }

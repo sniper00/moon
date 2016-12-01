@@ -13,6 +13,25 @@ function Connects:ctor()
     Log.Trace("ctor Connects")
 end
 
+function Connects:Size()
+    local n1 = 0
+    for i,v in pairs(self.connections) do
+        n1 = n1+1
+    end
+
+    local n2 = 0
+    for i,v in pairs(self.accounts) do
+        n2 = n2+1
+    end
+
+    local n3 = 0
+    for i,v in pairs(self.players) do
+        n3 = n3+1
+    end
+
+    return n1,n2,n3
+end
+
 function Connects:SetAccount(sessionid, accountid)
     local conn = { }
     conn.sessionid = sessionid

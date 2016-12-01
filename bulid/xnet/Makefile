@@ -173,9 +173,11 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/http_client.o \
 	$(OBJDIR)/io_service_pool.o \
 	$(OBJDIR)/io_worker.o \
 	$(OBJDIR)/log.o \
+	$(OBJDIR)/message.o \
 	$(OBJDIR)/network.o \
 	$(OBJDIR)/service.o \
 	$(OBJDIR)/service_pool.o \
@@ -239,6 +241,9 @@ $(GCH): $(PCH)
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
+$(OBJDIR)/http_client.o: ../../xnet/detail/http_client.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/io_service_pool.o: ../../xnet/detail/io_service_pool.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -246,6 +251,9 @@ $(OBJDIR)/io_worker.o: ../../xnet/detail/io_worker.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/log.o: ../../xnet/detail/log.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/message.o: ../../xnet/detail/message.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/network.o: ../../xnet/detail/network.cpp

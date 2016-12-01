@@ -54,34 +54,44 @@ function Gate:Init(config)
     self.gateLoginHandler = Gate.super.GetComponent(self,"GateLoginHandler")
 
     Log.Trace("Gate Service Init: %s",config)
-
-    -- Timer:Repeat(1000,-1,function ()
-    --     Log.ConsoleTrace("Msg Counter: %d",messageCount)
-    --     messageCount = 0
-    -- end)
 end
 
 local onf =  Gate.super.OnMessage
 
 function Gate:OnMessage(msg,msgtype)
-    if msgtype == MessageType.NetworkConnect then
-         self:ClientConnect(msg)
-    elseif msgtype == MessageType.NetworkData then
-        self:ClientData(msg)
-    elseif msgtype == MessageType.NetworkClose then
-        self:ClientClose(msg)
-    elseif msgtype == MessageType.ToClient then
-        self:ToClientData(msg)
+    if msgtype == message_type.service_client then
+          self:ToClientData(msg)
     else
         onf(self,msg,msgtype)
     end
 end
 
+function Gate:Update()
+    
+end
+
+function Gate:OnNetwork(msg,msgtype)
+    if     msgtype == message_type.network_connect then
+         self:ClientConnect(msg)
+    elseif msgtype == message_type.network_recv then
+        self:ClientData(msg)
+    elseif msgtype == message_type.network_close then
+        self:ClientClose(msg)
+    elseif msgtype == message_type.network_error then
+        local data = msg:bytes()
+        local br = BinaryReader.new(data)
+        --Log.ConsoleTrace("CLIENT %s NETWORK ERROR:%d(%s)",br:ReadString(),br:ReadInt32(),br:ReadString())
+    elseif msgtype == message_type.network_logic_error then
+        local data = msg:bytes()
+        local br = BinaryReader.new(data)
+        Log.ConsoleTrace("CLIENT %s LOGIC ERROR:%d",br:ReadString(),br:ReadInt32())
+    end
+end
+
 function Gate:ClientConnect(msg)
     local data = msg:bytes()
-
     local br = BinaryReader.new(data)
-    Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
+    --Log.ConsoleTrace("CLIENT CONNECT: %s",br:ReadString())
 end
 
 local mfunc = Gate.super.OnMessageServiceData
@@ -93,7 +103,7 @@ function Gate:ClientData(msg)
     local data = msg:bytes()
     local msgid,msgdata = UnpackMsg(data)
 
-    local handled = mfunc(self,sessionid,msgid,msgdata,nil,0,MessageType.NetworkData)
+    local handled = mfunc(self,sessionid,msgid,msgdata,nil,0,message_type.network_recv)
     if handled then      
         return
     end
@@ -125,7 +135,7 @@ function Gate:ClientClose(msg)
     local data = msg:bytes()
     local sessionid = msg:sender()
     local br = BinaryReader.new(data)
-    Log.ConsoleTrace("CLIENT CLOSE: %s %s  %s",br:ReadString(),br:ReadString(),br:ReadString())
+    --Log.ConsoleTrace("CLIENT CLOSE: %s",br:ReadString())
 
     self.gateLoginHandler:OnSessionClose(sessionid)
 

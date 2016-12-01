@@ -27,6 +27,8 @@ namespace moon
 		static void logfmt(bool console, LogLevel level, const char* tag, const char * fmt, ...);
 
 		static void logstring(bool console, LogLevel level, const char* tag, const char* info);
+	
+		static void wait();
 	private:
 		log();
 		struct  log_imp;
@@ -45,11 +47,11 @@ namespace moon
 #define LOG_WARN(fmt,...) moon::log::logfmt(false,moon::LogLevel::Warn,"native",fmt,##__VA_ARGS__);  
 #define LOG_ERROR(fmt,...) moon::log::logfmt(false,moon::LogLevel::Error,"native",fmt,##__VA_ARGS__);
 
-#define CONSOLE_TRACE_TAG(tag,fmt, ...) moon::log::logfmt(true,moon::LogLevel::Trace,fmt,##__VA_ARGS__);
-#define CONSOLE_DEBUG_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Debug,fmt,##__VA_ARGS__);  
-#define CONSOLE_INFO_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);  
-#define CONSOLE_WARN_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Warn,fmt,##__VA_ARGS__);  
-#define CONSOLE_ERROR_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Error,fmt,##__VA_ARGS__);  
+#define CONSOLE_TRACE_TAG(tag,fmt, ...) moon::log::logfmt(true,moon::LogLevel::Trace,tag,fmt,##__VA_ARGS__);
+#define CONSOLE_DEBUG_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Debug,tag,fmt,##__VA_ARGS__);  
+#define CONSOLE_INFO_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Info,tag,fmt,##__VA_ARGS__);  
+#define CONSOLE_WARN_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Warn,tag,fmt,##__VA_ARGS__);  
+#define CONSOLE_ERROR_TAG(tag,fmt,...) moon::log::logfmt(true,moon::LogLevel::Error,tag,fmt,##__VA_ARGS__);  
 
 #define LOG_TRACE_TAG(tag,fmt, ...) moon::log::logfmt(false,moon::LogLevel::Trace,tag,fmt,##__VA_ARGS__);
 #define LOG_DEBUG_TAG(tag,fmt,...) moon::log::logfmt(false,moon::LogLevel::Debug,tag,fmt,##__VA_ARGS__);  

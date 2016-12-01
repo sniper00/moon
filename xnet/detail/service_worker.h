@@ -27,6 +27,7 @@ namespace moon
 	{
 	public:
 		friend class service_pool;
+		friend class service;
 
 		service_worker();
 

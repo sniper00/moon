@@ -8,7 +8,7 @@
 #include "service_pool.h"
 #include "LuaService.h"
 #include "sol.hpp"
-
+#include "http_client.h"
 
 using namespace moon;
 
@@ -85,16 +85,18 @@ LuaBind & LuaBind::BindLog()
 
 LuaBind& LuaBind::BindMessageType()
 {
-	lua.new_enum("MessageType"
-		, "Unknown", MTYPE_UNKNOWN
-		, "NetworkData", MTYPE_NDATA
-		, "NetworkConnect", MTYPE_NCONNECT
-		, "NetworkClose", MTYPE_NCLOSE
-		, "ServiceData", MTYPE_SERVICE
-		, "ServiceBroadcast", MTYPE_BROADCAST
-		, "ServiceRPC", MTYPE_RESPONSE
-		, "ToClient", MTYPE_CLIENT
-		, "ServiceCrash", MTYPE_CRASH
+	lua.new_enum("message_type"
+		, "unknown", message_type::unknown
+		, "service_send", message_type::service_send
+		, "service_response", message_type::service_response
+		, "service_client", message_type::service_client
+		, "network_connect", message_type::network_connect
+		, "network_recv", message_type::network_recv
+		, "network_close", message_type::network_close
+		, "network_error", message_type::network_error
+		, "network_logic_error", message_type::network_logic_error
+		, "system_service_crash", message_type::system_service_crash
+		, "system_network_report", message_type::system_network_report
 	);
 
 	return *this;
@@ -121,7 +123,7 @@ LuaBind& LuaBind::BindService()
 	auto net_send = []
 	(LuaService* s, uint32_t sessionid,const std::string& data)
 	{
-		auto buf = std::make_shared<buffer>(data.size(), sizeof(message_head));
+		auto buf = create_buffer(data.size(), sizeof(message_head));
 		buffer_writer<buffer> bw(*buf);
 		bw.write_array(data.data(), data.size());
 		s->net_send(sessionid, buf);
@@ -172,6 +174,26 @@ LuaBind& LuaBind::BindServicePool()
 		, "broadcast", &service_pool::broadcast
 		, "run", &service_pool::run
 		, "stop", &service_pool::stop
+		);
+
+	return *this;
+}
+
+LuaBind & LuaBind::BindHttp()
+{
+	lua.new_usertype<http_request>("http_request"
+		, sol::call_constructor, sol::no_constructor
+		, "set_request_type", &http_request::set_request_type
+		, "set_path", &http_request::set_path
+		, "set_content", &http_request::set_content
+		, "push_header", &http_request::push_header
+		);
+
+	lua.new_usertype<http_client>("http_client"
+		, sol::constructors<sol::types<const std::string&>>()
+		, "make_request", &http_client::make_request
+		, "request", &http_client::request
+		, "get_content", &http_client::get_content
 		);
 
 	return *this;

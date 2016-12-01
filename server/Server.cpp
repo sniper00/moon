@@ -33,6 +33,7 @@ int main()
 		CONSOLE_ERROR("%s", e.what());
 		CONSOLE_DEBUG("Traceback: %s", Traceback(lua.lua_state()).data());
 	}
+	moon::log::wait();
 	return 0;
 }
 

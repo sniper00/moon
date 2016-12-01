@@ -18,6 +18,7 @@ function Login:ctor()
     Login.super.SetEnableUpdate(self,true)
 
     self.worldService = nil
+    self.mysql = nil
     
     LoadProtocol();
 
@@ -28,10 +29,6 @@ function Login:Init(config)
 	Login.super.AddComponent(self, "AccountDatas",AccountDatas.new())
 	Login.super.AddComponent(self,"LoginHandler",LoginHandler.new())
 	Log.Trace("Service Init: %s",config)
-
-    -- Timer:Repeat(5000,-1,function ()
-    --     Log.ConsoleTrace("Login Memeory Counter: "..collectgarbage("count"))
-    -- end)
 end
 
 function Login:SetWorldService(moduleid)
@@ -40,6 +37,14 @@ end
 
 function Login:GetWorldService()
     return self.worldService
+end
+
+function Login:SetMysqlService(moduleid)
+    self.mysql = moduleid
+end
+
+function Login:GetMysqlService()
+    return self.mysql
 end
 
 return Login

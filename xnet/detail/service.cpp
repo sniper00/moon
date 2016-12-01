@@ -27,9 +27,13 @@ namespace moon
 			, enable_update_(true)
 			, exit_(false)
 			, pool_(nullptr)
+			, worker_(nullptr)
 			, cache_uuid_(0)
 		{
+		}
 
+		~service_imp()
+		{
 		}
 
 		uint32_t serviceid_;
@@ -38,9 +42,9 @@ namespace moon
 		bool enable_update_;
 		bool exit_;
 		service_pool* pool_;
+		service_worker* worker_;
 		uint32_t cache_uuid_;
 		network_ptr_t net_;
-		std::function<void(const message_ptr_t& msg)> direct_send_;
 		std::unordered_map<std::string, std::string> kv_config_;
 		std::unordered_map<uint32_t, buffer_ptr_t> caches_;
 	};
@@ -76,27 +80,36 @@ namespace moon
 		return service_imp_->enable_update_;
 	}
 
-	void service::send(uint32_t receiver, const std::string& data, const std::string& userctx, uint32_t rpc, uint8_t type)
+	void service::send(uint32_t receiver, const std::string& data, const std::string& userctx, uint32_t rpc, message_type type)
 	{
-		Assert((type != MTYPE_UNKNOWN), "send unknown type message!");
-		auto ms = std::make_shared<buffer>(data.size());
+		if (!is_service_message(type))
+		{
+			CONSOLE_WARN("sending  illegal type message. can only send service type message");
+			return;
+		}
+
+		auto ms = create_buffer(data.size());
 		ms->write_back(data.data(), 0, data.size());
 		send_imp(receiver, ms, userctx, rpc, type);
 	}
 
-	void service::broadcast(const std::string& data)
+	void service::broadcast(const std::string& data, message_type type)
 	{
-		service_imp_->pool_->broadcast(serviceid(), data);
+		service_imp_->pool_->broadcast(serviceid(), data,type);
 	}
 
-	void service::broadcast_ex(const buffer_ptr_t & data)
+	void service::broadcast_ex(const message_ptr_t& msg)
 	{
-		service_imp_->pool_->broadcast_ex(serviceid(), data);
+		service_imp_->pool_->broadcast_ex(serviceid(), msg);
 	}
 
-	void service::send_cache(uint32_t receiver, uint32_t cacheid, const std::string& userctx, uint32_t rpc, uint8_t type)
+	void service::send_cache(uint32_t receiver, uint32_t cacheid, const std::string& userctx, uint32_t rpc, message_type type)
 	{
-		Assert((type != MTYPE_UNKNOWN), "send unknown type message!");
+		if (!is_service_message(type))
+		{
+			CONSOLE_WARN("sending  illegal type message. can only send service type message");
+			return;
+		}
 
 		auto iter = service_imp_->caches_.find(cacheid);
 		if (iter == service_imp_->caches_.end())
@@ -111,7 +124,7 @@ namespace moon
 
 	uint32_t service::make_cache(const std::string & data)
 	{
-		auto ms = std::make_shared<buffer>(data.size());
+		auto ms = create_buffer(data.size());
 		ms->write_back(data.data(), 0, data.size());
 		service_imp_->cache_uuid_++;
 		service_imp_->caches_.emplace(service_imp_->cache_uuid_, ms);
@@ -132,8 +145,17 @@ namespace moon
 	void service::init_net(uint8_t threadnum, uint32_t timeout)
 	{
 		service_imp_->net_ = std::make_shared<network>(threadnum, timeout);
-		service_imp_->net_->set_network_handle(std::bind(&service::handle_message, this, std::placeholders::_1));
-		//service_imp_->net_->set_queue_size(4000);
+		service_imp_->net_->set_max_queue_size(2000);
+		service_imp_->net_->set_network_handle([this](const message_ptr_t& m) {
+			if (m->broadcast())
+			{
+				broadcast_ex(m);
+			}
+			else
+			{
+				handle_message(m);
+			}
+		});	
 	}
 
 	void service::net_send(uint32_t sessionid, const buffer_ptr_t & data)
@@ -169,6 +191,11 @@ namespace moon
 		}
 	}
 
+	bool service::check_config(const std::string & key)
+	{
+		return contains_key(service_imp_->kv_config_, key);
+	}
+
 	std::string service::get_config(const std::string & key)
 	{
 		if (contains_key(service_imp_->kv_config_, key))
@@ -181,7 +208,7 @@ namespace moon
 	bool service::init(const std::string & config)
 	{
 		service_imp_->config_ = config;
-		service_imp_->kv_config_ = moon::parse_key_value_string(config);
+		service_imp_->kv_config_ = parse_key_value_string(config);
 
 		return true;
 	}
@@ -213,11 +240,6 @@ namespace moon
 		}
 	}
 
-	void service::set_direct_send(const std::function<void(const message_ptr_t&msg)>& f)
-	{
-		service_imp_->direct_send_ = f;
-	}
-
 	void service::set_serviceid(uint32_t v)
 	{
 		service_imp_->serviceid_ = v;
@@ -233,6 +255,11 @@ namespace moon
 		service_imp_->pool_ = pool;
 	}
 
+	void service::set_service_worker(service_worker * w)
+	{
+		service_imp_->worker_ = w;
+	}
+
 	void service::exit(bool v)
 	{
 		service_imp_->exit_ = v;
@@ -244,7 +271,7 @@ namespace moon
 		return service_imp_->exit_;
 	}
 
-	void service::send_imp(uint32_t receiver, const buffer_ptr_t& ms, const std::string& userctx, uint32_t rpc, uint8_t type)
+	void service::send_imp(uint32_t receiver, const buffer_ptr_t& ms, const std::string& userctx, uint32_t rpc, message_type type)
 	{
 		message_ptr_t msg = std::make_shared<message>(ms);
 		msg->set_sender(service_imp_->serviceid_);
@@ -256,7 +283,7 @@ namespace moon
 		// for the locked queue
 		if ( (receiver&0x00FF0000) == (service_imp_->serviceid_&0x00FF0000))
 		{
-			service_imp_->direct_send_(msg);
+			service_imp_->worker_->push_message(msg);
 			return;
 		}
 		service_imp_->pool_->send(msg);

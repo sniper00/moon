@@ -31,6 +31,8 @@ public:
 
 	LuaBind& BindServicePool();
 
+	LuaBind& BindHttp();
+
 private:
 	sol::state& lua;
 };

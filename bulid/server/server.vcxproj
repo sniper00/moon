@@ -257,7 +257,6 @@
     <ClInclude Include="..\..\server\LuaService.h" />
     <ClInclude Include="..\..\server\crypto\AesHelper.hpp" />
     <ClInclude Include="..\..\server\crypto\aes.h" />
-    <ClInclude Include="..\..\server\sol.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\server\LuaBind.cpp" />

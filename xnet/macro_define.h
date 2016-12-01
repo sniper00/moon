@@ -31,6 +31,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <functional>
 
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>

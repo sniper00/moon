@@ -14,6 +14,20 @@ function LoginDatas:ctor()
 	Log.Trace("ctor LoginDatas")
 end
 
+function LoginDatas:Size()
+	local n1 = 0
+    for i,v in pairs(self.logindatas) do
+		n1 = n1+1
+	end
+
+	local n2 = 0
+    for i,v in pairs(self.sessions) do
+		n2 = n2+1
+	end
+
+	return n1,n2
+end
+
 function LoginDatas:CreateSerialNum()
 	self.LoginIncreSerialNum  = self.LoginIncreSerialNum  +1
 	return self.LoginIncreSerialNum 

@@ -153,8 +153,18 @@ namespace moon
 
 	void service_pool::send(const message_ptr_t & msg)
 	{
-		Assert((msg->type() != MTYPE_UNKNOWN), "send unknown type message!");
-		Assert((msg->receiver() != 0), "receiver id is 0!");
+		if (!is_service_message(msg->type()))
+		{
+			CONSOLE_WARN("sending  illegal type message. can only send service type message");
+			return;
+		}
+
+		if (msg->receiver() == 0)
+		{
+			CONSOLE_WARN("message receiver id is 0");
+			return;
+		}
+
 		uint8_t id = imp_->worker_id(msg->receiver());
 		if (id < imp_->workers_.size())
 		{
@@ -162,26 +172,29 @@ namespace moon
 		}
 	}
 
-	void service_pool::broadcast(uint32_t sender, const std::string & data)
+	void service_pool::broadcast(uint32_t sender, const std::string & data, message_type type)
 	{
+		if (type == message_type::unknown)
+		{
+			CONSOLE_WARN("broadcast unknown type message.");
+			return;
+		}
+
 		auto msg = std::make_shared<message>(data.size());
 		msg->set_sender(sender);
-		msg->set_receiver(0);
 		msg->write_data(data);
-		msg->set_type(MTYPE_BROADCAST);
-
+		msg->set_broadcast(true);
+		msg->set_type(type);
 		for (auto& w : imp_->workers_)
 		{
 			w->send(msg);
 		}
 	}
-	void service_pool::broadcast_ex(uint32_t sender, const buffer_ptr_t & data)
-	{
-		auto msg = std::make_shared<message>(data);
-		msg->set_sender(sender);
-		msg->set_receiver(0);
-		msg->set_type(MTYPE_BROADCAST);
 
+	void service_pool::broadcast_ex(uint32_t sender, const message_ptr_t & msg)
+	{
+		msg->set_sender(sender);
+		msg->set_broadcast(true);
 		for (auto& w : imp_->workers_)
 		{
 			w->send(msg);

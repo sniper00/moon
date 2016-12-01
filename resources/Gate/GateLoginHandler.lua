@@ -34,6 +34,11 @@ function GateLoginHandler:Start()
 
 	self.connects = thisService:GetComponent("Connects")
 	assert(nil ~= self.connects,"GateLoginHandler can not get Connects")
+
+	-- Timer:Repeat(5000,-1,function ()
+	-- 	Log.ConsoleTrace("Gate connect %d, %d, %d",self.connects:Size())
+	-- 	Log.ConsoleTrace("Gate loginDatas %d, %d",self.loginDatas:Size())
+ --    end)
 end
 
 function GateLoginHandler:OnSessionClose( sessionID )
@@ -67,14 +72,14 @@ function GateLoginHandler:OnRequestLogin(uctx,data,rpc)
 
 	local s = Deserialize("NetMessage.C2SReqLogin",data)
 
-	Log.Trace("1.Login username[%s] password[%s]", s.username,s.password)
+	--Log.Trace("1.Login username[%s] password[%s]", s.username,s.password)
 
 	local  serialNum  =  self.loginDatas:CreateSerialNum()
 	local  accountID  =  Util.HashString(s.username)
 	
 	self.loginDatas:Add(serialNum,accountID,sessionID)
 
-	Log.Trace("2.Login username[%s] password[%s] accountID[%u] sessionID[%d] add to login data ", s.username,s.password ,accountID,sessionID)
+	--Log.Trace("2.Login username[%s] password[%s] accountID[%u] sessionID[%d] add to login data ", s.username,s.password ,accountID,sessionID)
 
 	-- send to login module
 	self.sm:Clear()
@@ -90,10 +95,10 @@ function GateLoginHandler:OnRequestLogin(uctx,data,rpc)
 	assert(thisService:GetLoginService() ~= 0, "can not find login module")
 
 	thisService:SendRPC(thisService:GetLoginService(),self.sm:Bytes(),function (data)
-		Log.Trace("3.login receive echo accountID[%u] ", accountID);
+		--Log.Trace("3.login receive echo accountID[%u] ", accountID);
 		local ld = self.loginDatas:Find(serialNum)
 		if nil == ld then
-			Log.Warn("3.login receive echo accountID[%u], can not find logindatas", accountID);
+			Log.Warn("login receive echo accountID[%u],but can not find logindatas", accountID);
 			return
 		end
 	
@@ -107,7 +112,9 @@ function GateLoginHandler:OnRequestLogin(uctx,data,rpc)
 
 		if loginret == "Ok" then
 			self.connects:SetAccount(ld.sessionid, act)
-			Log.Trace("4.login add Connection data sessionID:%u accountID%u]  ", ld.sessionid, act);
+			--Log.Trace("4.login add Connection data sessionID:%u accountID%u]  ", ld.sessionid, act);
+		else
+			Log.Warn("login failed %u %u ret = %s", ld.sessionid, act,loginret);
 		end
 
 		local s2clogin = { ret = loginret,accountID = act }
@@ -116,7 +123,7 @@ function GateLoginHandler:OnRequestLogin(uctx,data,rpc)
 		thisService:SendNetMessage(sessionID,s2cmsg)
 
 		if false == self.loginDatas:Remove(serialNum) then
-			Log.Trace("Gate remove login data [%u] success", serialNum);
+			Log.Warn("Gate remove login data [%u] failed", serialNum);
 		end
 	end )
 end

@@ -81,6 +81,17 @@ namespace moon
 			stream_.write_back(&t, 0, 1);
 		}
 
+		void write_imp(const bool& v)
+		{
+			uint8_t b = v ? 1 : 0;
+			stream_.write_back(&b, 0, 1);
+		}
+
+		void write_imp(const char* str)
+		{
+			stream_.write_back(str, 0,std::strlen(str) + 1);
+		}
+
 		void write_imp(const std::string & str)
 		{
 			stream_.write_back(str.data(), 0, str.size() + 1);

@@ -1,281 +1,288 @@
 #include "session.h"
 #include "io_worker.h"
 #include "common/buffer_writer.hpp"
+#include "common/string.hpp"
 #include "message.h"
 #include "log.h"
 
-using namespace moon;
-
-session::session(io_worker & worker, uint32_t id, uint32_t time_out)
-	:worker_(worker)
-	, socket_(worker.io_service())
-	, sessionid_(id)
-	, last_recv_time_(0)
-	, time_out_(time_out_)
-	, is_sending_(false)
-	, network_error_(network_error::ok, "")
-	, read_buffer_(IO_BUFFER_SIZE)
+namespace moon
 {
-	//CONSOLE_TRACE("session create %u", sessionid_);
-}
-
-session::~session()
-{
-	//CONSOLE_TRACE("session delete %u", sessionid_);
-}
-
-bool session::start()
-{
-	parse_remote_endpoint();
-	if (!ok())
+	session::session(io_worker & worker, uint32_t id, uint32_t time_out)
+		:worker_(worker)
+		, socket_(worker.io_service())
+		, sessionid_(id)
+		, last_recv_time_(0)
+		, time_out_(time_out_)
+		, is_sending_(false)
+		, read_buffer_(IO_BUFFER_SIZE)
 	{
-		return false;
+		//CONSOLE_TRACE("session create %u", sessionid_);
 	}
 
-	on_connect();
-
-	read();
-
-	return true;
-}
-
-
-bool session::ok()
-{
-	return (socket_.is_open() && !error_code_);
-}
-
-void session::set_no_delay()
-{
-	asio::ip::tcp::no_delay option(true);
-	asio::error_code ec;
-	socket_.set_option(option, ec);
-}
-
-void session::read()
-{
-	auto self = shared_from_this();
-	socket_.async_read_some(asio::buffer(read_buffer_),
-		[self](const asio::error_code& e, std::size_t bytes_transferred)
+	session::~session()
 	{
-		if (!self->ok())
+		//CONSOLE_TRACE("session delete %u", sessionid_);
+	}
+
+	bool session::start()
+	{
+		parse_remote_endpoint();
+		if (!ok())
 		{
-			return;
+			return false;
 		}
 
-		if (e)
-		{
-			self->on_error(network_error::socket_read, e);
-			return;
-		}
+		on_connect();
 
-		self->last_recv_time_ = std::time(nullptr);
+		read();
 
-		if (bytes_transferred == 0)
-		{
-			self->read();
-			return;
-		}
+		return true;
+	}
 
-		self->read_stream_.write_back(self->read_buffer_.data(), 0, bytes_transferred);
-		while (self->read_stream_.size() > sizeof(message_head))
+
+	bool session::ok()
+	{
+		return (socket_.is_open() && !error_code_);
+	}
+
+	void session::set_no_delay()
+	{
+		asio::ip::tcp::no_delay option(true);
+		asio::error_code ec;
+		socket_.set_option(option, ec);
+	}
+
+	void session::read()
+	{
+		auto self = shared_from_this();
+		socket_.async_read_some(asio::buffer(read_buffer_),
+			[this,self](const asio::error_code& e, std::size_t bytes_transferred)
 		{
-			message_head* phead = (message_head*)(self->read_stream_.data());
-			if (phead->len > MAX_NMSG_SIZE)
+			if (!ok())
 			{
-				self->on_error(network_error::message_size_max, asio::error_code());
 				return;
 			}
 
-			if (self->read_stream_.size() < sizeof(message_head) + phead->len)
+			if (e)
 			{
-				break;
+				on_network_error(e);
+				return;
 			}
 
-			self->read_stream_.seek(sizeof(message_head), buffer::Current);
-			self->on_message(self->read_stream_.data(), phead->len);
-			self->read_stream_.seek(phead->len, buffer::Current);
-		}
-		self->read();
-	});
-}
+			last_recv_time_ = std::time(nullptr);
 
+			if (bytes_transferred == 0)
+			{
+				read();
+				return;
+			}
 
-void session::send(const buffer_ptr_t& data)
-{
-	if (data->size() > MAX_NMSG_SIZE)
-	{
-		on_error(network_error::message_size_max, asio::error_code());
-		return;
+			read_stream_.write_back(read_buffer_.data(), 0, bytes_transferred);
+			while (read_stream_.size() > sizeof(message_head))
+			{
+				message_head* phead = (message_head*)(read_stream_.data());
+				if (phead->len > MAX_NMSG_SIZE)
+				{
+					on_logic_error(network_logic_error::message_size_max);
+					return;
+				}
+
+				if (read_stream_.size() < sizeof(message_head) + phead->len)
+				{
+					break;
+				}
+
+				read_stream_.seek(sizeof(message_head), buffer::Current);
+				on_message(read_stream_.data(), phead->len);
+				read_stream_.seek(phead->len, buffer::Current);
+			}
+			read();
+		});
 	}
 
-	if (data == nullptr || data->size() == 0)
-	{
-		assert(0);
-		return;
-	}
 
-	if (!is_sending_)
+	void session::send(const buffer_ptr_t& data)
 	{
-		post_send(data);
-	}
-	else
-	{
-		send_queue_.push_back(data);
-		if (send_queue_.size() > 10)
+		if (data->size() > MAX_NMSG_SIZE)
 		{
-			CONSOLE_WARN("session send queue > 10");
+			on_logic_error(network_logic_error::message_size_max);
+			return;
 		}
-	}
-}
 
-void session::send()
-{
-	if (!ok())
-	{
-		return;
-	}
-
-	if (send_queue_.size() == 0)
-		return;
-	auto data = send_queue_.front();
-	send_queue_.pop_front();
-	while ((send_queue_.size() > 0) && (data->size() + send_queue_.front()->size() <= IO_BUFFER_SIZE))
-	{
-		auto& msg = send_queue_.front();
-		data->write_back(msg->data(), 0, msg->size());
-		send_queue_.pop_front();
-	}
-
-	if (data->size() == 0)
-		return;
-	post_send(data);
-}
-
-void session::post_send(const buffer_ptr_t& data)
-{
-	uint16_t  len = data->size();
-	data->write_front(&len, 0, 1);
-
-	is_sending_ = true;
-	auto self = shared_from_this();
-	asio::async_write(
-		socket_,
-		asio::buffer(data->data(), data->size()),
-		[self, data](const asio::error_code& e, std::size_t bytes_transferred)
-	{
-		if (!self->ok())
-			return;
-		self->is_sending_ = false;
-		if (!e)
+		if (data == nullptr || data->size() == 0)
 		{
-			self->send();
+			assert(0);
 			return;
+		}
+
+		if (!is_sending_)
+		{
+			post_send(data);
 		}
 		else
 		{
-			self->on_error(network_error::socket_send, e);
+			send_queue_.push_back(data);
+			if (send_queue_.size() > 10)
+			{
+				CONSOLE_WARN("session send queue > 5");
+			}
 		}
-	});
-}
-
-void session::on_error(network_error ne, const asio::error_code& e)
-{
-	std::string errmsg;
-	if (e)
-	{
-		errmsg = e.message() + "(" + std::to_string(e.value()) + ")";
 	}
-	network_error_ = std::make_pair(ne, std::move(errmsg));
-	close();
-}
 
-
-void session::parse_remote_endpoint()
-{
-	auto ep = socket_.remote_endpoint(error_code_);
-	if (error_code_) return;
-	auto addr = ep.address();
-	remote_addr_ = addr.to_string(error_code_) + ":";
-	remote_addr_ += std::to_string(ep.port());
-}
-
-void session::on_connect()
-{
-	auto msg = std::make_shared<message>();
-	buffer_writer<buffer> bw(*msg);
-	bw << remote_addr_;
-	msg->set_sender(sessionid_);
-	msg->set_type(MTYPE_NCONNECT);
-	handle_(msg);
-}
-
-void session::on_message(const uint8_t * data, size_t len)
-{
-	auto msg = std::make_shared<message>(len);
-	buffer_writer<buffer> bw(*msg);
-	bw.write_array(data, len);
-	msg->set_sender(sessionid_);
-	msg->set_type(MTYPE_NDATA);
-	handle_(msg);
-}
-
-void session::on_close()
-{
-	auto msg = std::make_shared<message>();
-	buffer_writer<buffer> bw(*msg);
-	bw << remote_addr_;
-	bw << std::to_string(int(network_error_.first));
-	bw << network_error_.second;
-	msg->set_sender(sessionid_);
-	msg->set_type(MTYPE_NCLOSE);
-	handle_(msg);
-	remove_self(sessionid_);
-}
-
-asio::ip::tcp::socket& session::socket()
-{
-	return socket_;
-};
-
-void session::close()
-{
-	on_close();
-	if (socket_.is_open())
+	void session::send()
 	{
-		socket_.shutdown(asio::ip::tcp::socket::shutdown_both, error_code_);
-		if (error_code_)
+		if (!ok())
 		{
 			return;
 		}
-		socket_.close(error_code_);
-		if (error_code_)
-		{
+
+		if (send_queue_.size() == 0)
 			return;
+		auto data = send_queue_.front();
+		send_queue_.pop_front();
+		while ((send_queue_.size() > 0) && (data->size() + send_queue_.front()->size() <= IO_BUFFER_SIZE))
+		{
+			auto& msg = send_queue_.front();
+			data->write_back(msg->data(), 0, msg->size());
+			send_queue_.pop_front();
+		}
+
+		if (data->size() == 0)
+			return;
+		post_send(data);
+	}
+
+	void session::post_send(const buffer_ptr_t& data)
+	{
+		uint16_t  len = data->size();
+		data->write_front(&len, 0, 1);
+
+		is_sending_ = true;
+		auto self = shared_from_this();
+		asio::async_write(
+			socket_,
+			asio::buffer(data->data(), data->size()),
+			[this,self, data](const asio::error_code& e, std::size_t bytes_transferred)
+		{
+			if (!ok())
+				return;
+			is_sending_ = false;
+			if (!e)
+			{
+				send();
+				return;
+			}
+			else
+			{
+				on_network_error(e);
+			}
+		});
+	}
+
+	void session::parse_remote_endpoint()
+	{
+		auto ep = socket_.remote_endpoint(error_code_);
+		if (error_code_) return;
+		auto addr = ep.address();
+		remote_addr_ = addr.to_string(error_code_) + ":";
+		remote_addr_ += std::to_string(ep.port());
+	}
+
+	void session::on_network_error(const asio::error_code& e)
+	{
+		auto msg = message::create();
+		buffer_writer<buffer> bw(*msg);
+		bw << remote_addr_;
+		bw << int32_t(e.value());
+		bw << e.message();
+		msg->set_sender(sessionid_);
+		msg->set_type(message_type::network_error);
+		worker_(msg);
+		close();
+	}
+
+	void session::on_logic_error(network_logic_error ne)
+	{
+		auto msg = message::create();
+		buffer_writer<buffer> bw(*msg);
+		bw << remote_addr_;
+		bw << int32_t(ne);
+		msg->set_sender(sessionid_);
+		msg->set_type(message_type::network_logic_error);
+		worker_(msg);
+		close();
+	}
+
+	void session::on_connect()
+	{
+		auto msg = message::create();
+		buffer_writer<buffer> bw(*msg);
+		bw << remote_addr_;
+		msg->set_sender(sessionid_);
+		msg->set_type(message_type::network_connect);
+		worker_(msg);
+	}
+
+	void session::on_message(const uint8_t * data, size_t len)
+	{
+		auto msg = message::create(len);
+		buffer_writer<buffer> bw(*msg);
+		bw.write_array(data, len);
+		msg->set_sender(sessionid_);
+		msg->set_type(message_type::network_recv);
+		worker_(msg);
+	}
+
+	void session::on_close()
+	{
+		auto msg = message::create();
+		buffer_writer<buffer> bw(*msg);
+		bw << remote_addr_;
+		msg->set_sender(sessionid_);
+		msg->set_type(message_type::network_close);
+		worker_(msg);
+		worker_.remove(sessionid_);
+	}
+
+	asio::ip::tcp::socket& session::socket()
+	{
+		return socket_;
+	};
+
+	void session::close()
+	{
+		on_close();
+		if (socket_.is_open())
+		{
+			socket_.shutdown(asio::ip::tcp::socket::shutdown_both, error_code_);
+			if (error_code_)
+			{
+				return;
+			}
+			socket_.close(error_code_);
+			if (error_code_)
+			{
+				return;
+			}
 		}
 	}
-}
 
-uint32_t session::sessionid()
-{
-	return sessionid_;
-}
-
-void moon::session::set_socket_handle(network_handle_t handle)
-{
-	handle_ = handle;
-}
-
-void session::set_sessionid(uint32_t v)
-{
-	sessionid_ = v;
-}
-
-void session::check()
-{
-	auto curtime = std::time(nullptr);
-	if (time_out_ != 0 && (curtime - last_recv_time_ > time_out_))
+	uint32_t session::sessionid()
 	{
-		on_error(network_error::socket_read_timeout, asio::error_code());
+		return sessionid_;
+	}
+
+	void session::set_sessionid(uint32_t v)
+	{
+		sessionid_ = v;
+	}
+
+	void session::check()
+	{
+		auto curtime = std::time(nullptr);
+		if (time_out_ != 0 && (curtime - last_recv_time_ > time_out_))
+		{
+			on_logic_error(network_logic_error::socket_read_timeout);
+		}
 	}
 }

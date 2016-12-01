@@ -4,7 +4,7 @@ require("SerializeUtil")
 
 local MsgID = require("MsgID")
 
-pool:init("machineid:1;service_worker_num:2;")
+pool:init("machineid:1;service_worker_num:1;")
 
 pool:run()
 
@@ -12,7 +12,7 @@ pool:new_service(
 	[[
 	name:gate;
 	luafile:Gate/Gate.lua;
-	netthread:4;
+	netthread:1;
 	timeout:0;
 	ip:127.0.0.1;
 	port:11111;
@@ -30,9 +30,10 @@ pool:new_service(
 	luafile:Monitor/Monitor.lua;
 	]],false)
 
-pool:broadcast(0,UInt16ToBytes(MsgID.MSG_S2S_SERVER_START))
+pool:broadcast(0,UInt16ToBytes(MsgID.MSG_S2S_SERVER_START),message_type.service_send)
 
 local name = io.read()
 
 
 pool:stop()
+

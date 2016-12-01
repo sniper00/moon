@@ -72,12 +72,6 @@ namespace moon
 	private:
 		struct timer_pool_imp;
 		timer_pool_imp* imp_;
-
-		int64_t																				m_tick;
-		int64_t																				m_prewTick;
-		uint64_t																			m_inc;
-		bool																					m_Stop;
-
 	};
 }
 

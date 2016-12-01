@@ -52,132 +52,145 @@ namespace moon
 		return ss.str();
 	}
 
-		struct LogContext
+	struct LogContext
+	{
+		LogLevel		Level;
+		std::string		Content;
+		bool				bConsole;
+	};
+
+	struct log::log_imp
+	{
+		sync_queue<LogContext, true>		LogQueue;
+		std::thread										Thread;
+		std::ofstream									LogFile;
+		std::atomic_bool								bExit;
+
+		log_imp()
+			:bExit(false)
 		{
-			LogLevel		Level;
-			std::string		Content;
-			bool				bConsole;
-		};
+		}
 
-		struct log::log_imp
+		~log_imp()
 		{
-			sync_queue<LogContext,true>		LogQueue;
-			std::thread										Thread;
-			std::ofstream									LogFile;
-			std::atomic_bool								bExit;
-
-			log_imp()
-				:bExit(false)
+			if (Thread.joinable())
 			{
+				Thread.join();
 			}
 
-			~log_imp()
+			if (LogFile.is_open())
 			{
-				if (Thread.joinable())
-				{
-					Thread.join();
-				}
-
-				if (LogFile.is_open())
-				{
-					LogFile.flush();
-					LogFile.close();
-				}
+				LogFile.flush();
+				LogFile.close();
 			}
+		}
 
-			void Init()
+		void Init()
+		{
+			LogFile.open(LOG_FILE_NAME);
+			Thread = std::thread(std::bind(&log_imp::write, this));
+		}
+
+		void wait()
+		{
+			while(LogQueue.size() > 0)
 			{
-				LogFile.open(LOG_FILE_NAME);
-				Thread = std::thread(std::bind(&log_imp::write, this));
+				thread_sleep(100);
 			}
+			bExit = true;
+		}
 
-			void write()
+		void write()
+		{
+			if (!LogFile.is_open())
+				return;
+
+			do
 			{
-				if (!LogFile.is_open())
-					return;
-
-				do
+				auto ConsoleData = LogQueue.move();
+				for (auto& it : ConsoleData)
 				{
-					auto ConsoleData = LogQueue.move();
-					for (auto& it : ConsoleData)
+					if (it.bConsole)
 					{
-						if (it.bConsole)
-						{
-							std::cout << it.Content << std::endl;
-						}
-
-						LogFile.write(it.Content.data(), it.Content.size());
-						if (it.Content.back() != '\n')
-						{
-							LogFile.write(NEW_LINE, strlen(NEW_LINE));
-						}
-
-						LogFile.flush();
+						std::cout << it.Content << std::endl;
 					}
-				} while (!bExit);
-			}
-		};
 
-		log::log()
-			:imp_(new log::log_imp)
-		{
-			imp_->Init();
+					LogFile.write(it.Content.data(), it.Content.size());
+					if (it.Content.back() != '\n')
+					{
+						LogFile.write(NEW_LINE, strlen(NEW_LINE));
+					}
+
+					LogFile.flush();
+				}
+			} while (!bExit);
 		}
-		
-		log::~log()
-		{
-			imp_->bExit = true;
-			imp_->LogQueue.exit();
+	};
 
-			if (nullptr != imp_)
-				delete imp_;
+	log::log()
+		:imp_(new log::log_imp)
+	{
+		imp_->Init();
+	}
+
+	log::~log()
+	{
+		imp_->bExit = true;
+		imp_->LogQueue.exit();
+
+		if (nullptr != imp_)
+			delete imp_;
+	}
+
+	log& log::instance()
+	{
+		static std::shared_ptr<log> tmp;
+		if (tmp == nullptr)
+		{
+			std::call_once(once_flag(), []() {
+				assert(tmp == nullptr);
+				auto p = new log();
+				tmp = std::shared_ptr<log>(p);
+			});
 		}
+		return *tmp;
+	}
 
-		log& log::instance()
-		{
-			static std::shared_ptr<log> tmp;
-			if (tmp == nullptr)
-			{
-				std::call_once(once_flag(), []() {
-					assert(tmp == nullptr);
-					auto p = new log();
-					tmp = std::shared_ptr<log>(p);
-				});
-			}
-			return *tmp;
-		}
+	void log::logfmt(bool console, LogLevel level, const char* tag, const char * fmt, ...)
+	{
+		if (!fmt) return;
 
-		void log::logfmt(bool console, LogLevel level, const char* tag, const char * fmt, ...)
-		{
-			if (!fmt) return;
-
-			char fmtbuf[MAX_LOG_LEN] = { 0 };
-			va_list ap;
-			va_start(ap, fmt);
+		char fmtbuf[MAX_LOG_LEN] = { 0 };
+		va_list ap;
+		va_start(ap, fmt);
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-			vsnprintf_s(fmtbuf, MAX_LOG_LEN, fmt, ap);
+		vsnprintf_s(fmtbuf, MAX_LOG_LEN, fmt, ap);
 #else
-			vsnprintf(fmtbuf, MAX_LOG_LEN, fmt, ap);
+		vsnprintf(fmtbuf, MAX_LOG_LEN, fmt, ap);
 #endif
-			va_end(ap);
+		va_end(ap);
 
-			auto str = format(level, tag, fmtbuf);
-			LogContext   ctx;
-			ctx.bConsole = console;
-			ctx.Content = std::move(str);
-			ctx.Level = level;
-			instance().imp_->LogQueue.push_back(ctx);
-		}
+		auto str = format(level, tag, fmtbuf);
+		LogContext   ctx;
+		ctx.bConsole = console;
+		ctx.Content = std::move(str);
+		ctx.Level = level;
+		instance().imp_->LogQueue.push_back(ctx);
+	}
 
-		void log::logstring(bool console, LogLevel level, const char* tag, const char* info)
-		{
-			auto str = format(level, tag, info);
-			LogContext   ctx;
-			ctx.bConsole = console;
-			ctx.Content = std::move(str);
-			ctx.Level = level;
-			instance().imp_->LogQueue.push_back(ctx);
-		}
+	void log::logstring(bool console, LogLevel level, const char* tag, const char* info)
+	{
+		auto str = format(level, tag, info);
+		LogContext   ctx;
+		ctx.bConsole = console;
+		ctx.Content = std::move(str);
+		ctx.Level = level;
+		instance().imp_->LogQueue.push_back(ctx);
+	}
 
+	void log::wait()
+	{
+		instance().imp_->wait();
+	}
 }
 

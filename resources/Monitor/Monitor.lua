@@ -21,14 +21,19 @@ function Monitor:Init(config)
     Log.Trace("Monitor Service Init: %s",config)
 end
 
-function Monitor:OnMessage(sender,data,userdata,rpcid,msgtype)
-    if msgtype == MessageType.ServiceCrash then
+function Monitor:OnMessage( ... )
+    -- ingnore user message
+end
+
+function Monitor:OnSystem(msg,msgtype)
+    if msgtype == message_type.system_service_crash then
+        local data = msg:bytes()
         local br = BinaryReader.new(data)
-        local moduleID = br:ReadUInt32()
-        local moduleName = br:ReadString()
-        Log.ConsoleTrace("Service ID:%d  Name:%s  Crashed",moduleID,moduleName)
-    else
-        Monitor.super.OnMessage(self,sender,data,userdata,rpcid,msgtype)
+        --Log.ConsoleTrace("Service Crashed:%s",br:ReadString())
+    elseif msgtype == message_type.system_network_report then
+        local data = msg:bytes()
+        local br = BinaryReader.new(data)
+        --Log.ConsoleTrace("network report:%s",br:ReadString())
     end
 end
 

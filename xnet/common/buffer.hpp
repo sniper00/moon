@@ -154,7 +154,7 @@ namespace moon
 
 		void clear()
 		{
-			readpos_ = writepos_;
+			readpos_ = writepos_ = headreserved_;
 		}
 
 		buffer& stream()

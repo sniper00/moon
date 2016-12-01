@@ -30,12 +30,12 @@ namespace moon
 
 		static time_t make_time(int year, int month, int day, int hour, int min, int sec)
 		{
-			assert(year >= 1990);
-			assert(month>0 && month<=12);
-			assert(day >0 && day <=31);
-			assert(hour >=0 && hour <24);
-			assert(min >=0 && min <60);
-			assert(sec >= 0 && sec <60);
+			//assert(year >= 1990);
+			//assert(month>0 && month<=12);
+			//assert(day >0 && day <=31);
+			//assert(hour >=0 && hour <24);
+			//assert(min >=0 && min <60);
+			//assert(sec >= 0 && sec <60);
 
 			tm _tm;
 			_tm.tm_year = (year - 1900);

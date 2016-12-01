@@ -9,6 +9,14 @@ function AccountDatas:ctor()
 	Log.Trace("ctor AccountDatas")
 end
 
+function AccountDatas:Size()
+	local n = 0
+    for i,v in pairs(self.accounts) do
+		n = n+1
+	end
+	return n
+end
+
 function AccountDatas:IsExistAccount( accountID )
 	return self.accounts[accountID] ~= nil
 end

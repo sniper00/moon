@@ -76,6 +76,8 @@
     <ClInclude Include="..\..\xnet\detail\timer_wheel.hpp">
       <Filter>detail</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\xnet\error.hpp" />
+    <ClInclude Include="..\..\xnet\http_client.h" />
     <ClInclude Include="..\..\xnet\log.h" />
     <ClInclude Include="..\..\xnet\macro_define.h" />
     <ClInclude Include="..\..\xnet\message.h" />
@@ -85,6 +87,9 @@
     <ClInclude Include="..\..\xnet\timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\xnet\detail\http_client.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\xnet\detail\io_service_pool.cpp">
       <Filter>detail</Filter>
     </ClCompile>
@@ -92,6 +97,9 @@
       <Filter>detail</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xnet\detail\log.cpp">
+      <Filter>detail</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\xnet\detail\message.cpp">
       <Filter>detail</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xnet\detail\network.cpp">

@@ -1,11 +1,13 @@
 require("functions")
 
+local cjson = require("cjson")
+
 local SerializeUtil = require("SerializeUtil")
 local MsgID 		= require("MsgID")
 local Component 	= require("Component")
 local SerializeUtil = require("SerializeUtil")
 local Stream		= require("Stream")
-local BinaryReader = require("BinaryReader")
+local BinaryReader  = require("BinaryReader")
 
 local LoginHandler = class("LoginHandler",Component)
 
@@ -52,7 +54,7 @@ end
 
 function LoginHandler:OnClientClose(accountID, playerID)
 	if self.accountDatas:OffLine(accountID) then
-		Log.Trace("LoginHandler Client OffLine success")
+		--Log.Trace("LoginHandler Client OffLine success")
 	else
 		Log.Warn("LoginHandler Client OffLine failed")
 	end
@@ -87,10 +89,6 @@ function LoginHandler:OnRequestLogin(uctx,data,rpc)
 
 	--Log.Trace("login module send to gate rpcID [%u]",rpc or 0)
 	thisService:Send(thisService:GetGateService(),sm:Bytes(),"",rpc)
-
-	--test
-	--thisService:SendToAccount(accountID,"123456")
-
 end
 
 return LoginHandler

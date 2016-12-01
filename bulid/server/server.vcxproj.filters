@@ -14,7 +14,6 @@
     <ClInclude Include="..\..\server\crypto\aes.h">
       <Filter>crypto</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\server\sol.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\server\LuaBind.cpp" />

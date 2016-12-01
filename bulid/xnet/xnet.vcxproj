@@ -272,6 +272,8 @@
     <ClInclude Include="..\..\xnet\detail\session.h" />
     <ClInclude Include="..\..\xnet\detail\timer_context.hpp" />
     <ClInclude Include="..\..\xnet\detail\timer_wheel.hpp" />
+    <ClInclude Include="..\..\xnet\error.hpp" />
+    <ClInclude Include="..\..\xnet\http_client.h" />
     <ClInclude Include="..\..\xnet\log.h" />
     <ClInclude Include="..\..\xnet\macro_define.h" />
     <ClInclude Include="..\..\xnet\message.h" />
@@ -281,9 +283,11 @@
     <ClInclude Include="..\..\xnet\timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\xnet\detail\http_client.cpp" />
     <ClCompile Include="..\..\xnet\detail\io_service_pool.cpp" />
     <ClCompile Include="..\..\xnet\detail\io_worker.cpp" />
     <ClCompile Include="..\..\xnet\detail\log.cpp" />
+    <ClCompile Include="..\..\xnet\detail\message.cpp" />
     <ClCompile Include="..\..\xnet\detail\network.cpp" />
     <ClCompile Include="..\..\xnet\detail\service.cpp" />
     <ClCompile Include="..\..\xnet\detail\service_pool.cpp" />

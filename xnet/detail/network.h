@@ -10,13 +10,10 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "config.h"
 #include "asio.hpp"
 #include "io_service_pool.h"
-#include "message.h"
 #include "common/sync_queue.hpp"
 
 namespace moon
 {
-	DECLARE_SHARED_PTR(message)
-
 	class network
 	{
 	public:
@@ -24,7 +21,7 @@ namespace moon
 
 		~network();
 
-		void set_queue_size(size_t size);
+		void set_max_queue_size(size_t size);
 
 		void	set_network_handle(const network_handle_t& handle);
 
@@ -43,10 +40,9 @@ namespace moon
 		void close(uint32_t sessionid);
 
 		void update();
+
 	private:
 		void start_accept();
-
-		void handle_message(const message_ptr_t& msg);
 
 		void error(const asio::error_code& e);
 
@@ -57,9 +53,8 @@ namespace moon
 		asio::ip::tcp::acceptor acceptor_;
 		asio::signal_set signals_;
 		asio::error_code error_code_;
-		uint32_t	time_out_;
-		sync_queue<message_ptr_t> message_queue_;
-		network_handle_t network_handle_;
+		uint32_t time_out_;
 		network_handle_t handle_;
+		sync_queue<message_ptr_t> queue_;
 	};
 };

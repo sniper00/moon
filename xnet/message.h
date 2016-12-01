@@ -13,125 +13,63 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	DECLARE_SHARED_PTR(buffer)
-	DECLARE_SHARED_PTR(message)
+	buffer_ptr_t XNET_DLL create_buffer(size_t capacity = 64, size_t headreserved = 0);
 
-	class message
+	class XNET_DLL  message final
 	{
 	public:
-		using stream_type = buffer;
+		static message_ptr_t create(size_t capacity = 64, size_t headreserved = 0);
 
-		message(size_t capacity = 64, size_t headreserved = 0)
-		{
-			init();
-			data_ = std::make_shared<buffer>(capacity, headreserved);
-		}
+		message(size_t capacity = 64, size_t headreserved = 0);
 
-		message(const buffer_ptr_t & v)
-		{
-			init();
-			data_ = v;
-		}
+		message(const buffer_ptr_t & v);
 
-		message(const message& msg) = default;
+		~message();
 
-		message(message&& msg) = default;
+		message(const message&) = delete;
 
-		void set_sender(uint32_t serviceid)
-		{
-			sender_ = serviceid;
-		}
+		message& operator=(const message&) = delete;
 
-		uint32_t sender() const
-		{
-			return sender_;
-		}
+		void set_sender(uint32_t serviceid);
 
-		void set_receiver(uint32_t serviceid)
-		{
-			receiver_ = serviceid;
-		}
+		uint32_t sender() const;
 
-		uint32_t receiver() const
-		{
-			return receiver_;
-		}
+		void set_receiver(uint32_t serviceid);
 
-		void set_userctx(const std::string& v)
-		{
-			userctx_ = std::move(v);
-		}
+		uint32_t receiver() const;
 
-		const std::string userctx()
-		{
-			return userctx_;
-		}
+		void set_userctx(const std::string& v);
 
-		void set_rpc(uint32_t v)
-		{
-			rpc_ = v;
-		}
+		const std::string userctx();
 
-		uint32_t rpc() const
-		{
-			return rpc_;
-		}
+		void set_rpc(uint32_t v);
 
-		void set_type(uint8_t v)
-		{
-			type_  = v;
-		}
+		uint32_t rpc() const;
 
-		uint8_t type() const
-		{
-			return type_;
-		}
+		void set_type(message_type v);
 
-		std::string bytes() const
-		{
-			return std::string((char*)data_->data(), data_->size());
-		}
-	
-		void write_data(const std::string& v)
-		{
-			data_->write_back(v.data(), 0, v.size());
-		}
+		message_type type() const;
 
-		const uint8_t* data() const
-		{
-			return data_->data();
-		}
-	
-		size_t size() const
-		{
-			return data_->size();
-		}
+		std::string bytes() const;
 
-		operator buffer&()
-		{
-			return *(data_.get());
-		}
+		void write_data(const std::string& v);
 
-		buffer_ptr_t to_buffer()
-		{
-			return data_;
-		}
+		const uint8_t* data() const;
 
-	protected:
-		void init()
-		{
-			type_ = MTYPE_UNKNOWN;
-			sender_ = 0;
-			receiver_ = 0;
-			rpc_ = 0;
-		}
-	protected:
-		uint8_t type_;
-		uint32_t sender_;
-		uint32_t receiver_;
-		uint32_t rpc_;
-		std::string userctx_;
-		buffer_ptr_t data_;
+		size_t size() const;
+
+		operator buffer&();
+
+		const buffer_ptr_t to_buffer() const;
+
+		bool broadcast();
+
+		void set_broadcast(bool v);
+
+		void reset();
+	private:
+		struct message_imp;
+		message_imp* imp_;
 	};
 };
 
