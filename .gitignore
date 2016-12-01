@@ -3,3 +3,6 @@
 ################################################################################
 
 /Resource/MoonNet.log
+/premake5.exe
+/premake5.lua
+/resources/MoonNet.log
