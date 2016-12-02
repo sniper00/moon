@@ -6,7 +6,6 @@ Copyright (c) 2015-2016 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 ****************************************************************************/
-#pragma once
 #include "message.h"
 
 namespace moon

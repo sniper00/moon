@@ -21,6 +21,52 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
+	namespace hash_detail
+	{
+		template <typename SizeT>
+		inline void hash_combine_impl(SizeT& seed, SizeT value)
+		{
+			seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		}
+
+		inline void hash_combine_impl(std::uint32_t& h1,
+			std::uint32_t k1)
+		{
+			const uint32_t c1 = 0xcc9e2d51;
+			const uint32_t c2 = 0x1b873593;
+
+			k1 *= c1;
+			k1 = HASH_ROTL32(k1, 15);
+			k1 *= c2;
+
+			h1 ^= k1;
+			h1 = HASH_ROTL32(h1, 13);
+			h1 = h1 * 5 + 0xe6546b64;
+		}
+
+#if defined(_WIN64) || defined(__x86_64__)  || defined(__amd64) 
+		inline void hash_combine_impl(std::uint64_t& h,
+			std::uint64_t k)
+		{
+			static_assert(sizeof(void*) == 8, "only support 64bit system");
+
+			const uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
+			const int r = 47;
+
+			k *= m;
+			k ^= k >> r;
+			k *= m;
+
+			h ^= k;
+			h *= m;
+
+			// Completely arbitrary number, to prevent 0's
+			// from hashing to 0.
+			h += 0xe6546b64;
+		}
+#endif 
+	}
+
 	template <class T>
 	inline std::size_t hash_value_signed(T val)
 	{
@@ -90,52 +136,5 @@ namespace moon
 			hash_combine(seed, *first);
 		}
 	}
-
-	namespace hash_detail
-	{
-		template <typename SizeT>
-		inline void hash_combine_impl(SizeT& seed, SizeT value)
-		{
-			seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		}
-
-		inline void hash_combine_impl(std::uint32_t& h1,
-			std::uint32_t k1)
-		{
-			const uint32_t c1 = 0xcc9e2d51;
-			const uint32_t c2 = 0x1b873593;
-
-			k1 *= c1;
-			k1 = HASH_ROTL32(k1, 15);
-			k1 *= c2;
-
-			h1 ^= k1;
-			h1 = HASH_ROTL32(h1, 13);
-			h1 = h1 * 5 + 0xe6546b64;
-		}
-
-#ifdef _WIN64
-		inline void hash_combine_impl(std::uint64_t& h,
-			std::uint64_t k)
-		{
-			static_assert(sizeof(void*) == 8, "only support 64bit system");
-
-			const uint64_t m = UINT64_C(0xc6a4a7935bd1e995);
-			const int r = 47;
-
-			k *= m;
-			k ^= k >> r;
-			k *= m;
-
-			h ^= k;
-			h *= m;
-
-			// Completely arbitrary number, to prevent 0's
-			// from hashing to 0.
-			h += 0xe6546b64;
-		}
-#endif 
-	}
-
 }
 
