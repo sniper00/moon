@@ -12,7 +12,7 @@ namespace moon
 		, socket_(worker.io_service())
 		, sessionid_(id)
 		, last_recv_time_(0)
-		, time_out_(time_out_)
+		, time_out_(time_out)
 		, is_sending_(false)
 		, read_buffer_(IO_BUFFER_SIZE)
 	{
