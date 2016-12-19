@@ -11,14 +11,4 @@ Linux Platform:
 - make config=debug_linux
 - make config=release_linux
 
-##Run
-
-Windows
-- Copy MooNet.exe lua.dll to Resource path
-- Copy protubuf.dll to Resource/Lib path
-
-Linux
-- Copy MooNet lua.so to Resource path
-- Copy protubuf.so to Resource/Lib path
-
-
+[see more](https://github.com/chriskohlhoff/asio)
