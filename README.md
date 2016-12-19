@@ -11,4 +11,4 @@ Linux Platform:
 - make config=debug_linux
 - make config=release_linux
 
-[see more](https://github.com/chriskohlhoff/asio)
+[see more](https://github.com/sniper00/MoonNetLua/wiki)
