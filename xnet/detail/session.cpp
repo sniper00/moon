@@ -280,7 +280,7 @@ namespace moon
 	void session::check()
 	{
 		auto curtime = std::time(nullptr);
-		if (time_out_ != 0 && (curtime - last_recv_time_ > time_out_))
+		if (( 0 != time_out_ )&&(0 != last_recv_time_)&&(curtime - last_recv_time_ > time_out_))
 		{
 			on_logic_error(network_logic_error::socket_read_timeout);
 		}
