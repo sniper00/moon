@@ -1,5 +1,5 @@
 # MoonNetLua
-A simple game server with lua bind
+一个轻量级的游戏服务器框架，多线程，模块化，底层采用C++11,逻辑使用Lua脚本
 
 ##Bulid
 
