@@ -10,5 +10,7 @@ The project use of C++11/14 features, I tested compliers are:
 Linux Platform: 
 - make config=debug_linux
 - make config=release_linux
-### QQ543833695
+
+QQ交流群543833695
+
 [see more](https://github.com/sniper00/MoonNetLua/wiki)
