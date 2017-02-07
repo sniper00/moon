@@ -1,7 +1,7 @@
 #pragma  once 
 
 extern "C" {
-#include "liblua/lua.h"
-#include "liblua/lualib.h"
-#include "liblua/lauxlib.h"
+#include "lua53/lua.h"
+#include "lua53/lualib.h"
+#include "lua53/lauxlib.h"
 };
