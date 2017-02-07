@@ -1,6 +1,7 @@
 # MoonNetLua
-A simple game server with lua bind
-
+一个轻量级的游戏服务器框架，多线程，模块化，底层采用C++11,逻辑使用Lua脚本
+##框架处理流程
+![image](https://github.com/sniper00/MoonNetLua/raw/master/image/01.png)
 ##Bulid
 
 The project use of C++11/14 features, I tested compliers are: 
@@ -11,14 +12,6 @@ Linux Platform:
 - make config=debug_linux
 - make config=release_linux
 
-##Run
+QQ交流群543833695
 
-Windows
-- Copy MooNet.exe lua.dll to Resource path
-- Copy protubuf.dll to Resource/Lib path
-
-Linux
-- Copy MooNet lua.so to Resource path
-- Copy protubuf.so to Resource/Lib path
-
-
+[see more](https://github.com/sniper00/MoonNetLua/wiki)
