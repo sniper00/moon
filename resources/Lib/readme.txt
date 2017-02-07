@@ -1,1 +1,0 @@
-this folder store lua c library.

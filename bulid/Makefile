@@ -3,131 +3,65 @@
 .NOTPARALLEL:
 
 ifndef config
-  config=debug_win32
+  config=debug_linux
 endif
 
 ifndef verbose
   SILENT = @
 endif
 
-ifeq ($(config),debug_win32)
-  lua_config = debug_win32
-  cjson_config = debug_win32
-  protobuf_config = debug_win32
-  xnet_config = debug_win32
-  mysql_proxy_config = debug_win32
-  server_config = debug_win32
-endif
-ifeq ($(config),debug_x64)
-  lua_config = debug_x64
-  cjson_config = debug_x64
-  protobuf_config = debug_x64
-  xnet_config = debug_x64
-  mysql_proxy_config = debug_x64
-  server_config = debug_x64
-endif
 ifeq ($(config),debug_linux)
-  lua_config = debug_linux
-  cjson_config = debug_linux
-  protobuf_config = debug_linux
-  xnet_config = debug_linux
-  mysql_proxy_config = debug_linux
-  server_config = debug_linux
-endif
-ifeq ($(config),release_win32)
-  lua_config = release_win32
-  cjson_config = release_win32
-  protobuf_config = release_win32
-  xnet_config = release_win32
-  mysql_proxy_config = release_win32
-  server_config = release_win32
-endif
-ifeq ($(config),release_x64)
-  lua_config = release_x64
-  cjson_config = release_x64
-  protobuf_config = release_x64
-  xnet_config = release_x64
-  mysql_proxy_config = release_x64
-  server_config = release_x64
+  lua53_config = debug_linux
+  netcore_config = debug_linux
+  moon_config = debug_linux
 endif
 ifeq ($(config),release_linux)
-  lua_config = release_linux
-  cjson_config = release_linux
-  protobuf_config = release_linux
-  xnet_config = release_linux
-  mysql_proxy_config = release_linux
-  server_config = release_linux
+  lua53_config = release_linux
+  netcore_config = release_linux
+  moon_config = release_linux
 endif
 
-PROJECTS := lua cjson protobuf xnet mysql_proxy server
+PROJECTS := lua53 netcore moon
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
-lua:
-ifneq (,$(lua_config))
-	@echo "==== Building lua ($(lua_config)) ===="
-	@${MAKE} --no-print-directory -C lua -f Makefile config=$(lua_config)
+lua53:
+ifneq (,$(lua53_config))
+	@echo "==== Building lua53 ($(lua53_config)) ===="
+	@${MAKE} --no-print-directory -C lua53 -f Makefile config=$(lua53_config)
 endif
 
-cjson: lua
-ifneq (,$(cjson_config))
-	@echo "==== Building cjson ($(cjson_config)) ===="
-	@${MAKE} --no-print-directory -C cjson -f Makefile config=$(cjson_config)
+netcore:
+ifneq (,$(netcore_config))
+	@echo "==== Building netcore ($(netcore_config)) ===="
+	@${MAKE} --no-print-directory -C netcore -f Makefile config=$(netcore_config)
 endif
 
-protobuf: lua
-ifneq (,$(protobuf_config))
-	@echo "==== Building protobuf ($(protobuf_config)) ===="
-	@${MAKE} --no-print-directory -C protobuf -f Makefile config=$(protobuf_config)
-endif
-
-xnet:
-ifneq (,$(xnet_config))
-	@echo "==== Building xnet ($(xnet_config)) ===="
-	@${MAKE} --no-print-directory -C xnet -f Makefile config=$(xnet_config)
-endif
-
-mysql_proxy: lua xnet
-ifneq (,$(mysql_proxy_config))
-	@echo "==== Building mysql_proxy ($(mysql_proxy_config)) ===="
-	@${MAKE} --no-print-directory -C native_service/mysql_proxy -f Makefile config=$(mysql_proxy_config)
-endif
-
-server: lua xnet
-ifneq (,$(server_config))
-	@echo "==== Building server ($(server_config)) ===="
-	@${MAKE} --no-print-directory -C server -f Makefile config=$(server_config)
+moon: lua53 netcore
+ifneq (,$(moon_config))
+	@echo "==== Building moon ($(moon_config)) ===="
+	@${MAKE} --no-print-directory -C moon -f Makefile config=$(moon_config)
 endif
 
 clean:
-	@${MAKE} --no-print-directory -C lua -f Makefile clean
-	@${MAKE} --no-print-directory -C cjson -f Makefile clean
-	@${MAKE} --no-print-directory -C protobuf -f Makefile clean
-	@${MAKE} --no-print-directory -C xnet -f Makefile clean
-	@${MAKE} --no-print-directory -C native_service/mysql_proxy -f Makefile clean
-	@${MAKE} --no-print-directory -C server -f Makefile clean
+	@${MAKE} --no-print-directory -C lua53 -f Makefile clean
+	@${MAKE} --no-print-directory -C netcore -f Makefile clean
+	@${MAKE} --no-print-directory -C moon -f Makefile clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
 	@echo ""
 	@echo "CONFIGURATIONS:"
-	@echo "  debug_win32"
-	@echo "  debug_x64"
 	@echo "  debug_linux"
-	@echo "  release_win32"
-	@echo "  release_x64"
 	@echo "  release_linux"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   lua"
-	@echo "   cjson"
-	@echo "   protobuf"
-	@echo "   xnet"
-	@echo "   mysql_proxy"
-	@echo "   server"
+	@echo "   lua53"
+	@echo "   netcore"
+	@echo "   moon"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

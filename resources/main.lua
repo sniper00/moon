@@ -1,39 +1,51 @@
-package.path = 'Base/?.lua;Gate/?.lua;Login/?.lua;'
+package.path = 'Base/?.lua;Common/?.lua;'
 
-require("SerializeUtil")
+local function register_service(s,service_type)
+	assert(type(s)=='string' and type(service_type)=='string')
 
-local MsgID = require("MsgID")
+	local script
+	if s == "lua_service" then
+		script = string.format([[
+			%s.register("%s")
+		]],s,service_type)
+	else
+		script = string.format([[
+			require("%s")
+			%s.register("%s")
+		]],s,s,service_type)
+	end
+	local f = load(script)
+	f()
+end
 
-pool:init("machineid:1;service_worker_num:1;")
+--注册 lua_service
+register_service("lua_service","lua")
+--register service end
+
+--init service pool machineid 为1，worker线程数 1
+pool:init(1,1)
 
 pool:run()
 
-pool:new_service(
-	[[
-	name:gate;
-	luafile:Gate/Gate.lua;
-	netthread:1;
-	timeout:0;
-	ip:127.0.0.1;
-	port:11111;
-	]],true)
+pool:new_service("lua",[[
+{
+	"name":"EchoServer",
+	"file":"EchoServer.lua",
+	"network":{
+		"type":"listen",
+		"thread":4,
+		"timeout":30,
+		"ip":"127.0.0.1",
+		"port":11111
+	}
+}
+]], true)
 
-pool:new_service(
-	[[
-	name:login;
-	luafile:Login/Login.lua;
-	]],true)
-
-pool:new_service(
-	[[
-	name:monitor;
-	luafile:Monitor/Monitor.lua;
-	]],false)
-
-pool:broadcast(0,UInt16ToBytes(MsgID.MSG_S2S_SERVER_START),message_type.service_send)
-
+--block main thread, avoid exit, until input 'exit'
 local name = io.read()
-
+while name ~= 'exit' do
+    name = io.read()
+end
 
 pool:stop()
 

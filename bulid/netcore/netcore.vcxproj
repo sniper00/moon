@@ -1,0 +1,217 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{150B4A0B-81EA-C8A6-8A02-547DF6602F08}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>netcore</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>..\..\bin\Debug\</OutDir>
+    <IntDir>obj\Win32\Debug\</IntDir>
+    <TargetName>netcore-d</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>..\..\bin\Debug\</OutDir>
+    <IntDir>obj\x64\Debug\</IntDir>
+    <TargetName>netcore-d</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\bin\Release\</OutDir>
+    <IntDir>obj\Win32\Release\</IntDir>
+    <TargetName>netcore</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\bin\Release\</OutDir>
+    <IntDir>obj\x64\Release\</IntDir>
+    <TargetName>netcore</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_USRDLL;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\asio-1.10.6\include;..\..\netcore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ImportLibrary>..\..\bin\Debug\netcore-d.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_USRDLL;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\asio-1.10.6\include;..\..\netcore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ImportLibrary>..\..\bin\Debug\netcore-d.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_USRDLL;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\asio-1.10.6\include;..\..\netcore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ImportLibrary>..\..\bin\Release\netcore.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;_USRDLL;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\asio-1.10.6\include;..\..\netcore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ImportLibrary>..\..\bin\Release\netcore.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\netcore\common\async_event.hpp" />
+    <ClInclude Include="..\..\netcore\common\buffer.hpp" />
+    <ClInclude Include="..\..\netcore\common\buffer_reader.hpp" />
+    <ClInclude Include="..\..\netcore\common\buffer_writer.hpp" />
+    <ClInclude Include="..\..\netcore\common\file.hpp" />
+    <ClInclude Include="..\..\netcore\common\hash.hpp" />
+    <ClInclude Include="..\..\netcore\common\loop_thread.hpp" />
+    <ClInclude Include="..\..\netcore\common\noncopyable.hpp" />
+    <ClInclude Include="..\..\netcore\common\path.hpp" />
+    <ClInclude Include="..\..\netcore\common\string.hpp" />
+    <ClInclude Include="..\..\netcore\common\sync_queue.hpp" />
+    <ClInclude Include="..\..\netcore\common\time.hpp" />
+    <ClInclude Include="..\..\netcore\common\type_traits.hpp" />
+    <ClInclude Include="..\..\netcore\component.h" />
+    <ClInclude Include="..\..\netcore\components\http\http_client.h" />
+    <ClInclude Include="..\..\netcore\components\http\impl\client_http.hpp" />
+    <ClInclude Include="..\..\netcore\components\tcp\impl\handler_alloc.hpp" />
+    <ClInclude Include="..\..\netcore\components\tcp\impl\io_service_pool.h" />
+    <ClInclude Include="..\..\netcore\components\tcp\impl\io_worker.h" />
+    <ClInclude Include="..\..\netcore\components\tcp\impl\session.h" />
+    <ClInclude Include="..\..\netcore\components\tcp\network.h" />
+    <ClInclude Include="..\..\netcore\components\timer\impl\timer_context.hpp" />
+    <ClInclude Include="..\..\netcore\components\timer\impl\timer_wheel.hpp" />
+    <ClInclude Include="..\..\netcore\components\timer\timer.h" />
+    <ClInclude Include="..\..\netcore\config.h" />
+    <ClInclude Include="..\..\netcore\core\service_worker.h" />
+    <ClInclude Include="..\..\netcore\log.h" />
+    <ClInclude Include="..\..\netcore\macro_define.h" />
+    <ClInclude Include="..\..\netcore\message.h" />
+    <ClInclude Include="..\..\netcore\platform_define.h" />
+    <ClInclude Include="..\..\netcore\service.h" />
+    <ClInclude Include="..\..\netcore\service_pool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\netcore\components\http\impl\http_client.cpp" />
+    <ClCompile Include="..\..\netcore\components\tcp\impl\io_service_pool.cpp" />
+    <ClCompile Include="..\..\netcore\components\tcp\impl\io_worker.cpp" />
+    <ClCompile Include="..\..\netcore\components\tcp\impl\network.cpp" />
+    <ClCompile Include="..\..\netcore\components\tcp\impl\session.cpp" />
+    <ClCompile Include="..\..\netcore\components\timer\impl\timer.cpp" />
+    <ClCompile Include="..\..\netcore\core\component.cpp" />
+    <ClCompile Include="..\..\netcore\core\log.cpp" />
+    <ClCompile Include="..\..\netcore\core\message.cpp" />
+    <ClCompile Include="..\..\netcore\core\service.cpp" />
+    <ClCompile Include="..\..\netcore\core\service_pool.cpp" />
+    <ClCompile Include="..\..\netcore\core\service_worker.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

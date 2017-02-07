@@ -134,22 +134,14 @@ end
 
 local setmetatableindex_
 setmetatableindex_ = function(t, index)
-    if type(t) == "userdata" then
-        local peer = tolua.getpeer(t)
-        if not peer then
-            peer = {}
-            tolua.setpeer(t, peer)
-        end
-        setmetatableindex_(peer, index)
-    else
-        local mt = getmetatable(t)
-        if not mt then mt = {} end
-        if not mt.__index then
-            mt.__index = index
-            setmetatable(t, mt)
-        elseif mt.__index ~= index then
-            setmetatableindex_(mt, index)
-        end
+    assert(type(t) ~= "userdata")
+    local mt = getmetatable(t)
+    if not mt then mt = {} end
+    if not mt.__index then
+        mt.__index = index
+        setmetatable(t, mt)
+    elseif mt.__index ~= index then
+        setmetatableindex_(mt, index)
     end
 end
 setmetatableindex = setmetatableindex_
@@ -178,32 +170,19 @@ function class(classname, ...)
     local supers = {...}
     for _, super in ipairs(supers) do
         local superType = type(super)
-        assert(superType == "nil" or superType == "table" or superType == "function",
+        assert(superType == "nil" or superType == "table",
             string.format("class() - create class \"%s\" with invalid super class type \"%s\"",
                 classname, superType))
 
-        if superType == "function" then
-            assert(cls.__create == nil,
-                string.format("class() - create class \"%s\" with more than one creating function",
-                    classname));
-            -- if super is function, set it to __create
-            cls.__create = super
-        elseif superType == "table" then
-            if super[".isclass"] then
-                -- super is native class
-                assert(cls.__create == nil,
-                    string.format("class() - create class \"%s\" with more than one creating function or native class",
-                        classname));
-                cls.__create = function() return super:create() end
-            else
+        if superType == "table" then
                 -- super is pure lua class
-                cls.__supers = cls.__supers or {}
-                cls.__supers[#cls.__supers + 1] = super
-                if not cls.super then
+            cls.__supers = cls.__supers or {}
+            cls.__supers[#cls.__supers + 1] = super
+            if not cls.super then
                     -- set first super pure lua class as class.super
-                    cls.super = super
-                end
+                cls.super = super
             end
+
         else
             error(string.format("class() - create class \"%s\" with invalid super type",
                         classname), 0)
@@ -635,7 +614,7 @@ function string.formatnumberthousands(num)
     return formatted
 end
 
-function newConst( const_table )    --生成常量表功能
+function create_const_table( const_table )    --生成常量表功能
     function Const( const_table )
         local mt =
         {
@@ -670,4 +649,49 @@ function string.parsekv(str)
     return ret
 end
 
+function table.serialize(obj)
+    local lua = ""
+    local t = type(obj)
+    if t == "number" then
+        lua = lua .. obj
+    elseif t == "boolean" then
+        lua = lua .. tostring(obj)
+    elseif t == "string" then
+        lua = lua .. string.format("%q", obj)
+    elseif t == "table" then
+        lua = lua .. "{\n"
+    for k, v in pairs(obj) do
+        lua = lua .. "[" .. table.serialize(k) .. "]=" .. table.serialize(v) .. ",\n"
+    end
+    local metatable = getmetatable(obj)
+        if metatable ~= nil and type(metatable.__index) == "table" then
+        for k, v in pairs(metatable.__index) do
+            lua = lua .. "[" .. table.serialize(k) .. "]=" .. table.serialize(v) .. ",\n"
+        end
+    end
+        lua = lua .. "}"
+    elseif t == "nil" then
+        return nil
+    else
+        error("can not serialize a " .. t .. " type.")
+    end
+    return lua
+end
+
+function table.unserialize(lua)
+    local t = type(lua)
+    if t == "nil" or lua == "" then
+        return nil
+    elseif t == "number" or t == "string" or t == "boolean" then
+        lua = tostring(lua)
+    else
+        error("can not unserialize a " .. t .. " type.")
+    end
+    lua = "return " .. lua
+    local func = load(lua)
+    if func == nil then
+        return nil
+    end
+    return func()
+end
 
