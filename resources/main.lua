@@ -1,28 +1,10 @@
 package.path = 'Base/?.lua;Common/?.lua;'
 
-local function register_service(s,service_type)
-	assert(type(s)=='string' and type(service_type)=='string')
-
-	local script
-	if s == "lua_service" then
-		script = string.format([[
-			%s.register("%s")
-		]],s,service_type)
-	else
-		script = string.format([[
-			require("%s")
-			%s.register("%s")
-		]],s,s,service_type)
-	end
-	local f = load(script)
-	f()
-end
-
 --注册 lua_service
-register_service("lua_service","lua")
+lua_service.register("lua")
 --register service end
 
---init service pool machineid 为1，worker线程数 1
+--init service pool machineid 为1，worker线程数 2
 pool:init(1,1)
 
 pool:run()

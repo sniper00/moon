@@ -5,8 +5,10 @@
 #include "LuaBind.h"
 #include "service_pool.h"
 #include "log.h"
+#include "common/path.hpp"
+#include "common/string.hpp"
 
-int main()
+int main(int argc,char*argv[])
 {
 	{
 		moon::service_pool  pool;
@@ -29,7 +31,20 @@ int main()
 #endif
 
 				lua.set("pool", &pool);
-				lua.script_file("main.lua");
+
+				if (argc == 2)
+				{
+					const char* startfile = argv[1];
+					if (moon::path::extension(startfile) != ".lua")
+					{
+						throw std::logic_error("startup file must be a lua script.");
+					}
+					lua.script_file(startfile);
+				}
+				else
+				{
+					lua.script_file("main.lua");
+				}		
 			}
 			catch (sol::error& e)
 			{

@@ -8,3 +8,13 @@
 /resources/MoonNet.log
 *.db
 *.opendb
+*.dll
+*.exp
+*.ilk
+*.lib
+*.pdb
+*.exe
+*.obj
+*.log
+*.tlog
+*.idb

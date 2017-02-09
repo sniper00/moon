@@ -1,9 +1,8 @@
 --Base目录里面有一些Lua实现的辅助模块
 package.path = 'Base/?.lua'
 
-require("functions")
+require("class")
 
--- 使用 Base/function.lua 中的class辅助模块
 local EchoServer =  class("EchoServer")
 
 function EchoServer:ctor()
@@ -21,7 +20,7 @@ function EchoServer:Init(config)
 end
 
 function EchoServer:Start()
-	print("EchoServer Start")
+	print("ExampleServer Start")
 end
 
 function EchoServer:Update()
@@ -29,7 +28,7 @@ function EchoServer:Update()
 end
 
 function EchoServer:Destory()
-	print("EchoServer Destory")
+	print("ExampleServer Destory")
 end
 
 function EchoServer:OnNetwork(msg, msgtype)
