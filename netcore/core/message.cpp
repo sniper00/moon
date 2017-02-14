@@ -41,6 +41,11 @@ namespace moon
 		return std::make_shared<message>(capacity, headreserved);
 	}
 
+	message_ptr_t message::create(const buffer_ptr_t & v)
+	{
+		return std::make_shared<message>(v);
+	}
+
 	message::message(size_t capacity, size_t headreserved)
 		:imp_(new message_imp)
 	{

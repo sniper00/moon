@@ -175,6 +175,11 @@ namespace moon
 			return ((flag_&v) != 0);
 		}
 
+		void offset_writepos(size_t offset)
+		{
+			writepos_ += offset;
+		}
+
 	protected:
 		std::vector<uint8_t>::iterator writeable()
 		{

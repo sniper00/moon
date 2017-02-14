@@ -16,6 +16,42 @@ namespace moon
 	class io_worker;
 	DECLARE_SHARED_PTR(buffer)
 
+	class const_buffers_holder
+	{
+	public:
+		const_buffers_holder() = default;
+
+		const_buffers_holder(const buffer_ptr_t& buf)
+		{
+			push_back(buf);
+		}
+
+		void push_back(const buffer_ptr_t& buf)
+		{
+			buffers_.push_back(asio::buffer(buf->data(), buf->size()));
+			datas_.push_back(buf);
+		}
+
+		const auto& buffers() const
+		{
+			return buffers_;
+		}
+
+		size_t size()
+		{
+			return datas_.size();
+		}
+
+		void clear()
+		{
+			buffers_.clear();
+			datas_.clear();
+		}
+	private:
+		std::vector<asio::const_buffer> buffers_;
+		std::vector<buffer_ptr_t> datas_;
+	};
+
 	class session :public std::enable_shared_from_this<session>,asio::noncopyable
 	{	
 	public:
@@ -42,11 +78,13 @@ namespace moon
 
 		void	set_no_delay();
 
-		void read();
+		void read_header();
 
-		void send();
+		void read_body(message_size_t size);
 
-		void post_send(const buffer_ptr_t& data);
+		void do_send();
+
+		void post_send();
 
 		void parse_remote_endpoint();
 
@@ -56,7 +94,7 @@ namespace moon
 
 		void on_connect();
 
-		void on_message(const uint8_t* data, size_t len);
+		void on_message(const buffer_ptr_t& buf);
 
 		void on_close();
 
@@ -67,11 +105,11 @@ namespace moon
 		uint32_t sessionid_;
 		time_t last_recv_time_;
 		uint32_t time_out_;
-		std::vector<uint8_t> read_buffer_;
+		message_size_t msg_size_;
 		bool	 is_sending_;
-		buffer read_stream_;
 		std::string remote_addr_;
 		std::deque<buffer_ptr_t> send_queue_;
+		const_buffers_holder  buffers_holder_;
 		handler_allocator allocator_;
 	};
 }

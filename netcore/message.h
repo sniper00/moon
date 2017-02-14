@@ -20,6 +20,8 @@ namespace moon
 	public:
 		static message_ptr_t create(size_t capacity = 64, size_t headreserved = sizeof(message_size_t));
 
+		static message_ptr_t create(const buffer_ptr_t & v);
+
 		message(size_t capacity = 64, size_t headreserved = 0);
 
 		message(const buffer_ptr_t & v);

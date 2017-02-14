@@ -13,9 +13,8 @@ namespace moon
 		, sessionid_(id)
 		, last_recv_time_(0)
 		, time_out_(time_out)
+		, msg_size_(0)
 		, is_sending_(false)
-		, read_buffer_(IO_BUFFER_SIZE)
-		, read_stream_(IO_BUFFER_SIZE)
 	{
 	}
 
@@ -33,7 +32,7 @@ namespace moon
 
 		on_connect();
 
-		read();
+		read_header();
 
 		return true;
 	}
@@ -51,10 +50,10 @@ namespace moon
 		socket_.set_option(option, ec);
 	}
 
-	void session::read()
+	void session::read_header()
 	{
 		auto self = shared_from_this();
-		socket_.async_read_some(asio::buffer(read_buffer_),
+		asio::async_read(socket_, asio::buffer(&msg_size_, sizeof(msg_size_)),
 			make_custom_alloc_handler(allocator_,
 			[this,self](const asio::error_code& e, std::size_t bytes_transferred)
 		{
@@ -73,33 +72,52 @@ namespace moon
 
 			if (bytes_transferred == 0)
 			{
-				read();
+				read_header();
 				return;
 			}
 
-			read_stream_.write_back(read_buffer_.data(), 0, bytes_transferred);
-			while (read_stream_.size() > sizeof(message_size_t))
+			if (msg_size_ > MAX_NMSG_SIZE)
 			{
-				message_size_t len = *(message_size_t*)(read_stream_.data());
-				if (len > MAX_NMSG_SIZE)
-				{
-					on_logic_error(network_logic_error::message_size_max);
-					return;
-				}
-
-				if (read_stream_.size() < sizeof(message_size_t) + len)
-				{
-					break;
-				}
-
-				read_stream_.seek(sizeof(message_size_t), buffer::Current);
-				on_message(read_stream_.data(), len);
-				read_stream_.seek(len, buffer::Current);
+				on_logic_error(network_logic_error::message_size_max);
+				return;
 			}
-			read();
+
+			read_body(msg_size_);
 		}));
 	}
 
+	void session::read_body(message_size_t size)
+	{
+		auto self = shared_from_this();
+		auto buf = create_buffer(size);
+		asio::async_read(socket_, asio::buffer((void*)buf->data(),size),
+			make_custom_alloc_handler(allocator_,
+				[this, self, buf,size](const asio::error_code& e, std::size_t bytes_transferred)
+		{
+			if (!ok())
+			{
+				return;
+			}
+
+			if (e)
+			{
+				on_network_error(e);
+				return;
+			}
+
+			if (bytes_transferred == 0)
+			{
+				read_header();
+				return;
+			}
+
+			buf->offset_writepos(size);
+
+			on_message(buf);
+
+			read_header();
+		}));
+	}
 
 	void session::send(const buffer_ptr_t& data)
 	{
@@ -115,21 +133,20 @@ namespace moon
 			return;
 		}
 
+		send_queue_.push_back(data);
+
+		if (send_queue_.size() > 5)
+		{
+			CONSOLE_WARN("session send queue > 5");
+		}
+
 		if (!is_sending_)
 		{
-			post_send(data);
-		}
-		else
-		{
-			send_queue_.push_back(data);
-			if (send_queue_.size() > 10)
-			{
-				CONSOLE_WARN("session send queue > 5");
-			}
+			do_send();
 		}
 	}
 
-	void session::send()
+	void session::do_send()
 	{
 		if (!ok())
 		{
@@ -138,42 +155,46 @@ namespace moon
 
 		if (send_queue_.size() == 0)
 			return;
-		auto data = create_buffer(1024);
-		while ((send_queue_.size() > 0) && (data->size() + send_queue_.front()->size() <= IO_BUFFER_SIZE))
+
+		buffers_holder_.clear();
+
+		while ((send_queue_.size() !=0) && (buffers_holder_.size()<10))
 		{
 			auto& msg = send_queue_.front();
-			data->write_back(msg->data(), 0, msg->size());
+			buffers_holder_.push_back(msg);
 			send_queue_.pop_front();
 		}
 
-		if (data->size() == 0)
+		if (buffers_holder_.size() == 0)
 			return;
-		post_send(data);
+
+		post_send();
 	}
 
-	void session::post_send(const buffer_ptr_t& data)
+	void moon::session::post_send()
 	{
 		is_sending_ = true;
 		auto self = shared_from_this();
 		asio::async_write(
 			socket_,
-			asio::buffer(data->data(), data->size()),
+			buffers_holder_.buffers(),
 			make_custom_alloc_handler(allocator_,
-			[this,self, data](const asio::error_code& e, std::size_t bytes_transferred)
+				[this, self](const asio::error_code& e, std::size_t bytes_transferred)
 		{
+			is_sending_ = false;
 			if (!ok())
 				return;
-			is_sending_ = false;
 			if (!e)
 			{
-				send();
+				do_send();
 				return;
 			}
 			else
 			{
 				on_network_error(e);
 			}
-		}));
+		}
+		));
 	}
 
 	void session::parse_remote_endpoint()
@@ -220,11 +241,9 @@ namespace moon
 		worker_(msg);
 	}
 
-	void session::on_message(const uint8_t * data, size_t len)
+	void session::on_message(const buffer_ptr_t& buf)
 	{
-		auto msg = message::create(len);
-		buffer_writer<buffer> bw(*msg);
-		bw.write_array(data, len);
+		auto msg = message::create(buf);
 		msg->set_sender(sessionid_);
 		msg->set_type(message_type::network_recv);
 		worker_(msg);

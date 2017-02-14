@@ -135,7 +135,7 @@ bool LuaService::init(const std::string& config)
 
 		imp_->network_->init(nthread, timeout);
 
-		imp_->network_->set_max_queue_size(4000);
+		imp_->network_->set_max_queue_size(8000);
 
 		imp_->network_->set_network_handle([this](const message_ptr_t& m) {
 			if (m->broadcast())
