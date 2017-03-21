@@ -257,7 +257,7 @@ namespace moon
 		msg->set_sender(sessionid_);
 		msg->set_type(message_type::network_close);
 		worker_(msg);
-		worker_.remove(sessionid_);
+		worker_.remove_session(sessionid_);
 	}
 
 	asio::ip::tcp::socket& session::socket()
