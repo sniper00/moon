@@ -4,7 +4,7 @@
 ## server配置
 
 属性名 | 数据类型 | 默认值 | 说明 | 其他 
-- | :-: | :-:| :-: | -: 
+-- | :-: | :-:| :-: | -: 
 sid | int|必须配置| 服务器id | 其他属性配置可以使用`#sid`替代具体值。不能重复。
 name | string|必须配置| 服务器名 | 示例 如：sever_#sid
 outer_host | string| 必须配置 | 外部ip | 其他属性配置可以使用`#outer_host`替代具体值
@@ -17,7 +17,7 @@ loglevel | string| DEBUG | 日志等级 | 可选 DEBUG，INFO，WARN，ERROR
 ## sevice配置
 
 属性名 | 数据类型 | 默认值 | 说明 | 其他 
-- | :-: | :-:| :-: | -: 
+-- | :-: | :-:| :-: | -: 
 type |string| lua| 服务类型 | lua编写的服务类型都为lua,可以cpp编写自定义类型的服务
 unique |bool| false| 服务类型 | 是否是唯一服务，唯一服务可以用moon.unique_service（name）获取服务id.唯一服务crash时，进程会直接退出。
 shared |bool| true| 是否和其他服务共享worker线程 | 用于服务独享一个线程
@@ -28,7 +28,7 @@ network | json||用于配置网络相关
 ## network
 
 属性名 | 数据类型 | 默认值 | 说明 | 其他
-- | :-: | :-:| :-: | -: 
+-- | :-: | :-:| :-: | -: 
 name |string| 必须配置| netwokr name,方便获取
 timeout |int| 0| 连接read超时时间，单位秒。 0不检测超时
 ip |string| 必须配置| 如 #inner_host
