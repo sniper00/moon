@@ -45,5 +45,12 @@ LUAI_FUNC TString *luaS_newlstr (lua_State *L, const char *str, size_t l);
 LUAI_FUNC TString *luaS_new (lua_State *L, const char *str);
 LUAI_FUNC TString *luaS_createlngstrobj (lua_State *L, size_t l);
 
+#define ENABLE_SHORT_STRING_TABLE
+
+LUA_API void luaS_initshr();
+LUA_API void luaS_exitshr();
+LUA_API void luaS_expandshr(int n);
+LUAI_FUNC TString *luaS_clonestring(lua_State *L, TString *);
+LUA_API int luaS_shrinfo(lua_State *L);
 
 #endif

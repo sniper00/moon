@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.120 2016/03/31 19:01:21 roberto Exp $
+** $Id: ldebug.c,v 2.121 2016/10/19 12:32:10 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,8 @@
 #define ci_func(ci)		(clLvalue((ci)->func))
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
+static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
+                                    const char **name);
 
 
 static int currentpc (CallInfo *ci) {
@@ -124,14 +125,14 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 
 
 static const char *upvalname (Proto *p, int uv) {
-  TString *s = check_exp(uv < p->sizeupvalues, p->upvalues[uv].name);
+  TString *s = check_exp(uv < p->sp->sizeupvalues, p->sp->upvalues[uv].name);
   if (s == NULL) return "?";
   else return getstr(s);
 }
 
 
 static const char *findvararg (CallInfo *ci, int n, StkId *pos) {
-  int nparams = clLvalue(ci->func)->p->numparams;
+  int nparams = clLvalue(ci->func)->p->sp->numparams;
   if (n >= cast_int(ci->u.l.base - ci->func) - nparams)
     return NULL;  /* no such vararg */
   else {
@@ -215,7 +216,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
     ar->what = "C";
   }
   else {
-    Proto *p = cl->l.p;
+    SharedProto *p = cl->l.p->sp;
     ar->source = p->source ? getstr(p->source) : "=?";
     ar->linedefined = p->linedefined;
     ar->lastlinedefined = p->lastlinedefined;
@@ -233,14 +234,28 @@ static void collectvalidlines (lua_State *L, Closure *f) {
   else {
     int i;
     TValue v;
-    int *lineinfo = f->l.p->lineinfo;
+    int *lineinfo = f->l.p->sp->lineinfo;
     Table *t = luaH_new(L);  /* new table to store active lines */
     sethvalue(L, L->top, t);  /* push it on stack */
     api_incr_top(L);
     setbvalue(&v, 1);  /* boolean 'true' to be the value of all indices */
-    for (i = 0; i < f->l.p->sizelineinfo; i++)  /* for all lines with code */
+    for (i = 0; i < f->l.p->sp->sizelineinfo; i++)  /* for all lines with code */
       luaH_setint(L, t, lineinfo[i], &v);  /* table[line] = true */
   }
+}
+
+
+static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+  if (ci == NULL)  /* no 'ci'? */
+    return NULL;  /* no info */
+  else if (ci->callstatus & CIST_FIN) {  /* is this a finalizer? */
+    *name = "__gc";
+    return "metamethod";  /* report it as such */
+  }
+  /* calling function is a known Lua function? */
+  else if (!(ci->callstatus & CIST_TAIL) && isLua(ci->previous))
+    return funcnamefromcode(L, ci->previous, name);
+  else return NULL;  /* no way to find a name */
 }
 
 
@@ -264,8 +279,8 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
           ar->nparams = 0;
         }
         else {
-          ar->isvararg = f->l.p->is_vararg;
-          ar->nparams = f->l.p->numparams;
+          ar->isvararg = f->l.p->sp->is_vararg;
+          ar->nparams = f->l.p->sp->numparams;
         }
         break;
       }
@@ -274,11 +289,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'n': {
-        /* calling function is a known Lua function? */
-        if (ci && !(ci->callstatus & CIST_TAIL) && isLua(ci->previous))
-          ar->namewhat = getfuncname(L, ci->previous, &ar->name);
-        else
-          ar->namewhat = NULL;
+        ar->namewhat = getfuncname(L, ci, &ar->name);
         if (ar->namewhat == NULL) {
           ar->namewhat = "";  /* not found */
           ar->name = NULL;
@@ -376,7 +387,7 @@ static int findsetreg (Proto *p, int lastpc, int reg) {
   int setreg = -1;  /* keep last instruction that changed 'reg' */
   int jmptarget = 0;  /* any code before this address is conditional */
   for (pc = 0; pc < lastpc; pc++) {
-    Instruction i = p->code[pc];
+    Instruction i = p->sp->code[pc];
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     switch (op) {
@@ -426,7 +437,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
   /* else try symbolic execution */
   pc = findsetreg(p, lastpc, reg);
   if (pc != -1) {  /* could find instruction? */
-    Instruction i = p->code[pc];
+    Instruction i = p->sp->code[pc];
     OpCode op = GET_OPCODE(i);
     switch (op) {
       case OP_MOVE: {
@@ -452,7 +463,7 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
       case OP_LOADK:
       case OP_LOADKX: {
         int b = (op == OP_LOADK) ? GETARG_Bx(i)
-                                 : GETARG_Ax(p->code[pc + 1]);
+                                 : GETARG_Ax(p->sp->code[pc + 1]);
         if (ttisstring(&p->k[b])) {
           *name = svalue(&p->k[b]);
           return "constant";
@@ -471,24 +482,31 @@ static const char *getobjname (Proto *p, int lastpc, int reg,
 }
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
-  TMS tm = (TMS)0;  /* to avoid warnings */
+/*
+** Try to find a name for a function based on the code that called it.
+** (Only works when function was called by a Lua function.)
+** Returns what the name is (e.g., "for iterator", "method",
+** "metamethod") and sets '*name' to point to the name.
+*/
+static const char *funcnamefromcode (lua_State *L, CallInfo *ci,
+                                     const char **name) {
+  TMS tm = (TMS)0;  /* (initial value avoids warnings) */
   Proto *p = ci_func(ci)->p;  /* calling function */
   int pc = currentpc(ci);  /* calling instruction index */
-  Instruction i = p->code[pc];  /* calling instruction */
+  Instruction i = p->sp->code[pc];  /* calling instruction */
   if (ci->callstatus & CIST_HOOKED) {  /* was it called inside a hook? */
     *name = "?";
     return "hook";
   }
   switch (GET_OPCODE(i)) {
     case OP_CALL:
-    case OP_TAILCALL:  /* get function name */
-      return getobjname(p, pc, GETARG_A(i), name);
+    case OP_TAILCALL:
+      return getobjname(p, pc, GETARG_A(i), name);  /* get function name */
     case OP_TFORCALL: {  /* for iterator */
       *name = "for iterator";
        return "for iterator";
     }
-    /* all other instructions can call only through metamethods */
+    /* other instructions can do calls through metamethods */
     case OP_SELF: case OP_GETTABUP: case OP_GETTABLE:
       tm = TM_INDEX;
       break;
@@ -509,7 +527,8 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
     case OP_EQ: tm = TM_EQ; break;
     case OP_LT: tm = TM_LT; break;
     case OP_LE: tm = TM_LE; break;
-    default: lua_assert(0);  /* other instructions cannot call a function */
+    default:
+      return NULL;  /* cannot find a reasonable name */
   }
   *name = getstr(G(L)->tmname[tm]);
   return "metamethod";
@@ -634,11 +653,12 @@ l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {
   CallInfo *ci = L->ci;
   const char *msg;
   va_list argp;
+  luaC_checkGC(L);  /* error message uses memory */
   va_start(argp, fmt);
   msg = luaO_pushvfstring(L, fmt, argp);  /* format message */
   va_end(argp);
   if (isLua(ci))  /* if Lua function, add source:line information */
-    luaG_addinfo(L, msg, ci_func(ci)->p->source, currentline(ci));
+    luaG_addinfo(L, msg, ci_func(ci)->p->sp->source, currentline(ci));
   luaG_errormsg(L);
 }
 

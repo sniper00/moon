@@ -63,7 +63,17 @@
 
 #endif
 
+/* Add by skynet */
+lua_State * skynet_sig_L = NULL;
 
+LUA_API void
+lua_checksig_(lua_State *L) {
+  if (skynet_sig_L == G(L)->mainthread) {
+    skynet_sig_L = NULL;
+    lua_pushnil(L);
+    lua_error(L);
+  }
+}
 
 /*
 ** Try to convert a value to a float. The float case is already handled
@@ -610,8 +620,8 @@ lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
 static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
   LClosure *c = p->cache;
   if (c != NULL) {  /* is there a cached closure? */
-    int nup = p->sizeupvalues;
-    Upvaldesc *uv = p->upvalues;
+    int nup = p->sp->sizeupvalues;
+    Upvaldesc *uv = p->sp->upvalues;
     int i;
     for (i = 0; i < nup; i++) {  /* check whether it has right upvalues */
       TValue *v = uv[i].instack ? base + uv[i].idx : encup[uv[i].idx]->v;
@@ -631,8 +641,8 @@ static LClosure *getcached (Proto *p, UpVal **encup, StkId base) {
 */
 static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
                          StkId ra) {
-  int nup = p->sizeupvalues;
-  Upvaldesc *uv = p->upvalues;
+  int nup = p->sp->sizeupvalues;
+  Upvaldesc *uv = p->sp->upvalues;
   int i;
   LClosure *ncl = luaF_newLclosure(L, nup);
   ncl->p = p;
@@ -1078,6 +1088,7 @@ void luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_JMP) {
+        lua_checksig(L);
         dojump(ci, i, 0);
         vmbreak;
       }
@@ -1130,6 +1141,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_CALL) {
         int b = GETARG_B(i);
         int nresults = GETARG_C(i) - 1;
+        lua_checksig(L);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         if (luaD_precall(L, ra, nresults)) {  /* C function? */
           if (nresults >= 0)
@@ -1144,6 +1156,7 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_TAILCALL) {
         int b = GETARG_B(i);
+        lua_checksig(L);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
         if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
@@ -1156,10 +1169,10 @@ void luaV_execute (lua_State *L) {
           StkId nfunc = nci->func;  /* called function */
           StkId ofunc = oci->func;  /* caller function */
           /* last stack slot filled by 'precall' */
-          StkId lim = nci->u.l.base + getproto(nfunc)->numparams;
+          StkId lim = nci->u.l.base + getproto(nfunc)->sp->numparams;
           int aux;
           /* close all upvalues from previous call */
-          if (cl->p->sizep > 0) luaF_close(L, oci->u.l.base);
+          if (cl->p->sp->sizep > 0) luaF_close(L, oci->u.l.base);
           /* move new frame into old one */
           for (aux = 0; nfunc + aux < lim; aux++)
             setobjs2s(L, ofunc + aux, nfunc + aux);
@@ -1168,14 +1181,14 @@ void luaV_execute (lua_State *L) {
           oci->u.l.savedpc = nci->u.l.savedpc;
           oci->callstatus |= CIST_TAIL;  /* function was tail called */
           ci = L->ci = oci;  /* remove new frame */
-          lua_assert(L->top == oci->u.l.base + getproto(ofunc)->maxstacksize);
+          lua_assert(L->top == oci->u.l.base + getproto(ofunc)->sp->maxstacksize);
           goto newframe;  /* restart luaV_execute over new Lua function */
         }
         vmbreak;
       }
       vmcase(OP_RETURN) {
         int b = GETARG_B(i);
-        if (cl->p->sizep > 0) luaF_close(L, base);
+        if (cl->p->sp->sizep > 0) luaF_close(L, base);
         b = luaD_poscall(L, ci, ra, (b != 0 ? b - 1 : cast_int(L->top - ra)));
         if (ci->callstatus & CIST_FRESH)  /* local 'ci' still from callee */
           return;  /* external invocation: return */
@@ -1188,6 +1201,7 @@ void luaV_execute (lua_State *L) {
         }
       }
       vmcase(OP_FORLOOP) {
+        lua_checksig(L);
         if (ttisinteger(ra)) {  /* integer loop? */
           lua_Integer step = ivalue(ra + 2);
           lua_Integer idx = intop(+, ivalue(ra), step); /* increment index */
@@ -1254,6 +1268,7 @@ void luaV_execute (lua_State *L) {
       }
       vmcase(OP_TFORLOOP) {
         l_tforloop:
+        lua_checksig(L);
         if (!ttisnil(ra + 1)) {  /* continue loop? */
           setobjs2s(L, ra, ra + 1);  /* save control variable */
            ci->u.l.savedpc += GETARG_sBx(i);  /* jump back */
@@ -1295,7 +1310,7 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_VARARG) {
         int b = GETARG_B(i) - 1;  /* required results */
         int j;
-        int n = cast_int(base - ci->func) - cl->p->numparams - 1;
+        int n = cast_int(base - ci->func) - cl->p->sp->numparams - 1;
         if (n < 0)  /* less arguments than parameters? */
           n = 0;  /* no vararg arguments */
         if (b < 0) {  /* B == 0? */
