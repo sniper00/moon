@@ -1,0 +1,188 @@
+#pragma once
+#include "base_connection.hpp"
+
+namespace moon
+{
+    class custom_connection: public base_connection
+    {
+    public:
+        using base_connection_t = base_connection;
+        using socket_t = base_connection_t;
+
+        explicit custom_connection(asio::io_service& ios)
+            :base_connection(ios)
+            ,restore_write_offset_(0)
+            , prew_read_offset_(0)
+        {
+        }
+
+        void start(bool accepted, int32_t responseid = 0) override
+        {
+            base_connection_t::start(accepted, responseid);
+            response_msg_ = message::create(8192);
+            read_some();
+        }
+
+        bool read(const read_request& ctx) override
+        {
+            if (is_open() && read_request_.responseid ==0)
+            {
+                read_request_ = ctx;
+                restore_buffer_offset();
+                if (response_msg_->size() > 0)
+                {
+                    //guarantee read is async operation
+                    ios_.post([this] {
+                        handle_read_request();
+                    });
+                }
+                return true;
+            }
+            return false;
+        }
+
+    protected:
+        void read_some()
+        {
+            socket_.async_read_some(asio::buffer(buffer_),
+                make_custom_alloc_handler(allocator_,
+                    [this,self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
+            {
+                if (!ok())
+                    return;
+
+                if (e)
+                {
+                    error(e, int(logic_error_));
+                    return;
+                }
+
+                if (bytes_transferred == 0)
+                {
+                    read_some();
+                    return;
+                }
+
+                //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, std::string((char*)buffer_.data(), bytes_transferred).data());
+
+                last_recv_time_ = std::time(nullptr);
+                restore_buffer_offset();
+                response_msg_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
+                handle_read_request();
+                read_some();
+            }));
+        }
+
+        void restore_buffer_offset()
+        {
+            auto buf = response_msg_->get_buffer();
+            buf->offset_writepos(restore_write_offset_);
+            buf->seek(prew_read_offset_, buffer::Current);
+            restore_write_offset_ = 0;
+            prew_read_offset_ = 0;
+        }
+
+        void read_with_delim(buffer* buf,const string_view_t& delim)
+        {
+            size_t dszie = buf->size();
+            string_view_t strref(buf->data(), dszie);
+            size_t pos = strref.find(delim);
+            if (pos != string_view_t::npos)
+            {
+                buf->offset_writepos(-static_cast<int>(dszie - pos));
+                restore_write_offset_ = static_cast<int>(dszie - pos);
+                prew_read_offset_ = static_cast<int>(pos + delim.size());
+                make_response(response_msg_);
+            }
+        }
+
+        void handle_read_request()
+        {
+            auto buf = response_msg_->get_buffer();
+            size_t dszie = buf->size();
+
+            if (0 == read_request_.responseid || dszie ==0)
+            {
+                return;
+            }
+
+            switch (read_request_.delim)
+            {
+            case read_delim::FIXEDLEN:
+            {
+                if (buf->size() >= read_request_.size)
+                {
+                    buf->offset_writepos(-static_cast<int>(dszie - read_request_.size));
+                    restore_write_offset_ = static_cast<int>(dszie - read_request_.size);
+                    prew_read_offset_ = static_cast<int>(read_request_.size);
+                    make_response(response_msg_);
+                    break;
+                }
+                else
+                {
+                    return;
+                }
+            }
+            case read_delim::LF:
+            {
+                read_with_delim(buf,STR_LF);
+                break;
+            }
+            case read_delim::CRLF:
+            {
+                read_with_delim(buf, STR_CRLF);
+                break;
+            }
+            case read_delim::DCRLF:
+            {
+                read_with_delim(buf, STR_DCRLF);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
+        void error(const asio::error_code& e, int logicerr, const std::string& lemsg = "") override
+        {
+            (void)lemsg;
+            {
+                switch (logicerr)
+                {
+                case int(moon::network_logic_error::timeout):
+                    response_msg_->set_header("timeout");
+                    break;
+                default:
+                    response_msg_->set_header("closed");
+                    break;
+                }
+
+                if (e)
+                {
+                    response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
+                }
+
+                if (read_request_.responseid != 0)
+                {
+                    make_response(response_msg_, PTYPE_ERROR);
+                }
+            }
+            on_close(id_);
+            on_data = nullptr;
+        }
+
+        void make_response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
+        {
+            msg->set_type(mtype);
+            msg->set_responseid(-read_request_.responseid);
+            read_request_.responseid = 0;
+            on_data(msg);
+        }
+    protected:
+        int restore_write_offset_ ;
+        int prew_read_offset_;
+        message_ptr_t  response_msg_;
+        std::array<uint8_t, 1024> buffer_;
+        read_request read_request_;
+    };
+}

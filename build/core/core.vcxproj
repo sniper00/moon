@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4E40957C-3A77-960D-E363-7C10CF79120F}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>core</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>..\..\bin\Debug\</OutDir>
+    <IntDir>..\..\obj\core\Win32_Debug\</IntDir>
+    <TargetName>core-d</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>..\..\bin\Debug\</OutDir>
+    <IntDir>..\..\obj\core\x64_Debug\</IntDir>
+    <TargetName>core-d</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>..\..\bin\Release\</OutDir>
+    <IntDir>..\..\obj\core\Win32_Release\</IntDir>
+    <TargetName>core</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>..\..\bin\Release\</OutDir>
+    <IntDir>..\..\obj\core\x64_Release\</IntDir>
+    <TargetName>core</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;ASIO_HAS_MOVE;ASIO_HAS_VARIADIC_TEMPLATES;ASIO_HAS_CONSTEXPR;ASIO_HAS_STD_SYSTEM_ERROR;ASIO_HAS_STD_ATOMIC;ASIO_HAS_STD_FUNCTION;ASIO_HAS_STD_THREAD;ASIO_HAS_STD_MUTEX_AND_CONDVAR;ASIO_HAS_STD_ADDRESSOF;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..;..\..\third;..\..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;ASIO_HAS_MOVE;ASIO_HAS_VARIADIC_TEMPLATES;ASIO_HAS_CONSTEXPR;ASIO_HAS_STD_SYSTEM_ERROR;ASIO_HAS_STD_ATOMIC;ASIO_HAS_STD_FUNCTION;ASIO_HAS_STD_THREAD;ASIO_HAS_STD_MUTEX_AND_CONDVAR;ASIO_HAS_STD_ADDRESSOF;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..;..\..\third;..\..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;ASIO_HAS_MOVE;ASIO_HAS_VARIADIC_TEMPLATES;ASIO_HAS_CONSTEXPR;ASIO_HAS_STD_SYSTEM_ERROR;ASIO_HAS_STD_ATOMIC;ASIO_HAS_STD_FUNCTION;ASIO_HAS_STD_THREAD;ASIO_HAS_STD_MUTEX_AND_CONDVAR;ASIO_HAS_STD_ADDRESSOF;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..;..\..\third;..\..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_HAS_STD_ARRAY;ASIO_HAS_STD_TYPE_TRAITS;ASIO_HAS_STD_SHARED_PTR;ASIO_HAS_CSTDINT;ASIO_DISABLE_SERIAL_PORT;ASIO_HAS_STD_CHRONO;ASIO_HAS_MOVE;ASIO_HAS_VARIADIC_TEMPLATES;ASIO_HAS_CONSTEXPR;ASIO_HAS_STD_SYSTEM_ERROR;ASIO_HAS_STD_ATOMIC;ASIO_HAS_STD_FUNCTION;ASIO_HAS_STD_THREAD;ASIO_HAS_STD_MUTEX_AND_CONDVAR;ASIO_HAS_STD_ADDRESSOF;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..;..\..\third;..\..\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\core\component.h" />
+    <ClInclude Include="..\..\core\components\tcp\impl\base_connection.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\impl\const_buffers_holder.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\impl\custom_connection.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\impl\handler_alloc.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\impl\moon_connection.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\impl\ws_connection.hpp" />
+    <ClInclude Include="..\..\core\components\tcp\tcp.h" />
+    <ClInclude Include="..\..\core\config.h" />
+    <ClInclude Include="..\..\core\core\worker.h" />
+    <ClInclude Include="..\..\core\log.h" />
+    <ClInclude Include="..\..\core\message.hpp" />
+    <ClInclude Include="..\..\core\server.h" />
+    <ClInclude Include="..\..\core\service.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\core\components\tcp\impl\tcp.cpp" />
+    <ClCompile Include="..\..\core\core\component.cpp" />
+    <ClCompile Include="..\..\core\core\log.cpp" />
+    <ClCompile Include="..\..\core\core\server.cpp" />
+    <ClCompile Include="..\..\core\core\service.cpp" />
+    <ClCompile Include="..\..\core\core\worker.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

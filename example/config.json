@@ -1,0 +1,140 @@
+[
+    {
+        "sid": 1,
+        "name": "server_#sid",
+        "outer_host": "127.0.0.1",
+        "inner_host": "127.0.0.1",
+        "thread": 4,
+        "startup": "main.lua",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "type": "lua",
+                "unique": true,
+                "shared": false,
+                "threadid": 0,
+                "name": "clusterd",
+                "file": "service/clusterd.lua",
+                "network": {
+                    "name": "network",
+                    "type": "listen",
+                    "ip": "#inner_host",
+                    "port": "10001"
+                }
+            },
+            {
+                "name": "network_example",
+                "file": "network_example.lua",
+                "network": {
+                    "name": "network",
+                    "type": "listen",
+                    "ip": "#inner_host",
+                    "port": "12345"
+                }
+            }
+        ]
+    },
+    {
+        "sid": 2,
+        "name": "server_#sid",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "name": "redis_example",
+                "file": "redis_example.lua"
+            }
+        ]
+    },
+    {
+        "sid": 3,
+        "loglevel":"INFO",
+        "name": "server_#sid",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "send_example_sender",
+                "file": "send_example_sender.lua"       
+            },
+            {
+                "unique": true,
+                "name": "send_example_receiver1",
+                "file": "send_example_receiver.lua"
+            },
+            {
+                "unique": true,
+                "name": "send_example_receiver2",
+                "file": "send_example_receiver.lua"
+            },
+            {
+                "unique": true,
+                "name": "send_example_receiver3",
+                "file": "send_example_receiver.lua"
+            },
+            {
+                "unique": true,
+                "name": "send_example_receiver4",
+                "file": "send_example_receiver.lua"
+            }
+        ]
+    }
+    ,
+    {
+        "sid": 4,
+        "name": "server_#sid",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "name": "call_example_sender",
+                "file": "call_example_sender.lua"
+            }
+        ]
+    },
+    {
+        "sid": 5,
+        "name": "server_#sid",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "clusterd",
+                "file": "service/clusterd.lua",
+                "network": {
+                    "name": "network",
+                    "type": "listen",
+                    "ip": "#inner_host",
+                    "port": "10001"
+                }
+            },
+            {
+                "unique": true,
+                "name": "cluster_example_receiver",
+                "file": "cluster_example_receiver.lua"
+            }
+        ]
+    },
+    {
+        "sid": 6,
+        "name": "server_#sid",
+        "outer_host": "127.0.0.1",
+        "inner_host": "127.0.0.1",
+        "services": [
+            {
+                "unique": true,
+                "name": "clusterd",
+                "file": "service/clusterd.lua",
+                "network": {
+                    "name": "network",
+                    "type": "listen",
+                    "ip": "#inner_host",
+                    "port": "10002"
+                }
+            },
+            {
+                "unique": true,
+                "name": "cluster_example_sender",
+                "file": "cluster_example_sender.lua"
+            }
+        ]
+    }
+]

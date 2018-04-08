@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="luabind">
+      <UniqueIdentifier>{A4A34F95-1083-CE30-199B-590785F93492}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="services">
+      <UniqueIdentifier>{C98C7E0E-B559-D919-DE72-C7C1CA9E0EA8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\moon\luabind\lua_bind.h">
+      <Filter>luabind</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\moon\luabind\lua_buffer.hpp">
+      <Filter>luabind</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\moon\luabind\lua_serialize.hpp">
+      <Filter>luabind</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\moon\luabind\lua_string_view.hpp">
+      <Filter>luabind</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\moon\server_config.hpp" />
+    <ClInclude Include="..\..\moon\services\lua_service.h">
+      <Filter>services</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\moon\services\service_config.hpp">
+      <Filter>services</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\moon\luabind\lua_bind.cpp">
+      <Filter>luabind</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\moon\moon.cpp" />
+    <ClCompile Include="..\..\moon\services\lua_service.cpp">
+      <Filter>services</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

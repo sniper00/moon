@@ -1,0 +1,282 @@
+#pragma once
+#include "config.h"
+#include "asio.hpp"
+#include "message.hpp"
+#include "handler_alloc.hpp"
+#include "const_buffers_holder.hpp"
+#include "common/string.hpp"
+
+namespace moon
+{
+    constexpr const string_view_t STR_LF = "\n"_sv;
+    constexpr const string_view_t STR_CRLF = "\r\n"_sv;
+    constexpr const string_view_t STR_DCRLF = "\r\n\r\n"_sv;
+
+    struct read_request
+    {
+        read_request()
+            :delim(read_delim::CRLF)
+            , size(0)
+            , responseid(0)
+        {
+
+        }
+
+        read_request(read_delim d, size_t s, int32_t r)
+            :delim(d)
+            , size(s)
+            , responseid(r)
+        {
+        }
+
+        read_request(const read_request&) = default;
+        read_request& operator=(const read_request&) = default;
+
+        read_delim delim;
+        size_t size;
+        int32_t responseid;
+    };
+
+    class base_connection :public std::enable_shared_from_this<base_connection>
+    {
+    public:
+        using socket_t = asio::ip::tcp::socket;
+
+        explicit base_connection(asio::io_service& ios)
+            :sending_(false)
+            , id_(0)
+            , last_recv_time_(0)
+            , logic_error_(network_logic_error::ok)
+            , ios_(ios)
+            , socket_(ios)
+            , log_(nullptr)
+        {
+        }
+
+        virtual ~base_connection()
+        {
+
+        }
+
+        virtual void start(bool accepted, int32_t responseid = 0)
+        {
+            (void)accepted;
+            (void)responseid;
+            //save remote addr
+            asio::error_code ec;
+            auto ep = socket_.remote_endpoint(ec);
+            auto addr = ep.address();
+            remote_addr_ = addr.to_string(ec) + ":";
+            remote_addr_ += std::to_string(ep.port());
+
+            last_recv_time_ = std::time(nullptr);
+        }
+
+        virtual bool read(const read_request& ctx) 
+        {
+            (void)ctx;  
+            return false;
+        };
+
+        virtual bool send(const buffer_ptr_t & data)
+        {
+            if (data == nullptr || data->size() == 0)
+            {
+                return false;
+            }
+
+            if (!socket_.is_open())
+            {
+                return false;
+            }
+
+            send_queue_.push_back(data);
+
+            if (send_queue_.size() > 30)
+            {
+                printf("warn:network send_queue size >30\n");
+            }
+
+            if (!sending_)
+            {
+                post_send();
+            }
+            return true;
+        }
+
+        bool close(bool exit = false)
+        {
+            bool ret = false;
+            do
+            {
+                if (!socket_.is_open())
+                {
+                    break;
+                }
+                asio::error_code ec;
+                socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+                socket_.close(ec);
+                ret = true;
+            } while (0);
+
+            if (exit)
+            {
+                on_data = nullptr;
+            }
+            return ret;
+        }
+
+        socket_t& socket()
+        {
+            return socket_;
+        }
+
+        bool is_open() const
+        {
+            return socket_.is_open();
+        }
+
+        void set_id(uint32_t id)
+        {
+            id_ = id;
+        }
+
+        uint32_t id() const
+        {
+            return id_;
+        }
+
+        void timeout_check(time_t now, int timeout)
+        {
+            if ((0 != timeout) && (0 != last_recv_time_) && (now - last_recv_time_ > timeout))
+            {
+                logic_error_ = network_logic_error::timeout;
+                close();
+            }
+        }
+
+        void set_no_delay()
+        {
+            asio::ip::tcp::no_delay option(true);
+            asio::error_code ec;
+            socket_.set_option(option, ec);
+        }
+
+        std::function<void(const message_ptr_t&)> on_data;
+
+        std::function<void(uint32_t)> on_close;
+
+        moon::log* logger() const 
+        {
+            return log_;
+        }
+
+        void setlogger(moon::log* l)
+        {
+            log_ = l;
+        }
+
+    protected:
+        void post_send()
+        {
+            if (send_queue_.size() == 0)
+                return;
+
+            buffers_holder_.clear();
+
+            while ((send_queue_.size() != 0) && (buffers_holder_.size() < 50))
+            {
+                auto& msg = send_queue_.front();
+                buffers_holder_.push_back(msg);
+                send_queue_.pop_front();
+            }
+
+            if (buffers_holder_.size() == 0)
+                return;
+
+            sending_ = true;
+            asio::async_write(
+                socket_,
+                buffers_holder_.buffers(),
+                make_custom_alloc_handler(allocator_,
+                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
+            {
+                if (!ok())
+                    return;
+
+                sending_ = false;
+
+                if (!e)
+                {
+                    post_send();
+                    return;
+                }
+                else
+                {
+                    error(e, int(logic_error_));
+                }
+            }));
+        }
+
+        virtual void error(const asio::error_code& e, int lerrcode, const std::string& lemsg = "")
+        {
+            //error
+            {
+                auto msg = message::create();
+                std::string content;
+                if (e)
+                {
+                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                        , remote_addr_.data()
+                        , e.value()
+                        , e.message().data());
+                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
+                }
+                else
+                {
+                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                        , remote_addr_.data()
+                        , lerrcode
+                        , lemsg.data()
+                    );
+                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_logic_error));
+                }
+                msg->write_string(content);
+                msg->set_sender(id_);
+                msg->set_type(PTYPE_SOCKET);
+
+                on_data(msg);
+            }
+
+            //closed
+            {
+                auto msg = message::create();
+                msg->write_string(remote_addr_);
+                msg->set_sender(id_);
+                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
+                msg->set_type(PTYPE_SOCKET);
+                on_data(msg);
+            }
+
+            on_close(id_);
+            on_data = nullptr;
+        }
+
+        bool ok()
+        {
+            return (on_data != nullptr);
+        }
+    protected:
+        bool sending_;
+        uint32_t id_;
+        time_t last_recv_time_;
+        network_logic_error logic_error_;
+        asio::io_service& ios_;
+        socket_t socket_;
+        handler_allocator allocator_;
+        const_buffers_holder  buffers_holder_;
+        std::string remote_addr_;
+        std::deque<buffer_ptr_t> send_queue_;
+        moon::log* log_;
+    };
+}
