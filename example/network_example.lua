@@ -23,9 +23,11 @@ socket_handler[2] = function(sessionid, data)
 	print("accept ",sessionid,data)
 end
 
+local response = string.pack("H",2)
+
 socket_handler[3] = function(sessionid, data)
-	network:send(sessionid, data)
-	print("recv", data)
+	network:send(sessionid, response..data)
+	--print("recv", data)
 end
 
 socket_handler[4] = function(sessionid, data)
