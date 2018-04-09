@@ -9,20 +9,6 @@
         "log": "log/#sid_#date.log",
         "services": [
             {
-                "type": "lua",
-                "unique": true,
-                "shared": false,
-                "threadid": 0,
-                "name": "clusterd",
-                "file": "service/clusterd.lua",
-                "network": {
-                    "name": "network",
-                    "type": "listen",
-                    "ip": "#inner_host",
-                    "port": "10001"
-                }
-            },
-            {
                 "name": "network_example",
                 "file": "network_example.lua",
                 "network": {
@@ -30,6 +16,17 @@
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12345"
+                }
+            },
+            {
+                "name": "websocket_example",
+                "file": "network_example.lua",
+                "network": {
+                    "name": "network",
+                    "type": "listen",
+                    "ip": "#inner_host",
+                    "port": "12346",
+                    "protocol":2
                 }
             }
         ]
