@@ -62,7 +62,7 @@ namespace moon
                 c.Accept(writer);
                 std::string s(buffer.GetString(), buffer.GetSize());
                 moon::replace(s, "#sid", std::to_string(scfg.sid));
-                moon::replace(s, "#outter_host", scfg.outer_host);
+                moon::replace(s, "#outer_host", scfg.outer_host);
                 moon::replace(s, "#inner_host", scfg.inner_host);
                 config_.append(s);
             }
