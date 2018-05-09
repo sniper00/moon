@@ -43,7 +43,7 @@ socket_handler[6] = function(sessionid, data)
 end
 
 moon.start(function()
-	assert(false)
+
 	moon.register_protocol(
 	{
 		name = "socket",
