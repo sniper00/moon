@@ -15,6 +15,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <algorithm>
 #include <locale>
 #include <cmath>
+#include <sstream>
 #include "macro_define.hpp"
 
 #define MAX_FMT_LEN 8*1024
@@ -247,6 +248,17 @@ namespace moon
 			}
 		}
 		return true;
+	}
+
+	inline std::string to_hex_string(string_view_t s,string_view_t tok = "")  
+	{  
+		std::stringstream ss;
+		ss<<std::setiosflags(std::ios::uppercase)<<std::hex;
+        for (auto c : s)
+        {
+            ss << (int)(uint8_t)(c) << tok;
+        }
+		return ss.str();  
 	}
 
     template<typename TString>

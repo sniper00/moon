@@ -4,6 +4,9 @@ local log = require("log")
 local json = require("json")
 local clusters = {}
 
+local pack_cluster = moon.pack_cluster
+local unpack_cluster = moon.unpack_cluster
+
 local seri_pack = seri.pack
 local seri_packstr = seri.packstring
 local seri_unpack = seri.unpack
@@ -37,42 +40,51 @@ socket_handler[2] = function(sessionid, msg)
 end
 
 socket_handler[3] = function(sessionid, msg)
-    local snode, saddr, rnode, raddr, rresponseid, data = seri_unpack(msg:bytes())
+    local snode, saddr, rnode, raddr, rresponseid = seri_unpack(unpack_cluster(msg))
     local receiver = unique_service(raddr)
     if 0 == receiver then
-        log.warn("cluster : socket_handler[3] unique_service %s can not find",raddr)
+        local err = string.format( "cluster : socket_handler[3] unique_service %s can not find",raddr)
+        log.warn(err)
+
+        if 0>rresponseid then
+            local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err))
+            network:send(sessionid, s)
+        end
         return
     end
+
     --被调用者
     if 0 > rresponseid then
         moon.start_coroutine(
             function()
-                local responseid, err = moon.raw_send("lua", receiver, nil, data)
-                local sdata
-                if responseid then
-                    response_watch[responseid] = sessionid
-                    local ret, err = co_yield()
-                    local state = response_watch[responseid]
-                    response_watch[responseid] = nil
-                    if state == 'close' then
-                        return
-                    end
-                    if ret then
-                        sdata = seri_packstr(ret)
-                    else
-                        sdata = seri_packstr(false, err)
-                    end
-                else
-                    sdata = seri_packstr(false, err)
+                local responseid, err = moon.send_message("lua", receiver, nil, nil, msg)
+                if not responseid then
+                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err))
+                    network:send(sessionid, s)
+                    return
                 end
-                local t = seri_pack(rnode, raddr, snode, saddr, -rresponseid, sdata)
-                network:send(sessionid, t)
+
+                response_watch[responseid] = sessionid
+                local ret,err2 = co_yield()
+                local state = response_watch[responseid]
+                response_watch[responseid] = nil
+                if state == 'close' then
+                    return
+                end
+
+                if ret then
+                    pack_cluster(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),ret)
+                    network:send_message(sessionid, ret)
+                else
+                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err2))
+                    network:send(sessionid, s)
+                end
             end
         )
     else
         --调用者
         remove_send_watch(sessionid,receiver,-rresponseid)
-        moon.raw_send("lua", receiver, nil, data, -rresponseid)
+        moon.send_message("lua", receiver, nil, -rresponseid, msg)
     end
 end
 
@@ -91,7 +103,7 @@ socket_handler[4] = function(sessionid, msg)
             local sender = v[2]
             local responseid = v[3]
             print("response", sender, responseid)
-            moon.response("lua", sender, responseid, false, "conn closed")
+            moon.response("lua", sender, responseid, seri_packstr(false, "conn closed"))
         end
     end
 
@@ -131,7 +143,7 @@ moon.register_protocol(
 
 local command = {}
 
-command.CALL = function(sender, responseid, rnode, raddr, ...)
+command.CALL = function(sender, responseid,rnode, raddr, msg)
     local connid = connectors[rnode]
     local err
     if not connid then
@@ -150,24 +162,26 @@ command.CALL = function(sender, responseid, rnode, raddr, ...)
     end
 
     if connid then
-        local t = seri.pack(moon.name(), sender, rnode, raddr, responseid, seri_packstr(...))
+        pack_cluster(seri_packstr(moon.name(), sender, rnode, raddr, responseid),msg)
+        --local t = seri.pack(moon.name(), sender, rnode, raddr, responseid, seri_packstr(...))
         add_send_watch(connid,sender,responseid)
-        if network:send(connid, t) then
-            err = string.format("send to %s failed", rnode)
+        if network:send_message(connid, msg) then
             return
+        else
+            err = string.format("send to %s failed", rnode)
         end
     end
 
     if responseid ~= 0 then
-        moon.response("lua", sender, responseid, false, err)
+        moon.response("lua", sender, responseid, seri_packstr(false, err))
     end
     print("clusterd call error:", err)
 end
 
-local function docmd(sender, responseid, CMD, ...)
+local function docmd(sender, responseid, CMD, rnode, raddr, msg)
     local cb = command[CMD]
     if cb then
-        cb(sender, responseid, ...)
+        cb(sender, responseid, rnode, raddr ,msg)
     else
         error(string.format("Unknown command %s", tostring(CMD)))
     end
@@ -210,14 +224,28 @@ moon.init(function( config )
     assert(network)
     network:settimeout(10)
 
-    moon.dispatch(
-        "lua",
-        function(msg, p)
+    moon.register_protocol(
+    {
+        name = "lua",
+        PTYPE = moon.PLUA,
+        pack = function(...)return ...end,
+        unpack = function(...) return ... end,
+        dispatch =  function(msg, _)
             local sender = msg:sender()
             local responseid = msg:responseid()
-            docmd(sender, responseid, p.unpack(msg:bytes()))
+            local CMD, rnode, raddr = seri_unpack(msg:header())
+            docmd(sender, responseid, CMD, rnode, raddr, msg)
         end
-    )
+    })
+
+    -- moon.dispatch(
+    --     "lua",
+    --     function(msg, _)
+    --         local sender = msg:sender()
+    --         local responseid = msg:responseid()
+    --         docmd(sender, responseid,seri_unpack(msg:header()), msg)
+    --     end
+    -- )
 
     return true
 end)
