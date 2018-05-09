@@ -50,11 +50,44 @@ int new_table(lua_State* L)
     return 1;
 }
 
+std::string make_cluster_message(string_view_t header, string_view_t data)
+{
+    std::string ret;
+    uint16_t len = static_cast<uint16_t>(data.size());
+    ret.append((const char*)&len, sizeof(len));
+    ret.append(data.data(), data.size());
+    ret.append(header.data(), header.size());
+    return ret;
+}
+
+void pack_cluster_message(string_view_t header, message* msg)
+{
+    uint16_t len = static_cast<uint16_t>(msg->size());
+    msg->get_buffer()->write_front(&len, 0, 1);
+    msg->get_buffer()->write_back(header.data(), 0, header.size());
+}
+
+string_view_t unpack_cluster_message(message* msg)
+{
+    uint16_t len = 0;
+    msg->get_buffer()->read(&len, 0, 1);
+    size_t header_size = msg->size() - len;
+    const char* header = msg->data() + len;
+    int tmp = (int)header_size;
+    msg->get_buffer()->offset_writepos(-tmp);
+    return string_view_t{ header,header_size };
+}
+
 const lua_bind & lua_bind::bind_util() const
 {
     lua.set_function("millsecond", WRAP_FUNCTION(&time::millsecond));
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
     lua.set_function("hash_string", [](const std::string& s) { return moon::hash_range(s.begin(), s.end()); });
+    lua.set_function("hex_string", WRAP_FUNCTION(&moon::to_hex_string));
+
+    lua.set_function("pack_cluster", pack_cluster_message);
+    lua.set_function("unpack_cluster", unpack_cluster_message);
+    lua.set_function("make_cluster_message", make_cluster_message);
 
     lua_getglobal(lua.lua_state(), "table");
     lua_pushcclosure(lua.lua_state(), new_table, 0);
@@ -90,6 +123,18 @@ static void redirect_message(message* m, const moon::string_view_t& header, uint
     m->set_receiver(receiver);
 }
 
+static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::string_view_t& header, int32_t responseid, uint8_t mtype)
+{
+    if (header.size() != 0)
+    {
+        m->set_header(header);
+    }
+    m->set_sender(sender);
+    m->set_receiver(receiver);
+    m->set_type(mtype);
+    m->set_responseid(-responseid);
+}
+
 const lua_bind & lua_bind::bind_message() const
 {
     lua.new_usertype<message>("message"
@@ -105,6 +150,7 @@ const lua_bind & lua_bind::bind_message() const
         , "subbytes", WRAP_FUNCTION(&message::subbytes)
         , "buffer", WRAP_FUNCTION(&message::pointer)
         , "redirect", (redirect_message)
+        , "resend", resend
         );
     return *this;
 }
@@ -147,6 +193,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_env", &server::set_env, server_);
     lua.set_function("get_env", &server::get_env, server_);
     lua.set_function("set_loglevel", [server_](string_view_t s) { server_->logger()->set_level(s); });
+
     return *this;
 }
 
@@ -161,6 +208,7 @@ const lua_bind & lua_bind::bind_socket() const
         , "close", WRAP_FUNCTION(&moon::tcp::close)
         , "read", WRAP_FUNCTION(&moon::tcp::read)
         , "send", WRAP_FUNCTION(&moon::tcp::send)
+        , "send_then_close", WRAP_FUNCTION(&moon::tcp::send_then_close)
         , "send_message", WRAP_FUNCTION(&moon::tcp::send_message)
         , "setprotocol", WRAP_FUNCTION(&moon::tcp::setprotocol)
         , "settimeout", WRAP_FUNCTION(&moon::tcp::settimeout)
@@ -171,11 +219,6 @@ const lua_bind & lua_bind::bind_socket() const
 
 const lua_bind & lua_bind::bind_http() const
 {
-    string_view_t method;
-    string_view_t path;
-    string_view_t query_string;
-    string_view_t http_version;
-    string_view_t remote_endpoint_address;
     lua.new_usertype<moon::http_request>("http_request"
         , sol::constructors<sol::types<>>()
         , "parse", WRAP_FUNCTION(&moon::http_request::parse_string)
@@ -183,6 +226,7 @@ const lua_bind & lua_bind::bind_http() const
         , "path", sol::readonly(&moon::http_request::path)
         , "query_string", sol::readonly(&moon::http_request::query_string)
         , "http_version", sol::readonly(&moon::http_request::http_version)
+        , "get_header", WRAP_FUNCTION(&moon::http_request::get_header)
         );
 
     return *this;

@@ -4,7 +4,7 @@ local set_insert    = set.insert
 local set_remove    = set.remove
 local set_has       = set.has
 local set_size      = set.size
-local Group = {}
+local M = {}
 
 --[[
 Use context.get_group(matcher) to get a group of entities which
@@ -16,13 +16,13 @@ date. It will automatically add entities that match the matcher or
 remove entities as soon as they don't match the matcher anymore.
 ]]
 
-Group.__index = Group
+M.__index = M
 
-Group.__tostring = function(t)
+M.__tostring = function(t)
         return string.format("<Group [{%s}]>", tostring(t._matcher))
     end
 
-function Group.new(matcher)
+function M.new(matcher)
 
     local tb = {}
     -- Occurs when an entity gets added.
@@ -34,7 +34,7 @@ function Group.new(matcher)
     tb.on_entity_updated = Delegate.new()
     tb._matcher = matcher
     tb.entities = set.new()
-    return setmetatable(tb, Group)
+    return setmetatable(tb, M)
 
 end
 
@@ -44,7 +44,7 @@ It will return None if the group is empty.
 It will throw a :class:`MissingComponent` if the group has more
 than one entity.
 ]]
-function Group:single_entity()
+function M:single_entity()
     local count = set.size(self.entities)
 
     if count == 1 then
@@ -58,7 +58,7 @@ function Group:single_entity()
     error(string.format("Cannot get a single entity from a group containing %d entities", count))
 end
 
-function Group:entity_size()
+function M:entity_size()
     return set_size(self.entities)
 end
 
@@ -66,7 +66,7 @@ end
 This is used by the context to manage the group.
 :param matcher: Entity
 ]]
-function Group:handle_entity_silently(entity)
+function M:handle_entity_silently(entity)
     assert(entity)
     if self._matcher:matches(entity) then
         self:_add_entity_silently(entity)
@@ -79,7 +79,7 @@ end
 This is used by the context to manage the group.
 :param matcher: Entity
 ]]
-function Group:handle_entity(entity, component)
+function M:handle_entity(entity, component)
     if self._matcher:matches(entity) then
         --print("handle_entity match")
         self:_add_entity(entity, component)
@@ -94,7 +94,7 @@ end
 This is used by the context to manage the group.
 :param matcher: Entity
 ]]
-function Group:update_entity(entity, previous_comp, new_comp)
+function M:update_entity(entity, previous_comp, new_comp)
     if set.has(self.entities, entity) then
         self.on_entity_removed(entity, previous_comp)
         self.on_entity_added(entity, new_comp)
@@ -102,7 +102,7 @@ function Group:update_entity(entity, previous_comp, new_comp)
     end
 end
 
-function Group:_add_entity_silently(entity)
+function M:_add_entity_silently(entity)
     if not set.has(self.entities, entity) then
         set_insert(self.entities, entity)
         return true
@@ -110,28 +110,27 @@ function Group:_add_entity_silently(entity)
     return false
 end
 
-function Group:_add_entity(entity, component)
+function M:_add_entity(entity, component)
     local entity_added = self:_add_entity_silently(entity)
     if entity_added then
-        --print("size", #self.on_entity_added._listeners)
         self.on_entity_added(entity, component)
     end
 end
 
-function Group:_remove_entity_silently(entity)
+function M:_remove_entity_silently(entity)
     if set_has(self.entities, entity) then
         set_remove(self.entities, entity)
         return true
     end
-    --print("Group:_remove_entity_silently failed")
+    --print("M:_remove_entity_silently failed")
     return false
 end
 
-function Group:_remove_entity(entity, component)
+function M:_remove_entity(entity, component)
     local entity_removed = self:_remove_entity_silently(entity)
     if entity_removed then
         self.on_entity_removed(entity, component)
     end
 end
 
-return Group
+return M

@@ -18,15 +18,24 @@ namespace moon
     public:
         const_buffers_holder() = default;
 
-        explicit const_buffers_holder(const buffer_ptr_t& buf)
-        {
-            push_back(buf);
-        }
-
         void push_back(const buffer_ptr_t& buf)
         {
+            if (buf->check_flag(uint8_t(buffer_flag::close)))
+            {
+                close_ = true;
+            }
             buffers_.push_back(asio::buffer(buf->data(), buf->size()));
             datas_.push_back(buf);
+        }
+
+        void push_back(buffer_ptr_t&& buf)
+        {
+            if (buf->check_flag(uint8_t(buffer_flag::close)))
+            {
+                close_ = true;
+            }
+            buffers_.push_back(asio::buffer(buf->data(), buf->size()));
+            datas_.push_back(std::forward<buffer_ptr_t>(buf));
         }
 
         const auto& buffers() const
@@ -34,17 +43,24 @@ namespace moon
             return buffers_;
         }
 
-        size_t size()
+        size_t size() const
         {
             return datas_.size();
         }
 
         void clear()
         {
+            close_ = false;
             buffers_.clear();
             datas_.clear();
         }
+
+        bool close() const
+        {
+            return close_;
+        }
     private:
+        bool close_ = false;
         std::vector<asio::const_buffer> buffers_;
         std::vector<buffer_ptr_t> datas_;
     };

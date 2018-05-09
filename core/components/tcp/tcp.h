@@ -49,6 +49,9 @@ namespace moon
     class MOON_EXPORT tcp:public component
     {
     public:
+
+        friend class base_connection;
+
         tcp() noexcept;
 
         virtual ~tcp();
@@ -71,6 +74,8 @@ namespace moon
 
         bool send(uint32_t connid, const buffer_ptr_t& data);
 
+        bool send_then_close(uint32_t connid, const buffer_ptr_t& data);
+
         bool send_message(uint32_t connid, message* msg);
 
         bool close(uint32_t connid);
@@ -80,7 +85,7 @@ namespace moon
 
         void destroy() override;
 
-        void remove(uint32_t connid);
+        void handle_message(const message_ptr_t& msg);
 
         void check();
     private:

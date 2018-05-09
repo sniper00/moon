@@ -10,12 +10,12 @@ namedtuples for readability.
 ]]
 local table_unpack = table.unpack
 local Delegate = require("entitas.Delegate")
-local Entity = {}
+local M = {}
 
-Entity.__index = Entity
+M.__index = M
 
 -- print string
-Entity.__tostring = function(t)
+M.__tostring = function(t)
     local str = ""
     for _, v in pairs(t._components) do
         if #str > 0 then
@@ -34,7 +34,7 @@ end
     context.destroy_entity() to destroy it.
     You can add, replace and remove components to an entity.
 ]]
-function Entity.new()
+function M.new()
     local tb = {}
     -- Occurs when a component gets added.
     tb.on_component_added = Delegate.new()
@@ -50,20 +50,20 @@ function Entity.new()
     -- The context manages the state of an entity.
     -- Active entities are enabled, destroyed entities are not.
     tb._is_enabled = false
-    return setmetatable(tb, Entity)
+    return setmetatable(tb, M)
 end
 
-function Entity:activate(uid)
+function M:activate(uid)
     self._uid = uid
     self._is_enabled = true
 end
 
 --[[
-Adds a component.
-:param comp_type: table type
-:param ...: (optional) data values
+ Adds a component.
+param comp_type: table type
+param ...: (optional) data values
 ]]
-function Entity:add(comp_type, ...)
+function M:add(comp_type, ...)
     if not self._is_enabled then
         error("Cannot add component entity is not enabled.")
     end
@@ -77,7 +77,7 @@ function Entity:add(comp_type, ...)
     self.on_component_added(self, new_comp)
 end
 
-function Entity:remove(comp_type)
+function M:remove(comp_type)
     if not self._is_enabled then
         error("Cannot add component entity is not enabled.")
     end
@@ -90,7 +90,7 @@ function Entity:remove(comp_type)
     self:_replace(comp_type, nil)
 end
 
-function Entity:replace(comp_type, ...)
+function M:replace(comp_type, ...)
     if not self._is_enabled then
         error("Cannot add component entity is not enabled.")
     end
@@ -104,7 +104,7 @@ function Entity:replace(comp_type, ...)
     end
 end
 
-function Entity:_replace(comp_type, args)
+function M:_replace(comp_type, args)
     local previous_comp = self._components[comp_type]
     if not args then
         --print("_replace 0")
@@ -117,14 +117,14 @@ function Entity:_replace(comp_type, args)
     end
 end
 
-function Entity:get(comp_type)
+function M:get(comp_type)
     if not self:has(comp_type) then
         error(string.format("Cannot remove unexisting component"))
     end
     return self._components[comp_type]
 end
 
-function Entity:has(...)
+function M:has(...)
     local args = {...}
     if #args == 1 then
         return (self._components[args[1]] ~= nil)
@@ -138,7 +138,7 @@ function Entity:has(...)
     return true
 end
 
-function Entity:has_any(...)
+function M:has_any(...)
     local args = {...}
     for _, v in pairs(args) do
         if self._components[v] then
@@ -148,7 +148,7 @@ function Entity:has_any(...)
     return false
 end
 
-function Entity:remove_all()
+function M:remove_all()
     for k, v in pairs(self._components) do
         if v then
             self:_replace(k, nil)
@@ -156,10 +156,11 @@ function Entity:remove_all()
     end
 end
 
-function Entity:destory()
+-- use context destroy entity
+function M:destroy()
     self._is_enabled = false
     self:remove_all()
 end
 
 
-return Entity
+return M

@@ -111,10 +111,9 @@ namespace moon
     {
     public:
         using base_connection_t = base_connection;
-        using socket_t = base_connection_t;
-
-        explicit ws_connection(asio::io_service& ios)
-            :base_connection(ios)
+   
+        explicit ws_connection(asio::io_service& ios,tcp* t)
+            :base_connection(ios,t)
             , header_delim_(STR_DCRLF.data(),STR_DCRLF.size())
         {
         }
@@ -122,8 +121,11 @@ namespace moon
         void start(bool accepted, int32_t responseid = 0) override
         {
             base_connection_t::start(accepted, responseid);
-            response_msg_ = message::create(1024);
-            read_header();
+            if (socket_.is_open())
+            {
+                response_msg_ = message::create(1024);
+                read_header();
+            }
         }
 
         bool send(const buffer_ptr_t & data) override
@@ -140,9 +142,6 @@ namespace moon
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
             {
-                if (!ok())
-                    return;
-
                 if (e)
                 {
                     error(e, 0);
@@ -190,9 +189,6 @@ namespace moon
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
-                if (!ok())
-                    return;
-
                 if (e)
                 {
                     error(e, 0);
@@ -263,7 +259,7 @@ namespace moon
             msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             msg->set_type(PTYPE_SOCKET);
-            on_data(msg);
+            handle_message(msg);
             return true;
         }
 
@@ -405,7 +401,7 @@ namespace moon
                 msg_package_->set_sender(id_);
                 msg_package_->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
                 msg_package_->set_type(PTYPE_SOCKET);
-                on_data(msg_package_);
+                handle_message(msg_package_);
             }
 
             if (fh.op == ws::opcode::close)

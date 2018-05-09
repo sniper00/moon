@@ -21,7 +21,8 @@ namespace moon
 {
 	enum class buffer_flag :std::uint8_t
 	{
-		pack_size = 1
+		pack_size = 1,
+        close,
 	};
 
 	class buffer

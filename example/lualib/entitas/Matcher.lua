@@ -56,7 +56,7 @@ end
 
 local matcher_cache = {}
 
-local function Matcher(all_of_tb, any_of_tb, none_of_tb)
+return function (all_of_tb, any_of_tb, none_of_tb)
     local key = string_components_ex(all_of_tb)..string_components_ex(any_of_tb)..string_components_ex(none_of_tb)
     local tb = matcher_cache[key]
     if not tb then
@@ -65,5 +65,3 @@ local function Matcher(all_of_tb, any_of_tb, none_of_tb)
     end
     return tb
 end
-
-return Matcher

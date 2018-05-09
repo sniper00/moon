@@ -3,15 +3,15 @@
 
 namespace moon
 {
-    class custom_connection: public base_connection
+    class custom_connection : public base_connection
     {
     public:
         using base_connection_t = base_connection;
         using socket_t = base_connection_t;
 
-        explicit custom_connection(asio::io_service& ios)
-            :base_connection(ios)
-            ,restore_write_offset_(0)
+        explicit custom_connection(asio::io_service& ios, tcp* t)
+            :base_connection(ios, t)
+            , restore_write_offset_(0)
             , prew_read_offset_(0)
         {
         }
@@ -25,7 +25,7 @@ namespace moon
 
         bool read(const read_request& ctx) override
         {
-            if (is_open() && read_request_.responseid ==0)
+            if (is_open() && read_request_.responseid == 0)
             {
                 read_request_ = ctx;
                 restore_buffer_offset();
@@ -46,11 +46,8 @@ namespace moon
         {
             socket_.async_read_some(asio::buffer(buffer_),
                 make_custom_alloc_handler(allocator_,
-                    [this,self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
+                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
-                if (!ok())
-                    return;
-
                 if (e)
                 {
                     error(e, int(logic_error_));
@@ -63,7 +60,7 @@ namespace moon
                     return;
                 }
 
-                //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, std::string((char*)buffer_.data(), bytes_transferred).data());
+                //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, moon::to_hex_string(string_view_t{ (char*)buffer_.data(), bytes_transferred }, " ").data(), "");
 
                 last_recv_time_ = std::time(nullptr);
                 restore_buffer_offset();
@@ -82,7 +79,7 @@ namespace moon
             prew_read_offset_ = 0;
         }
 
-        void read_with_delim(buffer* buf,const string_view_t& delim)
+        void read_with_delim(buffer* buf, const string_view_t& delim)
         {
             size_t dszie = buf->size();
             string_view_t strref(buf->data(), dszie);
@@ -101,7 +98,7 @@ namespace moon
             auto buf = response_msg_->get_buffer();
             size_t dszie = buf->size();
 
-            if (0 == read_request_.responseid || dszie ==0)
+            if (0 == read_request_.responseid || dszie == 0)
             {
                 return;
             }
@@ -125,7 +122,7 @@ namespace moon
             }
             case read_delim::LF:
             {
-                read_with_delim(buf,STR_LF);
+                read_with_delim(buf, STR_LF);
                 break;
             }
             case read_delim::CRLF:
@@ -149,7 +146,7 @@ namespace moon
             {
                 switch (logicerr)
                 {
-                case int(moon::network_logic_error::timeout):
+                case int(moon::network_logic_error::timeout) :
                     response_msg_->set_header("timeout");
                     break;
                 default:
@@ -157,7 +154,7 @@ namespace moon
                     break;
                 }
 
-                if (e)
+                if (e && e != asio::error::eof)
                 {
                     response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
                 }
@@ -167,8 +164,7 @@ namespace moon
                     make_response(response_msg_, PTYPE_ERROR);
                 }
             }
-            on_close(id_);
-            on_data = nullptr;
+            remove(id_);
         }
 
         void make_response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
@@ -176,10 +172,10 @@ namespace moon
             msg->set_type(mtype);
             msg->set_responseid(-read_request_.responseid);
             read_request_.responseid = 0;
-            on_data(msg);
+            handle_message(msg);
         }
     protected:
-        int restore_write_offset_ ;
+        int restore_write_offset_;
         int prew_read_offset_;
         message_ptr_t  response_msg_;
         std::array<uint8_t, 1024> buffer_;

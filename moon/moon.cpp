@@ -13,12 +13,13 @@ extern "C" {
     #include "lua53/lstring.h"
 }
 
-static moon::server*  pserver = nullptr;
+static std::weak_ptr<moon::server>  wk_server;
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
 static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 {
-    if (nullptr == pserver)
+    auto svr = wk_server.lock();
+    if (nullptr == svr)
     {
         return TRUE;
     }
@@ -29,8 +30,8 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
     case CTRL_C_EVENT:
-        pserver->stop();
-        while (pserver->workernum() > 0)
+        svr->stop();
+        while (svr->workernum() > 0)
         {
             thread_sleep(10);
         }
@@ -43,7 +44,8 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 #else
 static void signal_handler(int signal)
 {
-    if (nullptr == pserver)
+    auto svr = wk_server.lock();
+    if (nullptr == svr)
     {
         return;
     }
@@ -51,12 +53,12 @@ static void signal_handler(int signal)
     switch (signal)
     {
     case SIGTERM:
-        CONSOLE_ERROR(pserver->logger(), "RECV SIGTERM SIGNAL");
-        pserver->stop();
+        CONSOLE_ERROR(svr->logger(), "RECV SIGTERM SIGNAL");
+        svr->stop();
         break;
     case SIGINT:
-        CONSOLE_ERROR(pserver->logger(), "RECV SIGINT SIGNAL");
-        pserver->stop();
+        CONSOLE_ERROR(svr->logger(), "RECV SIGINT SIGNAL");
+        svr->stop();
         break;
     default:
         break;
@@ -115,8 +117,8 @@ int main(int argc, char*argv[])
     std::string lock_content = std::to_string(sid);
     os.write(lock_content.data(), lock_content.size());
 
-    server  server_;
-    pserver = &server_;
+    std::shared_ptr<server> server_ = std::make_shared<server>();
+    wk_server = server_;
 
     register_signal();
 
@@ -133,9 +135,9 @@ int main(int argc, char*argv[])
             sol::table module = lua.create_table();
             lua_bind lua_bind(module);
             lua_bind.bind_path()
-                .bind_log(server_.logger());
+                .bind_log(server_->logger());
 
-            server_.register_service("lua", []()->service_ptr_t {
+            server_->register_service("lua", []()->service_ptr_t {
                 return std::make_shared<lua_service>();
             });
 
@@ -151,42 +153,40 @@ int main(int argc, char*argv[])
             auto c = scfg.find(sid);
             MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.",sid));
 
-            server_.set_env("sid", std::to_string(c->sid));
-            server_.set_env("name", c->name);
-            server_.set_env("inner_host", c->inner_host);
-            server_.set_env("outer_host", c->outer_host);
-            server_.set_env("server_config", scfg.config());
+            server_->set_env("sid", std::to_string(c->sid));
+            server_->set_env("name", c->name);
+            server_->set_env("inner_host", c->inner_host);
+            server_->set_env("outer_host", c->outer_host);
+            server_->set_env("server_config", scfg.config());
 
-            server_.init(c->thread, c->log);
-            server_.logger()->set_level(c->loglevel);
+            server_->init(c->thread, c->log);
+            server_->logger()->set_level(c->loglevel);
             for (auto&s : c->services)
             {
-                MOON_CHECK(0 != server_.new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
+                MOON_CHECK(0 != server_->new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
             }
 
             if (!c->startup.empty())
             {
                 MOON_CHECK(moon::path::extension(c->startup) == ".lua", "startup file must be lua script.");
                 module.set_function("new_service", [c, &server_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
-                    return server_.new_service(service_type, unique, shareth, workerid, config);
+                    return  server_->new_service(service_type, unique, shareth, workerid, config);
                 });
                 lua.script_file(c->startup);
             }
-            server_.run();
+            server_->run();
         }
         catch (std::exception& e)
         {
             printf("ERROR:%s\n", e.what());
             printf("LUA TRACEBACK:%s\n", lua_traceback(lua.lua_state()));
-            LOG_ERROR(server_.logger(), e.what());
-            LOG_ERROR(server_.logger(), lua_traceback(lua.lua_state()));
-            server_.stop();
+            LOG_ERROR(server_->logger(), e.what());
+            LOG_ERROR(server_->logger(), lua_traceback(lua.lua_state()));
         }
     }
     luaS_exitshr();
     os.close();
     path::remove(moon::format("%d.lock", sid));
-    pserver = nullptr;
     return 0;
 }
 

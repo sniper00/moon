@@ -27,7 +27,7 @@ namespace moon
             : connuid_(1)
             , timeout_(0)
             , type_(protocol_type::protocol_default)
-            , log_(nullptr)
+            , parent_(nullptr)
         {
         }
 
@@ -57,31 +57,28 @@ namespace moon
             response_msg_->set_header(header);
             response_msg_->set_responseid(-responseid);
             response_msg_->set_type(mtype);
-            on_data_(response_msg_);
+            parent_->handle_message(response_msg_);
         }
 
-        connection_ptr_t create_connection()
+        connection_ptr_t create_connection(tcp* t)
         {
             connection_ptr_t conn;
             switch (type_)
             {
             case moon::protocol_type::protocol_default:
-                conn = std::make_shared<moon_connection>(io_service());
+                conn = std::make_shared<moon_connection>(io_service(),t);
                 break;
             case moon::protocol_type::protocol_custom:
-                conn = std::make_shared<custom_connection>(io_service());
+                conn = std::make_shared<custom_connection>(io_service(),t);
                 break;
             case moon::protocol_type::protocol_websocket:
-                conn = std::make_shared<ws_connection>(io_service());
+                conn = std::make_shared<ws_connection>(io_service(),t);
                 break;
             default:
                 break;
             }
 
-            conn->setlogger(log_);
-            conn->on_data = on_data_;
-            conn->on_close = std::bind(&tcp::remove, get_self(), std::placeholders::_1);
-
+            conn->logger(t->logger());
             return conn;
         }
 
@@ -94,13 +91,12 @@ namespace moon
         uint32_t connuid_;
         uint32_t timeout_;
         protocol_type type_;
-        moon::log* log_;
+        service* parent_;
         std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
         std::shared_ptr<asio::steady_timer> checker_;
         std::unordered_map<uint32_t, connection_ptr_t> conns_;
         message_ptr_t  response_msg_;
         std::weak_ptr<tcp> self_;
-        std::function<void(const message_ptr_t&)> on_data_;
     };
 
     tcp::tcp() noexcept
@@ -176,7 +172,7 @@ namespace moon
         if (!acceptor_->is_open())
             return;
 
-        auto conn = imp_->create_connection();
+        auto conn = imp_->create_connection(this);
         acceptor_->async_accept(conn->socket(), [this, self = imp_->get_self(), conn, responseid](const asio::error_code& e)
         {
             if (nullptr == self || !self->ok())
@@ -225,7 +221,7 @@ namespace moon
             asio::ip::tcp::resolver resolver(imp_->io_service());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-            auto conn = imp_->create_connection();
+            auto conn = imp_->create_connection(this);
             asio::async_connect(conn->socket(), endpoint_iterator,
                 [this, self = imp_->get_self(), conn, ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
@@ -263,7 +259,7 @@ namespace moon
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-            auto conn = imp_->create_connection();
+            auto conn = imp_->create_connection(this);
             asio::connect(conn->socket(), endpoint_iterator);
             conn->set_id(imp_->make_connid());
             imp_->conns_.emplace(conn->id(), conn);
@@ -307,6 +303,21 @@ namespace moon
         return iter->second->send(data);
     }
 
+    bool tcp::send_then_close(uint32_t connid, const buffer_ptr_t & data)
+    {
+        auto iter = imp_->conns_.find(connid);
+        if (iter == imp_->conns_.end())
+        {
+            return false;
+        }
+
+        if (!data->check_flag(uint8_t(buffer_flag::close)))
+        {
+            data->set_flag(uint8_t(buffer_flag::close));
+        }
+        return iter->second->send(data);
+    }
+
     bool tcp::send_message(uint32_t connid, message * msg)
     {
         return send(connid,*msg);
@@ -320,19 +331,17 @@ namespace moon
             return false;
         }
         iter->second->close();
+        imp_->conns_.erase(connid);
         return true;
     }
-
 
     void tcp::init()
     {
         component::init();
-        auto s = parent<service>();
-        MOON_DCHECK(s != nullptr, "tcp::init service is null");
-        imp_->self_ = s->get_component<tcp>(name());
-        imp_->ios_ = &(s->get_worker()->io_service());
-        imp_->log_ = s->logger();
-        imp_->on_data_ = std::bind(&service::handle_message, s, std::placeholders::_1);
+        imp_->parent_ = parent<service>();
+        MOON_DCHECK(imp_->parent_ != nullptr, "tcp::init service is null");
+        imp_->self_ = imp_->parent_->get_component<tcp>(name());
+        imp_->ios_ = &(imp_->parent_->get_worker()->io_service());
         imp_->response_msg_ = message::create();
     }
 
@@ -357,10 +366,14 @@ namespace moon
         }
     }
 
-    void tcp::remove(uint32_t connid)
+    void tcp::handle_message(const message_ptr_t & msg)
     {
-        close(connid);
-        imp_->conns_.erase(connid);
+        if (!ok())
+        {
+            return;
+        }
+
+        imp_->parent_->handle_message(msg);
     }
 
     void tcp::check()

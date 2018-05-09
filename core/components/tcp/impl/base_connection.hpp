@@ -42,20 +42,24 @@ namespace moon
     public:
         using socket_t = asio::ip::tcp::socket;
 
-        explicit base_connection(asio::io_service& ios)
+        explicit base_connection(asio::io_service& ios, tcp* t)
             :sending_(false)
             , id_(0)
             , last_recv_time_(0)
             , logic_error_(network_logic_error::ok)
             , ios_(ios)
+            , tcp_(t)
             , socket_(ios)
             , log_(nullptr)
         {
         }
 
+        base_connection(const base_connection&) = delete;
+
+        base_connection& operator=(const base_connection&) = delete;
+
         virtual ~base_connection()
         {
-
         }
 
         virtual void start(bool accepted, int32_t responseid = 0)
@@ -72,9 +76,9 @@ namespace moon
             last_recv_time_ = std::time(nullptr);
         }
 
-        virtual bool read(const read_request& ctx) 
+        virtual bool read(const read_request& ctx)
         {
-            (void)ctx;  
+            (void)ctx;
             return false;
         };
 
@@ -94,7 +98,7 @@ namespace moon
 
             if (send_queue_.size() > 30)
             {
-                printf("warn:network send_queue size >30\n");
+                CONSOLE_WARN(logger(), "network send_queue too long %zu", send_queue_.size());
             }
 
             if (!sending_)
@@ -104,26 +108,19 @@ namespace moon
             return true;
         }
 
-        bool close(bool exit = false)
+        void close(bool exit = false)
         {
-            bool ret = false;
-            do
+            if (socket_.is_open())
             {
-                if (!socket_.is_open())
-                {
-                    break;
-                }
-                asio::error_code ec;
-                socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-                socket_.close(ec);
-                ret = true;
-            } while (0);
+                asio::error_code ignore_ec;
+                socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ignore_ec);
+                socket_.close(ignore_ec);
+            }
 
             if (exit)
             {
-                on_data = nullptr;
+                tcp_ = nullptr;
             }
-            return ret;
         }
 
         socket_t& socket()
@@ -162,16 +159,12 @@ namespace moon
             socket_.set_option(option, ec);
         }
 
-        std::function<void(const message_ptr_t&)> on_data;
-
-        std::function<void(uint32_t)> on_close;
-
-        moon::log* logger() const 
+        moon::log* logger() const
         {
             return log_;
         }
 
-        void setlogger(moon::log* l)
+        void logger(moon::log* l)
         {
             log_ = l;
         }
@@ -201,15 +194,18 @@ namespace moon
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
-                if (!ok())
-                    return;
-
                 sending_ = false;
 
                 if (!e)
                 {
-                    post_send();
-                    return;
+                    if (buffers_holder_.close())
+                    {
+                        close();
+                    }
+                    else
+                    {
+                        post_send();
+                    }
                 }
                 else
                 {
@@ -224,7 +220,7 @@ namespace moon
             {
                 auto msg = message::create();
                 std::string content;
-                if (e)
+                if (e && e != asio::error::eof)
                 {
                     content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
                         , remote_addr_.data()
@@ -232,8 +228,11 @@ namespace moon
                         , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
                 }
-                else
+
+                if (lerrcode)
                 {
+                    auto msg = message::create();
+                    std::string content;
                     content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
                         , remote_addr_.data()
                         , lerrcode
@@ -244,8 +243,7 @@ namespace moon
                 msg->write_string(content);
                 msg->set_sender(id_);
                 msg->set_type(PTYPE_SOCKET);
-
-                on_data(msg);
+                handle_message(msg);
             }
 
             //closed
@@ -255,23 +253,34 @@ namespace moon
                 msg->set_sender(id_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 msg->set_type(PTYPE_SOCKET);
-                on_data(msg);
+                handle_message(msg);
             }
-
-            on_close(id_);
-            on_data = nullptr;
+            remove(id_);
         }
 
-        bool ok()
+        void remove(uint32_t connid)
         {
-            return (on_data != nullptr);
+            if (nullptr != tcp_)
+            {
+                tcp_->close(connid);
+            }
         }
+
+        void handle_message(const message_ptr_t& msg)
+        {
+            if (nullptr != tcp_)
+            {
+                tcp_->handle_message(msg);
+            }
+        }
+
     protected:
         bool sending_;
         uint32_t id_;
         time_t last_recv_time_;
         network_logic_error logic_error_;
         asio::io_service& ios_;
+        tcp* tcp_;
         socket_t socket_;
         handler_allocator allocator_;
         const_buffers_holder  buffers_holder_;

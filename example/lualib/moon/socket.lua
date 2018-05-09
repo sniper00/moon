@@ -6,11 +6,10 @@ local csrv          = moon
 local co_yield      = coroutine.yield
 local make_response = moon.make_response
 
-local read_delim = {
-    '\r\n',
-    '\r\n\r\n',
-    '\n'
-}
+local read_delim = {}
+read_delim['\r\n'] = 1
+read_delim['\r\n\r\n'] = 2
+read_delim['\n'] = 3
 
 local session       = {}
 
@@ -28,15 +27,8 @@ end
 function session:co_read(n)
     local delim = 0
     if type(n) == 'string' then
-        delim = -1
-        for k,v in pairs(read_delim) do
-            if v == n then
-                delim = k
-                break
-            end
-        end
-
-        if delim == -1 then
+        delim = read_delim[n]
+        if not delim  then
             return nil,"unsupported read delim "..tostring(n)
         end
         n = 0
@@ -46,9 +38,13 @@ function session:co_read(n)
     return co_yield()
 end
 
-function session:send(data)
+function session:send(data,bclose)
     assert(self.connid,"attemp send an invalid session")
-    return self.sock:send(self.connid,data,false)
+    if bclose then
+        return self.sock:send_then_close(self.connid,data)
+    else
+        return self.sock:send(self.connid,data)
+    end
 end
 
 function session:close()

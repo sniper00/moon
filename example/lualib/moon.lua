@@ -205,6 +205,44 @@ function moon.raw_send(PTYPE, receiver, header, data, responseid)
 	return responseid
 end
 
+function moon.send_message(PTYPE, receiver, header, responseid, msg)
+	local p = protocol[PTYPE]
+    if not p then
+        error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
+    end
+
+    if watching_service[receiver] then
+        print("moon.raw_send send to a crashed service")
+        return false,"send to a crashed service"
+    end
+
+	if not responseid then
+		responseid = moon.make_response()
+		watching_response[responseid] = receiver
+	end
+
+    msg:resend(sid_,receiver,header,responseid,p.PTYPE)
+	return responseid
+end
+
+function moon.co_call_with_header(PTYPE, receiver, header, ...)
+    local p = protocol[PTYPE]
+    if not p then
+        error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
+    end
+
+    if watching_service[receiver] then
+        return false, "call a exited service"
+	end
+
+    local responseid = make_response()
+    watching_response[responseid] = receiver
+
+	core.send(sid_, receiver, p.pack(...), header, responseid, p.PTYPE)
+    return co_yield()
+end
+
+
 --[[
     获取当前的服务id
 	@return int
@@ -509,7 +547,7 @@ reg_protocol {
         local responseid = msg:responseid()
         local topic = msg:header()
         local data = p.unpack(msg)
-        print("error*****",topic,data)
+        --print("moon.PTYPE_ERROR",topic,data)
         local co = resplistener[responseid]
         if co then
             co_resume(co, nil, topic, data)

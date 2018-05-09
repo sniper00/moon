@@ -2,29 +2,29 @@ local set = require("unorderset")
 local set_insert = set.insert
 local set_remove = set.remove
 local set_has    = set.has
-local Delegate = {}
+local M = {}
 
-Delegate.__index = Delegate
+M.__index = M
 
-Delegate.__call = function(t, ...)
+M.__call = function(t, ...)
     for k,_ in pairs(t._listeners) do
         k(...)
     end
 end
 
-function Delegate.new()
+function M.new()
     local tb = {}
     tb._listeners = set.new()
-    return setmetatable(tb, Delegate)
+    return setmetatable(tb, M)
 end
 
-function Delegate.add(self, f)
+function M.add(self, f)
     assert(not set_has(self._listeners,f))
     set_insert(self._listeners, f)
 end
 
-function Delegate.remove(self, f)
+function M.remove(self, f)
     return set_remove(self._listeners, f)
 end
 
-return Delegate
+return M
