@@ -133,5 +133,21 @@
                 "file": "cluster_example_sender.lua"
             }
         ]
+    },
+    {
+        "sid": 7,
+        "name": "server_#sid",
+        "outer_host": "127.0.0.1",
+        "inner_host": "127.0.0.1",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "socket_example",
+                "file": "socket_example.lua",
+                "ip": "#inner_host",
+                "port": "8001"
+            }
+        ]
     }
 ]
