@@ -178,33 +178,6 @@ function moon.send(PTYPE, receiver, header, ...)
     return core.send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
 end
 
---[[
-    向指定服务发送消息，消息内容不进行协议打包
-	@param PTYPE:协议类型
-	@param receiver:接收者服务id
-	@param header:message header
-    @param data 消息内容 string 类型
-    @responseid 如果为0则等同moon.send,如果为nil则等同moon.call
-]]
-function moon.raw_send(PTYPE, receiver, header, data, responseid)
-	local p = protocol[PTYPE]
-    if not p then
-        error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
-    end
-
-    if watching_service[receiver] then
-        print("moon.raw_send send to a crashed service")
-        return false
-	end
-	if not responseid then
-		responseid = moon.make_response()
-		watching_response[responseid] = receiver
-	end
-
-	core.send(sid_, receiver, data, header, responseid, p.PTYPE)
-	return responseid
-end
-
 function moon.send_message(PTYPE, receiver, header, responseid, msg)
 	local p = protocol[PTYPE]
     if not p then
