@@ -3,7 +3,6 @@ local moon   = require("moon")
 local command = {}
 
 command.ADD =  function(a,b)
-    assert(false)
     return a+b
 end
 
@@ -37,10 +36,5 @@ moon.dispatch('lua',function(msg,p)
     local sender = msg:sender()
     local responseid = msg:responseid()
     docmd(sender,responseid, p.unpack(msg:bytes()))
-end)
-
-moon.repeated(5000,1,function()
-    --moon.removeself()
-    assert(false)
 end)
 
