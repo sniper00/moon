@@ -3,6 +3,7 @@ local moon   = require("moon")
 local command = {}
 
 command.ADD =  function(a,b)
+    assert(false)
     return a+b
 end
 
@@ -26,9 +27,7 @@ end
 local function docmd(sender,responseid, CMD,...)
     local f = command[CMD]
     if f then
-        if CMD ~= 'ADD' then
-            moon.response('lua',sender,responseid,f(...))
-        end
+        moon.response('lua',sender,responseid,f(...))
     else
         error(string.format("Unknown command %s", tostring(CMD)))
     end
