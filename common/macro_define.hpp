@@ -9,13 +9,14 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 #pragma once
 #include "platform_define.hpp"
-
+#include <string_view>
 #include <algorithm>
 #include <cstdint>
 #include <cassert>
 #include <string>
 #include <cstdarg>
 #include <iomanip>
+#include <fstream>
 
 #include <thread>
 #include <mutex>
@@ -35,19 +36,15 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <queue>
 
 #include <memory>
-
 #include "exception.hpp"
 
-#include "string_ref.hpp"
+using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 namespace moon
 {
-    using string_view_t = string_ref_t;
-    using wstring_view_t = wstring_ref_t;
-    constexpr string_view_t operator "" _sv(const char *_Str, size_t _Len) noexcept
-    {	// construct string_view from [_Str, _Str + _Len)
-        return (string_view_t(_Str, _Len));
-    }
+    using string_view_t = std::string_view;
+    using wstring_view_t =  std::wstring_view;
 }
 
 #undef min
@@ -85,5 +82,16 @@ using classname##_wptr_t = std::weak_ptr<classname>;
 
 #define SHARED_LOCK_GURAD(lock) std::shared_lock<decltype(lock)> lk(lock);
 #define UNIQUE_LOCK_GURAD(lock) std::unique_lock<decltype(lock)> lk(lock);
+
+namespace moon
+{
+	enum  class state
+	{
+		init,
+		ready,
+		stopping,
+		exited
+	};
+}
 
 

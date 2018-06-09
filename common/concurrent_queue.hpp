@@ -99,23 +99,23 @@ namespace moon
 		}
 	};
 
-	template<class T,typename TLock = std::mutex, bool CheckEmpty = false,bool CheckFull = false>
-	class sync_queue:public queue_empty_check<CheckEmpty>,public queue_full_check<CheckFull>
+	template<class T,typename LockType = std::mutex, bool CheckEmpty = false,bool CheckFull = false>
+	class concurrent_queue :public queue_empty_check<CheckEmpty>,public queue_full_check<CheckFull>
 	{
 	public:
 		using queue_type = std::vector<T>;
-		using lock_t = TLock;
+		using lock_t = LockType;
 		using empty_check_t = queue_empty_check<CheckEmpty>;
 		using full_check_t = queue_full_check<CheckFull>;
 
-		sync_queue()
+		concurrent_queue()
 			:exit_(false)
 			,max_size_(std::numeric_limits<size_t>::max())
 		{
 		}
 
-		sync_queue(const sync_queue& t) = delete;
-		sync_queue& operator=(const sync_queue& t) = delete;
+		concurrent_queue(const concurrent_queue& t) = delete;
+		concurrent_queue& operator=(const concurrent_queue& t) = delete;
 
 		void set_max_size(size_t max_size) const
 		{
@@ -123,7 +123,7 @@ namespace moon
 		}
 
 		template<typename TData>
-		void push_back(TData&& x)
+		size_t push_back(TData&& x)
 		{		
 			std::unique_lock<lock_t> lck(mutex_);
 
@@ -134,6 +134,8 @@ namespace moon
 			queue_.push_back(std::forward<TData>(x));
 
 			empty_check_t::notify_one();
+
+            return queue_.size();
 		}
 
 		bool try_pop(T& t)

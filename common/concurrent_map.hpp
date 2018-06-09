@@ -23,7 +23,7 @@ namespace moon
         struct try_get_value
         {
             template<class TMap>
-            static bool get(TMap& map, const TKey& key, TValue& value)
+            static bool get(const TMap& map, const TKey& key, TValue& value)
             {
                 auto iter = map.find(key);
                 if (iter != map.end())
