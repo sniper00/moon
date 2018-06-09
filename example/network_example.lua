@@ -2,7 +2,7 @@ local moon = require("moon")
 
 --Echo Server 示例
 
-local network = moon.get_component_tcp("network")
+local network = moon.get_tcp("network")
 local socket_handler = {}
 
 -- enum class socket_data_type :std::uint8_t
