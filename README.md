@@ -11,8 +11,8 @@
 git clone <https://github.com/sniper00/MoonNetLua.git> get the Sources
 
 The project use of C++11/14 features, I tested compliers are: 
-- GCC 7.3
-- Visual Studio 2015 Community Update 4
+- GCC 7.2
+- Visual Studio 2017 Community Update 5
 
 Linux Platform: 
 - make config=debug_linux
