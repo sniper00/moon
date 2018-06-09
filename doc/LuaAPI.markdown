@@ -29,9 +29,9 @@ local socket_logic_error = 6
 
 - `bytes()` 获取消息数据(string)
 - `size()` 获取消息数据长度(number)
-- `subbytes(pos,len)` 对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)
+- `substr(pos,len)` 对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)
 - `buffer()` 返回消息数据的userdata 指针
-- `redirect(header,receiver)` 更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
+- `redirect(header,receiver,mtype)` 更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
 - `responseid()` 取responseid，用于send response模式
 
 
@@ -41,8 +41,8 @@ local socket_logic_error = 6
 - `sid()` 获取服务的id(number)
 - `make_cache(string)` 生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用堆栈有效。
 - `send_cache(receiver,cacheid,header,responseid,type)` 根据cacheid发送缓存消息
-- `add_component_tcp(name)` 给服务器添加一个tcp网络组件，返回组件的指针moon::tcp*
-- `get_component_tcp(name)` 根据name获取已经添加的tcp网络组件，返回组件的指针moon::tcp*
+- `add_tcp(name)` 给服务器添加一个tcp网络组件，返回组件的指针moon::tcp*
+- `get_tcp(name)` 根据name获取已经添加的tcp网络组件，返回组件的指针moon::tcp*
 - `set_init(function)` 设置服务初始化回掉函数，回掉函数需要返回bool, true 表示初始化成功，false失败。在回掉函数里和初始化服务自身的相关信息，不能有协程相关操作。
 - `set_start(function)` 设置服务启动回掉函数,此时unique service 已经初始化完毕，可以收发信息。
 - `set_exit(function)` 设置进程收到进程退出时的回掉函数，可以在此处理进程退出前的相关操作，如保存数据，最后必须要调用 removeself().
@@ -96,6 +96,7 @@ local socket_logic_error = 6
 - `setprotocol(pt)` 设置协议类型
 - `settimeout(second)` 设置连接read超时
 - `setnodelay(connid)`
+- `set_enable_frame(frametype)`支持超过MAX_NET_MSG_SZIE的消息包， frametype:1 允许send包，2 允许receive， 3 send and receive
 
 ## socket 的协程封装
 参见 lualib/moon/socket.lua

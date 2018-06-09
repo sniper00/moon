@@ -109,7 +109,7 @@ namespace moon
 	}
 
     template<typename TMap, typename TKey, typename TValue>
-    inline bool try_get_value(const TMap& map, const TKey& key, typename TValue& value)
+    inline bool try_get_value(const TMap& map, const TKey& key, TValue& value)
     {
         auto iter = map.find(key);
         if (iter != map.end())

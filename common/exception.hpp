@@ -19,6 +19,26 @@ namespace moon
         error(const std::string& str) : std::runtime_error(""), w(str) {}
         error(std::string&& str) : std::runtime_error(""), w(std::move(str)) {}
 
+		error(const std::string& str, const char* file, int line)
+			: std::runtime_error(""),w(str)
+		{
+			w.append("(");
+			w.append(file);
+			w.append(":");
+			w.append(std::to_string(line));
+			w.append(")");
+		}
+
+		error(std::string&& str, const char* file, int line)
+			: std::runtime_error(""), w(std::move(str))
+		{
+			w.append("(");
+			w.append(file);
+			w.append(":");
+			w.append(std::to_string(line));
+			w.append(")");
+		}
+
         error(const error& e) = default;
         error(error&& e) = default;
         error& operator=(const error& e) = default;
@@ -30,10 +50,10 @@ namespace moon
     };
 }
 
-#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error(msg);}
+#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILE__,__LINE__};}
 
 #ifdef DEBUG
-#define MOON_DCHECK(cnd,msg) MOON_CHECK(cnd,msg)
+#define MOON_DCHECK(cnd,msg) MOON_CHECK((cnd),(msg))
 #else
-#define MOON_DCHECK(cnd,msg) MOON_CHECK(cnd,msg)
+#define MOON_DCHECK(cnd,msg) MOON_CHECK((cnd),(msg))
 #endif

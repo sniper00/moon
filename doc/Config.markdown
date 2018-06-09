@@ -13,6 +13,7 @@ thread | int| cpu核心数 | worker线程数 |
 startup | string|  | 启动脚本 | 可空，可以在启动脚本做一些全局初始化，如加载pbc协议文件
 log | string|  | 日志文件路径 | 如：logpath/#sid_#date.log #date当前日期。 为空时将不再写日志文件，只在控制台输出。
 loglevel | string| DEBUG | 日志等级 | 可选 DEBUG，INFO，WARN，ERROR
+path | string|  | lua搜索路径 |
 
 ## sevice配置
 
