@@ -29,8 +29,7 @@ function M.new(matcher)
     tb.on_entity_added = Delegate.new()
     -- Occurs when an entity gets removed.
     tb.on_entity_removed = Delegate.new()
-    -- Occurs when a component of an entity in the group gets
-    -- replaced.
+    -- Occurs when a component of an entity in the group gets replaced.
     tb.on_entity_updated = Delegate.new()
     tb._matcher = matcher
     tb.entities = set.new()
@@ -79,13 +78,10 @@ end
 This is used by the context to manage the group.
 :param matcher: Entity
 ]]
-function M:handle_entity(entity, component)
-    if self._matcher:matches(entity) then
-        --print("handle_entity match")
+function M:handle_entity(entity, component,brm)
+    if not brm and self._matcher:matches(entity) then
         self:_add_entity(entity, component)
     else
-        --print("handle_entity not match",self._matcher)
-        --print("entity",entity)
         self:_remove_entity(entity, component)
     end
 end
@@ -94,11 +90,9 @@ end
 This is used by the context to manage the group.
 :param matcher: Entity
 ]]
-function M:update_entity(entity, previous_comp, new_comp)
+function M:update_entity(entity, comp_value)
     if set.has(self.entities, entity) then
-        self.on_entity_removed(entity, previous_comp)
-        self.on_entity_added(entity, new_comp)
-        self.on_entity_updated(entity, previous_comp, new_comp)
+        self.on_entity_updated(entity, comp_value)
     end
 end
 
@@ -113,6 +107,7 @@ end
 function M:_add_entity(entity, component)
     local entity_added = self:_add_entity_silently(entity)
     if entity_added then
+        --print(self,"add_entity",entity)
         self.on_entity_added(entity, component)
     end
 end
@@ -122,7 +117,6 @@ function M:_remove_entity_silently(entity)
         set_remove(self.entities, entity)
         return true
     end
-    --print("M:_remove_entity_silently failed")
     return false
 end
 

@@ -29,7 +29,8 @@ function M.new()
     -- Dictionary of matchers mapping groups.
     tb._groups = {}
     tb._entity_indices = {}
-    tb.comp_added_or_removed = function(...) return tb._comp_added_or_removed(tb, ...) end
+    tb.comp_added = function(...) return tb._comp_added(tb, ...) end
+    tb.comp_removed = function(...) return tb._comp_removed(tb, ...) end
     tb.comp_replaced = function(...) return tb._comp_replaced(tb, ...) end
     return setmetatable(tb, M)
 end
@@ -49,8 +50,8 @@ function M:create_entity()
     local entity = table_remove(self._entities_pool)
     if not entity then
         entity = Entity.new()
-        entity.on_component_added:add(self.comp_added_or_removed)
-        entity.on_component_removed:add(self.comp_added_or_removed)
+        entity.on_component_added:add(self.comp_added)
+        entity.on_component_removed:add(self.comp_removed)
         entity.on_component_replaced:add(self.comp_replaced)
     end
 
@@ -95,7 +96,6 @@ function M:get_group(matcher)
     group = Group.new(matcher)
 
     self.entities:foreach(function(v)
-        assert(v)
         group:handle_entity_silently(v)
     end)
 
@@ -123,17 +123,27 @@ function M:get_entity_index(comp_type)
     return self._entity_indices[comp_type]
 end
 
-function M:_comp_added_or_removed(entity, comp)
+function M:_comp_added(entity, comp_value)
     for _, group in pairs(self._groups) do
-        --print("comp_added_or_removed",entity,comp)
-        group:handle_entity(entity, comp)
+        if group._matcher:mcp({comp_value}) then
+            group:handle_entity(entity, comp_value)
+        end
     end
 end
 
-function M:_comp_replaced(entity, previous_comp, new_comp)
+function M:_comp_removed(entity, comp_value)
     for _, group in pairs(self._groups) do
-        --print("update",entity,previous_comp,new_comp)
-        group:update_entity(entity, previous_comp, new_comp)
+        if group._matcher:mcp({comp_value}) then
+            group:handle_entity(entity, comp_value,true)
+        end
+    end
+end
+
+function M:_comp_replaced(entity, comp_value)
+    for _, group in pairs(self._groups) do
+        if group._matcher:mcp({comp_value}) then
+            group:update_entity(entity, comp_value)
+        end
     end
 end
 

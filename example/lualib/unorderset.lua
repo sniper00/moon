@@ -1,25 +1,25 @@
 -- 无序set
-local unorderset = {}
+local M = {}
 
-unorderset.__index = unorderset
+M.__index = M
 
-function unorderset.new()
+function M.new()
     local t = {}
-    setmetatable(t,unorderset)
+    setmetatable(t,M)
     return t
 end
 
-function unorderset.insert(self, value)
-    assert(not self[value],"set value already exist")
+function M.insert(self, value)
+    assert(not self[value],string.format( "set value %s already exist",tostring(value)))
     self[value] = true
 end
 
-function unorderset.remove(self, value)
+function M.remove(self, value)
     self[value] = nil
     return value
 end
 
-function unorderset.size(self)
+function M.size(self)
     local n = 0
     for _, _ in pairs(self) do
         n = n + 1
@@ -27,17 +27,19 @@ function unorderset.size(self)
     return n
 end
 
-function unorderset.has(self,value)
+function M.has(self,value)
     return self[value]
 end
 
-function unorderset.foreach(self,f)
-    for k, _ in pairs(self) do
-        f(k)
+function M.foreach(self,f)
+    for k, v in pairs(self) do
+        if v then
+            f(k)
+        end
     end
 end
 
-function unorderset.at(self,pos)
+function M.at(self,pos)
     local n = 0
     for k, _ in pairs(self) do
         n = n + 1
@@ -48,4 +50,10 @@ function unorderset.at(self,pos)
     return nil
 end
 
-return unorderset
+function M.clear(self)
+    for k, _ in pairs(self) do
+        self[k] = nil
+    end
+end
+
+return M

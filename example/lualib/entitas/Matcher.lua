@@ -9,7 +9,7 @@ local function string_components(components)
         end
 
         if v then
-            str = str .. v.__comp_name
+            str = str .. tostring(v)
         end
     end
     return str
@@ -49,6 +49,33 @@ function M:matches(entity)
     local all_cond = not self._all or entity:has(table.unpack(self._all))
     local any_cond = not self._any or entity:has_any(table.unpack(self._any))
     local none_cond = not self._none or not entity:has_any(table.unpack(self._none))
+
+    --print(all_cond,any_cond,none_cond)
+    return all_cond and any_cond and none_cond
+end
+
+local function components_eql( comps1, comps2 )
+    for k,v in pairs(comps1) do
+        if not comps2[k] or not comps2[k]._is(v) then
+            return false
+        end
+    end
+    return true
+end
+
+local function components_intersect( comps1, comps2 )
+    for k,v in pairs(comps1) do
+        if comps2[k] and comps2[k]._is(v) then
+            return true
+        end
+    end
+    return false
+end
+
+function M:mcp(comp)
+    local all_cond = not self._all or components_eql(self._all,comp)
+    local any_cond = not self._any or components_intersect(self._any,comp)
+    local none_cond = not self._none or not components_intersect(self._none,comp)
 
     --print(all_cond,any_cond,none_cond)
     return all_cond and any_cond and none_cond

@@ -15,7 +15,7 @@ end
 
 function M:_add_entity(key, entity)
     if self._indexes[key] then
-        error(string.format("Entity for key '%s' already exists ! Only one entity for a primary key is allowed.", key))
+        error(string.format("Entity for key '%s' already exists ! Only one entity for a primary key is allowed.", key))      
     end
     self._indexes[key] = entity
 end

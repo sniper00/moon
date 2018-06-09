@@ -23,6 +23,7 @@ end
 function M:ctor()
     self._initialize_systems = {}
     self._execute_systems = {}
+    self._net_systems = {}
     self._cleanup_systems = {}
     self._tear_down_systems = {}
 end
@@ -43,6 +44,10 @@ function M:add(system)
     if system.tear_down then
         table_insert(self._tear_down_systems, system)
     end
+
+    if system.dispatch then
+        table_insert(self._net_systems, system)
+    end
 end
 
 function M:initialize()
@@ -53,7 +58,13 @@ end
 
 function M:execute()
     for _, system in pairs(self._execute_systems) do
-        system:execute()
+        system:_execute()
+    end
+end
+
+function M:dispatch(...)
+    for _, system in pairs(self._net_systems) do
+        system:dispatch(...)
     end
 end
 

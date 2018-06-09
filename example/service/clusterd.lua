@@ -7,7 +7,6 @@ local clusters = {}
 local pack_cluster = moon.pack_cluster
 local unpack_cluster = moon.unpack_cluster
 
-local seri_pack = seri.pack
 local seri_packstr = seri.packstring
 local seri_unpack = seri.unpack
 local co_yield = coroutine.yield
@@ -57,12 +56,14 @@ socket_handler[3] = function(sessionid, msg)
     if 0 > rresponseid then
         moon.start_coroutine(
             function()
-                local responseid, err = moon.send_message("lua", receiver, nil, nil, msg)
+                local responseid = moon.make_response(receiver)
                 if not responseid then
-                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err))
+                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, "service dead"))
                     network:send(sessionid, s)
                     return
                 end
+
+                msg:resend(moon.sid(),receiver,"",responseid,moon.PLUA)
 
                 response_watch[responseid] = sessionid
                 local ret,err2 = co_yield()
@@ -84,7 +85,7 @@ socket_handler[3] = function(sessionid, msg)
     else
         --调用者
         remove_send_watch(sessionid,receiver,-rresponseid)
-        moon.send_message("lua", receiver, nil, -rresponseid, msg)
+        msg:resend(moon.sid(),receiver,"",-rresponseid,moon.PLUA)
     end
 end
 
@@ -163,7 +164,6 @@ command.CALL = function(sender, responseid,rnode, raddr, msg)
 
     if connid then
         pack_cluster(seri_packstr(moon.name(), sender, rnode, raddr, responseid),msg)
-        --local t = seri.pack(moon.name(), sender, rnode, raddr, responseid, seri_packstr(...))
         add_send_watch(connid,sender,responseid)
         if network:send_message(connid, msg) then
             return
@@ -220,7 +220,7 @@ moon.init(function( config )
         return false
     end
 
-    network = moon.get_component_tcp(config.network.name)
+    network = moon.get_tcp(config.network.name)
     assert(network)
     network:settimeout(10)
 
@@ -237,16 +237,6 @@ moon.init(function( config )
             docmd(sender, responseid, CMD, rnode, raddr, msg)
         end
     })
-
-    -- moon.dispatch(
-    --     "lua",
-    --     function(msg, _)
-    --         local sender = msg:sender()
-    --         local responseid = msg:responseid()
-    --         docmd(sender, responseid,seri_unpack(msg:header()), msg)
-    --     end
-    -- )
-
     return true
 end)
 

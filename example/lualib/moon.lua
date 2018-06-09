@@ -54,11 +54,11 @@ setmetatable(
     }
 )
 
-local sid_ = core.id()
-
 moon.add_package_path = function(p)
     package.path = package.path .. p
 end
+
+local sid_ = core.id()
 
 local response_uid = 1
 local resplistener = {} --response message handler
@@ -77,13 +77,21 @@ local function co_resume(co, ...)
 end
 
 -- map co with uid
-local function make_response()
+local function make_response(receiver)
     repeat
         response_uid = response_uid + 1
         if response_uid == 0xFFFFFFF then
             response_uid = 1
         end
     until not resplistener[response_uid]
+
+    if receiver then
+        if watching_service[receiver] then
+            return false
+        end
+        watching_response[response_uid] = receiver
+    end
+
     local co = co_running()
     resplistener[response_uid] = co
     return response_uid
@@ -151,7 +159,7 @@ local function _default_dispatch(msg, PTYPE)
         if not p.dispatch then
 			error(string.format( "[%s] dispatch null [%u]",moon.name(), p.PTYPE))
 			return
-		end
+        end
         p.dispatch(msg, p)
     end
 end
@@ -172,13 +180,20 @@ function moon.send(PTYPE, receiver, header, ...)
     end
 
     if watching_service[receiver] then
-        print("moon.send send to a exited service")
-        return false
+        return false,"send to a exited service"
     end
+    header = header or ''
     return core.send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
 end
 
-function moon.send_message(PTYPE, receiver, header, responseid, msg)
+--[[
+    向指定服务发送消息，消息内容不进行协议打包
+	@param PTYPE:协议类型
+	@param receiver:接收者服务id
+	@param header:message header
+    @param data 消息内容 string 类型
+]]
+function moon.raw_send(PTYPE, receiver, header, data)
 	local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
@@ -186,16 +201,10 @@ function moon.send_message(PTYPE, receiver, header, responseid, msg)
 
     if watching_service[receiver] then
         print("moon.raw_send send to a crashed service")
-        return false,"send to a crashed service"
-    end
-
-	if not responseid then
-		responseid = moon.make_response()
-		watching_response[responseid] = receiver
+        return false
 	end
-
-    msg:resend(sid_,receiver,header,responseid,p.PTYPE)
-	return responseid
+    header = header or ''
+	core.send(sid_, receiver, data, header, 0, p.PTYPE)
 end
 
 function moon.co_call_with_header(PTYPE, receiver, header, ...)
@@ -210,11 +219,10 @@ function moon.co_call_with_header(PTYPE, receiver, header, ...)
 
     local responseid = make_response()
     watching_response[responseid] = receiver
-
+    header = header or ''
 	core.send(sid_, receiver, p.pack(...), header, responseid, p.PTYPE)
     return co_yield()
 end
-
 
 --[[
     获取当前的服务id
@@ -249,8 +257,8 @@ end
 function moon.remove_service(sid, bresponse)
     local header = "rmservice." .. sid
     if bresponse then
-        local respid = make_response()
-        core.runcmd(moon.sid(), "", header, respid)
+        local rspid = make_response()
+        core.runcmd(moon.sid(), "", header, rspid)
         return co_yield()
     else
         core.runcmd(0, "", header, 0)
@@ -264,13 +272,16 @@ function moon.removeself()
     moon.remove_service(sid_)
 end
 
-function moon.query_worktime(workerid, bco)
+function moon.query_worktime(workerid, bresponse)
     local header = "workertime." .. workerid
-    local respid = 0
-    if bco then
-        respid = make_response()
+
+    if bresponse then
+        local rspid = make_response()
+        core.runcmd(moon.sid(), "", header, rspid)
+        return co_yield()
+    else
+        core.runcmd(0, "", header, 0)
     end
-    core.runcmd(sid_, "", header, respid)
 end
 
 --[[
@@ -418,14 +429,12 @@ function moon.co_call(PTYPE, receiver, ...)
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
 
-    if watching_service[receiver] then
+    local rspid = make_response(receiver)
+    if not rspid then
         return false, "call a exited service"
-	end
+    end
 
-    local responseid = make_response()
-    watching_response[responseid] = receiver
-
-	core.send(sid_, receiver, p.pack(...), nil, responseid, p.PTYPE)
+	core.send(sid_, receiver, p.pack(...), "", rspid, p.PTYPE)
     return co_yield()
 end
 
@@ -441,7 +450,7 @@ function moon.response(PTYPE, receiver, responseid, ...)
     if not p then
         error("handle unknown message")
     end
-    core.send(sid_, receiver, p.pack(...), nil, responseid, p.PTYPE)
+    core.send(sid_, receiver, p.pack(...), '', responseid, p.PTYPE)
 end
 
 ------------------------------------
@@ -523,7 +532,7 @@ reg_protocol {
         --print("moon.PTYPE_ERROR",topic,data)
         local co = resplistener[responseid]
         if co then
-            co_resume(co, nil, topic, data)
+            co_resume(co, false, topic, data)
             resplistener[responseid] = nil
             return
         end

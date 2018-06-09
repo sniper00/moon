@@ -1,3 +1,9 @@
+--[[
+    Component is the simplest ingredient in ECS. It is an atomic representation of data.
+    It can be empty, have one or many properties, or even be marked as unique.
+    https://github.com/mzaks/EntitasCookBook/blob/master/chapters/1_ingredients/101_component.md
+]]
+
 local function com_tostring(obj)
     local lua = ""
     local t = type(obj)
@@ -28,47 +34,27 @@ local function com_tostring(obj)
     elseif t == "nil" then
         return nil
     else
-        --error("can not com_tostring a " .. t .. " type.")
+        error("can not com_tostring a " .. t .. " type.")
     end
     return lua
 end
 
-local function _replace(t, ... )
-    local args = {...}
-    for k, v in pairs(t._keys) do
-        local n = args[k]
-        if not n then
-            return
-        end
-        t[v] = args[k]
-    end
-end
-
-local function _to_string( t )
-    return "\t" .. t._name .. com_tostring(t)
-end
-
-local mt = {}
-mt.__index = mt
-mt.__tostring = function(t) return t._name end
-
-local function make_component(name, ...)
+-- return component type
+return function (name, ...)
     local tmp = {}
-    tmp.__index = tmp
-    tmp.__tostring = _to_string
-
-    tmp._keys = {...}
+    tmp.__keys = {...}
     tmp._name = name
-    tmp._is = function(t) return t._name == name end
-    tmp._replace = _replace
+    tmp.__tostring = function(t) return "\t" .. t._name .. com_tostring(t) end
+    tmp.__index = tmp
     tmp.new = function(...)
+        local values = {...}
         local tb = {}
-        setmetatable(tb, tmp)
-        _replace(tb,...)
-        return tb
+        for k, v in pairs(tmp.__keys) do
+            if k <= #values then
+                tb[v] = values[k]
+            end
+        end
+        return setmetatable(tb, tmp)
     end
-    setmetatable(tmp,mt)
     return tmp
 end
-
-return make_component

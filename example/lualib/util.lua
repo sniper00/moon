@@ -107,6 +107,24 @@ function M.table_equal(t1,t2)
     return true
 end
 
+function M.table_contains( arraytable, value )
+    for k,v in pairs(arraytable) do
+        if v == value then
+            return true
+        end
+    end
+    return false
+end
+
+function M.table_intersect( t1, t2 )
+    for k,v in pairs(t1) do
+        if t2[k] == v then
+            return true
+        end
+    end
+    return false
+end
+
 
 ----------------------------------STRING---------------------------------------
 
@@ -229,12 +247,12 @@ end
 
 function M.writefile(path, content, mode)
     mode = mode or "w+b"
-    local file = M.open(path, mode)
+    local file = io.open(path, mode)
     if file then
         if file:write(content) == nil then
             return false
         end
-        M.close(file)
+        io.close(file)
         return true
     else
         return false

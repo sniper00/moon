@@ -83,7 +83,7 @@ function M:remove(comp_type)
     end
 
     if not self:has(comp_type) then
-        error(string.format("Cannot remove unexisting component %s", tostring(comp_type.__comp_name)))
+        error(string.format("Cannot remove unexisting component %s", tostring(comp_type)))
     end
 
     --print("Entity:remove")
@@ -105,33 +105,31 @@ function M:replace(comp_type, ...)
 end
 
 function M:_replace(comp_type, args)
-    local previous_comp = self._components[comp_type]
+    local comp_value = self._components[comp_type]
     if not args then
         --print("_replace 0")
         self._components[comp_type] = nil
-        self.on_component_removed(self, previous_comp)
+        self.on_component_removed(self, comp_value)
     else
-        local new_comp = comp_type.new(table_unpack(args))
-        self._components[comp_type] = new_comp
-        self.on_component_replaced(self, previous_comp, new_comp)
+        comp_value:_replace(table_unpack(args))
+        self.on_component_replaced(self, comp_value)
     end
 end
 
 function M:get(comp_type)
     if not self:has(comp_type) then
-        error(string.format("Cannot remove unexisting component"))
+        error(string.format("entity has not component '%s'",tostring(comp_type)))
     end
     return self._components[comp_type]
 end
 
 function M:has(...)
     local args = {...}
-    if #args == 1 then
-        return (self._components[args[1]] ~= nil)
+    if #args == 0 then
+        return false
     end
-
     for _, v in pairs(args) do
-        if not self._components[v] then
+        if  not self._components[v] then
             return false
         end
     end
