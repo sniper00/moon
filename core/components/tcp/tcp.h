@@ -46,6 +46,14 @@ namespace moon
         LF,// \n
     };
 
+    enum class frame_enable_type :std::uint8_t
+    {
+        none = 0,
+        send = 1<<0,//
+        receive = 1<<1,//
+        both = 3,
+    };
+
     class MOON_EXPORT tcp:public component
     {
     public:
@@ -61,6 +69,8 @@ namespace moon
         void settimeout(int seconds);
 
         void setnodelay(uint32_t connid);
+
+        void set_enable_frame(frame_enable_type t);
 
         bool listen(const std::string& ip, const std::string& port);
 

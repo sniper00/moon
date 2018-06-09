@@ -7,11 +7,11 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 ****************************************************************************/
 #include "components/tcp/tcp.h"
-#include "log.h"
+#include "common/log.hpp"
+#include "common/string.hpp"
 #include "message.hpp"
 #include "service.h"
 #include "core/worker.h"
-#include "common/string.hpp"
 #include "moon_connection.hpp"
 #include "custom_connection.hpp"
 #include "ws_connection.hpp"
@@ -27,6 +27,7 @@ namespace moon
             : connuid_(1)
             , timeout_(0)
             , type_(protocol_type::protocol_default)
+            , frame_type_(frame_enable_type::none)
             , parent_(nullptr)
         {
         }
@@ -77,7 +78,6 @@ namespace moon
             default:
                 break;
             }
-
             conn->logger(t->logger());
             return conn;
         }
@@ -91,6 +91,7 @@ namespace moon
         uint32_t connuid_;
         uint32_t timeout_;
         protocol_type type_;
+        frame_enable_type frame_type_;
         service* parent_;
         std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
         std::shared_ptr<asio::steady_timer> checker_;
@@ -130,6 +131,11 @@ namespace moon
                 break;
             iter->second->set_no_delay();
         } while (0);
+    }
+
+    void tcp::set_enable_frame(frame_enable_type t)
+    {
+        imp_->frame_type_ = t;
     }
 
     bool tcp::listen(const std::string & ip, const std::string & port)
@@ -182,6 +188,7 @@ namespace moon
 
             if (!e)
             {
+                conn->set_enable_frame(imp_->frame_type_);
                 conn->set_id(imp_->make_connid());
                 imp_->conns_.emplace(conn->id(), conn);
                 conn->start(true);
@@ -232,6 +239,7 @@ namespace moon
 
                 if (!e)
                 {
+                    conn->set_enable_frame(imp_->frame_type_);
                     conn->set_id(imp_->make_connid());
                     imp_->conns_.emplace(conn->id(), conn);
                     conn->start(false);
@@ -261,6 +269,7 @@ namespace moon
 
             auto conn = imp_->create_connection(this);
             asio::connect(conn->socket(), endpoint_iterator);
+            conn->set_enable_frame(imp_->frame_type_);
             conn->set_id(imp_->make_connid());
             imp_->conns_.emplace(conn->id(), conn);
             conn->start(false);
@@ -310,11 +319,7 @@ namespace moon
         {
             return false;
         }
-
-        if (!data->check_flag(uint8_t(buffer_flag::close)))
-        {
-            data->set_flag(uint8_t(buffer_flag::close));
-        }
+        data->set_flag(buffer::flag::close);
         return iter->second->send(data);
     }
 

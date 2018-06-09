@@ -20,7 +20,7 @@ namespace moon
 
         void push_back(const buffer_ptr_t& buf)
         {
-            if (buf->check_flag(uint8_t(buffer_flag::close)))
+            if (buf->has_flag(buffer::flag::close))
             {
                 close_ = true;
             }
@@ -30,12 +30,26 @@ namespace moon
 
         void push_back(buffer_ptr_t&& buf)
         {
-            if (buf->check_flag(uint8_t(buffer_flag::close)))
+            if (buf->has_flag(buffer::flag::close))
             {
                 close_ = true;
             }
-            buffers_.push_back(asio::buffer(buf->data(), buf->size()));
+            buffers_.push_back(asio::const_buffer(buf->data(), buf->size()));
             datas_.push_back(std::forward<buffer_ptr_t>(buf));
+        }
+
+        void framing_begin(const buffer_ptr_t& buf, size_t framing_size)
+        {
+            datas_.push_back(buf);
+            headers_.reserve(framing_size);
+        }
+
+        void push_framing(message_size_t header, const char* data, size_t len)
+        {
+            headers_.push_back(header);
+            message_size_t& back = headers_.back();
+            buffers_.push_back(asio::buffer((const char*)&back, sizeof(back)));
+            buffers_.push_back(asio::buffer(data, len));
         }
 
         const auto& buffers() const
@@ -45,7 +59,7 @@ namespace moon
 
         size_t size() const
         {
-            return datas_.size();
+            return buffers_.size();
         }
 
         void clear()
@@ -53,6 +67,7 @@ namespace moon
             close_ = false;
             buffers_.clear();
             datas_.clear();
+            headers_.clear();
         }
 
         bool close() const
@@ -63,6 +78,7 @@ namespace moon
         bool close_ = false;
         std::vector<asio::const_buffer> buffers_;
         std::vector<buffer_ptr_t> datas_;
+        std::vector<message_size_t> headers_;
     };
 }
 

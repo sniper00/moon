@@ -7,12 +7,15 @@ namespace moon
     class moon_connection : public base_connection
     {
     public:
+		static constexpr message_size_t INCOMPLETE_FLAG = 0x8000;
+		static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
+
         using base_connection_t = base_connection;
-        using socket_t = base_connection_t;
 
         explicit moon_connection(asio::io_service& ios, tcp* t)
             :base_connection(ios, t)
-            , msg_size_(0)
+            , continue_(false)
+            , header_(0)
         {
         }
 
@@ -30,20 +33,56 @@ namespace moon
 
         bool send(const buffer_ptr_t & data) override
         {
-            if (!data->check_flag(uint8_t(buffer_flag::pack_size)))
+            if (!data->has_flag(buffer::flag::pack_size))
             {
-                message_size_t size = static_cast<message_size_t>(data->size());
-                host2net(size);
-                MOON_DCHECK(data->write_front(&size, 0, 1), "send_packsize write_front failed");
-                data->set_flag(uint8_t(buffer_flag::pack_size));
+                bool enable = (static_cast<int>(frame_type_)&static_cast<int>(frame_enable_type::send)) !=0;
+                if (data->size() > MAX_MSG_FRAME_SIZE)
+                {
+                    if (!enable)
+                    {
+                        error(asio::error_code(), int(network_logic_error::send_message_size_max),"send_message_size_max");
+                        return false;
+                    }         
+                    data->set_flag(buffer::flag::framing);
+                }
+                else
+                {
+                    message_size_t size = static_cast<message_size_t>(data->size());
+                    host2net(size);
+                    MOON_DCHECK(data->write_front(&size, 0, 1), "send_packsize write_front failed");
+                    data->set_flag(buffer::flag::pack_size);
+                }
             }
             return base_connection_t::send(data);
         }
 
     protected:
+        void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf) override
+        {
+            size_t n = buf->size();
+            holder.framing_begin(buf, n/MAX_NET_MSG_SIZE+1);
+            do
+            {
+                message_size_t  size=0,header = 0;
+                if (n > MAX_NET_MSG_SIZE)
+                {
+                    header = size = MAX_NET_MSG_SIZE;
+                    header |= INCOMPLETE_FLAG;
+                }
+                else
+                {
+                    header = size = static_cast<message_size_t>(n);
+                }
+                const char* data = buf->data()+(buf->size()-n);
+                n -= size;
+                host2net(header);
+                holder.push_framing(header, data, size);
+            } while (n != 0);
+        }
+
         void read_header()
         {
-            asio::async_read(socket_, asio::buffer(&msg_size_, sizeof(msg_size_)),
+            asio::async_read(socket_, asio::buffer(&header_, sizeof(header_)),
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
@@ -60,23 +99,42 @@ namespace moon
                 }
 
                 last_recv_time_ = std::time(nullptr);
-                net2host(msg_size_);
-                if (msg_size_ > MAX_NMSG_SIZE)
+                net2host(header_);
+
+                bool enable = (static_cast<int>(frame_type_)&static_cast<int>(frame_enable_type::receive)) != 0;
+                if (enable)
                 {
-                    error(asio::error_code(), int(network_logic_error::read_message_size_max));
-                    close();
+                    //check is continue message
+                    continue_ = ((header_ & INCOMPLETE_FLAG) != 0);
+                    if (continue_)
+                    {
+                        header_ &= (~INCOMPLETE_FLAG);
+                    }
+                }
+
+                if (header_ > MAX_NET_MSG_SIZE)
+                {
+                    error(asio::error_code(), int(network_logic_error::read_message_size_max),"read_message_size_max");
+                    base_connection_t::close();
                     return;
                 }
-                read_body(msg_size_);
+                read_body(header_);
             }));
         }
 
         void read_body(message_size_t size)
         {
-            auto buf = message::create_buffer(size);
-            asio::async_read(socket_, asio::buffer((void*)buf->data(), size),
+            if(nullptr == buf_)
+            {
+                buf_ = message::create_buffer(continue_?5*size:size);
+            }
+            else{
+                buf_->check_space(size);
+            }
+
+            asio::async_read(socket_, asio::buffer((buf_->data()+buf_->size()), size),
                 make_custom_alloc_handler(allocator_,
-                    [this, self = shared_from_this(), buf](const asio::error_code& e, std::size_t bytes_transferred)
+                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
                 {
@@ -90,18 +148,23 @@ namespace moon
                     return;
                 }
 
-                buf->offset_writepos(static_cast<int>(bytes_transferred));
-                auto msg = message::create(buf);
-                msg->set_sender(id_);
-                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                msg->set_type(PTYPE_SOCKET);
-                handle_message(msg);
-
+                buf_->offset_writepos(static_cast<int>(bytes_transferred));
+                if (!continue_)
+                {
+                    auto msg = message::create(buf_);
+                    buf_.reset();
+                    msg->set_sender(id_);
+                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                    msg->set_type(PTYPE_SOCKET);
+                    handle_message(msg);
+                }
                 read_header();
             }));
         }
 
     protected:
-        message_size_t msg_size_;
+        bool continue_;
+        message_size_t header_;
+        buffer_ptr_t buf_;
     };
 }

@@ -8,10 +8,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 ****************************************************************************/
 
 #pragma once
-#include <stdarg.h>
-#include <cstdint>
-#include <vector>
-#include <string>
 #include <algorithm>
 #include <locale>
 #include <cmath>
@@ -122,7 +118,7 @@ namespace moon
 			{
 				if (b!= e && b!= i)
 				{
-					r.push_back(string_convert<T>(string_view_t(b, i-b)));
+					r.push_back(string_convert<T>(string_view_t(std::addressof(*b), size_t(i-b))));
 				}
                 b = e;
 			}
@@ -134,7 +130,7 @@ namespace moon
                 }
             }
 		}
-		if (b != e) r.push_back(string_convert<T>(string_view_t(b, e - b)));
+		if (b != e) r.push_back(string_convert<T>(string_view_t(std::addressof(*b), size_t(e - b))));
 		return std::move(r);
 	}
 
@@ -145,13 +141,10 @@ namespace moon
 		va_list ap;
 		char szBuffer[MAX_FMT_LEN];
 		va_start(ap, fmt);
-		//int ret = 0;
 		// win32
-#if defined(_WIN32)
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
 		vsnprintf_s(szBuffer, MAX_FMT_LEN, fmt, ap);
-#endif
-		// linux
-#if defined(__linux__) || defined(__linux) 
+#else
 		vsnprintf(szBuffer, MAX_FMT_LEN, fmt, ap);
 #endif
 		va_end(ap);

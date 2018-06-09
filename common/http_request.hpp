@@ -1,9 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <unordered_map>
-#include "string.hpp"
-#include "string_ref.hpp"
+#include "macro_define.hpp"
 #include "buffer_reader.hpp"
+#include "utils.hpp"
 
 namespace moon
 {
@@ -87,7 +87,7 @@ namespace moon
            return static_cast<int>(sv.size() - br.size());
         }
 
-        string_view_t get_header(const string_view_t& key)
+        string_view_t get_header(const string_view_t& key) const
         {
             auto iter = header.find(key);
             if (iter != header.end())
@@ -95,6 +95,16 @@ namespace moon
                 return iter->second;
             }
             return string_view_t();
+        }
+
+        bool keep_alive() const
+        {
+            string_view_t v;
+            if (try_get_value(header, "Connection"sv, v))
+            {
+                return iequal_string(v, "keep-alive"sv);
+            }
+            return false;
         }
 
         uint16_t remote_endpoint_port;

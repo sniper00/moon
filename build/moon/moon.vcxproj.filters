@@ -18,9 +18,6 @@
     <ClInclude Include="..\..\moon\luabind\lua_serialize.hpp">
       <Filter>luabind</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\moon\luabind\lua_string_view.hpp">
-      <Filter>luabind</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\moon\server_config.hpp" />
     <ClInclude Include="..\..\moon\services\lua_service.h">
       <Filter>services</Filter>

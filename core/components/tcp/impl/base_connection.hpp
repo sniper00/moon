@@ -8,10 +8,6 @@
 
 namespace moon
 {
-    constexpr const string_view_t STR_LF = "\n"_sv;
-    constexpr const string_view_t STR_CRLF = "\r\n"_sv;
-    constexpr const string_view_t STR_DCRLF = "\r\n\r\n"_sv;
-
     struct read_request
     {
         read_request()
@@ -44,6 +40,7 @@ namespace moon
 
         explicit base_connection(asio::io_service& ios, tcp* t)
             :sending_(false)
+            , frame_type_(frame_enable_type::none)
             , id_(0)
             , last_recv_time_(0)
             , logic_error_(network_logic_error::ok)
@@ -169,18 +166,33 @@ namespace moon
             log_ = l;
         }
 
+        void set_enable_frame(frame_enable_type t)
+        {
+            frame_type_ = t;
+        }
+
     protected:
+        virtual void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf)
+        {
+        }
+
         void post_send()
         {
+            buffers_holder_.clear();
             if (send_queue_.size() == 0)
                 return;
-
-            buffers_holder_.clear();
 
             while ((send_queue_.size() != 0) && (buffers_holder_.size() < 50))
             {
                 auto& msg = send_queue_.front();
-                buffers_holder_.push_back(msg);
+                if (msg->has_flag(buffer::flag::framing))
+                {
+                    message_framing(buffers_holder_, msg);
+                }
+                else
+                {
+                    buffers_holder_.push_back(msg);
+                }
                 send_queue_.pop_front();
             }
 
@@ -231,8 +243,6 @@ namespace moon
 
                 if (lerrcode)
                 {
-                    auto msg = message::create();
-                    std::string content;
                     content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
                         , remote_addr_.data()
                         , lerrcode
@@ -263,6 +273,7 @@ namespace moon
             if (nullptr != tcp_)
             {
                 tcp_->close(connid);
+                tcp_ = nullptr;
             }
         }
 
@@ -276,6 +287,7 @@ namespace moon
 
     protected:
         bool sending_;
+        frame_enable_type frame_type_;
         uint32_t id_;
         time_t last_recv_time_;
         network_logic_error logic_error_;

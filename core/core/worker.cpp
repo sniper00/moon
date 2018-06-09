@@ -11,16 +11,14 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "common/string.hpp"
 #include "service.h"
 #include "message.hpp"
-#include "log.h"
+#include "common/log.hpp"
 #include "server.h"
-
 
 namespace moon
 {
     worker::worker()
-        :shared_(true)
-        , exit_(false)
-        , stoped_(false)
+        : state_(state::init)
+		, shared_(true)
         , workerid_(0)
         , cache_uuid_(0)
         , serviceuid_(1)
@@ -38,7 +36,7 @@ namespace moon
 
     void worker::run()
     {
-        stoped_ = false;
+		state_.store(state::ready, std::memory_order_release);
         thread_ = std::thread([this]() {
             CONSOLE_INFO(server_->logger(),"WORKER-%d start", workerid_);
             start_time_ = time::millsecond();
@@ -49,18 +47,19 @@ namespace moon
 
     void worker::stop()
     {
-        if (exit_)
-        {
-            return;
-        }
-
         post([this] {
+			auto s = state_.load();
+			if (s == state::stopping || s == state::exited)
+			{
+				return;
+			}
+
             if (services_.empty())
             {
-                stoped_ = true;
+				state_.store(state::exited, std::memory_order_release);
                 return;
             }
-            exit_ = true;
+			state_.store(state::stopping, std::memory_order_release);
             for (auto& it : services_)
             {
                 auto& s = it.second;
@@ -80,7 +79,7 @@ namespace moon
 
     bool worker::stoped()
     {
-        return stoped_;
+		return (state_.load() == state::exited);
     }
 
     uint32_t worker::make_serviceid()
@@ -122,7 +121,7 @@ namespace moon
                     on_service_remove(id);
                 }
                 servicenum_.store(static_cast<uint32_t>(services_.size()));
-                server_->make_response(sender, "service destroy",response_content, respid);
+                server_->make_response(sender, "service destroy"sv,response_content, respid);
                 CONSOLE_INFO(server_->logger(), "[WORKER %d]service [%s:%u] destroy", workerid(), s->name().data(), s->id());
                 services_.erase(iter);
 
@@ -141,13 +140,12 @@ namespace moon
             }
             else
             {
-                static const char* errmsg = "remove_service:service not found";
-                server_->make_response(sender, "error", errmsg, respid, PTYPE_ERROR);
+                server_->make_response(sender, "error"sv, "remove_service:service not found"sv, respid, PTYPE_ERROR);
             }
 
-            if (services_.size()==0 &&  exit_)
+            if (services_.size()==0 && (state_.load() == state::stopping))
             {
-                stoped_ = true;
+				state_.store(state::exited, std::memory_order_release);
             }
         });
     }
@@ -178,17 +176,29 @@ namespace moon
         return iter->second;
     }
 
-    void worker::send(const message_ptr_t & msg, bool immediately)
+    void worker::send(const message_ptr_t & msg)
     {
-        if (immediately)
+        if (mqueue_.push_back(std::move(msg)) == 1)
         {
-            post([this, msg]() {
-                handle_one(nullptr, msg);
+            post([this]() {
+                auto begin_time = time::millsecond();
+                if (mqueue_.size() != 0)
+                {
+                    service* ser = nullptr;
+                    swapqueue_.clear();
+                    mqueue_.swap(swapqueue_);
+                    if (swapqueue_.size() > 1000)
+                    {
+                        CONSOLE_DEBUG(server_->logger(), "worker %d queue_size too long, %zu", workerid_, swapqueue_.size());
+                    }
+                    for (auto& msg : swapqueue_)
+                    {
+                        handle_one(ser, msg);
+                    }
+                }
+                auto difftime = time::millsecond() - begin_time;
+                work_time_ += difftime;
             });
-        }
-        else
-        {
-            mqueue_.push_back(msg);
         }
     }
 
@@ -257,20 +267,21 @@ namespace moon
                 it.second->update();
             }
 
-            if (mqueue_.size() != 0)
+            //if (mqueue_.size() != 0)
+            //{
+            //    service* ser = nullptr;
+            //    swapqueue_.clear();
+            //    mqueue_.swap(swapqueue_);
+            //    for (auto& msg : swapqueue_)
+            //    {
+            //        handle_one(ser, msg);
+            //    }
+            //}
+
+            if (cache_uuid_ != 0)
             {
-                service* ser = nullptr;
-                swapqueue_.clear();
-                mqueue_.swap(swapqueue_);
-                for (auto& msg : swapqueue_)
-                {
-                    handle_one(ser, msg);
-                }
-                if (cache_uuid_ != 0)
-                {
-                    cache_uuid_ = 0;
-                    caches_.clear();
-                }
+                cache_uuid_ = 0;
+                caches_.clear();
             }
             auto difftime = time::millsecond() - begin_time;
             work_time_ += difftime;

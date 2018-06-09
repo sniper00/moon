@@ -99,18 +99,18 @@ namespace moon
         };
     }
 
-    constexpr size_t PAYLOAD_MIN_LEN = 125;
-    constexpr size_t PAYLOAD_MID_LEN = 126;
-    constexpr size_t PAYLOAD_MAX_LEN = 127;
-
-    constexpr const string_view_t WEBSOCKET = "websocket"_sv;
-    constexpr const string_view_t UPGRADE = "upgrade"_sv;
-    constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_sv;
-
     class ws_connection: public base_connection
     {
     public:
         using base_connection_t = base_connection;
+
+		static constexpr size_t PAYLOAD_MIN_LEN = 125;
+		static constexpr size_t PAYLOAD_MID_LEN = 126;
+		static constexpr size_t PAYLOAD_MAX_LEN = 127;
+
+		static constexpr const string_view_t WEBSOCKET = "websocket"sv;
+		static constexpr const string_view_t UPGRADE = "upgrade"sv;
+		static constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
    
         explicit ws_connection(asio::io_service& ios,tcp* t)
             :base_connection(ios,t)
@@ -163,7 +163,6 @@ namespace moon
                     {
                         auto data = asio::buffer_cast<const char*>(sbuf->data());
                         cache_.write_back(data, 0, num_additional_bytes);
-
                         auto cod = decode_frame();
                         if (ws::close_code::none != cod)
                         {
@@ -177,8 +176,7 @@ namespace moon
                 else
                 {
                     printf("websocket handshake failed\n");
-                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n");
-                    close();
+                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n",true);
                 }
             }));
         }
@@ -204,11 +202,10 @@ namespace moon
                 last_recv_time_ = std::time(nullptr);
                 cache_.write_back(buffer_.data(), 0, bytes_transferred);
 
-                auto cod = decode_frame();
-                if (ws::close_code::none != cod)
+                auto close_code = decode_frame();
+                if (ws::close_code::none != close_code)
                 {
-                    close();
-                    error(asio::error_code(), int(cod), std::string(cache_.data(),cache_.size()));
+                    error(asio::error_code(), int(close_code), std::string(cache_.data(), cache_.size()));
                     return;
                 }
                 read_some();
@@ -228,14 +225,16 @@ namespace moon
             {
                 return false;
             }
-
             buf->consume(consumed);
 
-            auto h = request.get_header("connection");
+            if (request.method != "GET"sv)
+                return false;
+
+            auto h = request.get_header("connection"sv);
             if (h.empty())
                 return false;
 
-            auto u = request.get_header("upgrade");
+            auto u = request.get_header("upgrade"sv);
             if (u.empty())
                 return false;
 
@@ -245,15 +244,13 @@ namespace moon
             if (!iequal_string(u, WEBSOCKET))
                 return false;
 
-            auto sec_ws_key_ = request.get_header("sec-websocket-key");
+            auto sec_ws_key_ = request.get_header("sec-websocket-key"sv);
             if (sec_ws_key_.empty() || sec_ws_key_.size() != 24)
                 return false;
 
-
             handshaked_ = true;
-            auto answer = make_handshake_response(sec_ws_key_);
+            auto answer = upgrade_response(sec_ws_key_,request.get_header("Sec-WebSocket-Protocol"sv));
             send_response(answer);
-
             auto msg = message::create();
             msg->write_string(remote_addr_);
             msg->set_sender(id_);
@@ -263,10 +260,14 @@ namespace moon
             return true;
         }
 
-        void send_response(const std::string& s)
+        void send_response(const std::string& s, bool bclose =false)
         {
             auto buf = message::create_buffer();
             buf->write_back(s.data(), 0, s.size());
+            if (bclose)
+            {
+                buf->set_flag(buffer::flag::close);
+            }
             base_connection::send(buf);
         }
 
@@ -293,7 +294,7 @@ namespace moon
             }
 
             fh.mask = (tmp[1] & 0x80) != 0;
-            //this is server, must masked.
+            //server must masked.
             if (!fh.mask)
             {
                 return ws::close_code::protocol_error;
@@ -441,13 +442,8 @@ namespace moon
             data->write_front(&m, 0, 1);
         }
 
-        std::string make_handshake_response(string_view_t seckey)
+        std::string upgrade_response(string_view_t seckey, string_view_t wsprotocol)
         {
-            std::string response;
-            response.append("HTTP/1.1 101 Switching Protocols\r\n");
-            response.append("Upgrade: WebSocket\r\n");
-            response.append("Connection: Upgrade\r\n");
-
             uint8_t keybuf[60];
             std::memcpy(keybuf, seckey.data(), seckey.size());
             std::memcpy(keybuf + seckey.size(), WS_MAGICKEY.data(), WS_MAGICKEY.size());
@@ -458,9 +454,20 @@ namespace moon
             sha1::update(ctx, keybuf, sizeof(keybuf));
             sha1::finish(ctx, shakey);
             std::string sha1str  = base64_encode(shakey, sizeof(shakey));
+
+            std::string response;
+            response.append("HTTP/1.1 101 Switching Protocols\r\n");
+            response.append("Upgrade: WebSocket\r\n");
+            response.append("Connection: Upgrade\r\n");
             response.append("Sec-WebSocket-Accept: ");
             response.append(sha1str);
             response.append(header_delim_);
+            if (!wsprotocol.empty())
+            {
+                response.append("Sec-WebSocket-Protocol: ");
+                response.append(wsprotocol.data(), wsprotocol.size());
+                response.append(header_delim_);
+            }
             return response;
         }
 

@@ -11,7 +11,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "common/concurrent_map.hpp"
 #include "common/time.hpp"
 #include "common/rwlock.hpp"
-#include "log.h"
+#include "common/log.hpp"
 #include "worker.h"
 #include "message.hpp"
 #include "service.h"
@@ -28,7 +28,7 @@ namespace moon
         using unique_service_db_t = concurrent_map<std::string, uint32_t, rwlock>;
 
         server_imp()
-            :ok_(false)
+            :state_(state::init)
             , workernum_(0)
             , next_workerid_(0)
         {
@@ -97,10 +97,10 @@ namespace moon
 
             CONSOLE_INFO((&default_log_), "STOP");
             default_log_.wait();
-            ok_ = false;
+			state_.store(state::exited);
         }
 
-        std::atomic_bool ok_;
+		std::atomic<state> state_;
         uint8_t workernum_;
         std::atomic<uint32_t> next_workerid_;
         std::vector<worker_ptr_t> workers_;
@@ -131,7 +131,8 @@ namespace moon
         worker_num == 0 ? 1 : worker_num;
         imp_->workernum_ = worker_num;
 
-        CONSOLE_INFO(logger(), "INIT with %d workers.", imp_->workernum_);
+		logger()->init(logpath);
+		CONSOLE_INFO(logger(), "INIT with %d workers.", imp_->workernum_);
 
         for (uint8_t i = 0; i != worker_num; i++)
         {
@@ -147,8 +148,7 @@ namespace moon
             w->run();
         }
 
-        logger()->init(logpath);
-        imp_->ok_ = true;
+		imp_->state_.store(state::ready);
     }
 
     uint8_t server::workernum()
@@ -190,7 +190,6 @@ namespace moon
                 {
                     stoped_worker_num++;
                 }
-
                 w->update();
             }
 
@@ -215,21 +214,26 @@ namespace moon
 
     void server::stop()
     {
-        if (!imp_->ok_)
-        {
-            return;
-        }
+		if (imp_->state_.load()!=state::ready)
+		{
+			return;
+		}
 
-        for (auto iter = imp_->workers_.rbegin(); iter != imp_->workers_.rend(); ++iter)
-        {
-            (*iter)->stop();
-        }
+		for (int i = 0; i < 100; i++)
+		{
+			for (auto iter = imp_->workers_.rbegin(); iter != imp_->workers_.rend(); ++iter)
+			{
+				(*iter)->stop();
+			}
+		}
     }
 
-    uint32_t server::new_service(const std::string & service_type, bool unique, bool shared, int workerid, const std::string & config)
+    uint32_t server::new_service(const std::string & service_type, bool unique, bool shared, int workerid, const string_view_t& config)
     {
-        if (!imp_->ok_)
-            return 0;
+		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
+		{
+			return 0;
+		}
 
         auto iter = imp_->regservices_.find(service_type);
         if (iter == imp_->regservices_.end())
@@ -277,7 +281,7 @@ namespace moon
             }
         }
         imp_->on_service_remove(serviceid);
-        CONSOLE_ERROR(logger(), "init service failed with config: %s", config.data());
+        CONSOLE_ERROR(logger(), "init service failed with config: %s", std::string{ config.data(),config.size() }.data());
         return 0;
     }
 
@@ -285,15 +289,17 @@ namespace moon
     {
         (void)buf;
 
-        if (!imp_->ok_)
-            return;
+		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
+		{
+			return;
+		}
 
         responseid = -responseid;
 
         auto cmds = moon::split<string_view_t>(header, ".");
         if (cmds.size() == 0)
         {
-            make_response(sender,"error","server: call cmd empty", responseid, PTYPE_ERROR);
+            make_response(sender,"error"sv,"server: call cmd empty"sv, responseid, PTYPE_ERROR);
             return;
         }
 
@@ -309,7 +315,7 @@ namespace moon
             uint32_t serviceid = moon::string_convert<uint32_t>(cmds[1]);
             if (0 == serviceid)
             {
-                make_response(sender, "error", "remove service id = 0", responseid, PTYPE_ERROR);
+                make_response(sender, "error"sv, "remove service id = 0"sv, responseid, PTYPE_ERROR);
                 return;
             }
 
@@ -321,7 +327,7 @@ namespace moon
             else
             {
                 auto content = moon::format("rmservice worker %d not found.",workerid);
-                make_response(sender, "error", content, responseid, PTYPE_ERROR);
+                make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
             }
         }
         else if (cmds.front() == "workertime")
@@ -329,7 +335,7 @@ namespace moon
             if (cmds.size() < 2)
             {
                 auto content = moon::format("server: call workerrate param error %s", header.data());
-                make_response(sender, "error", content, responseid, PTYPE_ERROR);
+                make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
                 return;
             }
 
@@ -341,26 +347,28 @@ namespace moon
             else
             {
                 auto content = moon::format("service worker %d not found.", workerid);
-                make_response(sender, "error", content, responseid, PTYPE_ERROR);
+                make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
             }
         }
         else
         {
-            auto content = moon::format("server: call invalid  cmd %s.", cmds.front().data());
-            make_response(sender, "error", content, responseid, PTYPE_ERROR);
+            auto content = moon::format("server: call invalid  cmd %s.", std::string{ cmds.front().data(),cmds.front().size() });
+            make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
         }
         return;
     }
 
     void server::send_message(const message_ptr_t & msg) const
     {
-        if (!imp_->ok_)
-            return;
+		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
+		{
+			return;
+		}
         MOON_DCHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_DCHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
         uint8_t wkid =worker_id(msg->receiver());
         MOON_DCHECK(wkid > 0 && wkid <= imp_->workernum_, "invalid message receiver serviceid.");
-        imp_->workers_[wkid -1]->send(msg,(msg->responseid()!=0));
+        imp_->workers_[wkid -1]->send(msg);
     }
 
     void server::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, const string_view_t& header, int32_t responseid, uint8_t type) const
@@ -380,8 +388,10 @@ namespace moon
 
     void server::broadcast(uint32_t sender, const message_ptr_t & msg)
     {
-        if (!imp_->ok_)
-            return;
+		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
+		{
+			return;
+		}
 
         MOON_DCHECK(msg->type() != PTYPE_UNKNOWN,"invalid message type.");
         msg->set_broadcast(true);
@@ -401,8 +411,10 @@ namespace moon
 
     int64_t server::local_db(int ndb, char op, int64_t key, int64_t value)
     {
-        if (!imp_->ok_)
-            return 0;
+		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
+		{
+			return 0;
+		}
 
         if (ndb <= 0 || ndb > static_cast<int>(imp_->databases_.size()))
         {
@@ -460,6 +472,11 @@ namespace moon
 
     uint32_t server::get_unique_service(const string_view_t & name)
     {
+        if (name.empty())
+        {
+            return 0;
+        }
+
         uint32_t id = 0;
         imp_->unique_services_.try_get_value(std::string(name.data(), name.size()), id);
         return id;
@@ -467,6 +484,10 @@ namespace moon
 
     void server::set_unique_service(const string_view_t & name, uint32_t v)
     {
+        if (name.empty())
+        {
+            return;
+        }
         imp_->unique_services_.set(std::string(name.data(), name.size()), v);
     }
 

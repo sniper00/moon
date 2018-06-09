@@ -96,24 +96,22 @@ namespace moon
 
         void set_type(uint8_t v)
         {
-            flag_ &= 0xFFFF00FF;
-            flag_ |= (static_cast<uint32_t>(v) << 8);
+            type_ = v;
         }
 
         uint8_t type() const
         {
-            return static_cast<uint8_t>(static_cast<uint8_t>(flag_>>8));
+            return type_;
         }
 
         void set_subtype(uint8_t v)
         {
-            flag_ &= 0xFFFFFF00;
-            flag_ |= (static_cast<uint32_t>(v));
+            subtype_ = v;
         }
 
         uint8_t subtype() const
         {
-            return static_cast<uint8_t>(flag_);
+            return subtype_;
         }
 
         string_view_t bytes() const
@@ -125,7 +123,7 @@ namespace moon
             return string_view_t(reinterpret_cast<const char*>(data_->data()),data_->size());
         }
 
-        string_view_t subbytes(int pos, size_t len = string_view_t::npos) const
+        string_view_t substr(int pos, size_t len = string_view_t::npos) const
         {
             string_view_t sr(reinterpret_cast<const char*>(data_->data()), data_->size());
             return sr.substr(pos, len);
@@ -163,13 +161,12 @@ namespace moon
 
         bool broadcast() const
         {
-            return (((flag_ >> 16) & 0x1) !=0);
+            return data_->has_flag(buffer::flag::broadcast);
         }
 
         void set_broadcast(bool v)
         {
-            flag_ &= 0xFFFEFFFF;
-            flag_ |= ((v ? 1 : 0) << 16);
+            v?data_->set_flag(buffer::flag::broadcast): data_->clear_flag(buffer::flag::broadcast);
         }
 
         void* pointer()
@@ -183,37 +180,19 @@ namespace moon
            header_.clear();
            data_->clear();
         }
-
-        uint16_t check_uint16() const
-        {
-            if (data_->size() >= sizeof(uint16_t))
-            {
-                auto d =data_->data();
-                if (data_->check_flag(uint8_t(buffer_flag::pack_size)))
-                {
-                    if (data_->size() < 2 * sizeof(uint16_t))
-                    {
-                        return 0;
-                    }
-                    d += 2;
-                }
-                return (*(uint16_t*)d);
-            }
-            return 0;
-        }
-
     private:
         void init()
         {
-            flag_ = 0;
+            type_ = 0;
+            subtype_ = 0;
             sender_ = 0;
             receiver_ = 0;
             responseid_ = 0;
         }
 
     private:
-        //1-8bit subtype,9-16bit type, 17bit isbroadcast
-        uint32_t flag_;
+        uint8_t type_;
+        uint8_t subtype_;
         uint32_t sender_;
         uint32_t receiver_;
         int32_t responseid_;

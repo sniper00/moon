@@ -20,7 +20,7 @@ namespace sol
                 }
                 else
                 {
-                    handler(L, index, type::lightuserdata, t);
+                    handler(L, index, type::lightuserdata, t, "expected a nil or a userdata(buffer*) or a string");
                     return false;
                 }
             }

@@ -12,12 +12,12 @@ namespace moon
     {
         rapidjson::Document doc;
     public:
-        bool parse(TService* s,const std::string& config)
+        bool parse(TService* s,const string_view_t& config)
         {
-            doc.Parse(config.data());
+            doc.Parse(config.data(),config.size());
             if (doc.HasParseError() || !doc.IsObject())
             {
-                CONSOLE_ERROR(s->logger(), "Lua service parse config %s failed,errorcode %d", config.data(), doc.GetParseError());
+                CONSOLE_ERROR(s->logger(), "Lua service parse config %s failed,errorcode %d", std::string{ config.data(),config.size() }, doc.GetParseError());
                 return false;
             }
 

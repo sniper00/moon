@@ -12,7 +12,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
-#include "log.h"
+#include "common/log.hpp"
 
 namespace moon
 {

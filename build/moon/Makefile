@@ -20,11 +20,11 @@ ifeq ($(config),debug_linux)
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -std=c++14
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g -std=c++1z
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -Wl,--start-group -llua53 -lcore-d -lrapidjson -lprotobuf -ldl -lpthread -Wl,--end-group
-  LDDEPS += ../../bin/Debug/liblua53.a ../../bin/Debug/libcore-d.a ../../bin/Debug/librapidjson.a ../../bin/Debug/libprotobuf.a
-  ALL_LDFLAGS += $(LDFLAGS) -L../../libs -L../../bin/Debug -Wl,-rpath=./
+  LIBS += -llua53 -lcore-d -lrapidjson -ldl -lpthread
+  LDDEPS += ../../bin/Debug/liblua53.so ../../bin/Debug/libcore-d.a ../../bin/Debug/librapidjson.a
+  ALL_LDFLAGS += $(LDFLAGS) -L../../libs -L../../bin/Debug -Wl,-rpath,'$$ORIGIN' -Wl,-rpath=./
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -32,7 +32,7 @@ ifeq ($(config),debug_linux)
   endef
   define POSTBUILDCMDS
   endef
-all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+all: prebuild prelink $(TARGET)
 	@:
 
 endif
@@ -47,11 +47,11 @@ ifeq ($(config),release_linux)
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CFLAGS) -std=c++14
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -std=c++1z
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += -Wl,--start-group -llua53 -lcore -lrapidjson -lprotobuf -ldl -lpthread -Wl,--end-group
-  LDDEPS += ../../bin/Release/liblua53.a ../../bin/Release/libcore.a ../../bin/Release/librapidjson.a ../../bin/Release/libprotobuf.a
-  ALL_LDFLAGS += $(LDFLAGS) -L../../libs -L../../bin/Release -s -Wl,-rpath=./
+  LIBS += -llua53 -lcore -lrapidjson -ldl -lpthread
+  LDDEPS += ../../bin/Release/liblua53.so ../../bin/Release/libcore.a ../../bin/Release/librapidjson.a
+  ALL_LDFLAGS += $(LDFLAGS) -L../../libs -L../../bin/Release -Wl,-rpath,'$$ORIGIN' -s -Wl,-rpath=./
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -59,7 +59,7 @@ ifeq ($(config),release_linux)
   endef
   define POSTBUILDCMDS
   endef
-all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
+all: prebuild prelink $(TARGET)
 	@:
 
 endif
@@ -83,24 +83,13 @@ endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES)
 	@echo Linking moon
-	$(SILENT) $(LINKCMD)
-	$(POSTBUILDCMDS)
-
-$(TARGETDIR):
-	@echo Creating $(TARGETDIR)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(TARGETDIR)
 else
 	$(SILENT) mkdir $(subst /,\\,$(TARGETDIR))
 endif
-
-$(OBJDIR):
-	@echo Creating $(OBJDIR)
-ifeq (posix,$(SHELLTYPE))
-	$(SILENT) mkdir -p $(OBJDIR)
-else
-	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
-endif
+	$(SILENT) $(LINKCMD)
+	$(POSTBUILDCMDS)
 
 clean:
 	@echo Cleaning moon
@@ -122,17 +111,37 @@ ifneq (,$(PCH))
 $(OBJECTS): $(GCH) $(PCH)
 $(GCH): $(PCH)
 	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
 
 $(OBJDIR)/lua_bind.o: ../../moon/luabind/lua_bind.cpp
 	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/moon.o: ../../moon/moon.cpp
 	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/lua_service.o: ../../moon/services/lua_service.cpp
 	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)

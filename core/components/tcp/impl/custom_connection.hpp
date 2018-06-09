@@ -7,7 +7,6 @@ namespace moon
     {
     public:
         using base_connection_t = base_connection;
-        using socket_t = base_connection_t;
 
         explicit custom_connection(asio::io_service& ios, tcp* t)
             :base_connection(ios, t)

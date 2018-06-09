@@ -1,6 +1,6 @@
 #pragma  once
 #include "service.h"
-#include "log.h"
+#include "common/log.hpp"
 #include "luabind/lua_bind.h"
 #include "components/tcp/tcp.h"
 
@@ -31,12 +31,16 @@ public:
 
     void set_destroy(sol_function_t f);
 
-    moon::tcp* add_component_tcp(const std::string& name);
+	void set_on_timer(sol_function_t f);
 
-    moon::tcp* get_component_tcp(const std::string& name);
+	void set_remove_timer(sol_function_t f);
+
+    moon::tcp* add_tcp(const std::string& name);
+
+    moon::tcp* get_tcp(const std::string& name);
 
 private:
-    bool     init(const std::string& config) override;
+    bool     init(const moon::string_view_t& config) override;
 
     void     start()  override;
 
@@ -63,5 +67,7 @@ private:
     sol_function_t dispatch_;
     sol_function_t exit_;
     sol_function_t destroy_;
-    moon::timer timer_;
+	sol_function_t on_timer_;
+	sol_function_t remove_timer_;
+    moon::timer_t timer_;
 };

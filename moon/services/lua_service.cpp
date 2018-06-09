@@ -44,7 +44,7 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
 }
 
 lua_service::lua_service()
-    :lua_(sol::detail::default_at_panic,lalloc, this)
+    :lua_(sol::default_at_panic,lalloc, this)
     ,error_(true)
 {
 }
@@ -53,13 +53,13 @@ lua_service::~lua_service()
 {
 }
 
-moon::tcp * lua_service::add_component_tcp(const std::string & name)
+moon::tcp * lua_service::add_tcp(const std::string & name)
 {
     auto p = add_component<moon::tcp>(name);
     return ((p != nullptr) ? p.get() : nullptr);
 }
 
-moon::tcp * lua_service::get_component_tcp(const std::string & name)
+moon::tcp * lua_service::get_tcp(const std::string & name)
 {
     auto p = get_component<moon::tcp>(name);
     return ((p != nullptr) ? p.get() : nullptr);
@@ -90,7 +90,33 @@ void lua_service::set_destroy(sol_function_t f)
     destroy_ = f;
 }
 
-bool lua_service::init(const std::string& config)
+void lua_service::set_on_timer(sol_function_t f)
+{
+	on_timer_ = f;
+	timer_.set_on_timer([this](timerid_t tid) {
+		auto result = on_timer_(tid);
+		if (!result.valid())
+		{
+			sol::error err = result;
+			CONSOLE_ERROR(logger(), err.what());
+		}
+	});
+}
+
+void lua_service::set_remove_timer(sol_function_t f)
+{
+	remove_timer_ = f;
+	timer_.set_remove_timer([this](timerid_t tid) {
+		auto result = remove_timer_(tid);
+		if (!result.valid())
+		{
+			sol::error err = result;
+			CONSOLE_ERROR(logger(), err.what());
+		}
+	});
+}
+
+bool lua_service::init(const string_view_t& config)
 {
     service_config<lua_service> scfg;
     if (!scfg.parse(this, config))
@@ -125,7 +151,6 @@ bool lua_service::init(const std::string& config)
 
             lua_.require("seri", lua_serialize::open);
             lua_.require("codecache", luaopen_cache);
-            lua_.require("protobuf.c", luaopen_protobuf_c);
             lua_.require("json", luaopen_rapidjson);
 
             lua_["package"]["loaded"]["moon_core"] = module;
@@ -135,13 +160,24 @@ bool lua_service::init(const std::string& config)
 #else
             lua_.script("package.cpath = './clib/?.so;'");
 #endif
-            lua_.script("package.path = './?.lua;./lualib/?.lua;'");
-            lua_.script_file(luafile);
+			auto package_path = scfg.get_value<std::string>("path");
+            lua_.script(moon::format("package.path = './?.lua;./lualib/?.lua;'  package.path ='%s'..package.path", package_path.data()));
+            
+			lua_.script_file(luafile);
 
             if(init_.valid())
             {
                 auto result = init_(config);
-                error_ = result.valid() ? (!(bool)result): true;
+                if (result.valid())
+                {
+                    error_ = (!(bool)result);
+                }
+                else
+                {
+                    error_ = true;
+                    sol::error err = result;
+                    CONSOLE_ERROR(logger(), err.what());
+                }
             }
             else
             {
@@ -166,7 +202,12 @@ void lua_service::start()
     {    
         if (start_.valid())
         {
-            start_();
+            auto result =  start_();
+            if (!result.valid())
+            {
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), err.what());
+            }
         }
     }
     catch (std::exception& e)
@@ -184,7 +225,12 @@ void lua_service::dispatch(message* msg)
         auto type = msg->type();
         //network message will directly handle,check it's messsage type.
         MOON_DCHECK(type != PTYPE_UNKNOWN, "recevice unknown type message");
-        dispatch_(msg, type);
+        auto result =  dispatch_(msg, type);
+        if (!result.valid())
+        {
+            sol::error err = result;
+			get_server()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
+        }
     }
     catch (std::exception& e)
     {
@@ -215,7 +261,12 @@ void lua_service::exit()
         {
             if (exit_.valid())
             {
-                exit_();
+                auto result = exit_();
+                if (!result.valid())
+                {
+                    sol::error err = result;
+                    CONSOLE_ERROR(logger(), err.what());
+                }
                 return;
             }
         }
@@ -235,7 +286,12 @@ void lua_service::destroy()
         {
             if (destroy_.valid())
             {
-                destroy_();
+                auto result = destroy_();
+                if (!result.valid())
+                {
+                    sol::error err = result;
+                    CONSOLE_ERROR(logger(), err.what());
+                }
             }
         }
         catch (std::exception& e)

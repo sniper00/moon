@@ -37,7 +37,7 @@ namespace moon
 
         size_t servicenum();
 
-        uint32_t new_service(const std::string& service_type, bool unique, bool shareth,int workerid,const std::string& config);
+        uint32_t new_service(const std::string& service_type, bool unique, bool shareth,int workerid, const string_view_t& config);
 
         void runcmd(uint32_t sender, const buffer_ptr_t& buf, const std::string& header, int32_t responseid);
 

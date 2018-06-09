@@ -18,7 +18,7 @@ public:
     explicit lua_bind(sol::table& lua);
     ~lua_bind();
 
-    const lua_bind& bind_timer(moon::timer* t) const;
+    const lua_bind& bind_timer(moon::timer_t* t) const;
 
     const lua_bind& bind_util() const;
 
@@ -41,7 +41,6 @@ const char* lua_traceback(lua_State* _state);
 
 extern "C" 
 {
-    extern int luaopen_rapidjson(lua_State* L);
-    int  luaopen_protobuf_c(lua_State *L);
+    int luaopen_rapidjson(lua_State* L);
 }
 

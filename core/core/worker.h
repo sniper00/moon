@@ -60,7 +60,7 @@ namespace moon
 
         void add_service(const service_ptr_t& s);
 
-        void send(const message_ptr_t& msg,bool immediately =false);
+        void send(const message_ptr_t& msg);
     
         uint8_t workerid() const;
 
@@ -86,9 +86,8 @@ namespace moon
 
         void handle_one(service* ser,const message_ptr_t& msg);
     private:
+		std::atomic<state> state_;
         std::atomic_bool shared_;
-        bool exit_;
-        std::atomic_bool stoped_;
         uint8_t workerid_;
         uint32_t cache_uuid_;
         std::atomic<uint16_t> serviceuid_;
@@ -102,7 +101,7 @@ namespace moon
         asio::io_service::work work_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
         std::vector<message_ptr_t> swapqueue_;
-        sync_queue<message_ptr_t, moon::spin_lock> mqueue_;
+		concurrent_queue<message_ptr_t, moon::spin_lock> mqueue_;
         std::unordered_map<uint32_t, buffer_ptr_t> caches_;
     };
 };

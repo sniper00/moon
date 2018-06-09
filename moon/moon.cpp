@@ -1,11 +1,11 @@
 #include <csignal>
-#include "log.h"
-#include "server.h"
-#include "luabind/lua_bind.h"
+#include "common/log.hpp"
 #include "common/path.hpp"
 #include "common/string.hpp"
 #include "common/time.hpp"
 #include "common/file.hpp"
+#include "server.h"
+#include "luabind/lua_bind.h"
 #include "server_config.hpp"
 #include "services/lua_service.h"
 

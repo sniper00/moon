@@ -41,7 +41,6 @@
     <ClInclude Include="..\..\core\core\worker.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\core\log.h" />
     <ClInclude Include="..\..\core\message.hpp" />
     <ClInclude Include="..\..\core\server.h" />
     <ClInclude Include="..\..\core\service.h" />
@@ -51,9 +50,6 @@
       <Filter>components\tcp\impl</Filter>
     </ClCompile>
     <ClCompile Include="..\..\core\core\component.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\core\core\log.cpp">
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="..\..\core\core\server.cpp">

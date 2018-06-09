@@ -50,7 +50,7 @@ namespace moon
 
         void set_worker(worker* w);
 
-        virtual bool init(const std::string& config) = 0;
+        virtual bool init(const string_view_t& config) = 0;
 
         virtual void dispatch(message* msg) = 0;
 

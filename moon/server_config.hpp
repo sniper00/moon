@@ -30,6 +30,7 @@ namespace moon
         std::string inner_host;
         std::string startup;
         std::string log;
+		std::string path;
         std::vector<service_config> services;
     };
 
@@ -98,6 +99,7 @@ namespace moon
                     scfg.startup = rapidjson::get_value<std::string>(&c, "startup");
                     scfg.log = rapidjson::get_value<std::string>(&c, "log");
                     scfg.loglevel = rapidjson::get_value<std::string>(&c, "loglevel", "DEBUG");
+					scfg.path = rapidjson::get_value<std::string>(&c, "path", "");
                     if (scfg.log.find("#date") != std::string::npos)
                     {
                         time_t now = std::time(nullptr);
@@ -121,6 +123,9 @@ namespace moon
                             sc.shared = rapidjson::get_value<bool>(&s, "shared", true);
                             sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
                             sc.name = rapidjson::get_value<int32_t>(&s, "name");
+
+							s.AddMember("path", rapidjson::Value::StringRefType(scfg.path.data()),doc.GetAllocator());
+
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             s.Accept(writer);
