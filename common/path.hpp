@@ -63,8 +63,9 @@ class path
 #endif
 	}
 
-	typedef std::function<bool(const std::string &, int)> TraverFileHandler;
-	static void traverse_folder(std::string szPath, int nDepth, const TraverFileHandler &handler)
+	//THandler bool(const std::string&filepath,int type) type:0 folder,1 file
+	template<typename THandler>
+	static void traverse_folder(std::string szPath, int nDepth, THandler&&handler)
 	{
 		if (nDepth < 0)
 		{
