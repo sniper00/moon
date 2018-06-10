@@ -67,7 +67,5 @@ private:
     sol_function_t dispatch_;
     sol_function_t exit_;
     sol_function_t destroy_;
-	sol_function_t on_timer_;
-	sol_function_t remove_timer_;
     moon::timer_t timer_;
 };

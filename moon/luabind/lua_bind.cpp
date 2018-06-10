@@ -87,9 +87,30 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
+static void traverse_folder(std::string path,int nDepth,sol::protected_function func,sol::this_state s)
+{
+	path::traverse_folder(path, nDepth, [func,s](const std::string& filepath, int nDepth)->bool {
+		auto result = func(filepath, nDepth);
+		if (!result.valid())
+		{
+			sol::error err = result;
+			luaL_error(s.lua_state(), err.what());
+			return false;
+		}
+		else
+		{
+			if (result.return_count())
+			{
+				return  ((bool)result);
+			}
+			return true;
+		}
+	});
+}
+
 const lua_bind & lua_bind::bind_path() const
 {
-    lua.set_function("traverse_folder", path::traverse_folder);
+    lua.set_function("traverse_folder", traverse_folder);
     lua.set_function("exist", path::exist);
     lua.set_function("create_directory", path::create_directory);
     lua.set_function("directory", path::directory);

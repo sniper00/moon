@@ -92,9 +92,8 @@ void lua_service::set_destroy(sol_function_t f)
 
 void lua_service::set_on_timer(sol_function_t f)
 {
-	on_timer_ = f;
-	timer_.set_on_timer([this](timerid_t tid) {
-		auto result = on_timer_(tid);
+	timer_.set_on_timer([this, f](timerid_t tid) {
+		auto result = f(tid);
 		if (!result.valid())
 		{
 			sol::error err = result;
@@ -105,9 +104,8 @@ void lua_service::set_on_timer(sol_function_t f)
 
 void lua_service::set_remove_timer(sol_function_t f)
 {
-	remove_timer_ = f;
-	timer_.set_remove_timer([this](timerid_t tid) {
-		auto result = remove_timer_(tid);
+	timer_.set_remove_timer([this, f](timerid_t tid) {
+		auto result = f(tid);
 		if (!result.valid())
 		{
 			sol::error err = result;
