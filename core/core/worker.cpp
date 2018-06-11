@@ -267,17 +267,6 @@ namespace moon
                 it.second->update();
             }
 
-            //if (mqueue_.size() != 0)
-            //{
-            //    service* ser = nullptr;
-            //    swapqueue_.clear();
-            //    mqueue_.swap(swapqueue_);
-            //    for (auto& msg : swapqueue_)
-            //    {
-            //        handle_one(ser, msg);
-            //    }
-            //}
-
             if (cache_uuid_ != 0)
             {
                 cache_uuid_ = 0;
