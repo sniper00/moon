@@ -64,8 +64,8 @@ local response_uid = 1
 local resplistener = {} --response message handler
 local protocol = {}
 
-local watching_service = {}
-local watching_response = {}
+local services_exited = {}
+local response_wacther = {}
 
 local waitallco = {}
 
@@ -86,10 +86,10 @@ local function make_response(receiver)
     until not resplistener[response_uid]
 
     if receiver then
-        if watching_service[receiver] then
+        if services_exited[receiver] then
             return false
         end
-        watching_response[response_uid] = receiver
+        response_wacther[response_uid] = receiver
     end
 
     local co = co_running()
@@ -146,7 +146,7 @@ local function _default_dispatch(msg, PTYPE)
     local responseid = msg:responseid()
 
     if responseid > 0 and PTYPE ~= PTYPE_ERROR then
-        watching_response[responseid] = nil
+        response_wacther[responseid] = nil
         local co = resplistener[responseid]
         if co then
             --print(coroutine.status(co))
@@ -179,7 +179,7 @@ function moon.send(PTYPE, receiver, header, ...)
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
 
-    if watching_service[receiver] then
+    if services_exited[receiver] then
         return false,"send to a exited service"
     end
     header = header or ''
@@ -199,7 +199,7 @@ function moon.raw_send(PTYPE, receiver, header, data)
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
 
-    if watching_service[receiver] then
+    if services_exited[receiver] then
         print("moon.raw_send send to a crashed service")
         return false
 	end
@@ -213,12 +213,12 @@ function moon.co_call_with_header(PTYPE, receiver, header, ...)
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
 
-    if watching_service[receiver] then
+    if services_exited[receiver] then
         return false, "call a exited service"
 	end
 
     local responseid = make_response()
-    watching_response[responseid] = receiver
+    response_wacther[responseid] = receiver
     header = header or ''
 	core.send(sid_, receiver, p.pack(...), header, responseid, p.PTYPE)
     return co_yield()
@@ -557,8 +557,8 @@ reg_protocol {
         local header = msg:header()
         if header == "exit" then
             local data = msg:bytes()
-            watching_service[sender] = true
-            for k, v in pairs(watching_response) do
+            services_exited[sender] = true
+            for k, v in pairs(response_wacther) do
                 if v == sender then
                     local co = resplistener[k]
                     if co then

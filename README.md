@@ -14,10 +14,18 @@ The project use of C++17 features, I tested compliers are:
 - GCC 7.2
 - Visual Studio 2017 Community Update 5
 
-Linux Platform: 
-- make config=debug_linux
-- make config=release_linux
+Windows Platform:
+```shell
+    premake5.exe vs2017
+```
 
+Linux Platform:
+```shell
+    #premake5.exe --os=linux gmake
+    
+    make config=debug_linux
+    make config=release_linux
+```
 **把编译完成后把bin目录的moon可执行文件拷贝到example目录。**
 
 ## Example
