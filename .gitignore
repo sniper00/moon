@@ -1,11 +1,7 @@
 ﻿################################################################################
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
-
-/Resource/MoonNet.log
 /premake5.exe
-/premake5.lua
-/resources/MoonNet.log
 *.db
 *.opendb
 *.dll
@@ -18,13 +14,9 @@
 *.log
 *.tlog
 *.idb
-.vs/Server/v15/ipch/AutoPCH/f19378a21b0bea45/COMPONENT.ipch
-.vs/Server/v15/.suo
-.vs/Server/v15/Solution.VC.db-shm
-.vs/Server/v15/Solution.VC.db-wal
-.vs/Server/v15/ipch/AutoPCH/1e52c5eff8121a1a/TCP.ipch
-.vs/Server/v15/ipch/AutoPCH/420027f45a2d4cc1/TCP.ipch
-.vs/Server/v15/ipch/AutoPCH/9bf7f678bc3d5b69/LUA_BIND.ipch
-.vs/Server/v15/ipch/AutoPCH/d90e102c40598ca2/LOG.ipch
-.vs/Server/v15/ipch/AutoPCH/f1cf2238dd672c6a/LUA_SERVICE.ipch
-.vs/Server/v15/ipch/AutoPCH/1b870d64dbf2bab/WORKER.ipch
+.vs/
+build/
+bin/
+obj/
+exmaple/log/
+
