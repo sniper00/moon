@@ -61,7 +61,7 @@ namespace moon
 
         log* logger() const;
 
-        void make_response(uint32_t sender, const string_view_t&, const string_view_t& content, int32_t resp, uint8_t mtype = PTYPE_SOCKET) const;
+        void make_response(uint32_t sender, const string_view_t&, const string_view_t& content, int32_t resp, uint8_t mtype = PTYPE_TEXT) const;
     private:
         struct server_imp;
         server_imp*   imp_;
