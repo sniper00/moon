@@ -22,7 +22,7 @@ Windows Platform:
 Linux Platform:
 ```shell
     #premake5.exe --os=linux gmake
-    
+    premake5 gmake
     make config=debug_linux
     make config=release_linux
 ```
