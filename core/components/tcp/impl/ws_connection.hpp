@@ -137,7 +137,7 @@ namespace moon
     protected:
         void read_header()
         {
-            auto sbuf = std::make_shared<asio::streambuf>(512);
+            auto sbuf = std::make_shared<asio::streambuf>(MAX_REQUEST_STREAMBUF_SIZE);
             asio::async_read_until(socket_,*sbuf, header_delim_,
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
