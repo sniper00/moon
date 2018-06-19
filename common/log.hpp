@@ -255,7 +255,7 @@ namespace moon
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
         shared_pointer_pool<log_line, 1000, rwlock> buffer_cache_;
-		concurrent_queue<std::shared_ptr<log_line>, std::mutex, true> log_queue_;
+	concurrent_queue<std::shared_ptr<log_line>, std::mutex, true> log_queue_;
      };
 
 #define CONSOLE_INFO(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);  
