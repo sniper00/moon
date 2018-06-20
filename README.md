@@ -8,7 +8,7 @@
 - [rapidjson](https://github.com/Tencent/rapidjson)
 ## Bulid
 
-git clone <https://github.com/sniper00/MoonNetLua.git> get the Sources
+git clone <https://github.com/sniper00/moon.git> get the Sources
 
 需要使用premake生成工程文件, [下载最新的premake5](https://premake.github.io/download.html)
 
