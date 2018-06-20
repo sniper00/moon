@@ -70,7 +70,7 @@ namespace moon
         void for_all(std::function<void(component*)> cb);
 
         virtual log* logger() const;
-        void setlogger(log* l);
+        void logger(log* l);
 
         bool started() const;
 

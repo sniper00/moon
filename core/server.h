@@ -49,8 +49,6 @@ namespace moon
 
         bool register_service(const std::string& type, register_func func);
 
-        int64_t  local_db(int ndb,char op, int64_t, int64_t);
-
         std::string get_env(const std::string& name);
 
         void set_env(const string_view_t& name, const string_view_t& value);

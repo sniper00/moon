@@ -16,14 +16,11 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "message.hpp"
 #include "service.h"
 
-
 namespace moon
 {
-    DECLARE_SHARED_PTR(worker)
-
     struct server::server_imp
     {
-        using simple_db_t = concurrent_map<int64_t, int64_t,rwlock>;
+		using worker_ptr_t = std::unique_ptr<worker>;
         using env_t = concurrent_map<std::string, std::string, rwlock>;
         using unique_service_db_t = concurrent_map<std::string, uint32_t, rwlock>;
 
@@ -32,10 +29,6 @@ namespace moon
             , workernum_(0)
             , next_workerid_(0)
         {
-            for (size_t i = 0; i < SERVICE_DB_NUM; i++)
-            {
-                databases_.emplace_back(std::make_shared<simple_db_t>());
-            }
         }
 
         uint8_t next_worker_id()
@@ -45,13 +38,13 @@ namespace moon
             return static_cast<uint8_t>(id);
         }
 
-        worker_ptr_t next_worker()
+        worker_ptr_t& next_worker()
         {
             uint8_t  id = 0;
             for (uint8_t i = 0; i < workernum_; i++)
             {
                 id = next_worker_id();
-                auto w = workers_[id];
+                auto& w = workers_[id];
                 if (!w->shared())
                     continue;
                 return w;
@@ -107,7 +100,6 @@ namespace moon
         std::unordered_map<std::string, register_func > regservices_;
         rwlock serviceids_lck_;
         std::unordered_set<uint32_t> serviceids_;
-        std::vector<std::shared_ptr<simple_db_t>>  databases_;
         env_t env_;
         unique_service_db_t unique_services_;
         log default_log_;
@@ -136,8 +128,7 @@ namespace moon
 
         for (uint8_t i = 0; i != worker_num; i++)
         {
-            imp_->workers_.emplace_back(std::make_shared<worker>());
-            auto w = imp_->workers_.back();
+			auto& w = imp_->workers_.emplace_back(std::make_unique<worker>());
             w->workerid(i+1);
             w->set_server(this);
             w->on_service_remove = std::bind(&server_imp::on_service_remove, imp_, std::placeholders::_1);
@@ -407,55 +398,6 @@ namespace moon
         auto ret = imp_->regservices_.emplace(type, f);
         MOON_DCHECK(ret.second, moon::format("already registed message type[%s].",type.data()).data());
         return ret.second;
-    }
-
-    int64_t server::local_db(int ndb, char op, int64_t key, int64_t value)
-    {
-		if (imp_->state_.load(std::memory_order_acquire) != state::ready)
-		{
-			return 0;
-		}
-
-        if (ndb <= 0 || ndb > static_cast<int>(imp_->databases_.size()))
-        {
-            return 0;
-        }
-
-        auto& db = imp_->databases_[ndb-1];
-
-        switch (op)
-        {
-        case 'W'://write
-        {
-            if (db->set(key, value))
-            {
-                return value;
-            }
-        }
-        break;
-        case 'R'://read
-        {
-            int64_t value = 0;
-            if (db->try_get_value(key, value))
-            {
-                return value;
-            }
-        }
-        break;
-        case 'D'://delete
-        {
-            return db->erase(key);
-        }
-        break;
-        case 'N'://size
-        {
-            return db->size();
-        }
-        break;
-        default:
-            break;
-        }
-        return 0;
     }
 
     std::string server::get_env(const std::string & name)

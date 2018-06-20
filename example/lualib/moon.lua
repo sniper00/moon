@@ -298,24 +298,6 @@ function moon.set_unique_service(name,id)
 	core.set_unique_service(name,id)
 end
 
-----------------Loacl key-value DB, 只支持int-int----------
-
-function moon.db_set(ndb, key, value)
-    return core.local_db(ndb, "W", key, value)
-end
-
-function moon.db_get(ndb, key)
-    return core.local_db(ndb, "R", key, 0)
-end
-
-function moon.db_del(ndb, key)
-    return core.local_db(ndb, "D", key, 0)
-end
-
-function moon.db_size(ndb)
-    return core.local_db(ndb, "N", 0, 0)
-end
-
 -------------------------协程操作封装--------------------------
 local co_pool = setmetatable({}, {__mode = "kv"})
 

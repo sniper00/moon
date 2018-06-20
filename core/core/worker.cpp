@@ -48,8 +48,7 @@ namespace moon
     void worker::stop()
     {
         post([this] {
-			auto s = state_.load();
-			if (s == state::stopping || s == state::exited)
+			if (auto s = state_.load(); s == state::stopping || s == state::exited)
 			{
 				return;
 			}
@@ -95,7 +94,7 @@ namespace moon
     void worker::add_service(const service_ptr_t & s)
     {
         post([this,s](){
-            MOON_CHECK(services_.emplace(s->id(), s).second, "serviceid repeated");
+            MOON_CHECK(services_.try_emplace(s->id(), s).second, "serviceid repeated");
             s->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
             CONSOLE_INFO(server_->logger(),"[WORKER %d] new service [%s:%u]", workerid(), s->name().data(), s->id());
@@ -105,10 +104,9 @@ namespace moon
     void worker::remove_service(uint32_t id, uint32_t sender, uint32_t respid, bool crashed)
     {
         post([this, id,sender,respid,crashed]() {
-            std::string response_content;
-            auto iter = services_.find(id);
-            if (services_.end() != iter)
+            if (auto iter = services_.find(id); services_.end() != iter)
             {
+				std::string response_content;
                 auto& s = iter->second;
                 s->destroy();
                 if (services_.size() == 0)

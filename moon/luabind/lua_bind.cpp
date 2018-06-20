@@ -75,7 +75,7 @@ const lua_bind & lua_bind::bind_util() const
     lua.set_function("millsecond", (&time::millsecond));
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
     lua.set_function("hash_string", [](const std::string& s) { return moon::hash_range(s.begin(), s.end()); });
-    lua.set_function("hex_string", (&moon::to_hex_string));
+    lua.set_function("hex_string", (&moon::hex_string));
 
     lua.set_function("pack_cluster", pack_cluster_message);
     lua.set_function("unpack_cluster", unpack_cluster_message);
@@ -202,14 +202,12 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("runcmd", &server::runcmd, server_);
     lua.set_function("broadcast", broadcast);
     lua.set_function("workernum", &server::workernum, server_);
-    lua.set_function("local_db", &server::local_db, server_);
     lua.set_function("unique_service", &server::get_unique_service, server_);
     lua.set_function("set_unique_service", &server::set_unique_service, server_);
     lua.set_function("stop", &server::stop, server_);
     lua.set_function("set_env", &server::set_env, server_);
     lua.set_function("get_env", &server::get_env, server_);
     lua.set_function("set_loglevel", [server_](string_view_t s) { server_->logger()->set_level(s); });
-
     return *this;
 }
 

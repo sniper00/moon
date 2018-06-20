@@ -80,7 +80,7 @@ namespace moon
         {
             v->set_name(name);
             v->set_parent(this);
-            v->setlogger(logger());
+            v->logger(logger());
             v->init();
             v->ok(true);
         }
@@ -111,7 +111,7 @@ namespace moon
         return component_imp_->log_;
     }
 
-    void component::setlogger(log * l)
+    void component::logger(log * l)
     {
         component_imp_->log_ = l;
     }
