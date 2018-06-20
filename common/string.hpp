@@ -165,21 +165,34 @@ namespace moon
 	}
 
 	//" /t/n/r"
-	inline void						trimright(std::string &str)
+	inline string_view_t trim_right(string_view_t v)
 	{
-		str.erase(str.find_last_not_of(" \t\n\r") + 1);
-	}
-
-	inline void						trimleft(std::string &str)
-	{
-		auto  pos =  str.find_first_not_of(" \t\n\r");
-		if (pos != std::string::npos)
-		{
-			str.erase(0,pos);
+		const auto words_end(v.find_last_not_of(" \t\n\r"));
+		if (words_end != string_view_t::npos) {
+			v.remove_suffix(v.size() - words_end - 1);
 		}
+		return v;
 	}
 
-	inline void						replace(std::string& src, const std::string& old, const std::string& strnew)
+	inline string_view_t trim_left(string_view_t v)
+	{
+		const auto words_begin(v.find_first_not_of(" \t\n\r"));
+		v.remove_prefix(std::min(words_begin, v.size()));
+		return v;
+	}
+
+	inline string_view_t trim_surrounding(string_view_t v)
+	{
+		const auto words_end(v.find_last_not_of(" \t\n\r"));
+		if (words_end != string_view_t::npos) {
+			v.remove_suffix(v.size() - words_end - 1);
+		}
+		const auto words_begin(v.find_first_not_of(" \t\n\r"));
+		v.remove_prefix(std::min(words_begin, v.size()));
+		return v;
+	}
+
+	inline void replace(std::string& src, string_view_t old, string_view_t strnew)
 	{
 		for (std::string::size_type pos(0); pos != std::string::npos; pos += strnew.size()) {
 			if ((pos = src.find(old, pos)) != std::string::npos)
@@ -189,12 +202,12 @@ namespace moon
 		}
 	}
 
-	inline void						upper(std::string& src)
+	inline void upper(std::string& src)
 	{
 		std::transform(src.begin(), src.end(), src.begin(), ::toupper);
 	}
 
-	inline void						lower(std::string& src)
+	inline void lower(std::string& src)
 	{
 		std::transform(src.begin(), src.end(), src.begin(), ::tolower);
 	}
@@ -243,7 +256,7 @@ namespace moon
 		return true;
 	}
 
-	inline std::string to_hex_string(string_view_t s,string_view_t tok = "")  
+	inline std::string hex_string(string_view_t s,string_view_t tok = "")  
 	{  
 		std::stringstream ss;
 		ss<<std::setiosflags(std::ios::uppercase)<<std::hex;
