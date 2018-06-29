@@ -33,9 +33,9 @@ namespace moon
 
         void stop();
 
-        uint8_t workernum();
+        uint8_t workernum() const;
 
-        size_t servicenum();
+        size_t servicenum() const;
 
         uint32_t new_service(const std::string& service_type, bool unique, bool shareth,int workerid, const string_view_t& config);
 
@@ -49,11 +49,11 @@ namespace moon
 
         bool register_service(const std::string& type, register_func func);
 
-        std::string get_env(const std::string& name);
+        std::string get_env(const std::string& name) const;
 
         void set_env(const string_view_t& name, const string_view_t& value);
 
-        uint32_t get_unique_service(const string_view_t& name);
+        uint32_t get_unique_service(const string_view_t& name) const;
 
         void set_unique_service(const string_view_t& name, uint32_t v);
 

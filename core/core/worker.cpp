@@ -36,19 +36,20 @@ namespace moon
 
     void worker::run()
     {
-		state_.store(state::ready, std::memory_order_release);
         thread_ = std::thread([this]() {
+			state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(server_->logger(),"WORKER-%d start", workerid_);
             start_time_ = time::millsecond();
             ios_.run();
             CONSOLE_INFO(server_->logger(), "WORKER-%d stop", workerid_);
         });
+		while (state_.load(std::memory_order_acquire) != state::ready);
     }
 
     void worker::stop()
     {
         post([this] {
-			if (auto s = state_.load(); s == state::stopping || s == state::exited)
+			if (auto s = state_.load(std::memory_order_acquire); s == state::stopping || s == state::exited)
 			{
 				return;
 			}
@@ -78,7 +79,7 @@ namespace moon
 
     bool worker::stoped()
     {
-		return (state_.load() == state::exited);
+		return (state_.load(std::memory_order_acquire) == state::exited);
     }
 
     uint32_t worker::make_serviceid()

@@ -75,7 +75,7 @@ namespace moon
     bool component::add_component_imp(const std::string& name,component_ptr_t v)
     {
         auto iter = component_imp_->components_.emplace(name, v);
-        MOON_DCHECK(iter.second, "The component is already exist!");
+        MOON_CHECK(iter.second, "The component is already exist!");
         if (iter.second)
         {
             v->set_name(name);

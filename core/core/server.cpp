@@ -53,7 +53,7 @@ namespace moon
             return workers_[id];
         }
 
-        bool has_serviceid(uint32_t serviceid)
+        bool has_serviceid(uint32_t serviceid) const
         {
             SHARED_LOCK_GURAD(serviceids_lck_);
             return (serviceids_.find(serviceid) != serviceids_.end());
@@ -72,10 +72,10 @@ namespace moon
         void on_service_remove(uint32_t serviceid)
         {
             UNIQUE_LOCK_GURAD(serviceids_lck_);
-            MOON_DCHECK(serviceids_.erase(serviceid)==1,"erase failed!");
+            MOON_CHECK(serviceids_.erase(serviceid)==1,"erase failed!");
         }
 
-        size_t servicenum()
+        size_t servicenum() const
         {
             SHARED_LOCK_GURAD(serviceids_lck_);
             return serviceids_.size();
@@ -98,7 +98,7 @@ namespace moon
         std::atomic<uint32_t> next_workerid_;
         std::vector<worker_ptr_t> workers_;
         std::unordered_map<std::string, register_func > regservices_;
-        rwlock serviceids_lck_;
+        mutable rwlock serviceids_lck_;
         std::unordered_set<uint32_t> serviceids_;
         env_t env_;
         unique_service_db_t unique_services_;
@@ -142,12 +142,12 @@ namespace moon
 		imp_->state_.store(state::ready);
     }
 
-    uint8_t server::workernum()
+    uint8_t server::workernum() const
     {
         return static_cast<uint8_t>(imp_->workers_.size());
     }
 
-    size_t server::servicenum()
+    size_t server::servicenum() const
     {
         return imp_->servicenum();
     }
@@ -400,7 +400,7 @@ namespace moon
         return ret.second;
     }
 
-    std::string server::get_env(const std::string & name)
+    std::string server::get_env(const std::string & name) const
     {
         std::string v;
         imp_->env_.try_get_value(name, v);
@@ -412,7 +412,7 @@ namespace moon
         imp_->env_.set(std::string(name.data(), name.size()), std::string(value.data(), value.size()));
     }
 
-    uint32_t server::get_unique_service(const string_view_t & name)
+    uint32_t server::get_unique_service(const string_view_t & name) const
     {
         if (name.empty())
         {
