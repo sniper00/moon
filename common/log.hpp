@@ -154,7 +154,7 @@ namespace moon
             }
         }
     private:
-        void format_header(moon::buffer* buf, LogLevel level)
+        void format_header(moon::buffer* buf, LogLevel level) const
         {
             size_t len = time::milltimestamp(buf->data(), 23);
             buf->offset_writepos(static_cast<int>(len));
@@ -209,10 +209,14 @@ namespace moon
                         ofs_->write(it->content_.data(), it->content_.size());
                     }
                 }
+				if (ofs_)
+				{
+					ofs_->flush();
+				}
             }
         }
 
-        const char* to_string(LogLevel lv)
+        const char* to_string(LogLevel lv) const
         {
             switch (lv)
             {

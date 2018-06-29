@@ -154,7 +154,7 @@ namespace moon
 			return true;
 		}
 
-		size_t size()
+		size_t size() const
 		{
 			std::unique_lock<lock_t> lck(mutex_);
 			return queue_.size();
@@ -179,7 +179,7 @@ namespace moon
 		}
 
 	private:
-		lock_t mutex_;
+		mutable lock_t mutex_;
 		queue_type queue_;
 		std::atomic_bool exit_;
 		size_t max_size_;

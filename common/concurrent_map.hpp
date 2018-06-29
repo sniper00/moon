@@ -59,7 +59,7 @@ namespace moon
             }
         }
 
-        bool try_get_value(const Key& key, Value& value)
+        bool try_get_value(const Key& key, Value& value) const
         {
             SHARED_LOCK_GURAD(lock_)
             return detail::try_get_value<Key, Value>::get(data_, key, value);
@@ -83,13 +83,13 @@ namespace moon
             data_.clear();
         }
 
-        size_t size()
+        size_t size() const
         {
             SHARED_LOCK_GURAD(lock_);
             return data_.size();
         }
 
-        bool has(const Key& key)
+        bool has(const Key& key) const
         {
             SHARED_LOCK_GURAD(lock_);
             auto iter = data_.find(key);
@@ -100,7 +100,7 @@ namespace moon
             return false;
         }
     private:
-        Lock lock_;
+        mutable Lock lock_;
         std::unordered_map<Key, Value> data_;
     };
 }
