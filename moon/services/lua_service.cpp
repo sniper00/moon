@@ -46,6 +46,7 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
 lua_service::lua_service()
     :lua_(sol::default_at_panic,lalloc, this)
     ,error_(true)
+	,cache_uuid_(0)
 {
 }
 
@@ -63,6 +64,28 @@ moon::tcp * lua_service::get_tcp(const std::string & name)
 {
     auto p = get_component<moon::tcp>(name);
     return ((p != nullptr) ? p.get() : nullptr);
+}
+
+uint32_t lua_service::make_cache(const moon::buffer_ptr_t & buf)
+{
+	auto iter = caches_.emplace(cache_uuid_++, buf);
+	if (iter.second)
+	{
+		return iter.first->first;
+	}
+	return 0;
+}
+
+void lua_service::send_cache(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
+{
+	auto iter = caches_.find(cacheid);
+	if (iter == caches_.end())
+	{
+		CONSOLE_DEBUG(logger(), "send_cache failed, can not find cache data id %s", cacheid);
+		return;
+	}
+
+	get_server()->send(id(), receiver, iter->second, header, responseid, type);
 }
 
 void lua_service::set_init(sol_function_t f)
@@ -244,6 +267,11 @@ void lua_service::update()
     try
     {
         timer_.update();
+		if (cache_uuid_ != 0)
+		{
+			cache_uuid_ = 0;
+			caches_.clear();
+		}
     }
     catch (std::exception& e)
     {

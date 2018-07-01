@@ -13,8 +13,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
     class log;
-    class server;
-    DECLARE_SHARED_PTR(component)
+	DECLARE_SHARED_PTR(component);
 
     class MOON_EXPORT component
     {

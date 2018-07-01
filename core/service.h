@@ -30,10 +30,6 @@ namespace moon
 
         uint32_t id() const;
 
-        uint32_t make_cache(const buffer_ptr_t& buf);
-
-        void send_cache(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t mtype ) const;
-    
         void handle_message(const message_ptr_t& msg);
 
         log* logger() const override;
