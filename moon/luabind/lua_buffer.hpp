@@ -31,26 +31,29 @@ namespace sol
             static moon::buffer_ptr_t get(lua_State* L, int index, record& tracking) {
                 tracking.use(1);
                 type t = type_of(L, index);
-                if (t == type::nil)
-                {
-                    return nullptr;
-                }
-
-                if (t == type::string)
-                {
-                    std::size_t len;
-                    auto str = lua_tolstring(L, index, &len);
-                    auto buf = moon::message::create_buffer(len);
-                    buf->write_back(str, 0, len);
-                    return buf;
-                }
-                
-                if (t == type::userdata || t == type::lightuserdata)
-                {
-                    moon::buffer* p = static_cast<moon::buffer*>(lua_touserdata(L, index));
-                    return moon::buffer_ptr_t(p);
-                }
-
+				switch (t)
+				{
+				case sol::type::lua_nil:
+				{
+					return nullptr;
+				}
+				case sol::type::string:
+				{
+					std::size_t len;
+					auto str = lua_tolstring(L, index, &len);
+					auto buf = moon::message::create_buffer(len);
+					buf->write_back(str, 0, len);
+					return buf;
+				}
+				case sol::type::userdata:
+				case sol::type::lightuserdata:
+				{
+					moon::buffer* p = static_cast<moon::buffer*>(lua_touserdata(L, index));
+					return moon::buffer_ptr_t(p);
+				}
+				default:
+					break;
+				}
                 luaL_error(L, "get buffer only support string or void*(buffer*)");
                 return nullptr;
             }
