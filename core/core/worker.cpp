@@ -20,7 +20,6 @@ namespace moon
         : state_(state::init)
 		, shared_(true)
         , workerid_(0)
-        , cache_uuid_(0)
         , serviceuid_(1)
         , start_time_(0)
         , work_time_(0)
@@ -154,27 +153,6 @@ namespace moon
         return ios_;
     }
 
-    uint32_t worker::make_cache(const buffer_ptr_t & buf)
-    {
-       auto iter = caches_.emplace(cache_uuid_++, buf);
-       if (iter.second)
-       {
-           return iter.first->first;
-       }
-       return 0;
-    }
-
-    buffer_ptr_t worker::get_cache(uint32_t cacheid)
-    {
-        auto iter = caches_.find(cacheid);
-        if (iter == caches_.end())
-        {
-            CONSOLE_DEBUG(server_->logger(), "send_cache failed, can not find cache data id %s", cacheid);
-            return nullptr;
-        }
-        return iter->second;
-    }
-
     void worker::send(const message_ptr_t & msg)
     {
         if (mqueue_.push_back(std::move(msg)) == 1)
@@ -266,11 +244,6 @@ namespace moon
                 it.second->update();
             }
 
-            if (cache_uuid_ != 0)
-            {
-                cache_uuid_ = 0;
-                caches_.clear();
-            }
             auto difftime = time::millsecond() - begin_time;
             work_time_ += difftime;
         });

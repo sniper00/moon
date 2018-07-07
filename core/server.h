@@ -39,7 +39,7 @@ namespace moon
 
         uint32_t new_service(const std::string& service_type, bool unique, bool shareth,int workerid, const string_view_t& config);
 
-        void runcmd(uint32_t sender, const buffer_ptr_t& buf, const std::string& header, int32_t responseid);
+        void runcmd(uint32_t sender, const buffer_ptr_t& buf, const string_view_t& header, int32_t responseid);
 
         void send_message(const message_ptr_t& msg) const;
 
@@ -49,7 +49,7 @@ namespace moon
 
         bool register_service(const std::string& type, register_func func);
 
-        std::string get_env(const std::string& name) const;
+		std::shared_ptr<std::string> get_env(const std::string& name) const;
 
         void set_env(const string_view_t& name, const string_view_t& value);
 

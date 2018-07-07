@@ -57,20 +57,6 @@ namespace moon
         return service_imp_->id_;
     }
 
-    uint32_t service::make_cache(const buffer_ptr_t & buf)
-    {
-        return get_worker()->make_cache(buf);
-    }
-
-    void service::send_cache(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
-    {
-        const auto& buff = get_worker()->get_cache(cacheid);
-        if (nullptr != buff)
-        {
-            get_server()->send(service_imp_->id_, receiver, buff, header, responseid, type);
-        }
-    }
-
     void service::set_id(uint32_t v)
     {
         service_imp_->id_ = v;

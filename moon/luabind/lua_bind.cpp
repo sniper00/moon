@@ -206,7 +206,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_unique_service", &server::set_unique_service, server_);
     lua.set_function("stop", &server::stop, server_);
     lua.set_function("set_env", &server::set_env, server_);
-    lua.set_function("get_env", &server::get_env, server_);
+    lua.set_function("get_env", [server_](const std::string& key) { return *server_->get_env(key); });
     lua.set_function("set_loglevel", [server_](string_view_t s) { server_->logger()->set_level(s); });
     return *this;
 }

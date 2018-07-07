@@ -3,6 +3,7 @@
 #include "common/log.hpp"
 #include "luabind/lua_bind.h"
 #include "components/tcp/tcp.h"
+#include "common/buffer.hpp"
 
 class lua_service :public moon::service
 {
@@ -39,6 +40,10 @@ public:
 
     moon::tcp* get_tcp(const std::string& name);
 
+	uint32_t make_cache(const moon::buffer_ptr_t & buf);
+
+	void send_cache(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
+
 private:
     bool     init(const moon::string_view_t& config) override;
 
@@ -68,4 +73,6 @@ private:
     sol_function_t exit_;
     sol_function_t destroy_;
     moon::timer_t timer_;
+	uint32_t cache_uuid_;
+	std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
 };

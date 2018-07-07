@@ -37,10 +37,6 @@ namespace moon
         void remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed = false);
 
         asio::io_service& io_service();
-
-        uint32_t make_cache(const buffer_ptr_t & buf);
-
-        buffer_ptr_t  get_cache(uint32_t cacheid);
     private:
         void run();
 
@@ -89,7 +85,6 @@ namespace moon
 		std::atomic<state> state_;
         std::atomic_bool shared_;
         uint8_t workerid_;
-        uint32_t cache_uuid_;
         std::atomic<uint16_t> serviceuid_;
         std::atomic<uint32_t> servicenum_;
 
@@ -102,7 +97,6 @@ namespace moon
         std::unordered_map<uint32_t, service_ptr_t> services_;
         std::vector<message_ptr_t> swapqueue_;
 		concurrent_queue<message_ptr_t, moon::spin_lock> mqueue_;
-        std::unordered_map<uint32_t, buffer_ptr_t> caches_;
     };
 };
 

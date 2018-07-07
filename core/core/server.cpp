@@ -276,7 +276,7 @@ namespace moon
         return 0;
     }
 
-    void server::runcmd(uint32_t sender, const buffer_ptr_t& buf, const std::string& header, int32_t responseid)
+    void server::runcmd(uint32_t sender, const buffer_ptr_t& buf, const string_view_t& header, int32_t responseid)
     {
         (void)buf;
 
@@ -400,11 +400,14 @@ namespace moon
         return ret.second;
     }
 
-    std::string server::get_env(const std::string & name) const
+    std::shared_ptr<std::string> server::get_env(const std::string & name) const
     {
         std::string v;
-        imp_->env_.try_get_value(name, v);
-        return v;
+		if (imp_->env_.try_get_value(name, v))
+		{
+			return std::make_shared<std::string>(std::move(v));
+		}
+        return nullptr;
     }
 
     void server::set_env(const string_view_t & name, const string_view_t & value)
