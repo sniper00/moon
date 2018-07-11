@@ -241,5 +241,23 @@ class path
     {
         return 0== ::remove(path.data());
     }
+
+	static std::string find_file(const std::string& path, const std::string& filename)
+	{
+		std::string result;
+		traverse_folder(path, 100, [&result,&filename](const std::string& file, int type)
+		{
+			if (type == 1)
+			{
+				if (path::filename(file) == filename)
+				{
+					result = file;
+					return false;
+				}
+			}
+			return true;
+		});
+		return result;
+	}
 };
 }

@@ -183,7 +183,21 @@ bool lua_service::init(const string_view_t& config)
 #endif
 			auto package_path = scfg.get_value<std::string>("path");
             lua_.script(moon::format("package.path = './?.lua;./lualib/?.lua;'  package.path ='%s'..package.path", package_path.data()));
-            
+
+			if (!path::exist(luafile))
+			{
+				auto paths = moon::split<std::string>(package_path, ";");
+				for (auto& p : paths)
+				{
+					luafile = path::find_file(path::directory(p), luafile);
+					if (!luafile.empty())
+					{
+						break;
+					}
+				}
+				MOON_CHECK(path::exist(luafile), "file not found");
+			}
+
 			lua_.script_file(luafile);
 
             if(init_.valid())
