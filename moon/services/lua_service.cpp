@@ -187,15 +187,18 @@ bool lua_service::init(const string_view_t& config)
 			if (!path::exist(luafile))
 			{
 				auto paths = moon::split<std::string>(package_path, ";");
+				paths.push_back("./");
+				std::string file;
 				for (auto& p : paths)
 				{
-					luafile = path::find_file(path::directory(p), luafile);
-					if (!luafile.empty())
+					file = path::find_file(path::directory(p), luafile);
+					if (!file.empty())
 					{
 						break;
 					}
 				}
-				MOON_CHECK(path::exist(luafile), "file not found");
+				MOON_CHECK(path::exist(file), moon::format("luafile %s not found",luafile.data()).data());
+				luafile = file;
 			}
 
 			lua_.script_file(luafile);
