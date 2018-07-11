@@ -245,7 +245,7 @@ class path
 	static std::string find_file(const std::string& path, const std::string& filename)
 	{
 		std::string result;
-		traverse_folder(path, 100, [&result,&filename](const std::string& file, int type)
+		traverse_folder(path, 5, [&result,&filename](const std::string& file, int type)
 		{
 			if (type == 1)
 			{
