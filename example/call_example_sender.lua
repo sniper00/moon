@@ -10,7 +10,7 @@ moon.start(function()
     })
 
 
-    moon.start_coroutine(function()
+    moon.async(function()
         print(moon.co_call('lua',receiverid,"SUB",1000,2000))
         moon.co_wait(1000)
 

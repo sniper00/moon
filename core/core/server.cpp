@@ -365,7 +365,7 @@ namespace moon
     void server::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, const string_view_t& header, int32_t responseid, uint8_t type) const
     {
         responseid = -responseid;
-        message_ptr_t msg = std::make_shared<message>(data);
+        message_ptr_t msg = message::create(data);
         msg->set_sender(sender);
         msg->set_receiver(receiver);
         if (header.size() != 0)

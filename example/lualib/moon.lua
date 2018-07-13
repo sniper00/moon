@@ -324,7 +324,7 @@ local function routine(func)
     end
 end
 
-function moon.start_coroutine(func)
+function moon.async(func)
     local co = table_remove(co_pool)
     if not co then
         co = co_create(routine)

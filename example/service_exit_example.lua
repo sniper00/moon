@@ -2,7 +2,7 @@ local moon   = require("moon")
 
 moon.exit(function(  )
     print("exit once")
-    moon.start_coroutine(function ()
+    moon.async(function ()
         moon.co_wait(1000)
         print("t1")
         moon.co_wait(1000)
