@@ -54,7 +54,7 @@ socket_handler[3] = function(sessionid, msg)
 
     --被调用者
     if 0 > rresponseid then
-        moon.start_coroutine(
+        moon.async(
             function()
                 local responseid = moon.make_response(receiver)
                 if not responseid then

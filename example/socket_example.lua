@@ -3,7 +3,7 @@ local socket = require("moon.socket")
 local seri = require("seri")
 
 local function read_line_example(session)
-    moon.start_coroutine(function()
+    moon.async(function()
         while true do
             local data, err = session:co_readline()
             if not data then
@@ -23,7 +23,7 @@ local function read_line_example(session)
 end
 
 local function http_example(session)
-    moon.start_coroutine(function()
+    moon.async(function()
         local http_request = moon.http_request.new()
         while true do
             local data, err = session:co_read('\r\n\r\n')
@@ -75,7 +75,7 @@ moon.init(function( config )
 
     server:listen(config.ip,config.port)
 
-    moon.start_coroutine(function()
+    moon.async(function()
         while true do
             local session = server:co_accept()
             if session then
