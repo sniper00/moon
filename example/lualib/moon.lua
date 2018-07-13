@@ -144,13 +144,13 @@ local function _default_dispatch(msg, PTYPE)
     end
 
     local responseid = msg:responseid()
-
     if responseid > 0 and PTYPE ~= PTYPE_ERROR then
         response_wacther[responseid] = nil
         local co = resplistener[responseid]
         if co then
             --print(coroutine.status(co))
             co_resume(co, p.unpack(msg))
+            --print(coroutine.status(co))
             resplistener[responseid] = nil
             return
         end
@@ -385,15 +385,11 @@ end
 ------------------------------------------
 
 function moon.co_remove_service(serviceid)
-    local co = co_running()
-    moon.remove_service(serviceid, co)
-    return co_yield()
+    return moon.remove_service(serviceid, true)
 end
 
 function moon.co_query_worktime(workerid)
-    local co = co_running()
-    moon.query_worktime(workerid, co)
-    return co_yield()
+    return moon.query_worktime(workerid, true)
 end
 
 --[[
