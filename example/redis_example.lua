@@ -19,7 +19,7 @@ local function run_example()
         print(ret)
     end
 
-    moon.start_coroutine(function()
+    moon.async(function()
         local redis,err = pool:spawn()
         if not redis then
             print("error",err)
@@ -44,7 +44,7 @@ local function run_example()
         log.dump(ret)
     end)
 
-    moon.start_coroutine(function()
+    moon.async(function()
 
         local redis,err = pool:spawn()
         if not redis then
@@ -87,7 +87,7 @@ local function run_example()
         pool:close(redis)
     end)
 
-    moon.start_coroutine(function()
+    moon.async(function()
         local redis,err = pool:spawn()
         if not redis then
             print("error",err)
