@@ -131,27 +131,23 @@ namespace moon
     
         void wait()
         {
-            if (state_.load() == state::exited)
-            {
-                return;
-            }
+			if (state_.load() == state::exited)
+			{
+				return;
+			}
 
-            while (log_queue_.size() > 0)
-            {
-                thread_sleep(1);
-            }
+			state_.store(state::exited);
+			log_queue_.exit();
 
-            state_.store(state::exited);
-            log_queue_.exit();
+			if (thread_.joinable())
+				thread_.join();
 
-            if (thread_.joinable())
-                thread_.join();
-
-            if (ofs_&&ofs_->is_open())
-            {
-                ofs_->flush();
-                ofs_->close();
-            }
+			if (ofs_&&ofs_->is_open())
+			{
+				ofs_->flush();
+				ofs_->close();
+				ofs_ = nullptr;
+			}
         }
     private:
         void format_header(moon::buffer* buf, LogLevel level) const
@@ -175,7 +171,7 @@ namespace moon
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
             std::vector<std::shared_ptr<log_line>> swaps;
-            while (state_.load() == state::ready)
+            while (state_.load() == state::ready || log_queue_.size()!=0)
             {
                 swaps.clear();
                 log_queue_.swap(swaps);
