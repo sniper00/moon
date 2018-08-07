@@ -1,6 +1,6 @@
 #include "lua_service.h"
 #include "message.hpp"
-#include "server.h"
+#include "router.h"
 #include "common/string.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson_helper.hpp"
@@ -41,6 +41,15 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
     {
         return realloc(ptr, nsize);
     }
+}
+
+void lua_service::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
+{
+	auto params = moon::split<std::string>(cmd, ".");
+	if (auto iter = commands_.find(params[2]); iter != commands_.end())
+	{
+		get_router()->make_response(sender, "", iter->second(params), responseid);
+	}
 }
 
 lua_service::lua_service()
@@ -85,7 +94,7 @@ void lua_service::send_cache(uint32_t receiver, uint32_t cacheid, const string_v
 		return;
 	}
 
-	get_server()->send(id(), receiver, iter->second, header, responseid, type);
+	get_router()->send(id(), receiver, iter->second, header, responseid, type);
 }
 
 void lua_service::set_init(sol_function_t f)
@@ -135,6 +144,24 @@ void lua_service::set_remove_timer(sol_function_t f)
 			CONSOLE_ERROR(logger(), err.what());
 		}
 	});
+}
+
+void lua_service::register_command(const std::string & command, sol_function_t f)
+{
+	auto hander = [this, command, f](const std::vector<std::string>& params) {
+		auto result = f(params);
+		if (!result.valid())
+		{
+			sol::error err = result;
+			CONSOLE_ERROR(logger(), err.what());
+			return std::string(err.what());
+		}
+		else
+		{
+			return result.get<std::string>();
+		}
+	};
+	commands_.try_emplace(command, hander);
 }
 
 bool lua_service::init(const string_view_t& config)
@@ -267,7 +294,7 @@ void lua_service::dispatch(message* msg)
         if (!result.valid())
         {
             sol::error err = result;
-			get_server()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
+			get_router()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
         }
     }
     catch (std::exception& e)
@@ -354,7 +381,7 @@ void lua_service::error(const std::string & msg)
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique server %s crashed, server will stop.", name().data());
-        get_server()->stop();
+        get_router()->stop_server();
     }
 }
 

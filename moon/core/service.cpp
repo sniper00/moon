@@ -10,62 +10,37 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 #include "service.h"
 #include "message.hpp"
-#include "server.h"
-#include "worker.h"
+#include "router.h"
 #include "common/log.hpp"
 
 namespace moon
 {
-    struct service::service_imp
-    {
-        service_imp()
-            :unique_(false)
-            , id_(0)
-            , pool_(nullptr)
-            , worker_(nullptr)
-        {
-        }
-
-        ~service_imp()
-        {
-        }
-
-        bool unique_;
-        uint32_t id_;
-        server* pool_;
-        worker* worker_;
-    };
-
     service::service()
-        :service_imp_(new service_imp())
+		:unique_(false)
+		, id_(0)
+		, router_(nullptr)
     {
 
     }
 
     service::~service()
     {
-        SAFE_DELETE(service_imp_);
+       
     }
 
     bool service::unique() const
     {
-        return service_imp_->unique_;
+        return unique_;
     }
 
     uint32_t service::id() const
     {
-        return service_imp_->id_;
+        return id_;
     }
 
     void service::set_id(uint32_t v)
     {
-        service_imp_->id_ = v;
-    }
-
-    void service::set_worker(worker * w)
-    {
-        service_imp_->worker_ = w;
-        service_imp_->pool_ = w->get_server();
+        id_ = v;
     }
 
     void service::exit()
@@ -75,27 +50,27 @@ namespace moon
 
     log * service::logger() const
     {
-        return get_server()->logger();
+        return router_->logger();
     }
 
-    server * service::get_server() const
-    {
-        return service_imp_->pool_;
-    }
+	router * service::get_router() const
+	{
+		return router_;
+	}
 
-    worker * service::get_worker() const
-    {
-        return service_imp_->worker_;
-    }
+	void service::set_router(router * r)
+	{
+		router_ = r;
+	}
 
     void service::removeself(bool crashed)
     {
-        get_worker()->remove_service(service_imp_->id_, 0, 0, crashed);
+		router_->remove_service(id_, 0, 0, crashed);
     }
 
     void service::set_unique(bool v)
     {
-        service_imp_->unique_ = v;
+        unique_ = v;
     }
 
     void service::handle_message(const message_ptr_t& msg)
@@ -112,7 +87,7 @@ namespace moon
             if (msg->receiver() != id() && msg->receiver() != 0)
             {
                 MOON_DCHECK(!msg->broadcast(), "can not redirect broadcast message");
-                get_server()->send_message(msg);
+                router_->send_message(msg);
             }
         }
         catch (std::exception& e)

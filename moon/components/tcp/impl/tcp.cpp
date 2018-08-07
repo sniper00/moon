@@ -15,6 +15,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "moon_connection.hpp"
 #include "custom_connection.hpp"
 #include "ws_connection.hpp"
+#include "router.h"
 
 namespace moon
 {
@@ -346,7 +347,7 @@ namespace moon
         imp_->parent_ = parent<service>();
         MOON_DCHECK(imp_->parent_ != nullptr, "tcp::init service is null");
         imp_->self_ = imp_->parent_->get_component<tcp>(name());
-        imp_->ios_ = &(imp_->parent_->get_worker()->io_service());
+        imp_->ios_ = &(imp_->parent_->get_router()->get_io_service(imp_->parent_->id()));
         imp_->response_msg_ = message::create();
     }
 

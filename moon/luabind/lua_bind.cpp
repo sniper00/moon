@@ -8,7 +8,7 @@
 #include "common/log.hpp"
 #include "components/tcp/tcp.h"
 #include "message.hpp"
-#include "server.h"
+#include "router.h"
 #include "lua_buffer.hpp"
 #include "lua_serialize.hpp"
 
@@ -171,15 +171,15 @@ const lua_bind & lua_bind::bind_message() const
 
 const lua_bind& lua_bind::bind_service(lua_service* s) const
 {
-    auto server_ = s->get_server();
+    auto router_ = s->get_router();
 
-    lua.set("null", (void*)(server_));
+    lua.set("null", (void*)(router_));
 
-    auto broadcast = [server_](uint32_t sender, const buffer_ptr_t & data, uint8_t type)
+    auto broadcast = [router_](uint32_t sender, const buffer_ptr_t & data, uint8_t type)
     {
         auto msg = message::create(data);
         msg->set_type(type);
-        server_->broadcast(sender, msg);
+		router_->broadcast(sender, msg);
     };
 
     lua.set_function("name", &lua_service::name, s);
@@ -196,18 +196,19 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_destroy", &lua_service::set_destroy,s);
 	lua.set_function("set_on_timer", &lua_service::set_on_timer, s);
 	lua.set_function("set_remove_timer", &lua_service::set_remove_timer, s);
+	lua.set_function("register_command", &lua_service::register_command, s);
     lua.set_function("memory_use", &lua_service::memory_use, s);
-    lua.set_function("send", &server::send, server_);
-    lua.set_function("new_service", &server::new_service, server_);
-    lua.set_function("runcmd", &server::runcmd, server_);
+    lua.set_function("send", &router::send, router_);
+    lua.set_function("new_service", &router::new_service, router_);
+	lua.set_function("remove_service", &router::remove_service, router_);
+    lua.set_function("runcmd", &router::runcmd, router_);
     lua.set_function("broadcast", broadcast);
-    lua.set_function("workernum", &server::workernum, server_);
-    lua.set_function("unique_service", &server::get_unique_service, server_);
-    lua.set_function("set_unique_service", &server::set_unique_service, server_);
-    lua.set_function("stop", &server::stop, server_);
-    lua.set_function("set_env", &server::set_env, server_);
-    lua.set_function("get_env", [server_](const std::string& key) { return *server_->get_env(key); });
-    lua.set_function("set_loglevel", [server_](string_view_t s) { server_->logger()->set_level(s); });
+    lua.set_function("workernum", &router::workernum, router_);
+    lua.set_function("unique_service", &router::get_unique_service, router_);
+    lua.set_function("set_unique_service", &router::set_unique_service, router_);
+    lua.set_function("set_env", &router::set_env, router_);
+    lua.set_function("get_env", [router_](const std::string& key) { return *router_->get_env(key); });
+    lua.set_function("set_loglevel", [router_](string_view_t s) { router_->logger()->set_level(s); });
     return *this;
 }
 

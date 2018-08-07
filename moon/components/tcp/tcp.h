@@ -54,7 +54,7 @@ namespace moon
         both = 3,
     };
 
-    class MOON_EXPORT tcp:public component
+    class tcp:public component
     {
     public:
 

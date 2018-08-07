@@ -12,18 +12,17 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "service.h"
 #include "message.hpp"
 #include "common/log.hpp"
-#include "server.h"
+#include "router.h"
 
 namespace moon
 {
-    worker::worker()
+    worker::worker(router* r)
         : state_(state::init)
 		, shared_(true)
         , workerid_(0)
         , serviceuid_(1)
-        , start_time_(0)
         , work_time_(0)
-        , server_(nullptr)
+        , router_(r)
         , ios_(1)
         , work_(ios_)
     {
@@ -35,12 +34,13 @@ namespace moon
 
     void worker::run()
     {
+		register_commands();
+
         thread_ = std::thread([this]() {
 			state_.store(state::ready, std::memory_order_release);
-            CONSOLE_INFO(server_->logger(),"WORKER-%d start", workerid_);
-            start_time_ = time::millsecond();
+            CONSOLE_INFO(router_->logger(),"WORKER-%d start", workerid_);
             ios_.run();
-            CONSOLE_INFO(server_->logger(), "WORKER-%d stop", workerid_);
+            CONSOLE_INFO(router_->logger(), "WORKER-%d stop", workerid_);
         });
 		while (state_.load(std::memory_order_acquire) != state::ready);
     }
@@ -97,7 +97,7 @@ namespace moon
             MOON_CHECK(services_.try_emplace(s->id(), s).second, "serviceid repeated");
             s->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
-            CONSOLE_INFO(server_->logger(),"[WORKER %d] new service [%s:%u]", workerid(), s->name().data(), s->id());
+            CONSOLE_INFO(router_->logger(),"[WORKER %d] new service [%s:%u]", workerid(), s->name().data(), s->id());
         });    
     }
 
@@ -116,11 +116,11 @@ namespace moon
                 response_content = moon::format(R"({"name":"%s","serviceid":%u})",s->name().data(), s->id());    
                 if (!crashed)
                 {
-                    on_service_remove(id);
+                    router_->on_service_remove(id);
                 }
                 servicenum_.store(static_cast<uint32_t>(services_.size()));
-                server_->make_response(sender, "service destroy"sv,response_content, respid);
-                CONSOLE_INFO(server_->logger(), "[WORKER %d]service [%s:%u] destroy", workerid(), s->name().data(), s->id());
+                router_->make_response(sender, "service destroy"sv,response_content, respid);
+                CONSOLE_INFO(router_->logger(), "[WORKER %d]service [%s:%u] destroy", workerid(), s->name().data(), s->id());
                 services_.erase(iter);
 
                 auto m = message::create();
@@ -134,11 +134,11 @@ namespace moon
                 {
                     m->write_string("service exit");
                 }
-                get_server()->broadcast(id, m);
+				router_->broadcast(id, m);
             }
             else
             {
-                server_->make_response(sender, "error"sv, "remove_service:service not found"sv, respid, PTYPE_ERROR);
+                router_->make_response(sender, "error"sv, "remove_service:service not found"sv, respid, PTYPE_ERROR);
             }
 
             if (services_.size()==0 && (state_.load() == state::stopping))
@@ -166,7 +166,7 @@ namespace moon
                     mqueue_.swap(swapqueue_);
                     if (swapqueue_.size() > 1000)
                     {
-                        CONSOLE_DEBUG(server_->logger(), "worker %d queue_size too long, %zu", workerid_, swapqueue_.size());
+                        CONSOLE_DEBUG(router_->logger(), "worker %d queue_size too long, %zu", workerid_, swapqueue_.size());
                     }
                     for (auto& msg : swapqueue_)
                     {
@@ -189,16 +189,6 @@ namespace moon
         workerid_ = id;
     }
 
-    void worker::set_server(server * v)
-    {
-        server_ = v;
-    }
-
-    server* worker::get_server() const
-    {
-        return server_;
-    }
-
     service * worker::find_service(uint32_t serviceid) const
     {
         auto iter = services_.find(serviceid);
@@ -208,6 +198,32 @@ namespace moon
         }
         return nullptr;
     }
+
+	void worker::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
+	{
+		post([this,sender, cmd, responseid]{
+			auto params = moon::split<std::string>(cmd, ".");
+			if (params[0] == "worker"sv)
+			{
+				if (auto iter = commands_.find(params[2]); iter != commands_.end())
+				{
+					router_->make_response(sender, "", iter->second(params), responseid);
+				}
+			}
+			else if (params[0] == "service"sv)
+			{
+				uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
+				if (service* s = find_service(serviceid); s != nullptr)
+				{
+					s->runcmd(sender, cmd, responseid);
+				}
+				else
+				{
+					router_->make_response(sender, "error"sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
+				}
+			}
+		});
+	}
 
     void worker::shared(bool v)
     {
@@ -249,21 +265,6 @@ namespace moon
         });
     }
 
-    void worker::worker_time(uint32_t sender, uint32_t respid)
-    {
-        post([this, sender, respid]() {
-            auto cur = time::millsecond();
-            auto total_time  = cur - start_time_;
-            total_time = total_time == 0 ? 1 : total_time;
-
-            auto percent = static_cast<float>(work_time_) / static_cast<float>(total_time);
-            auto response_content = moon::format(R"(["worker%d",%.2f])", workerid(), percent*100);
-            server_->make_response(sender,"",response_content, respid);
-            start_time_ = cur;
-            work_time_ = 0;
-        });
-    }
-
     void worker::handle_one(service* ser,const message_ptr_t & msg)
     {
         if (msg->broadcast())
@@ -284,10 +285,38 @@ namespace moon
             ser = find_service(msg->receiver());
             if (nullptr == ser)
             {
-                server_->make_response(msg->sender(), "error", "call dead service.", msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "error", "call dead service.", msg->responseid(), PTYPE_ERROR);
                 return;
             }
         }
         ser->handle_message(msg);
     }
+
+	void worker::register_commands()
+	{
+		{
+			auto hander = [this](const std::vector<std::string>& params) {
+				(void)params;
+				auto response = moon::format(R"({"work_time":%lld})", work_time_);
+				work_time_ = 0;
+				return response;
+			};
+			commands_.try_emplace("worktime", hander);
+		}
+		
+		{
+			auto hander = [this](const std::vector<std::string>& params) {
+				(void)params;
+				std::string content;
+				content.append("[");
+				for (auto& it : services_)
+				{
+					content.append(moon::format(R"({"name":%s,"serviceid":%u})", it.second->name().data(),it.second->id()));
+				}
+				content.append("]");
+				return content;
+			};
+			commands_.try_emplace("services", hander);
+		}
+	}
 }

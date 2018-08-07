@@ -15,7 +15,7 @@ namespace moon
     class log;
 	DECLARE_SHARED_PTR(component);
 
-    class MOON_EXPORT component
+    class component
     {
     public:
         component() noexcept;
@@ -76,7 +76,7 @@ namespace moon
         bool ok() const;
 
         void ok(bool v);
-    protected:
+
         void set_parent(component* v);
 
         virtual void init() {}
@@ -86,7 +86,7 @@ namespace moon
         virtual void destroy();
 
         virtual void update();
-
+	protected:
         component_ptr_t get_component_imp(const std::string& name) const;
 
         bool add_component_imp(const std::string& name,component_ptr_t v);

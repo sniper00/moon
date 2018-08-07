@@ -120,6 +120,8 @@ int main(int argc, char*argv[])
     std::shared_ptr<server> server_ = std::make_shared<server>();
     wk_server = server_;
 
+	auto router_ = server_->get_router();
+
     register_signal();
 
     luaS_initshr();  /* init global short string table */
@@ -127,6 +129,7 @@ int main(int argc, char*argv[])
         sol::state lua;
         try
         {
+			MOON_CHECK(path::exist("config.json"), "can not found config file: config.json");
             moon::server_config_manger scfg;
             MOON_CHECK(scfg.parse(moon::file::read_all_text("config.json"), sid), "failed");
             lua.open_libraries();
@@ -137,7 +140,7 @@ int main(int argc, char*argv[])
             lua_bind.bind_path()
                 .bind_log(server_->logger());
 
-            server_->register_service("lua", []()->service_ptr_t {
+			router_->register_service("lua", []()->service_ptr_t {
                 return std::make_shared<lua_service>();
             });
 
@@ -153,24 +156,24 @@ int main(int argc, char*argv[])
             auto c = scfg.find(sid);
             MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.",sid));
 
-            server_->set_env("sid", std::to_string(c->sid));
-            server_->set_env("name", c->name);
-            server_->set_env("inner_host", c->inner_host);
-            server_->set_env("outer_host", c->outer_host);
-            server_->set_env("server_config", scfg.config());
+			router_->set_env("sid", std::to_string(c->sid));
+			router_->set_env("name", c->name);
+			router_->set_env("inner_host", c->inner_host);
+			router_->set_env("outer_host", c->outer_host);
+			router_->set_env("server_config", scfg.config());
 
             server_->init(c->thread, c->log);
             server_->logger()->set_level(c->loglevel);
             for (auto&s : c->services)
             {
-                MOON_CHECK(0 != server_->new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
+                MOON_CHECK(0 != router_->new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
             }
 
             if (!c->startup.empty())
             {
                 MOON_CHECK(moon::path::extension(c->startup) == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [c, &server_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
-                    return  server_->new_service(service_type, unique, shareth, workerid, config);
+                module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
+                    return  router_->new_service(service_type, unique, shareth, workerid, config);
                 });
                 lua.script_file(c->startup);
             }
