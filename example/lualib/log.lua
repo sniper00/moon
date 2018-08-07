@@ -35,16 +35,24 @@ end
 
 local logV = c.LOGV
 
+local function do_log(bcle,level,fmt, ... )
+    local str = string_format(fmt, ...)
+    local traceback = string_split(debug_traceback("", 2), "\n")
+    logV(bcle, level, table.concat({str,"(",string_trim(traceback[2]),")"}))
+end
+
 print = function(...)
-    local tb = {...}
-    local str = ""
-    for _, v in pairs(tb) do
-        if #str > 0 then
-            str = str .. "    "
-        end
-        str = str .. tostring(v)
+    local tb = table.pack(...)
+    local len = #tb
+    for i=1,len do
+        tb[i] = tostring(tb[i])
+        -- if tb[i] == nil then
+        --     tb[i] = "nil"
+        -- else
+
+        -- end
     end
-    logV(true, M.LOG_INFO, str)
+    logV(true, M.LOG_INFO, table.concat(tb,"    "))
 end
 
 local print = print
@@ -117,22 +125,22 @@ function M.dump(value, desciption, nesting, _print)
 end
 
 function M.error(fmt, ...)
-    logV(true, M.LOG_ERROR, string_format(fmt, ...))
+    do_log(true, M.LOG_ERROR,fmt,...)
 end
 
 function M.warn(fmt, ...)
-    logV(true, M.LOG_WARN, string_format(fmt, ...))
+    do_log(true, M.LOG_WARN,fmt,...)
 end
 
 function M.debug(fmt, ...)
     if M.LOG_DEBUG <= M.LOG_LEVEL then
-        logV(false, M.LOG_DEBUG, string_format(fmt, ...))
+        do_log(false, M.LOG_DEBUG,fmt,...)
     end
 end
 
 function M.info(fmt, ...)
     if M.LOG_INFO <= M.LOG_LEVEL then
-        logV(true, M.LOG_INFO, string_format(fmt, ...))
+        do_log(true, M.LOG_INFO,fmt,...)
     end
 end
 

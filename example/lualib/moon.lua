@@ -255,13 +255,12 @@ end
 	@param 可选，为true时可以 使用协程等待移除结果
 ]]
 function moon.remove_service(sid, bresponse)
-    local header = "rmservice." .. sid
     if bresponse then
         local rspid = make_response()
-        core.runcmd(moon.sid(), "", header, rspid)
+        core.remove_service(sid,sid_,rspid,false)
         return co_yield()
     else
-        core.runcmd(0, "", header, 0)
+        core.remove_service(sid_,0,0,false)
     end
 end
 
@@ -270,18 +269,6 @@ end
 ]]
 function moon.removeself()
     moon.remove_service(sid_)
-end
-
-function moon.query_worktime(workerid, bresponse)
-    local header = "workertime." .. workerid
-
-    if bresponse then
-        local rspid = make_response()
-        core.runcmd(moon.sid(), "", header, rspid)
-        return co_yield()
-    else
-        core.runcmd(0, "", header, 0)
-    end
 end
 
 --[[
@@ -388,9 +375,18 @@ function moon.co_remove_service(serviceid)
     return moon.remove_service(serviceid, true)
 end
 
-function moon.co_query_worktime(workerid)
-    return moon.query_worktime(workerid, true)
+function moon.co_runcmd(command)
+    local rspid = make_response()
+    core.runcmd(moon.sid(), command, rspid)
+    return co_yield()
 end
+
+-- function moon.co_query_worktime(workerid)
+--     local header = "workertime." .. workerid
+--     local rspid = make_response()
+--     core.runcmd(moon.sid(), "", header, rspid)
+--     return co_yield()
+-- end
 
 --[[
 	send-response 形式调用，发送消息附带一个responseid，对方收到后把
