@@ -130,7 +130,13 @@ project "protobuf"
         defines {"LUA_BUILD_AS_DLL"} -- windows下动态库导出宏定义
         buildoptions {"/TP"} -- windows 下强制用C++编译，默认会根据文件后缀名选择编译
 
--- lua版mysql, 需要连接 mysql client库, 如果需要lua mysql 客户端，取消下面注释
+--[[
+    lua版mysql,如果需要lua mysql 客户端，取消下面注释.
+    依赖： 需要连接 mysql C client库,
+    1. windows 下需要设置MYSQL_HOME.
+    2. Linux 下需要确保mysql C client头文件目录和库文件目录正确
+]]
+
 -- project "mysql"
 --     location "build/lualib/mysql"
 --     kind "SharedLib"
@@ -142,14 +148,18 @@ project "protobuf"
 --     links{"lua53"}
 --     postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/clib/"} -- 编译完后拷贝到example目录
 --     filter { "system:windows" }
---         defines {"LUA_BUILD_AS_DLL","SOL_CHECK_ARGUMENTS"}
---         assert(os.getenv("MYSQL_HOME"),"please set mysql environment 'MYSQL_HOME'")
---         includedirs {os.getenv("MYSQL_HOME").. "/include"}
---         libdirs{os.getenv("MYSQL_HOME").. "/lib"} -- 搜索目录
---         links{"libmysql"}
+--         defines {"LUA_BUILD_AS_DLL"}
+--         if os.istarget("windows") then
+--             assert(os.getenv("MYSQL_HOME"),"please set mysql environment 'MYSQL_HOME'")
+--             includedirs {os.getenv("MYSQL_HOME").. "/include"}
+--             libdirs{os.getenv("MYSQL_HOME").. "/lib"} -- 搜索目录
+--             links{"libmysql"}
+--         end
 --     filter { "system:linux" }
---         assert(os.isdir("/usr/include/mysql"),"please make sure you have install mysql, or modify the default include path,'/usr/include/mysql'")
---         assert(os.isdir("/usr/lib64/mysql"),"please make sure you have install mysql, or modify the default lib path,'/usr/lib64/mysql'")
---         includedirs {"/usr/include/mysql"}
---         libdirs{"/usr/lib64/mysql"} -- 搜索目录
---         links{"mysqlclient"}
+--         if os.istarget("linux") then
+--             assert(os.isdir("/usr/include/mysql"),"please make sure you have install mysql, or modify the default include path,'/usr/include/mysql'")
+--             assert(os.isdir("/usr/lib64/mysql"),"please make sure you have install mysql, or modify the default lib path,'/usr/lib64/mysql'")
+--             includedirs {"/usr/include/mysql"}
+--             libdirs{"/usr/lib64/mysql"} -- 搜索目录
+--             links{"mysqlclient"}
+--         end
