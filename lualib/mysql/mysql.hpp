@@ -48,20 +48,9 @@ namespace db
 			std::string sql;
 		};
 
-		struct connect_info
-		{
-			int port;
-			int timeout;
-			std::string host;
-			std::string user;
-			std::string password;
-			std::string database;
-		};
-
 		using stmt_ptr = std::shared_ptr<stmt>;
 
 		MYSQL* mysql_=nullptr;
-		connect_info connect_info_;
 		std::unordered_map<size_t, stmt_ptr> stmts_;
 	public:
 		mysql() = default;
@@ -108,16 +97,9 @@ namespace db
 
 			char value = 1;
 			mysql_options(mysql_, MYSQL_OPT_RECONNECT, &value);
-
-			connect_info_.host = host;
-			connect_info_.port = port;
-			connect_info_.user = user;
-			connect_info_.password = password;
-			connect_info_.timeout = timeout;
-			connect_info_.database = database;
 		}
 
-		bool connected()
+		bool connected() const noexcept
 		{
 			if (nullptr != mysql_)
 			{
@@ -127,17 +109,21 @@ namespace db
 			return false;
 		}
 
-		void reconnect()
-		{
-			connect(connect_info_.host, connect_info_.port, connect_info_.user, connect_info_.password, connect_info_.database, connect_info_.timeout);
-		}
-
-		int error_code()
+		int error_code() const noexcept
 		{
 			return mysql_errno(mysql_);
 		}
 
-		void execute(const std::string& sql)
+		int ping() const noexcept
+		{
+			if (nullptr != mysql_)
+			{
+				return mysql_ping(mysql_);
+			}
+			return 0;
+		}
+
+		void execute(const std::string& sql) const
 		{
 			do
 			{
@@ -172,7 +158,7 @@ namespace db
 		}
 
 		template<typename TablePolicy,typename... PolicyArgs>
-		std::shared_ptr<TablePolicy> query(const std::string& sql, PolicyArgs&&... args)
+		std::shared_ptr<TablePolicy> query(const std::string& sql, PolicyArgs&&... args) const
 		{
 			if (nullptr == mysql_)
 			{
@@ -244,7 +230,7 @@ namespace db
 			return dt;
 		}
 
-		void execute_stmt_param(size_t id, std::vector<MYSQL_BIND>& params)
+		void execute_stmt_param(size_t id, std::vector<MYSQL_BIND>& params) const
 		{
 			stmt_ptr m = nullptr;
 			if (auto iter = stmts_.find(id); iter == stmts_.end())
@@ -321,7 +307,7 @@ namespace db
 		}
 
 	private:
-		void format_throw(const char* fmt, ...)
+		void format_throw(const char* fmt, ...) const
 		{
 			if (nullptr == fmt)
 			{

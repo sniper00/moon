@@ -122,7 +122,7 @@ namespace db
 		}
 
 		template<typename T>
-		T& get(size_t row, size_t col) const
+		T& get(size_t row, size_t col)
 		{
 			assert(row <= rows_.size() && col <= cols_.size());
 			return std::get<T>(rows_[row][col]);
@@ -132,7 +132,7 @@ namespace db
 		const T& get(size_t row, size_t col) const
 		{
 			assert(row <= rows_.size() && col <= cols_.size());
-			return rows_[row][col];
+			return std::get<T>(rows_[row][col]);
 		}
 
 		const size_t column_size() const
