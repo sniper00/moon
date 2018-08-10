@@ -142,22 +142,14 @@ static int lmysql_errorcode(lua_State *L)
 	return 1;
 }
 
-static int lmysql_reconnect(lua_State *L)
+static int lmysql_ping(lua_State *L)
 {
 	lua_mysql_box* my = (lua_mysql_box*)lua_touserdata(L, 1);
 	if (my == nullptr || my->mysql == nullptr)
 		return luaL_error(L, "Invalid mysql pointer");
-	try
-	{
-		my->mysql->reconnect();
-	}
-	catch (std::exception& e)
-	{
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, e.what());
-		return 2;
-	}
-	lua_pushboolean(L, 1);
+
+	auto ret = my->mysql->ping();
+	lua_pushinteger(L, ret);
 	return 1;
 }
 
@@ -268,7 +260,7 @@ static int lmysql_create(lua_State *L)
 			{ "connect",lmysql_connect },
 			{ "connected",lmysql_connected },
 			{ "errorcode",lmysql_errorcode },
-			{ "reconnect",lmysql_reconnect },
+			{ "ping",lmysql_ping },
 			{ "query",lmysql_query },
 			{ "execute",lmysql_execute },
 			{ "prepare",lmysql_prepare },
