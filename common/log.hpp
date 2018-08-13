@@ -3,7 +3,7 @@
 #include "common/concurrent_queue.hpp"
 #include "common/time.hpp"
 #include "common/termcolor.hpp"
-#include "common/path.hpp"
+#include "common/directory.hpp"
 #include "common/object_pool.hpp"
 #include "common/buffer.hpp"
 #include "common/rwlock.hpp"
@@ -49,14 +49,14 @@ namespace moon
 
             if (!logfile.empty())
             {
-                auto dir = path::directory(logfile);
-                if (dir.size() != 0)
-                {
-                    if (!path::exist(dir))
-                    {
-                        MOON_CHECK(path::create_directory(dir),"create log dir failed");
-                    }
-                }
+				std::error_code ec;
+				auto parent_path = std::filesystem::path(logfile).parent_path();
+				if (!std::filesystem::exists(parent_path, ec))
+				{
+					std::filesystem::create_directories(parent_path, ec);
+					MOON_CHECK(!ec, ec.message().data());
+				}
+
                 ofs_.reset(new std::ofstream());
                 ofs_->open(logfile, std::ofstream::out | std::ofstream::trunc);
             }

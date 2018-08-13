@@ -1,6 +1,6 @@
 #include <csignal>
 #include "common/log.hpp"
-#include "common/path.hpp"
+#include "common/directory.hpp"
 #include "common/string.hpp"
 #include "common/time.hpp"
 #include "common/file.hpp"
@@ -94,9 +94,9 @@ int main(int argc, char*argv[])
     }
 
     std::string lock_file = moon::format("%d.lock", sid);
-    if (path::exist(moon::format("%d.lock", sid)))
+    if (directory::exists(moon::format("%d.lock", sid)))
     {
-        if (!path::remove(lock_file))
+        if (!directory::remove(lock_file))
         {
             printf("server sid=%d already start.\n", sid);
             return -1;
@@ -129,7 +129,7 @@ int main(int argc, char*argv[])
         sol::state lua;
         try
         {
-			MOON_CHECK(path::exist("config.json"), "can not found config file: config.json");
+			MOON_CHECK(directory::exists("config.json"), "can not found config file: config.json");
             moon::server_config_manger scfg;
             MOON_CHECK(scfg.parse(moon::file::read_all_text("config.json"), sid), "failed");
             lua.open_libraries();
@@ -137,7 +137,7 @@ int main(int argc, char*argv[])
 
             sol::table module = lua.create_table();
             lua_bind lua_bind(module);
-            lua_bind.bind_path()
+			lua_bind.bind_filesystem()
                 .bind_log(server_->logger());
 
 			router_->register_service("lua", []()->service_ptr_t {
@@ -171,7 +171,7 @@ int main(int argc, char*argv[])
 
             if (!c->startup.empty())
             {
-                MOON_CHECK(moon::path::extension(c->startup) == ".lua", "startup file must be lua script.");
+                MOON_CHECK(std::filesystem::path(c->startup).extension() == ".lua", "startup file must be lua script.");
                 module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
                     return  router_->new_service(service_type, unique, shareth, workerid, config);
                 });
@@ -189,7 +189,7 @@ int main(int argc, char*argv[])
     }
     luaS_exitshr();
     os.close();
-    path::remove(moon::format("%d.lock", sid));
+	directory::remove(moon::format("%d.lock", sid));
     return 0;
 }
 
