@@ -171,7 +171,7 @@ int main(int argc, char*argv[])
 
             if (!c->startup.empty())
             {
-                MOON_CHECK(std::filesystem::path(c->startup).extension() == ".lua", "startup file must be lua script.");
+                MOON_CHECK(std_filesystem::path(c->startup).extension() == ".lua", "startup file must be lua script.");
                 module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
                     return  router_->new_service(service_type, unique, shareth, workerid, config);
                 });

@@ -12,8 +12,10 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "string.hpp"
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
 #include <filesystem>
+namespace std_filesystem = std::filesystem;
 #else
 #include <experimental/filesystem>
+namespace std_filesystem = std::experimental::filesystem;
 #endif
 
 namespace moon
@@ -24,18 +26,18 @@ class directory
 	static std::string current_directory()
 	{
 		std::error_code ec;
-		auto p = std::filesystem::current_path(ec);
+		auto p = std_filesystem::current_path(ec);
 		return p.string();
 	}
 
 	static bool exists(const std::string &path)
 	{
 		std::error_code ec;
-		auto b = std::filesystem::exists(path, ec);
+		auto b = std_filesystem::exists(path, ec);
 		return (!ec)&&b;
 	}
 
-	//THandler bool(const std::filesystem::path& path,bool dir)
+	//THandler bool(const std_filesystem::path& path,bool dir)
 	template<typename THandler>
 	static void traverse_folder(const std::string& dir, int depth, THandler&&handler)
 	{
@@ -44,14 +46,14 @@ class directory
 			return;
 		}
 
-		if (!std::filesystem::exists(dir))
+		if (!std_filesystem::exists(dir))
 		{
 			return;
 		}
 
 		depth--;
 
-		for (auto&p : std::filesystem::directory_iterator(dir))
+		for (auto&p : std_filesystem::directory_iterator(dir))
 		{
 			if (!handler(p.path(),p.is_directory()))
 			{
@@ -67,28 +69,28 @@ class directory
 	static bool create_directory(const std::string& dir)
 	{
 		std::error_code ec;
-		std::filesystem::create_directories(dir, ec);
+		std_filesystem::create_directories(dir, ec);
 		return !ec;
 	}
 
     static bool remove(const std::string& dir)
     {
 		std::error_code ec;
-		std::filesystem::remove(dir, ec);
+		std_filesystem::remove(dir, ec);
 		return !ec;
     }
 
 	static bool remove_all (const std::string& dir)
 	{
 		std::error_code ec;
-		std::filesystem::remove_all(dir, ec);
+		std_filesystem::remove_all(dir, ec);
 		return !ec;
 	}
 
 	static std::string find_file(const std::string& path, const std::string& filename,int depth = 10)
 	{
 		std::string result;
-		traverse_folder(path, depth, [&result,&filename](const std::filesystem::path& p,bool isdir)
+		traverse_folder(path, depth, [&result,&filename](const std_filesystem::path& p,bool isdir)
 		{
 			if (!isdir)
 			{

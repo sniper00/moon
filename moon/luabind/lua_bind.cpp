@@ -89,7 +89,7 @@ const lua_bind & lua_bind::bind_util() const
 
 static void traverse_folder(const std::string& dir,int depth,sol::protected_function func,sol::this_state s)
 {
-	directory::traverse_folder(dir, depth, [func,s](const std::filesystem::path& path, bool isdir)->bool {
+	directory::traverse_folder(dir, depth, [func,s](const std_filesystem::path& path, bool isdir)->bool {
 		auto result = func(path.lexically_normal().string(), isdir);
 		if (!result.valid())
 		{
@@ -117,24 +117,24 @@ const lua_bind & lua_bind::bind_filesystem() const
 
 	sol::table tb = lua.create_named("path");
 	tb.set_function("parent_path", [](const moon::string_view_t& s) {
-		return std::filesystem::path(s).lexically_normal().parent_path().string();
+		return std_filesystem::path(s).lexically_normal().parent_path().string();
 	});
 
 	tb.set_function("filename", [](const moon::string_view_t& s) {
-		return std::filesystem::path(s).filename().string();
+		return std_filesystem::path(s).filename().string();
 	});
 
 	tb.set_function("extension", [](const moon::string_view_t& s) {
-		return std::filesystem::path(s).extension().string();
+		return std_filesystem::path(s).extension().string();
 	});
 
 	tb.set_function("root_path", [](const moon::string_view_t& s) {
-		return std::filesystem::path(s).root_path().string();
+		return std_filesystem::path(s).root_path().string();
 	});
 
 	//filename_without_extension
 	tb.set_function("stem", [](const moon::string_view_t& s) {
-		return std::filesystem::path(s).stem().string();
+		return std_filesystem::path(s).stem().string();
 	});
     return *this;
 }
