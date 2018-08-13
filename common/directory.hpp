@@ -10,7 +10,11 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #pragma once
 #include "macro_define.hpp"
 #include "string.hpp"
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
 #include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
 
 namespace moon
 {
