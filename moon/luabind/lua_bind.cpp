@@ -1,7 +1,7 @@
 #include "lua_bind.h"
 #include "common/time.hpp"
 #include "common/timer.hpp"
-#include "common/path.hpp"
+#include "common/directory.hpp"
 #include "common/buffer_writer.hpp"
 #include "common/hash.hpp"
 #include "common/http_request.hpp"
@@ -87,10 +87,10 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-static void traverse_folder(std::string path,int depth,sol::protected_function func,sol::this_state s)
+static void traverse_folder(const std::string& dir,int depth,sol::protected_function func,sol::this_state s)
 {
-	path::traverse_folder(path, depth, [func,s](const std::string& filepath, bool isdir)->bool {
-		auto result = func(filepath, isdir);
+	directory::traverse_folder(dir, depth, [func,s](const std_filesystem::path& path, bool isdir)->bool {
+		auto result = func(path.lexically_normal().string(), isdir);
 		if (!result.valid())
 		{
 			sol::error err = result;
@@ -108,16 +108,34 @@ static void traverse_folder(std::string path,int depth,sol::protected_function f
 	});
 }
 
-const lua_bind & lua_bind::bind_path() const
+const lua_bind & lua_bind::bind_filesystem() const
 {
     lua.set_function("traverse_folder", traverse_folder);
-    lua.set_function("exist", path::exist);
-    lua.set_function("create_directory", path::create_directory);
-    lua.set_function("directory", path::directory);
-    lua.set_function("extension", path::extension);
-    lua.set_function("filename", path::filename);
-    lua.set_function("name_without_extension", path::name_without_extension);
-    lua.set_function("current_directory", path::current_directory);
+    lua.set_function("exists", directory::exists);
+    lua.set_function("create_directory", directory::create_directory);
+    lua.set_function("current_directory", directory::current_directory);
+
+	sol::table tb = lua.create_named("path");
+	tb.set_function("parent_path", [](const moon::string_view_t& s) {
+		return std_filesystem::path(s).lexically_normal().parent_path().string();
+	});
+
+	tb.set_function("filename", [](const moon::string_view_t& s) {
+		return std_filesystem::path(s).filename().string();
+	});
+
+	tb.set_function("extension", [](const moon::string_view_t& s) {
+		return std_filesystem::path(s).extension().string();
+	});
+
+	tb.set_function("root_path", [](const moon::string_view_t& s) {
+		return std_filesystem::path(s).root_path().string();
+	});
+
+	//filename_without_extension
+	tb.set_function("stem", [](const moon::string_view_t& s) {
+		return std_filesystem::path(s).stem().string();
+	});
     return *this;
 }
 
