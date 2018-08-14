@@ -63,27 +63,27 @@ class path
 #endif
 	}
 
-	//THandler bool(const std::string&filepath,int type) type:0 folder,1 file
+	//THandler bool(const std::string&filepath,bool isdir)
 	template<typename THandler>
-	static void traverse_folder(std::string szPath, int nDepth, THandler&&handler)
+	static void traverse_folder(std::string dir, int depth, THandler&&handler)
 	{
-		if (nDepth < 0)
+		if (depth < 0)
 		{
 			return;
 		}
 
-		add_path_separator(szPath); //make sure end with path separator
+		add_path_separator(dir); //make sure end with path separator
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
 
-		if (_access(szPath.data(), 0) != 0)
+		if (_access(dir.data(), 0) != 0)
 		{
-			throw std::runtime_error(moon::format("Path[%s] does not exist.", szPath.data()).data());
+			throw std::runtime_error(moon::format("Path[%s] does not exist.", dir.data()).data());
 		}
 
-		nDepth--;
+		depth--;
 
 		_finddata_t fileinfo;
-		auto lhandle = _findfirst((szPath + "*").data(), &fileinfo);
+		auto lhandle = _findfirst((dir + "*").data(), &fileinfo);
 		if (lhandle == -1)
 		{
 			return;
@@ -91,19 +91,19 @@ class path
 
 		do
 		{
-			auto filename = szPath + fileinfo.name;
+			auto filename = dir + fileinfo.name;
 			moon::replace(filename, "/", "\\");
 			if (fileinfo.attrib & _A_SUBDIR)
 			{
 				if ((strcmp(fileinfo.name, (".")) != 0) && (strcmp(fileinfo.name, ("..")) != 0))
 				{
-					handler(filename, 0);
-					traverse_folder(filename, nDepth, handler);
+					handler(filename, true);
+					traverse_folder(filename, depth, handler);
 				}
 			}
 			else
 			{
-				if (!handler(filename, 1))
+				if (!handler(filename, false))
 				{
 					break;
 				}
@@ -111,30 +111,30 @@ class path
 		} while (_findnext(lhandle, &fileinfo) == 0);
 		_findclose(lhandle);
 #else
-		if (access(szPath.data(), 0) != 0)
+		if (access(dir.data(), 0) != 0)
 		{
-			throw std::runtime_error(moon::format("Path[%s] does not exist.", szPath.data()).data());
+			throw std::runtime_error(moon::format("Path[%s] does not exist.", dir.data()).data());
 		}
 
 		DIR *dp;
 		struct dirent *dirp;
 		struct stat filestat;
 
-		if ((dp = opendir(szPath.data())) == NULL)
+		if ((dp = opendir(dir.data())) == NULL)
 		{
 			return;
 		}
 
 		while ((dirp = readdir(dp)) != NULL)
 		{
-			auto filename = szPath + dirp->d_name;
+			auto filename = dir + dirp->d_name;
 			lstat(filename.data(), &filestat);
 			if (S_ISDIR(filestat.st_mode))
 			{
 				if (strcmp(dirp->d_name, ".") != 0 && strcmp(dirp->d_name, "..") != 0)
 				{
 					handler(filename, 0);
-					traverse_folder(filename, nDepth, handler);
+					traverse_folder(filename, depth, handler);
 				}
 			}
 			else
@@ -245,9 +245,9 @@ class path
 	static std::string find_file(const std::string& path, const std::string& filename)
 	{
 		std::string result;
-		traverse_folder(path, 5, [&result,&filename](const std::string& file, int type)
+		traverse_folder(path, 5, [&result,&filename](const std::string& file,bool isdir)
 		{
-			if (type == 1)
+			if (!isdir)
 			{
 				if (path::filename(file) == filename)
 				{
