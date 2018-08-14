@@ -87,10 +87,10 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-static void traverse_folder(std::string path,int nDepth,sol::protected_function func,sol::this_state s)
+static void traverse_folder(std::string path,int depth,sol::protected_function func,sol::this_state s)
 {
-	path::traverse_folder(path, nDepth, [func,s](const std::string& filepath, int nDepth)->bool {
-		auto result = func(filepath, nDepth);
+	path::traverse_folder(path, depth, [func,s](const std::string& filepath, bool isdir)->bool {
+		auto result = func(filepath, isdir);
 		if (!result.valid())
 		{
 			sol::error err = result;
