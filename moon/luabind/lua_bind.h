@@ -22,7 +22,7 @@ public:
 
     const lua_bind& bind_util() const;
 
-    const lua_bind& bind_path() const;
+    const lua_bind& bind_filesystem() const;
 
     const lua_bind& bind_log(moon::log* logger) const;
 
