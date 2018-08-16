@@ -203,23 +203,29 @@ namespace moon
 	{
 		post([this,sender, cmd, responseid]{
 			auto params = moon::split<std::string>(cmd, ".");
-			if (params[0] == "worker"sv)
+
+			switch (moon::chash_string(params[0].data()))
 			{
-				if (auto iter = commands_.find(params[2]); iter != commands_.end())
+				case moon::chash_string("worker"):
 				{
-					router_->make_response(sender, "", iter->second(params), responseid);
+					if (auto iter = commands_.find(params[2]); iter != commands_.end())
+					{
+						router_->make_response(sender, "", iter->second(params), responseid);
+					}
+					break;
 				}
-			}
-			else if (params[0] == "service"sv)
-			{
-				uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
-				if (service* s = find_service(serviceid); s != nullptr)
+				case moon::chash_string("service"):
 				{
-					s->runcmd(sender, cmd, responseid);
-				}
-				else
-				{
-					router_->make_response(sender, "error"sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
+					uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
+					if (service* s = find_service(serviceid); s != nullptr)
+					{
+						s->runcmd(sender, cmd, responseid);
+					}
+					else
+					{
+						router_->make_response(sender, "error"sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
+					}
+					break;
 				}
 			}
 		});
