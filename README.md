@@ -23,10 +23,10 @@ Windows Platform:
 
 Linux Platform:
 ```shell
-    #premake5.exe --os=linux gmake (in windows platform)
     premake5 gmake
-    make config=debug_linux
-    make config=release_linux
+    make
+    # Release版
+    # make config=release_linux
 ```
 **把编译完成后把bin目录的moon可执行文件拷贝到example目录。**
 
@@ -51,7 +51,7 @@ https://github.com/sniper00/BallGame
 - 命令行输入 `./moon 4` call示例
 
 ### Cluster Example
-服务间发送消息示例
+进程间发送消息示例
 - 命令行输入 `./moon 5`
 - 命令行输入 `./moon 6`
 
