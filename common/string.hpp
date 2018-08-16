@@ -294,4 +294,9 @@ namespace moon
 
     using iequal_string_functor_t = iequal_string_functor<std::string>;
     using iequal_string_view_functor_t = iequal_string_functor<string_view_t>;
+
+	inline constexpr size_t chash_string(const char* str, size_t seed = 0)
+	{
+		return 0 == *str ? seed : chash_string(str + 1, seed ^ (*str + 0x9e3779b9 + (seed << 6) + (seed >> 2)));
+	}
 };
