@@ -106,27 +106,32 @@ namespace moon
 		auto params = moon::split<std::string>(cmd, ".");
 		if (params.size() < 3)
 		{
-			make_response(sender, "error"sv, moon::format("router::runcmd param too few: %s",cmd.data()), responseid, PTYPE_ERROR);
+			make_response(sender, "error"sv, moon::format("router::runcmd param too few: %s", cmd.data()), responseid, PTYPE_ERROR);
 			return;
 		}
 
-		if (params[0] == "worker"sv)
+		switch (moon::chash_string(params[0].data()))
 		{
-			uint32_t workerid = moon::string_convert<uint32_t>(params[1]);
-			if (workerid_valid(workerid))
+		case moon::chash_string("worker"):
 			{
-				workers_[workerid - 1]->runcmd(sender,cmd,responseid);
-				return;
+				uint32_t workerid = moon::string_convert<uint32_t>(params[1]);
+				if (workerid_valid(workerid))
+				{
+					workers_[workerid - 1]->runcmd(sender, cmd, responseid);
+					return;
+				}
+				break;
 			}
-		}
-		else if (params[0] == "service"sv)
-		{
-			uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
-			uint8_t workerid = worker_id(serviceid);
-			if (workerid_valid(workerid))
+		case moon::chash_string("service"):
 			{
-				workers_[workerid - 1]->runcmd(sender, cmd, responseid);
-				return;
+				uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
+				uint8_t workerid = worker_id(serviceid);
+				if (workerid_valid(workerid))
+				{
+					workers_[workerid - 1]->runcmd(sender, cmd, responseid);
+					return;
+				}
+				break;
 			}
 		}
 
