@@ -177,7 +177,7 @@ namespace moon
 	bool router::register_service(const std::string & type, register_func f)
 	{
 		auto ret = regservices_.emplace(type, f);
-		MOON_DCHECK(ret.second, moon::format("already registed message type[%s].", type.data()).data());
+		MOON_DCHECK(ret.second, moon::format("already registed service type[%s].", type.data()).data());
 		return ret.second;
 	}
 

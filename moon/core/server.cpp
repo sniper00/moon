@@ -147,8 +147,6 @@ namespace moon
 			delete (*iter);
 		}
 
-		workers_.clear();
-
 		CONSOLE_INFO(logger(), "STOP");
 		default_log_.wait();
 	}

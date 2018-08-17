@@ -31,10 +31,6 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
     case CTRL_C_EVENT:
         svr->stop();
-        while (svr->workernum() > 0)
-        {
-            thread_sleep(10);
-        }
         return TRUE;
     default:
         break;
