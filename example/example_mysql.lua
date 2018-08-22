@@ -2,11 +2,19 @@ local mysql = require("mysql")
 
 local conn = mysql.create()
 
-local ret,errmsg = conn:connect("192.168.182.123", 3306, "moon", "12345", "mytest",2)
+local ret,errmsg = conn:connect("127.0.0.1", 3306, "root", "4321", "mysql",0)
 print(ret,errmsg)
 
 local result = conn:query("select * from article_detail;")
-log.dump(result)
+if result then
+    for _,row in pairs(result) do
+        print("[")
+        for _,v in pairs(row) do
+            print(" ",v)
+        end
+        print("]")
+    end
+end
 
 local create_table = [[
     DROP TABLE IF EXISTS `article_detail`;
