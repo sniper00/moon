@@ -149,5 +149,17 @@
                 "port": "8001"
             }
         ]
+    },
+    {
+        "sid": 8,
+        "name": "server_#sid",
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "example_mysql",
+                "file": "example_mysql.lua"
+            }
+        ]
     }
 ]
