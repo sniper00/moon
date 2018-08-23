@@ -27,16 +27,14 @@ namespace moon
 		template<typename T>
 		bool write_front(const T& t)
 		{
-            static_assert(!std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be not point or array");
-            static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
+            static_assert(std::is_trivially_copyable<T>::value&& !std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be trivially copyable");
 			return buffer_.write_front(&t, 0, 1);
 		}
 
 		template<typename T>
 		bool write_front(const T* t,size_t count)
 		{
-            static_assert(!std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be not point or array");
-            static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
+			static_assert(std::is_trivially_copyable<T>::value && !std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be trivially copyable");
 			return buffer_.write_front(t, 0, count);
 		}
 
@@ -49,7 +47,7 @@ namespace moon
 		template<typename T>
 		void write_vector(const std::vector<T>& t)
 		{
-			static_assert(std::is_pod<T>::value, "type T must be pod.");
+			static_assert(std::is_trivially_copyable<T>::value && !std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be trivially copyable");
 			write(t.size());
 			for (auto& it : t)
 			{
@@ -60,7 +58,7 @@ namespace moon
 		template<typename T>
 		void write_array(const T* t, size_t count)
 		{
-			static_assert(std::is_pod<T>::value, "type T must be pod.");
+			static_assert(std::is_trivially_copyable<T>::value && !std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be trivially copyable");
 			buffer_.write_back(t, 0, count);
 		}
 
@@ -80,7 +78,7 @@ namespace moon
 		template<typename T>
 		void write_imp(const T & t)
 		{
-			static_assert(std::is_pod<T>::value, "type T must be pod.");
+			static_assert(std::is_trivially_copyable<T>::value && !std::is_pointer<T>::value && !std::is_array<T>::value, "type T must be trivially copyable");
 			buffer_.write_back(&t, 0, 1);
 		}
 
