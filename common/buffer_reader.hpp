@@ -60,7 +60,7 @@ namespace moon
 			!std::is_same<T, std::string>::value, T>::type
 			read()
 		{
-			static_assert(std::is_pod<T>::value, "type T must be pod.");
+			static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable.");
 			return _read<T>();
 		}
 

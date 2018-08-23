@@ -44,8 +44,8 @@ namespace moon
 
 	template<typename T> void net2host(T*);    // will generate link error
 	template<typename T> void host2net(T*);  // will generate link error
-	inline void net2host(uint8_t&) {}
-	inline void net2host(int8_t&) {}
-	inline void host2net(uint8_t&) { }
-	inline void host2net(int8_t&) { }
+	inline void net2host(uint8_t*) {}
+	inline void net2host(int8_t*) {}
+	inline void host2net(uint8_t*) { }
+	inline void host2net(int8_t*) { }
 }
