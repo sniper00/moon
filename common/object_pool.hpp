@@ -64,7 +64,7 @@ namespace moon
         }
 
         template<class... Args>
-        object_pointer_t create(Args... args)
+        object_pointer_t create(Args&&... args)
         {
             object_pointer_t t = nullptr;
             {
@@ -118,7 +118,7 @@ namespace moon
         shared_pointer_pool& operator=(const shared_pointer_pool&) = delete;
 
         template<class... Args>
-        std::shared_ptr<T> create(Args... args)
+        std::shared_ptr<T> create(Args&&... args)
         {
             auto p = pool_.create(std::forward<Args>(args)...);
             if (nullptr != p)
