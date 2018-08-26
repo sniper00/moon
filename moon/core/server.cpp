@@ -109,12 +109,9 @@ namespace moon
 			return;
 		}
 
-		for (int i = 0; i < 100; i++)
+		for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
 		{
-			for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
-			{
-				(*iter)->stop();
-			}
+			(*iter)->stop();
 		}
     }
 
