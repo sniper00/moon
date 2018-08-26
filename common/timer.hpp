@@ -168,6 +168,11 @@ namespace moon
             tick_ += (now_tick - prew_tick_);
             prew_tick_ = now_tick;
 
+			if (tick_ > 100)
+			{
+				printf("warning timer update takes too long : %lldms\r\n", tick_);
+			}
+
             auto& wheels = wheels_;
             while (tick_ >= PRECISION)
             {
