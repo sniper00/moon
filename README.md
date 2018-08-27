@@ -28,7 +28,6 @@ Linux Platform:
     # Release版
     # make config=release_linux
 ```
-**把编译完成后把bin目录的moon可执行文件拷贝到example目录。**
 
 ## Example
 
