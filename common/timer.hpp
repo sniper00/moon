@@ -30,13 +30,17 @@ namespace moon
         class timer_context
         {
         public:
-            static constexpr int32_t  TIMER_INFINITE = -1;
-            static constexpr int32_t  TIMER_REMOVED = -2;
+			static constexpr int32_t times_mask = 0xFFFFFFF;
+
+			enum flag
+			{
+				removed = 1 << 29,
+				infinite = 1 << 30,
+			};
 
             timer_context(int32_t duration,int32_t repeattimes)
                 :duration_(duration)
-                ,repeattimes_(repeattimes)
-               
+                ,repeattimes_(repeattimes)   
             {
             }
 
@@ -49,10 +53,10 @@ namespace moon
                 return duration_;
             }
 
-            int32_t repeattimes(int32_t value) noexcept
+            bool repeattimes(int32_t value) noexcept
             {
                 repeattimes_ = value;
-                return repeattimes_;
+                return (repeattimes_& times_mask)>0;
             }
 
             int32_t repeattimes()  const noexcept
@@ -60,20 +64,20 @@ namespace moon
                 return repeattimes_;
             }
 
-            void remove() noexcept
-            {
-                repeattimes_ = TIMER_REMOVED;
-            }
+			void set_flag(flag v) noexcept
+			{
+				repeattimes_ |= static_cast<int32_t>(v);
+			}
 
-            bool removed() const noexcept
-            {
-                return (repeattimes_ == TIMER_REMOVED);
-            }
+			bool has_flag(flag v) const noexcept
+			{
+				return ((repeattimes_& static_cast<int32_t>(v)) != 0);
+			}
 
-            bool forever() const noexcept
-            {
-                return (repeattimes_ == TIMER_INFINITE);
-            }
+			void clear_flag(flag v) noexcept
+			{
+				repeattimes_ &= ~static_cast<int32_t>(v);
+			}
         private:
             int32_t	duration_;
             int32_t	repeattimes_;
@@ -305,6 +309,8 @@ namespace moon
                 duration = PRECISION;
             }
 
+			assert(times < detail::timer_context::times_mask);
+
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
                 uuid_ = 1;
 
@@ -312,6 +318,11 @@ namespace moon
             {
                 ++uuid_;
             }
+
+			if (times <= 0)
+			{
+				times = (0|detail::timer_context::infinite);
+			}
 
             timerid_t id = uuid_;
             insert_timer(duration, id);
@@ -324,7 +335,7 @@ namespace moon
             auto iter = timers_.find(timerid);
             if (iter != timers_.end())
             {
-                iter->second.remove();
+				iter->second.set_flag(detail::timer_context::removed);
                 return;
             }
         }
@@ -349,10 +360,10 @@ namespace moon
             }
 
             auto&ctx = iter->second;
-            if (!ctx.removed())
+            if (!ctx.has_flag(detail::timer_context::removed))
             {
                 on_timer_(id);
-                if (ctx.forever() || ctx.repeattimes(ctx.repeattimes() - 1))
+                if (ctx.has_flag(detail::timer_context::infinite) || ctx.repeattimes(ctx.repeattimes() - 1))
                 {
                     return ctx.duration();
                 }
