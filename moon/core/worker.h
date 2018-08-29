@@ -78,6 +78,8 @@ namespace moon
 
 		void register_commands();
     private:
+		//To prevent post too many update event
+		std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
 		std::atomic<state> state_;
         std::atomic_bool shared_;
         uint8_t workerid_;

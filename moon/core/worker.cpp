@@ -258,6 +258,12 @@ namespace moon
 
     void worker::update()
     {
+		//update_state is true
+		if (update_state_.test_and_set(std::memory_order_acquire))
+		{
+			return;
+		}
+
         post([this] {
             auto begin_time = time::millsecond();
 
@@ -268,6 +274,8 @@ namespace moon
 
             auto difftime = time::millsecond() - begin_time;
             work_time_ += difftime;
+
+			update_state_.clear(std::memory_order_release);
         });
     }
 
