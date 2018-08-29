@@ -64,13 +64,14 @@ namespace moon
             w->start();
         }
 
-        int64_t prew_tick = time::millsecond();
-        int64_t prev_sleep_time = 0;
+        int64_t previous_tick = time::millsecond();
+        int64_t sleep_duration = 0;
         while (true)
         {
             auto now = time::millsecond();
-            auto diff = (now - prew_tick);
-            prew_tick = now;
+            auto diff = (now - previous_tick);
+			diff = (diff < 0) ? 0 : diff;
+			previous_tick = now;
 
             int stoped_worker_num = 0;
 
@@ -88,14 +89,14 @@ namespace moon
                 break;
             }
 
-            if (diff <= EVENT_UPDATE_INTERVAL + prev_sleep_time)
+            if (diff <= EVENT_UPDATE_INTERVAL + sleep_duration)
             {
-                prev_sleep_time = EVENT_UPDATE_INTERVAL + prev_sleep_time - diff;
-                thread_sleep(prev_sleep_time);
+				sleep_duration = EVENT_UPDATE_INTERVAL + sleep_duration - diff;
+                thread_sleep(sleep_duration);
             }
             else
             {
-                prev_sleep_time = 0;
+				sleep_duration = 0;
             }
         }
 
