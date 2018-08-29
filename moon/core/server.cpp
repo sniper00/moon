@@ -98,7 +98,6 @@ namespace moon
             {
 				sleep_duration = 0;
             }
-			CONSOLE_INFO(logger(), "main update");
         }
 
        wait();
