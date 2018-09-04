@@ -2,6 +2,7 @@
 #include "service.h"
 #include "common/log.hpp"
 #include "luabind/lua_bind.h"
+#include "luabind/lua_timer.hpp"
 #include "components/tcp/tcp.h"
 #include "common/buffer.hpp"
 
@@ -76,7 +77,7 @@ private:
     sol_function_t dispatch_;
     sol_function_t exit_;
     sol_function_t destroy_;
-    moon::timer_t timer_;
+    moon::lua_timer timer_;
 	uint32_t cache_uuid_;
 	std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
 
