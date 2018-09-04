@@ -18,7 +18,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-    using timerid_t = uint32_t;
+    using timer_id_t = uint32_t;
 
     namespace detail
     {
@@ -27,106 +27,51 @@ namespace moon
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
 
-        class timer_context
-        {
-        public:
-			static constexpr int32_t times_mask = 0xFFFFFFF;
-
-			enum flag
-			{
-				removed = 1 << 29,
-				infinite = 1 << 30,
-			};
-
-            timer_context(int32_t duration,int32_t repeattimes)
-                :duration_(duration)
-                ,repeattimes_(repeattimes)   
-            {
-            }
-
-            ~timer_context()
-            {
-            }
-
-            int32_t duration()  const noexcept
-            {
-                return duration_;
-            }
-
-            bool repeattimes(int32_t value) noexcept
-            {
-                repeattimes_ = value;
-                return (repeattimes_& times_mask)>0;
-            }
-
-            int32_t repeattimes()  const noexcept
-            {
-                return repeattimes_;
-            }
-
-			void set_flag(flag v) noexcept
-			{
-				repeattimes_ |= static_cast<int32_t>(v);
-			}
-
-			bool has_flag(flag v) const noexcept
-			{
-				return ((repeattimes_& static_cast<int32_t>(v)) != 0);
-			}
-
-			void clear_flag(flag v) noexcept
-			{
-				repeattimes_ &= ~static_cast<int32_t>(v);
-			}
-        private:
-            int32_t	duration_;
-            int32_t	repeattimes_;
-        };
-
-        template<typename TContainer, uint8_t TSize>
+        template<typename TContainer, uint8_t Size>
         class timer_wheel
         {
+			using container_t = TContainer;
         public:
             timer_wheel()
-                :m_head(0)
+                :head_(0)
             {
             }
 
-            TContainer& operator[](uint8_t pos)
+			container_t& operator[](uint8_t pos)
             {
-                assert(pos < TSize);
-                return m_array[pos];
+                assert(pos < Size);
+                return array_[pos];
             }
 
-            TContainer& front()
+			container_t& front()
             {
-                assert(m_head < TSize);
-                return m_array[m_head];
+                assert(head_ < Size);
+                return array_[head_];
             }
 
             void pop_front() noexcept
             {
-                auto tmp = ++m_head;
-                m_head = tmp % TSize;
+                auto tmp = ++head_;
+                head_ = tmp % Size;
             }
 
             bool round() const noexcept
             {
-                return m_head == 0;
+                return head_ == 0;
             }
 
             uint8_t size() const noexcept
             {
-                return TSize;
+                return Size;
             }
 
             size_t next_slot() const noexcept
             {
-                return m_head;
+                return head_;
             }
         private:
-            TContainer 	m_array[TSize];
-            uint32_t	m_head;
+			container_t 	array_[Size];
+            uint32_t	head_;
         };
     }
 
@@ -134,9 +79,9 @@ namespace moon
     class base_timer
     {
         //every wheel size max 255
-        static const uint8_t  WHEEL_SIZE = 255;
+        static constexpr int  WHEEL_SIZE = 255;
 
-        static const int TIMERID_SHIT = 32;
+        static constexpr int TIMERID_SHIT = 32;
 
         using timer_wheel_t = detail::timer_wheel<std::list<uint64_t>, WHEEL_SIZE>;
         using child_t = TChild;
@@ -172,7 +117,7 @@ namespace moon
             tick_ += (now_tick - prew_tick_);
             prew_tick_ = now_tick;
 
-			if (tick_ > 100)
+			if (tick_ > 1000)
 			{
 				printf("warning timer update takes too long : %lldms\r\n", tick_);
 			}
@@ -232,7 +177,7 @@ namespace moon
 
     protected:
         // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
-        uint64_t make_key(timerid_t id, uint32_t slots)
+        uint64_t make_key(timer_id_t id, uint32_t slots)
         {
             return ((static_cast<uint64_t>(id) << TIMERID_SHIT) | slots);
         }
@@ -242,7 +187,7 @@ namespace moon
             return (key >> (which_queue * 8)) & 0xFF;
         }
 
-        void insert_timer(int32_t duration, timerid_t id)
+        void insert_timer(int32_t duration, timer_id_t id)
         {
             auto diff = duration;
             auto offset = diff % PRECISION;
@@ -280,7 +225,7 @@ namespace moon
             {
                 auto key = expires.front();
                 expires.pop_front();
-                timerid_t id = static_cast<timerid_t>(key >> TIMERID_SHIT);
+                timer_id_t id = static_cast<timer_id_t>(key >> TIMERID_SHIT);
                 child_t* child = static_cast<child_t*>(this);
                 int32_t duration = child->on_timer(id);
                 if (duration != 0)
@@ -296,25 +241,101 @@ namespace moon
         std::vector <timer_wheel_t> wheels_;
     };
 
+	class timer_context
+	{
+	public:
+		static constexpr int32_t times_mask = 0xFFFFFFF;
+
+		enum flag
+		{
+			removed = 1 << 29,
+			infinite = 1 << 30,
+		};
+
+		timer_context(int32_t duration, int32_t times)
+			:duration_(duration)
+			, times_(times)
+		{
+		}
+
+		~timer_context()
+		{
+		}
+
+		int32_t duration()  const noexcept
+		{
+			return duration_;
+		}
+
+		bool times(int32_t value) noexcept
+		{
+			times_ = value;
+			return (times_& times_mask) > 0;
+		}
+
+		int32_t times()  const noexcept
+		{
+			return times_;
+		}
+
+		void set_flag(flag v) noexcept
+		{
+			times_ |= static_cast<int32_t>(v);
+		}
+
+		bool has_flag(flag v) const noexcept
+		{
+			return ((times_& static_cast<int32_t>(v)) != 0);
+		}
+
+		void clear_flag(flag v) noexcept
+		{
+			times_ &= ~static_cast<int32_t>(v);
+		}
+	private:
+		int32_t	duration_;
+		int32_t	times_;
+	};
 
     class timer:public base_timer<timer>
     {
-        static const int MAX_TIMER_NUM = (1 << 24) - 1;
-        using timer_context_t = detail::timer_context;
-    public:
-        timerid_t repeat(int32_t duration, int32_t times)
-        {
-            if (!on_timer_ || !on_remove_)
-            {
-                return 0;
-            }
+        static constexpr int MAX_TIMER_NUM = (1 << 24) - 1;
 
+		using timer_handler_t = std::function<void(timer_id_t)>;
+
+		friend class base_timer<timer>;
+        
+		class context:public timer_context
+		{
+		public:
+			context(int32_t duration, int32_t times, timer_handler_t handler)
+				:timer_context(duration, times)
+				, handler_(std::forward<timer_handler_t>(handler))
+			{
+			}
+
+			~context()
+			{
+			}
+
+			void  expired(timer_id_t id)
+			{
+				assert(nullptr != handler_);
+				handler_(id);
+			}
+		private:
+			timer_handler_t handler_;
+		};
+
+    public:
+        timer_id_t repeat(int32_t duration, int32_t times, timer_handler_t hander)
+        {
             if (duration < PRECISION)
             {
                 duration = PRECISION;
             }
 
-			assert(times < detail::timer_context::times_mask);
+			assert(times < timer_context::times_mask);
 
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
                 uuid_ = 1;
@@ -326,26 +347,27 @@ namespace moon
 
 			if (times <= 0)
 			{
-				times = (0|detail::timer_context::infinite);
+				times = (0|timer_context::infinite);
 			}
 
-            timerid_t id = uuid_;
+            timer_id_t id = uuid_;
             insert_timer(duration, id);
-            timers_.emplace(id, timer_context_t{ duration,times });
+            timers_.emplace(id, context{ duration,times, hander});
             return id;
         }
 
-        void remove(timerid_t timerid)
+        void remove(timer_id_t timerid)
         {
             auto iter = timers_.find(timerid);
             if (iter != timers_.end())
             {
-				iter->second.set_flag(detail::timer_context::removed);
+				iter->second.set_flag(timer_context::removed);
                 return;
             }
         }
 
-        timerid_t create_timerid()
+	private:
+        timer_id_t create_timerid()
         {
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
                 uuid_ = 1;
@@ -356,7 +378,7 @@ namespace moon
             return uuid_;
         }
 
-        int32_t on_timer(timerid_t id)
+        int32_t on_timer(timer_id_t id)
         {
             auto iter = timers_.find(id);
             if (iter == timers_.end())
@@ -365,35 +387,21 @@ namespace moon
             }
 
             auto&ctx = iter->second;
-            if (!ctx.has_flag(detail::timer_context::removed))
+            if (!ctx.has_flag(timer_context::removed))
             {
-                on_timer_(id);
-                if (ctx.has_flag(detail::timer_context::infinite) || ctx.repeattimes(ctx.repeattimes() - 1))
+				ctx.expired(id);
+                if (ctx.has_flag(timer_context::infinite) || ctx.times(ctx.times() - 1))
                 {
                     return ctx.duration();
                 }
             }
-            on_remove_(id);
             timers_.erase(iter);
             return 0;
         }
 
-        void set_remove_timer(const std::function<void(timerid_t)>& v)
-        {
-            on_remove_ = v;
-        }
-
-        void set_on_timer(const std::function<void(timerid_t)>& v)
-        {
-            on_timer_ = v;
-        }
     private:
         uint32_t uuid_ = 0;
-        std::unordered_map<uint32_t, timer_context_t> timers_;
-        std::function<void(timerid_t)> on_remove_;
-        std::function<void(timerid_t)> on_timer_;
-    };
-
-    using timer_t = timer;
+        std::unordered_map<uint32_t, context> timers_;
+	};
 }
 
