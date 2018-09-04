@@ -25,16 +25,16 @@ lua_bind::~lua_bind()
 {
 }
 
-const lua_bind & lua_bind::bind_timer(moon::timer_t* t) const
+const lua_bind & lua_bind::bind_timer(moon::lua_timer* t) const
 {
-    lua.set_function("repeated", &moon::timer_t::repeat, t);
-    lua.set_function("remove_timer", &moon::timer_t::remove, t);
-    lua.set_function("pause_timer", &moon::timer_t::stop_all_timer, t);
-    lua.set_function("start_all_timer", &moon::timer_t::start_all_timer, t);
+    lua.set_function("repeated", &moon::lua_timer::repeat, t);
+    lua.set_function("remove_timer", &moon::lua_timer::remove, t);
+    lua.set_function("pause_timer", &moon::lua_timer::stop_all_timer, t);
+    lua.set_function("start_all_timer", &moon::lua_timer::start_all_timer, t);
     return *this;
 }
 
-int new_table(lua_State* L)
+static int new_table(lua_State* L)
 {
     auto arrn = luaL_checkinteger(L, -2);
     auto hn = luaL_checkinteger(L, -1);
