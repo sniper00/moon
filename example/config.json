@@ -26,7 +26,7 @@
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12346",
-                    "protocol":2
+                    "protocol":"websocket"
                 }
             }
         ]
