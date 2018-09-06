@@ -31,7 +31,7 @@ namespace moon
                 auto ip = rapidjson::get_value<std::string>(&doc, "network.ip");
                 auto port = rapidjson::get_value<std::string>(&doc, "network.port");
                 auto type = rapidjson::get_value<std::string>(&doc, "network.type","listen");
-                auto protocol = rapidjson::get_value<int32_t>(&doc, "network.protocol",0);
+                auto protocol = rapidjson::get_value<std::string>(&doc, "network.protocol","default");
 
                 if (ip.empty() || port.empty())
                 {
@@ -40,7 +40,7 @@ namespace moon
                 }
 
                 auto n = s->template add_component<moon::tcp>(compname);
-                n->setprotocol(protocol_type(protocol));
+                n->setprotocol(protocol);
                 n->settimeout(timeout);
                 if (type == "listen")
                 {

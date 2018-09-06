@@ -65,7 +65,7 @@ function socket.new()
     n=n+1
     local tb = {}
     tb.sock = csrv.add_tcp("component_tcp"..(tostring(n)))
-    tb.sock:setprotocol(1)
+    tb.sock:setprotocol("custom")
     return setmetatable(tb,socket)
 end
 

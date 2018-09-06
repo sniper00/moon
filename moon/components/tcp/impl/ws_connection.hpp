@@ -266,7 +266,7 @@ namespace moon
             buf->write_back(s.data(), 0, s.size());
             if (bclose)
             {
-                buf->set_flag(buffer::flag::close);
+                buf->set_flag(static_cast<uint8_t>(buffer_flag::close));
             }
             base_connection::send(buf);
         }

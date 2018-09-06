@@ -111,9 +111,30 @@ namespace moon
         SAFE_DELETE(imp_);
     }
 
-    void tcp::setprotocol(protocol_type t)
+    void tcp::setprotocol(std::string flag)
     {
-        imp_->type_ = t;
+		moon::lower(flag);
+		switch (moon::chash_string(flag.data()))
+		{
+		case moon::chash_string("default"):
+		{
+			imp_->type_ = moon::protocol_type::protocol_default;
+			break;
+		}
+		case moon::chash_string("custom"):
+		{
+			imp_->type_ = moon::protocol_type::protocol_custom;
+			break;
+		}
+		case moon::chash_string("websocket"):
+		{
+			imp_->type_ = moon::protocol_type::protocol_websocket;
+			break;
+		}
+		default:
+			CONSOLE_WARN(logger(), "tcp::setprotocol Unsupported  protocol %s.Support: 'default' 'custom' 'websocket'.", flag.data());
+			break;
+		}
     }
 
     void tcp::settimeout(int seconds)
@@ -134,9 +155,31 @@ namespace moon
         } while (0);
     }
 
-    void tcp::set_enable_frame(frame_enable_type t)
+    void tcp::set_enable_frame(std::string flag)
     {
-        imp_->frame_type_ = t;
+		moon::lower(flag);
+		switch (moon::chash_string(flag.data()))
+		{
+		case moon::chash_string("r"):
+		{
+			imp_->frame_type_ = moon::frame_enable_type::receive;
+			break;
+		}
+		case moon::chash_string("w"):
+		{
+			imp_->frame_type_ = moon::frame_enable_type::send;
+			break;
+		}
+		case moon::chash_string("wr"):
+		case moon::chash_string("rw"):
+		{
+			imp_->frame_type_ = moon::frame_enable_type::both;
+			break;
+		}
+		default:
+			CONSOLE_WARN(logger(), "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
+			break;
+		}
     }
 
     bool tcp::listen(const std::string & ip, const std::string & port)
@@ -320,7 +363,7 @@ namespace moon
         {
             return false;
         }
-        data->set_flag(buffer::flag::close);
+        data->set_flag(static_cast<uint8_t>(buffer_flag::close));
         return iter->second->send(data);
     }
 

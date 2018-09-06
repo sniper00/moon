@@ -75,6 +75,8 @@ moon.init(function( config )
 
     server:listen(config.ip,config.port)
 
+    print("service http_example listen on",config.ip,config.port)
+
     moon.async(function()
         while true do
             local session = server:co_accept()

@@ -64,13 +64,13 @@ namespace moon
 
         virtual ~tcp();
 
-        void setprotocol(protocol_type t);
+        void setprotocol(std::string flag);
 
         void settimeout(int seconds);
 
         void setnodelay(uint32_t connid);
 
-        void set_enable_frame(frame_enable_type t);
+        void set_enable_frame(std::string flag);
 
         bool listen(const std::string& ip, const std::string& port);
 

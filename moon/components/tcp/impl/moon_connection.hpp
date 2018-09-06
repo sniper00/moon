@@ -33,7 +33,7 @@ namespace moon
 
         bool send(const buffer_ptr_t & data) override
         {
-            if (!data->has_flag(buffer::flag::pack_size))
+            if (!data->has_flag(static_cast<uint8_t>(buffer_flag::pack_size)))
             {
                 bool enable = (static_cast<int>(frame_type_)&static_cast<int>(frame_enable_type::send)) !=0;
                 if (data->size() > MAX_MSG_FRAME_SIZE)
@@ -43,14 +43,14 @@ namespace moon
                         error(asio::error_code(), int(network_logic_error::send_message_size_max),"send_message_size_max");
                         return false;
                     }         
-                    data->set_flag(buffer::flag::framing);
+                    data->set_flag(static_cast<uint8_t>(buffer_flag::framing));
                 }
                 else
                 {
                     message_size_t size = static_cast<message_size_t>(data->size());
                     host2net(size);
                     MOON_DCHECK(data->write_front(&size, 0, 1), "send_packsize write_front failed");
-                    data->set_flag(buffer::flag::pack_size);
+                    data->set_flag(static_cast<uint8_t>(buffer_flag::pack_size));
                 }
             }
             return base_connection_t::send(data);

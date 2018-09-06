@@ -39,6 +39,14 @@ namespace moon
 	constexpr  string_view_t STR_LF = "\n"sv;
 	constexpr  string_view_t STR_CRLF = "\r\n"sv;
 	constexpr  string_view_t STR_DCRLF = "\r\n\r\n"sv;
+
+	enum class buffer_flag:uint8_t
+	{
+		pack_size = 1 << 0,
+		close = 1 << 1,
+		framing = 1 << 2,
+		broadcast = 1 << 3,
+	};
 }
 
 

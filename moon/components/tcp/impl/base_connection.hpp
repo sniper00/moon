@@ -185,7 +185,7 @@ namespace moon
             while ((send_queue_.size() != 0) && (buffers_holder_.size() < 50))
             {
                 auto& msg = send_queue_.front();
-                if (msg->has_flag(buffer::flag::framing))
+                if (msg->has_flag(static_cast<uint8_t>(buffer_flag::framing)))
                 {
                     message_framing(buffers_holder_, msg);
                 }
