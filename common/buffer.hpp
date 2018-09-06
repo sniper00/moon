@@ -36,14 +36,6 @@ namespace moon
         using pointer = value_type * ;
         using const_pointer = const value_type*;
 
-        enum class flag
-        {
-            pack_size = 1 << 0,
-            close = 1 << 1,
-            framing = 1 << 2,
-            broadcast = 1 << 3,
-        };
-
         enum seek_origin
         {
             Begin,
@@ -156,19 +148,19 @@ namespace moon
             flag_ = 0;
         }
 
-        void set_flag(flag v) noexcept
+        void set_flag(uint8_t v) noexcept
         {
-            flag_ |= static_cast<uint8_t>(v);
+            flag_ |=v;
         }
 
-        bool has_flag(flag v) const noexcept
+        bool has_flag(uint8_t v) const noexcept
         {
-            return ((flag_& static_cast<uint8_t>(v)) != 0);
+            return ((flag_&v) != 0);
         }
 
-        void clear_flag(flag v) noexcept
+        void clear_flag(uint8_t v) noexcept
         {
-            flag_ &= ~static_cast<uint8_t>(v);
+            flag_ &= ~v;
         }
 
         //mark
