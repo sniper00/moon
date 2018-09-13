@@ -29,7 +29,7 @@ namespace moon
 
 		using register_func = service_ptr_t(*)();
 
-		router(std::vector<worker*>& workers, log* logger);
+		router(std::vector<std::shared_ptr<worker>>& workers, log* logger);
 
 		router(const router&) = delete;
 
@@ -82,7 +82,7 @@ namespace moon
 		bool try_add_serviceid(uint32_t serviceid);
 	private:
 		std::atomic<uint32_t> next_workerid_;
-		std::vector<worker*>& workers_;
+		std::vector<std::shared_ptr<worker>>& workers_;
 		std::unordered_map<std::string, register_func > regservices_;
 		mutable rwlock serviceids_lck_;
 		std::unordered_set<uint32_t> serviceids_;

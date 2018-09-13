@@ -39,7 +39,7 @@ namespace moon
 
         for (uint8_t i = 0; i != worker_num; i++)
         {
-			auto& w =workers_.emplace_back(new worker(&router_));
+			auto& w =workers_.emplace_back(std::make_shared<worker>(&router_));
             w->workerid(i+1);
         }
 
@@ -99,8 +99,7 @@ namespace moon
 				sleep_duration = 0;
             }
         }
-
-       wait();
+		wait();
     }
 
     void server::stop()
@@ -142,7 +141,6 @@ namespace moon
 		for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
 		{
 			(*iter)->wait();
-			delete (*iter);
 		}
 
 		CONSOLE_INFO(logger(), "STOP");

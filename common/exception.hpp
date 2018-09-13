@@ -50,10 +50,16 @@ namespace moon
     };
 }
 
-#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILE__,__LINE__};}
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? (strrchr(__FILE__, '\\') + 1):__FILE__)
+#else
+#define __FILENAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
+#endif
+
+#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILENAME__,__LINE__};}
 
 #ifdef DEBUG
 #define MOON_DCHECK(cnd,msg) MOON_CHECK((cnd),(msg))
 #else
-#define MOON_DCHECK(cnd,msg) MOON_CHECK((cnd),(msg))
+#define MOON_DCHECK(cnd,msg)
 #endif

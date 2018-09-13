@@ -129,7 +129,7 @@ void lua_service::set_on_timer(sol_function_t f)
 		if (!result.valid())
 		{
 			sol::error err = result;
-			CONSOLE_ERROR(logger(), err.what());
+			CONSOLE_ERROR(logger(),"%s", err.what());
 		}
 	});
 }
@@ -141,7 +141,7 @@ void lua_service::set_remove_timer(sol_function_t f)
 		if (!result.valid())
 		{
 			sol::error err = result;
-			CONSOLE_ERROR(logger(), err.what());
+			CONSOLE_ERROR(logger(),"%s", err.what());
 		}
 	});
 }
@@ -153,7 +153,7 @@ void lua_service::register_command(const std::string & command, sol_function_t f
 		if (!result.valid())
 		{
 			sol::error err = result;
-			CONSOLE_ERROR(logger(), err.what());
+			CONSOLE_ERROR(logger(),"%s", err.what());
 			return std::string(err.what());
 		}
 		else
@@ -169,7 +169,7 @@ bool lua_service::init(const string_view_t& config)
     service_config<lua_service> scfg;
     if (!scfg.parse(this, config))
     {
-        CONSOLE_ERROR(logger(), "Lua service parse config failed");
+        CONSOLE_ERROR(logger(),"Lua service parse config failed");
         return false;
     }
 
@@ -241,7 +241,7 @@ bool lua_service::init(const string_view_t& config)
                 {
                     error_ = true;
                     sol::error err = result;
-                    CONSOLE_ERROR(logger(), err.what());
+                    CONSOLE_ERROR(logger(),"%s", err.what());
                 }
             }
             else
@@ -271,7 +271,7 @@ void lua_service::start()
             if (!result.valid())
             {
                 sol::error err = result;
-                CONSOLE_ERROR(logger(), err.what());
+                CONSOLE_ERROR(logger(), "%s", err.what());
             }
         }
     }
@@ -287,10 +287,7 @@ void lua_service::dispatch(message* msg)
 
     try
     {
-        auto type = msg->type();
-        //network message will directly handle,check it's messsage type.
-        MOON_DCHECK(type != PTYPE_UNKNOWN, "recevice unknown type message");
-        auto result =  dispatch_(msg, type);
+        auto result =  dispatch_(msg, msg->type());
         if (!result.valid())
         {
             sol::error err = result;
@@ -335,7 +332,7 @@ void lua_service::exit()
                 if (!result.valid())
                 {
                     sol::error err = result;
-                    CONSOLE_ERROR(logger(), err.what());
+                    CONSOLE_ERROR(logger(), "%s", err.what());
                 }
                 return;
             }
@@ -360,7 +357,7 @@ void lua_service::destroy()
                 if (!result.valid())
                 {
                     sol::error err = result;
-                    CONSOLE_ERROR(logger(), err.what());
+                    CONSOLE_ERROR(logger(), "%s", err.what());
                 }
             }
         }

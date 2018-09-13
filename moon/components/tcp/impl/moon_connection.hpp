@@ -49,7 +49,8 @@ namespace moon
                 {
                     message_size_t size = static_cast<message_size_t>(data->size());
                     host2net(size);
-                    MOON_DCHECK(data->write_front(&size, 0, 1), "send_packsize write_front failed");
+					bool res = data->write_front(&size, 0, 1);
+                    MOON_DCHECK(res, "tcp::send write front failed");
                     data->set_flag(static_cast<uint8_t>(buffer_flag::pack_size));
                 }
             }

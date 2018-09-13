@@ -17,7 +17,7 @@ namespace moon
 {
     class router;
 
-    class worker
+    class worker: public std::enable_shared_from_this<worker>
     {
     public:
         static const uint16_t MAX_SERVICE_NUM = 0xFFFF;

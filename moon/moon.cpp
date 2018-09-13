@@ -113,11 +113,6 @@ int main(int argc, char*argv[])
     std::string lock_content = std::to_string(sid);
     os.write(lock_content.data(), lock_content.size());
 
-    std::shared_ptr<server> server_ = std::make_shared<server>();
-    wk_server = server_;
-
-	auto router_ = server_->get_router();
-
     register_signal();
 
     luaS_initshr();  /* init global short string table */
@@ -125,6 +120,11 @@ int main(int argc, char*argv[])
         sol::state lua;
         try
         {
+			std::shared_ptr<server> server_ = std::make_shared<server>();
+			wk_server = server_;
+
+			auto router_ = server_->get_router();
+
 			MOON_CHECK(path::exist("config.json"), "can not found config file: config.json");
             moon::server_config_manger scfg;
             MOON_CHECK(scfg.parse(moon::file::read_all_text("config.json"), sid), "failed");
@@ -160,27 +160,26 @@ int main(int argc, char*argv[])
 
             server_->init(c->thread, c->log);
             server_->logger()->set_level(c->loglevel);
+
+			if (!c->startup.empty())
+			{
+				MOON_CHECK(moon::path::extension(c->startup) == ".lua", "startup file must be lua script.");
+				module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
+					return  router_->new_service(service_type, unique, shareth, workerid, config);
+				});
+				lua.script_file(c->startup);
+			}
+
             for (auto&s : c->services)
             {
                 MOON_CHECK(0 != router_->new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
             }
-
-            if (!c->startup.empty())
-            {
-                MOON_CHECK(moon::path::extension(c->startup) == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
-                    return  router_->new_service(service_type, unique, shareth, workerid, config);
-                });
-                lua.script_file(c->startup);
-            }
-            server_->run();
+			server_->run();
         }
         catch (std::exception& e)
         {
             printf("ERROR:%s\n", e.what());
             printf("LUA TRACEBACK:%s\n", lua_traceback(lua.lua_state()));
-            LOG_ERROR(server_->logger(), e.what());
-            LOG_ERROR(server_->logger(), lua_traceback(lua.lua_state()));
         }
     }
     luaS_exitshr();

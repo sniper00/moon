@@ -36,11 +36,12 @@ namespace moon
     {
 		register_commands();
 
-        thread_ = std::thread([this]() {
+		auto self = shared_from_this();
+        thread_ = std::thread([this, self]() {
 			state_.store(state::ready, std::memory_order_release);
-            CONSOLE_INFO(router_->logger(),"WORKER-%d start", workerid_);
+            CONSOLE_INFO(router_->logger(), "WORKER-%d START", workerid_);
             ios_.run();
-            CONSOLE_INFO(router_->logger(), "WORKER-%d stop", workerid_);
+            CONSOLE_INFO(router_->logger(), "WORKER-%d STOP", workerid_);
         });
 		while (state_.load(std::memory_order_acquire) != state::ready);
     }
@@ -94,7 +95,8 @@ namespace moon
     void worker::add_service(const service_ptr_t & s)
     {
         post([this,s](){
-            MOON_CHECK(services_.try_emplace(s->id(), s).second, "serviceid repeated");
+			bool res = services_.try_emplace(s->id(), s).second;
+            MOON_CHECK(res, "serviceid repeated");
             s->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
             CONSOLE_INFO(router_->logger(),"[WORKER %d] new service [%s:%u]", workerid(), s->name().data(), s->id());

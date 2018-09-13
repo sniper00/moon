@@ -77,16 +77,12 @@ namespace moon
     {
         try
         {
-            if (msg->type() != PTYPE_SOCKET)
-            {
-                MOON_CHECK(id() == msg->receiver() || msg->receiver() == 0, "message receiver must be 0 or this serivice");
-            }
-
             dispatch(msg.get());
             //redirect message
             if (msg->receiver() != id() && msg->receiver() != 0)
             {
-                MOON_DCHECK(!msg->broadcast(), "can not redirect broadcast message");
+				bool b = msg->broadcast();
+                MOON_DCHECK(!b, "can not redirect broadcast message");
                 router_->send_message(msg);
             }
         }

@@ -15,7 +15,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	router::router(std::vector<worker*>& workers,log* logger)
+	router::router(std::vector<std::shared_ptr<worker>>& workers,log* logger)
 		:next_workerid_(0)
 		,workers_(workers)
 		,logger_(logger)
@@ -47,7 +47,7 @@ namespace moon
 		worker* wk;
 		if(workerid_valid(workerid))
 		{
-			wk = workers_[workerid - 1];
+			wk = workers_[workerid - 1].get();
 		}
 		else
 		{
@@ -145,7 +145,10 @@ namespace moon
 		MOON_DCHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
 		uint8_t id = worker_id(msg->receiver());
 		MOON_DCHECK(id > 0 && id <= workers_.size(), "invalid message receiver serviceid.");
-		workers_[id - 1]->send(msg);
+		if (id - 1 < workers_.size())
+		{
+			workers_[id - 1]->send(msg);
+		}
 	}
 
 	void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, const string_view_t& header, int32_t responseid, uint8_t type) const
@@ -253,10 +256,10 @@ namespace moon
 			auto& w = workers_[id];
 			if (!w->shared())
 				continue;
-			return w;
+			return w.get();
 		}
 
-		return workers_[id];
+		return workers_[id].get();
 	}
 
 	bool router::has_serviceid(uint32_t serviceid) const
@@ -278,7 +281,8 @@ namespace moon
 	void router::on_service_remove(uint32_t serviceid)
 	{
 		UNIQUE_LOCK_GURAD(serviceids_lck_);
-		MOON_CHECK(serviceids_.erase(serviceid) == 1, "erase failed!");
+		size_t count = serviceids_.erase(serviceid);
+		MOON_CHECK(count == 1, "erase failed!");
 	}
 
 	asio::io_service & router::get_io_service(uint32_t serviceid)
