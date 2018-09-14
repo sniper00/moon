@@ -377,7 +377,7 @@ void lua_service::error(const std::string & msg)
     removeself(true);
     if (unique())
     {
-        CONSOLE_ERROR(logger(), "unique server %s crashed, server will stop.", name().data());
+        CONSOLE_ERROR(logger(), "unique service %s crashed, server will stop.", name().data());
         get_router()->stop_server();
     }
 }

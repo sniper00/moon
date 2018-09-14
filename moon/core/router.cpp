@@ -141,10 +141,10 @@ namespace moon
 
 	void router::send_message(const message_ptr_t & msg) const
 	{
-		MOON_DCHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
-		MOON_DCHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
+		MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
+		MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
 		uint8_t id = worker_id(msg->receiver());
-		MOON_DCHECK(id > 0 && id <= workers_.size(), "invalid message receiver serviceid.");
+		MOON_CHECK(id > 0 && id <= workers_.size(), "invalid message receiver serviceid.");
 		if (id - 1 < workers_.size())
 		{
 			workers_[id - 1]->send(msg);

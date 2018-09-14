@@ -10,6 +10,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #pragma once
 #include <exception>
 #include <string>
+#include <cstring>
 namespace moon
 {
     class error : public std::runtime_error {
