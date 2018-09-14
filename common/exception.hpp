@@ -54,7 +54,7 @@ namespace moon
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? (strrchr(__FILE__, '\\') + 1):__FILE__)
 #else
-#define __FILENAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
+#define __FILENAME__ __FILE__
 #endif
 
 #define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILENAME__,__LINE__};}
