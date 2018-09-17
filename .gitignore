@@ -15,6 +15,7 @@
 *.tlog
 *.idb
 .vs/
+.vscode/
 build/
 bin/
 obj/
