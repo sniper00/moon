@@ -28,7 +28,7 @@ local function http_example(session)
         while true do
             local data, err = session:co_read('\r\n\r\n')
             if not data then
-                --print(session.connid, err)
+                print(session.connid, err)
                 return
             else
                 --print(data)
