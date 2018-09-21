@@ -2,7 +2,7 @@
 #include "lua.hpp"
 #include "config.h"
 #include "common/buffer.hpp"
-#include "common/buffer_reader.hpp"
+#include "common/buffer_view.hpp"
 
 #define TYPE_NIL 0
 #define TYPE_BOOLEAN 1
@@ -85,7 +85,7 @@ namespace moon
 
             lua_settop(L, 1);
 
-            buffer_reader br(pdata, len);
+            buffer_view br(pdata, len);
 
             for (int i = 0;;i++)
             {
@@ -354,14 +354,14 @@ namespace moon
             }
         }
 
-        static void invalid_stream_line(lua_State *L, buffer_reader* buf, int line) {
+        static void invalid_stream_line(lua_State *L, buffer_view* buf, int line) {
             int len = (int)buf->size();
             luaL_error(L, "Invalid serialize stream %d (line:%d)", len, line);
         }
 
 #define invalid_stream(L,rb) invalid_stream_line(L,rb,__LINE__)
 
-        static lua_Integer get_integer(lua_State *L, buffer_reader* buf, int cookie) {
+        static lua_Integer get_integer(lua_State *L, buffer_view* buf, int cookie) {
             switch (cookie) {
             case TYPE_NUMBER_ZERO:
                 return 0;
@@ -395,21 +395,21 @@ namespace moon
             }
         }
 
-        static double get_real(lua_State *L, buffer_reader* buf) {
+        static double get_real(lua_State *L, buffer_view* buf) {
             double n;
             if (!buf->read(&n))
                 invalid_stream(L, buf);
             return n;
         }
 
-        static void * get_pointer(lua_State *L, buffer_reader* buf) {
+        static void * get_pointer(lua_State *L, buffer_view* buf) {
             void * userdata = 0;
             if (!buf->read(&userdata))
                 invalid_stream(L, buf);
             return userdata;
         }
 
-        static void get_buffer(lua_State *L, buffer_reader* buf, int len) {
+        static void get_buffer(lua_State *L, buffer_view* buf, int len) {
             if (int(buf->size()) < len) {
                 invalid_stream(L, buf);
             }
@@ -417,14 +417,14 @@ namespace moon
             buf->skip(len);
         }
 
-        static void unpack_one(lua_State *L, buffer_reader* buf) {
+        static void unpack_one(lua_State *L, buffer_view* buf) {
             uint8_t type;
             if (!buf->read(&type))
                 invalid_stream(L, buf);
             push_value(L, buf, type & 0x7, type >> 3);
         }
 
-        static void unpack_table(lua_State *L, buffer_reader* buf, int array_size) {
+        static void unpack_table(lua_State *L, buffer_view* buf, int array_size) {
             if (array_size == MAX_COOKIE - 1) {
                 uint8_t type;
                 if (!buf->read(&type))
@@ -453,7 +453,7 @@ namespace moon
             }
         }
 
-        static void push_value(lua_State *L, buffer_reader* buf, int type, int cookie) 
+        static void push_value(lua_State *L, buffer_view* buf, int type, int cookie) 
         {
             switch (type) {
             case TYPE_NIL:
