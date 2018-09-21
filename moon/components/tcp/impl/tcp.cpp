@@ -336,7 +336,6 @@ namespace moon
         {
             return;
         }
-		assert(nullptr != hander_);
 		msg->set_receiver(parent_->id());
 		parent_->handle_message(msg);
     }
