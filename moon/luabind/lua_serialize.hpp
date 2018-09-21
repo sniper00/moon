@@ -366,25 +366,25 @@ namespace moon
             case TYPE_NUMBER_ZERO:
                 return 0;
             case TYPE_NUMBER_BYTE: {
-                uint8_t n;
+				uint8_t n{};
                 if (!buf->read(&n))
                     invalid_stream(L, buf);
                 return n;
             }
             case TYPE_NUMBER_WORD: {
-                uint16_t n;
+                uint16_t n{};
                 if (!buf->read(&n))
                     invalid_stream(L, buf);
                 return n;
             }
             case TYPE_NUMBER_DWORD: {
-                int32_t n;
+                int32_t n{};
                 if (!buf->read(&n))
                     invalid_stream(L, buf);
                 return n;
             }
             case TYPE_NUMBER_QWORD: {
-                int64_t n;
+                int64_t n{};
                 if (!buf->read(&n))
                     invalid_stream(L, buf);
                 return n;
@@ -418,7 +418,7 @@ namespace moon
         }
 
         static void unpack_one(lua_State *L, buffer_view* buf) {
-            uint8_t type;
+            uint8_t type{};
             if (!buf->read(&type))
                 invalid_stream(L, buf);
             push_value(L, buf, type & 0x7, type >> 3);
@@ -426,7 +426,7 @@ namespace moon
 
         static void unpack_table(lua_State *L, buffer_view* buf, int array_size) {
             if (array_size == MAX_COOKIE - 1) {
-                uint8_t type;
+                uint8_t type{};
                 if (!buf->read(&type))
                     invalid_stream(L, buf);
                 int cookie = type >> 3;
@@ -478,7 +478,7 @@ namespace moon
                 break;
             case TYPE_LONG_STRING: {
                 if (cookie == 2) {
-                    uint16_t n;
+                    uint16_t n{};
                     if (!buf->read(&n))
                         invalid_stream(L, buf);
                     get_buffer(L, buf, n);
@@ -487,7 +487,7 @@ namespace moon
                     if (cookie != 4) {
                         invalid_stream(L, buf);
                     }
-                    uint32_t n;
+                    uint32_t n{};
                     if (!buf->read(&n))
                         invalid_stream(L, buf);
                     get_buffer(L, buf, n);
