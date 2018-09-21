@@ -139,9 +139,9 @@ namespace moon
             }
         }
 
-        void error(const asio::error_code& e, int logicerr, const std::string& lemsg = "") override
+        void error(const asio::error_code& e, int logicerr, const char* lerrmsg = nullptr) override
         {
-            (void)lemsg;
+			(void)lerrmsg;
             {
                 switch (logicerr)
                 {

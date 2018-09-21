@@ -465,6 +465,9 @@ reg_protocol {
         else -- message
             return seri.unpack(arg:buffer())
         end
+    end,
+    dispatch = function()
+        error("PTYPE_LUA dispatch not implemented")
     end
 }
 
@@ -544,6 +547,15 @@ reg_protocol {
             end
         end
         return true
+    end
+}
+
+reg_protocol{
+    name = "socket",
+    PTYPE = PTYPE_SOCKET,
+    pack = function(...) return ... end,
+    dispatch = function(msg)
+        error("PTYPE_SOCKET dispatch not implemented")
     end
 }
 

@@ -26,7 +26,6 @@ namespace moon
             //parse network config
             if (doc.HasMember("network"))
             {
-                std::string compname = rapidjson::get_value<std::string>(&doc, "network.name");
                 auto timeout = rapidjson::get_value<int32_t>(&doc, "network.timeout", 0);
                 auto ip = rapidjson::get_value<std::string>(&doc, "network.ip");
                 auto port = rapidjson::get_value<std::string>(&doc, "network.port");
@@ -39,7 +38,7 @@ namespace moon
                     return false;
                 }
 
-                auto n = s->template add_component<moon::tcp>(compname);
+                auto n = s->template add_component<moon::tcp>(TCP_COMP_NAME);
                 n->setprotocol(protocol);
                 n->settimeout(timeout);
                 if (type == "listen")

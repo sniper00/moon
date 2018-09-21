@@ -40,7 +40,7 @@ namespace moon
                 {
                     if (!enable)
                     {
-                        error(asio::error_code(), int(network_logic_error::send_message_size_max),"send_message_size_max");
+                        error(asio::error_code(), int(network_logic_error::send_message_size_max));
                         return false;
                     }         
                     data->set_flag(static_cast<uint8_t>(buffer_flag::framing));
@@ -89,7 +89,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(network_logic_error::ok));
+					error(e, int(logic_error_));
                     return;
                 }
 
@@ -115,7 +115,7 @@ namespace moon
 
                 if (header_ > MAX_NET_MSG_SIZE)
                 {
-                    error(asio::error_code(), int(network_logic_error::read_message_size_max),"read_message_size_max");
+                    error(asio::error_code(), int(network_logic_error::read_message_size_max));
                     base_connection_t::close();
                     return;
                 }
@@ -139,7 +139,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(network_logic_error::ok));
+					error(e, int(logic_error_));
                     return;
                 }
 

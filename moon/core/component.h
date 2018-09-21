@@ -15,7 +15,7 @@ namespace moon
     class log;
 	DECLARE_SHARED_PTR(component);
 
-    class component
+    class component:public std::enable_shared_from_this<component>
     {
     public:
         component() noexcept;

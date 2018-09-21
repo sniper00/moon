@@ -63,16 +63,15 @@ lua_service::~lua_service()
 {
 }
 
-moon::tcp * lua_service::add_tcp(const std::string & name)
+moon::tcp * lua_service::get_tcp()
 {
-    auto p = add_component<moon::tcp>(name);
-    return ((p != nullptr) ? p.get() : nullptr);
-}
-
-moon::tcp * lua_service::get_tcp(const std::string & name)
-{
-    auto p = get_component<moon::tcp>(name);
-    return ((p != nullptr) ? p.get() : nullptr);
+    auto p = get_component<moon::tcp>(TCP_COMP_NAME);
+	if (nullptr == p)
+	{
+		p = add_component<moon::tcp>(TCP_COMP_NAME);
+		return ((p != nullptr) ? p.get() : nullptr);
+	}
+    return p.get();
 }
 
 uint32_t lua_service::make_cache(const moon::buffer_ptr_t & buf)

@@ -226,30 +226,30 @@ namespace moon
             }));
         }
 
-        virtual void error(const asio::error_code& e, int lerrcode, const std::string& lemsg = "")
+        virtual void error(const asio::error_code& e, int lerrcode, const char* lerrmsg = nullptr)
         {
             //error
             {
                 auto msg = message::create();
                 std::string content;
-                if (e && e != asio::error::eof)
-                {
-                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
-                        , remote_addr_.data()
-                        , e.value()
-                        , e.message().data());
-                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
-                }
-
                 if (lerrcode)
                 {
-                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                    content = moon::format("{\"addr\":\"%s\",\"logic_errcode\":%d,\"errmsg\":\"%s\"}"
                         , remote_addr_.data()
                         , lerrcode
-                        , lemsg.data()
+                        , (lerrmsg==nullptr?logic_errmsg(lerrcode): lerrmsg)
                     );
-                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_logic_error));
+					msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
                 }
+				else if (e && e != asio::error::eof)
+				{
+					content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+						, remote_addr_.data()
+						, e.value()
+						, e.message().data());
+					msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
+				}
+
                 msg->write_string(content);
                 msg->set_sender(id_);
                 msg->set_type(PTYPE_SOCKET);

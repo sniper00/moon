@@ -9,6 +9,9 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #pragma once
 #include "config.h"
 #include "component.h"
+#include "service.h"
+#include "router.h"
+#include "worker.h"
 
 namespace moon
 {
@@ -25,18 +28,27 @@ namespace moon
         socket_accept =2,
         socket_recv = 3,
         socket_close =4,
-        socket_error = 5,
-        socket_logic_error = 6
+        socket_error = 5
     };
 
     enum class network_logic_error :std::uint8_t
     {
         ok = 0,
-        read_message_size_max = 1, // recv message size too long
+        read_message_size_max = 1, // read message size too long
         send_message_size_max = 2, // send message size too long
         timeout = 3, //socket read time out
-        client_close = 4, //closed
     };
+
+	inline const char* logic_errmsg(int logic_errcode)
+	{
+		static const char* errmsg[] = { 
+			"ok",
+			"read message size too long",
+			"send message size too long",
+			"timeout" 
+		};
+		return errmsg[logic_errcode];
+	}
 
     enum class read_delim :std::uint8_t
     {
@@ -54,8 +66,11 @@ namespace moon
         both = 3,
     };
 
+	class base_connection;
+
     class tcp:public component
     {
+		using connection_ptr_t = std::shared_ptr<base_connection>;
     public:
 
         friend class base_connection;
@@ -98,9 +113,25 @@ namespace moon
         void handle_message(const message_ptr_t& msg);
 
         void check();
+
+		asio::io_service& io_service();
+
+		uint32_t make_connid();
+
+		void make_response(string_view_t data, const std::string& header, int32_t responseid, uint8_t mtype = PTYPE_SOCKET);
+
+		connection_ptr_t create_connection(tcp* t);
     private:
-        struct imp;
-        imp* imp_;
+		asio::io_service* ios_;
+		uint32_t connuid_;
+		uint32_t timeout_;
+		protocol_type type_;
+		frame_enable_type frame_type_;
+		service* parent_;
+		std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
+		std::shared_ptr<asio::steady_timer> checker_;
+		message_ptr_t  response_msg_;
+		std::unordered_map<uint32_t, connection_ptr_t> conns_;
     };
 }
 

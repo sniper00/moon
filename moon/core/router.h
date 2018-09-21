@@ -6,6 +6,7 @@ Copyright (c) 2015-2017 moon
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 ****************************************************************************/
+#pragma once
 #include "config.h"
 #include "common/concurrent_map.hpp"
 #include "common/rwlock.hpp"

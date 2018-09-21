@@ -75,13 +75,28 @@ namespace moon
         {
             if (header.size() != 0)
             {
-                header_ = std::string(header.data(),header.size());
+				if (nullptr == header_)
+				{
+					header_ = std::make_unique<std::string>(header.data(), header.size());
+				}
+				else
+				{
+					header_->clear();
+					header_->assign(header.data(), header.size());
+				}
             }       
         }
 
-        const std::string& header() const
+		string_view_t header() const
         {
-            return header_;
+			if (nullptr == header_)
+			{
+				return string_view_t{};
+			}
+			else
+			{
+				return string_view_t{ header_->data(),header_->size() };
+			}
         }
 
         void set_responseid(int32_t v)
@@ -177,7 +192,10 @@ namespace moon
         void reset()
         {
            init();
-           header_.clear();
+		   if (nullptr != header_)
+		   {
+			   header_->clear();
+		   }
            data_->clear();
         }
     private:
@@ -196,7 +214,7 @@ namespace moon
         uint32_t sender_;
         uint32_t receiver_;
         int32_t responseid_;
-        std::string header_;
+        std::unique_ptr<std::string> header_;
         buffer_ptr_t data_;
     };
 };

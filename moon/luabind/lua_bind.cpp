@@ -186,7 +186,6 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("send_cache", &lua_service::send_cache, s);
     lua.set_function("make_cache", &lua_service::make_cache, s);
-    lua.set_function("add_tcp", &lua_service::add_tcp, s);
     lua.set_function("get_tcp", &lua_service::get_tcp, s);
     lua.set_function("remove_component", &lua_service::remove, s);
     lua.set_function("set_init", &lua_service::set_init,s);

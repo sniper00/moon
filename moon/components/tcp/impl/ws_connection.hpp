@@ -144,7 +144,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, 0);
+					error(e, int(logic_error_));
                     return;
                 }
 
@@ -167,7 +167,7 @@ namespace moon
                         if (ws::close_code::none != cod)
                         {
                             close();
-                            error(asio::error_code(), int(cod), std::string((const char*)cache_.data(), cache_.size()));
+                            error(asio::error_code(), int(cod), std::string((const char*)cache_.data(), cache_.size()).data());
                             return;
                         }
                     }
@@ -189,7 +189,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, 0);
+					error(e, int(logic_error_));
                     return;
                 }
 
@@ -205,7 +205,7 @@ namespace moon
                 auto close_code = decode_frame();
                 if (ws::close_code::none != close_code)
                 {
-                    error(asio::error_code(), int(close_code), std::string(cache_.data(), cache_.size()));
+                    error(asio::error_code(), int(close_code), std::string(cache_.data(), cache_.size()).data());
                     return;
                 }
                 read_some();

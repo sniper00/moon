@@ -2,6 +2,8 @@ local moon = require("moon")
 local seri = require("seri")
 local log = require("log")
 local json = require("json")
+local tcp = require("moon.tcpserver")
+
 local clusters = {}
 
 local pack_cluster = moon.pack_cluster
@@ -12,7 +14,6 @@ local seri_unpack = seri.unpack
 local co_yield = coroutine.yield
 local unique_service = moon.unique_service
 
-local network
 local response_watch = {}
 local send_watch = {}
 local connectors = {}
@@ -28,26 +29,24 @@ local function remove_send_watch( connid, sender, responseid )
     send_watch[key] = nil
 end
 
-local socket_handler = {}
+tcp.on("connect",function(sessionid, msg)
+    print("connect", sessionid, msg:bytes())
+end)
 
-socket_handler[1] = function(sessionid, msg)
-    print("connect",sessionid, msg:bytes())
-end
+tcp.on("accept",function(sessionid, msg)
+    print("accept", sessionid, msg:bytes())
+end)
 
-socket_handler[2] = function(sessionid, msg)
-    print("accept",sessionid, msg:bytes())
-end
-
-socket_handler[3] = function(sessionid, msg)
+tcp.on("message", function(sessionid, msg)
     local snode, saddr, rnode, raddr, rresponseid = seri_unpack(unpack_cluster(msg))
     local receiver = unique_service(raddr)
     if 0 == receiver then
-        local err = string.format( "cluster : socket_handler[3] unique_service %s can not find",raddr)
+        local err = string.format( "cluster : tcp message unique_service %s can not find",raddr)
         log.warn(err)
 
         if 0>rresponseid then
             local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err))
-            network:send(sessionid, s)
+            tcp.send(sessionid, s)
         end
         return
     end
@@ -59,7 +58,7 @@ socket_handler[3] = function(sessionid, msg)
                 local responseid = moon.make_response(receiver)
                 if not responseid then
                     local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, "service dead"))
-                    network:send(sessionid, s)
+                    tcp.send(sessionid, s)
                     return
                 end
 
@@ -75,10 +74,10 @@ socket_handler[3] = function(sessionid, msg)
 
                 if ret then
                     pack_cluster(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),ret)
-                    network:send_message(sessionid, ret)
+                    tcp.send_message(sessionid, ret)
                 else
                     local s = moon.make_cluster_message(seri_packstr(rnode, raddr, snode, saddr, -rresponseid),seri_packstr(false, err2))
-                    network:send(sessionid, s)
+                    tcp.send(sessionid, s)
                 end
             end
         )
@@ -87,10 +86,9 @@ socket_handler[3] = function(sessionid, msg)
         remove_send_watch(sessionid,receiver,-rresponseid)
         msg:resend(moon.sid(),receiver,"",-rresponseid,moon.PLUA)
     end
-end
+end)
 
---close
-socket_handler[4] = function(sessionid, msg)
+tcp.on("close", function(sessionid, msg)
     print("close", msg:bytes())
     for k, v in pairs(response_watch) do
         if v == sessionid then
@@ -114,33 +112,11 @@ socket_handler[4] = function(sessionid, msg)
             print("connectors remove")
         end
     end
-end
+end)
 
-socket_handler[5] = function(sessionid, msg)
+tcp.on("error", function(sessionid, msg)
     print("socket_error",sessionid, msg:bytes())
-end
-
-socket_handler[7] = function(sessionid, msg)
-    print("socket_logic_error",sessionid, msg:bytes())
-end
-
-moon.register_protocol(
-    {
-        name = "socket",
-        PTYPE = moon.PSOCKET,
-        pack = function(...)
-            return ...
-        end,
-        dispatch = function(msg)
-            local sessionid = msg:sender()
-            local subtype = msg:subtype()
-            local f = socket_handler[subtype]
-            if f then
-                f(sessionid, msg)
-            end
-        end
-    }
-)
+end)
 
 local command = {}
 
@@ -152,7 +128,7 @@ command.CALL = function(sender, responseid,rnode, raddr, msg)
         if not addr then
             err = string.format("send to unknown node:%s", rnode)
         else
-            connid = network:connect(addr.ip, addr.port)
+            connid = tcp.connect(addr.ip, addr.port)
             if 0~=connid then
                 connectors[rnode] = connid
             else
@@ -165,7 +141,7 @@ command.CALL = function(sender, responseid,rnode, raddr, msg)
     if connid then
         pack_cluster(seri_packstr(moon.name(), sender, rnode, raddr, responseid),msg)
         add_send_watch(connid,sender,responseid)
-        if network:send_message(connid, msg) then
+        if tcp.send_message(connid, msg) then
             return
         else
             err = string.format("send to %s failed", rnode)
@@ -220,9 +196,7 @@ moon.init(function( config )
         return false
     end
 
-    network = moon.get_tcp(config.network.name)
-    assert(network)
-    network:settimeout(10)
+    tcp.settimeout(10)
 
     moon.register_protocol(
     {
