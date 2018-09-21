@@ -42,7 +42,7 @@ workspace "Server"
 
     filter { "platforms:Linux" }
         system "linux"
-        warnings "all"
+        warnings "High"
 
 
 project "lua53"
