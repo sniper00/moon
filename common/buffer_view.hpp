@@ -17,20 +17,20 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	class buffer_reader
+	class buffer_view
 	{
 	public:
-		buffer_reader(const char* data, size_t size)
+		buffer_view(const char* data, size_t size)
 			:data_(data)
 			, readpos_(0)
 			, size_(size)
 		{
 		}
 
-		buffer_reader(const buffer_reader&) = delete;
-		buffer_reader& operator=(const buffer_reader&) = delete;
+		buffer_view(const buffer_view&) = delete;
+		buffer_view& operator=(const buffer_view&) = delete;
 
-		~buffer_reader(void)
+		~buffer_view(void)
 		{
 		}
 
@@ -108,7 +108,7 @@ namespace moon
 
 
 		template<class T>
-		buffer_reader& operator >> (T& value)
+		buffer_view& operator >> (T& value)
 		{
 			value = read<T>();
 			return *this;
