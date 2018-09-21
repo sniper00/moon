@@ -33,15 +33,18 @@ workspace "Server"
     filter { "platforms:Win32" }
         system "windows"
         architecture "x86"
+        warnings "Extra"
 
     filter { "platforms:x64" }
         system "windows"
         architecture "x64"
+        warnings "Extra"
 
     filter { "platforms:Linux" }
-        system "linux"     
+        system "linux"
+        warnings "all"
 
- 
+
 project "lua53"
     objdir "obj/lua53/%{cfg.platform}_%{cfg.buildcfg}"
     location "build/lua53"

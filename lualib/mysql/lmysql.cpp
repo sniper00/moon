@@ -63,20 +63,9 @@ static void bind_param_one(lua_State *L,std::vector<MYSQL_BIND>& params, std::li
 		break;
 	}
 	default:
-		luaL_error(L, "Unsupport type %s to concat", lua_typename(L, type));
+		luaL_error(L, "Unsupport type %s to concat.", lua_typename(L, type)));
 	}
 	params.push_back(param);
-}
-
-static int
-traceback(lua_State *L) {
-	const char *msg = lua_tostring(L, 1);
-	if (msg)
-		luaL_traceback(L, L, msg, 1);
-	else {
-		lua_pushliteral(L, "(no error message)");
-	}
-	return 1;
 }
 
 struct lua_mysql_box

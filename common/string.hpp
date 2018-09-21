@@ -204,12 +204,12 @@ namespace moon
 
 	inline void upper(std::string& src)
 	{
-		std::transform(src.begin(), src.end(), src.begin(), ::toupper);
+		std::transform(src.begin(), src.end(), src.begin(), [](char c) { return std::toupper(c, std::locale()); });
 	}
 
 	inline void lower(std::string& src)
 	{
-		std::transform(src.begin(), src.end(), src.begin(), ::tolower);
+		std::transform(src.begin(), src.end(), src.begin(), [](char c) { return std::tolower(c, std::locale()); });
 	}
 
 	//! case insensitive
