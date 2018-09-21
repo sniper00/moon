@@ -25,9 +25,9 @@ namespace moon
         wait();
     }
 
-    void server::init(uint8_t worker_num, const std::string& logpath)
+    void server::init(int worker_num, const std::string& logpath)
     {
-        worker_num == 0 ? 1 : worker_num;
+		worker_num = (worker_num <= 0) ? 1 : worker_num;
 
 		logger()->init(logpath);
 
@@ -37,7 +37,7 @@ namespace moon
 
 		CONSOLE_INFO(logger(), "INIT with %d workers.", worker_num);
 
-        for (uint8_t i = 0; i != worker_num; i++)
+        for (int i = 0; i != worker_num; i++)
         {
 			auto& w =workers_.emplace_back(std::make_shared<worker>(&router_));
             w->workerid(i+1);
@@ -73,7 +73,7 @@ namespace moon
 			diff = (diff < 0) ? 0 : diff;
 			previous_tick = now;
 
-            int stoped_worker_num = 0;
+            size_t stoped_worker_num = 0;
 
             for (auto w : workers_)
             {

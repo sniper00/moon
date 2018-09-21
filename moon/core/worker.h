@@ -36,7 +36,7 @@ namespace moon
 
         asio::io_service& io_service();
 
-		uint8_t workerid() const;
+		int32_t workerid() const;
 
 		uint32_t servicenum() const;
 
@@ -46,7 +46,7 @@ namespace moon
 
 		void send(const message_ptr_t& msg);
 
-		void workerid(uint8_t id);
+		void workerid(int32_t id);
 
 		void shared(bool v);
 
@@ -82,7 +82,7 @@ namespace moon
 		std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
 		std::atomic<state> state_;
         std::atomic_bool shared_;
-        uint8_t workerid_;
+		int32_t workerid_;
         std::atomic<uint16_t> serviceuid_;
         std::atomic<uint32_t> servicenum_;
 

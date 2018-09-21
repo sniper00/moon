@@ -145,10 +145,7 @@ namespace moon
 		MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
 		int32_t id = worker_id(msg->receiver());
 		MOON_CHECK(workerid_valid(id), "invalid message receiver serviceid.");
-		if (id - 1 < workers_.size())
-		{
-			workers_[id - 1]->send(msg);
-		}
+		workers_[id - 1]->send(msg);
 	}
 
 	void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, const string_view_t& header, int32_t responseid, uint8_t type) const

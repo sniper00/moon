@@ -26,7 +26,7 @@ namespace moon
 
         server(server&&) = delete;
 
-        void init(uint8_t worker_num, const std::string& logpath);
+        void init(int worker_num, const std::string& logpath);
 
         void run();
 

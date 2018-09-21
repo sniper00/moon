@@ -87,7 +87,7 @@ namespace moon
         auto uid = serviceuid_.fetch_add(1);
         uid %= MAX_SERVICE_NUM;
         uint32_t tmp = uid+1;
-        uint8_t wkid = workerid();
+        int32_t wkid = workerid();
         tmp |= static_cast<uint32_t>(wkid) << WORKER_ID_SHIFT;
         return tmp;
     }
@@ -181,12 +181,12 @@ namespace moon
         }
     }
 
-    uint8_t worker::workerid() const
+	int32_t worker::workerid() const
     {
         return workerid_;
     }
 
-    void worker::workerid(uint8_t id)
+    void worker::workerid(int32_t id)
     {
         workerid_ = id;
     }
