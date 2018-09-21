@@ -15,6 +15,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <vector>
 #include <unordered_map>
 #include <list>
+#include <inttypes.h>
 
 namespace moon
 {
@@ -119,7 +120,7 @@ namespace moon
 
 			if (tick_ > 1000)
 			{
-				printf("warning timer update takes too long : %lldms\r\n", tick_);
+				printf("warning timer update takes too long : %" PRId64 "ms\r\n", tick_);
 			}
 
             auto& wheels = wheels_;

@@ -12,6 +12,7 @@ namespace rapidjson
         template<>
         inline json_value_pointer get_value<json_value_pointer>(rapidjson::Value* value, const json_value_pointer& dv)
         {
+			(void)dv;
             return value;
         }
 
