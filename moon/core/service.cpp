@@ -68,7 +68,12 @@ namespace moon
 		router_->remove_service(id_, 0, 0, crashed);
     }
 
-    void service::set_unique(bool v)
+	void service::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
+	{
+		CONSOLE_WARN(logger(), "service::runcmd [%s] not Implemented: sender[%u] responseid[%d]",cmd.data(), sender, responseid);
+	}
+
+	void service::set_unique(bool v)
     {
         unique_ = v;
     }
@@ -83,7 +88,10 @@ namespace moon
             {
 				bool b = msg->broadcast();
                 MOON_DCHECK(!b, "can not redirect broadcast message");
-                router_->send_message(msg);
+				if (!b)
+				{
+					router_->send_message(msg);
+				}
             }
         }
         catch (std::exception& e)

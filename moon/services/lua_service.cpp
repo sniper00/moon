@@ -53,8 +53,8 @@ void lua_service::runcmd(uint32_t sender, const std::string & cmd, int32_t respo
 }
 
 lua_service::lua_service()
-    :lua_(sol::default_at_panic,lalloc, this)
-    ,error_(true)
+    :error_(true)
+	,lua_(sol::default_at_panic,lalloc, this)
 	,cache_uuid_(0)
 {
 }

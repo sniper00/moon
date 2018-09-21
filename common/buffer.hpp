@@ -44,7 +44,11 @@ namespace moon
         };
 
         buffer(size_t capacity = DEFAULT_CAPACITY, size_t headreserved = 0)
-            :data_(capacity + headreserved), readpos_(headreserved), writepos_(headreserved), headreserved_(headreserved), flag_(0)
+            : flag_(0)
+			, readpos_(headreserved)
+			, writepos_(headreserved)
+			, headreserved_(headreserved)
+			, data_(capacity + headreserved)
         {
 
         }

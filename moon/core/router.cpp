@@ -45,7 +45,7 @@ namespace moon
 		auto s = iter->second();
 
 		worker* wk;
-		if(workerid_valid(workerid))
+		if(workerid_valid(static_cast<uint8_t>(workerid)))
 		{
 			wk = workers_[workerid - 1].get();
 		}
@@ -114,8 +114,8 @@ namespace moon
 		{
 		case moon::chash_string("worker"):
 			{
-				uint32_t workerid = moon::string_convert<uint32_t>(params[1]);
-				if (workerid_valid(workerid))
+				int32_t workerid = moon::string_convert<int32_t>(params[1]);
+				if (workerid_valid(static_cast<uint8_t>(workerid)))
 				{
 					workers_[workerid - 1]->runcmd(sender, cmd, responseid);
 					return;

@@ -122,7 +122,7 @@ namespace moon
                             sc.unique = rapidjson::get_value<bool>(&s, "unique", false);
                             sc.shared = rapidjson::get_value<bool>(&s, "shared", true);
                             sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
-                            sc.name = rapidjson::get_value<int32_t>(&s, "name");
+                            sc.name = rapidjson::get_value<std::string>(&s, "name");
 
 							s.AddMember("path", rapidjson::Value::StringRefType(scfg.path.data()),doc.GetAllocator());
 

@@ -34,7 +34,7 @@ namespace moon
 
                 if (ip.empty() || port.empty())
                 {
-                    CONSOLE_ERROR(s->logger(), "service %s add network component failed. ip or port is null", s->name());
+                    CONSOLE_ERROR(s->logger(), "service %s add network component failed. ip or port is null", s->name().data());
                     return false;
                 }
 

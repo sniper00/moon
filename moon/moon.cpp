@@ -158,7 +158,7 @@ int main(int argc, char*argv[])
 			router_->set_env("outer_host", c->outer_host);
 			router_->set_env("server_config", scfg.config());
 
-            server_->init(c->thread, c->log);
+            server_->init(static_cast<uint8_t>(c->thread), c->log);
             server_->logger()->set_level(c->loglevel);
 
 			if (!c->startup.empty())

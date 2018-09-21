@@ -44,7 +44,7 @@ namespace moon
 
 		virtual void dispatch(message* msg) = 0;
 
-		virtual void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid) {};
+		virtual void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
     protected:
         void set_unique(bool v);
 

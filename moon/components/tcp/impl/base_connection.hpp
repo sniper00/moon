@@ -174,6 +174,8 @@ namespace moon
     protected:
         virtual void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf)
         {
+			(void)holder;
+			(void)buf;
         }
 
         void post_send()
