@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include "macro_define.hpp"
-#include "buffer_reader.hpp"
+#include "buffer_view.hpp"
 #include "utils.hpp"
 
 namespace moon
@@ -28,7 +28,7 @@ namespace moon
         {
             header.clear();
 
-            buffer_reader br(sv.data(), sv.size());
+            buffer_view br(sv.data(), sv.size());
             auto line = br.readline();
 
             size_t method_end;
