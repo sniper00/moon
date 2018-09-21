@@ -21,7 +21,6 @@ extern "C" {
 #include <stdint.h>
 
 #include "pbc.h"
-#include "pbc-lua.h"
 
 static inline void *
 checkuserdata(lua_State *L, int index) {
@@ -869,8 +868,11 @@ _add_rmessage(lua_State *L) {
 	return 0;
 }
 
+#if __cplusplus
+extern "C" {
+#endif
 int
-luaopen_protobuf_c(lua_State *L) {
+LUAMOD_API luaopen_protobuf_c(lua_State *L) {
 	luaL_Reg reg[] = {
 		{"_env_new" , _env_new },
 		{"_env_register" , _env_register },
@@ -909,3 +911,6 @@ luaopen_protobuf_c(lua_State *L) {
 
 	return 1;
 }
+#if __cplusplus
+}
+#endif

@@ -406,18 +406,9 @@ static const luaL_Reg methods[] = {
 	{nullptr, nullptr }
 };
 
-/*-------------------------------------------------------------------------*\
-* This macro prefixes all exported API functions
-\*-------------------------------------------------------------------------*/
-#ifndef LUARAPIDJSON_EXPORT
-#define LUARAPIDJSON_API extern
-#else
-#define LUARAPIDJSON_API __declspec(dllexport)
-#endif
-
 extern "C" {
 
-LUARAPIDJSON_API int luaopen_rapidjson(lua_State* L)
+int LUALIB_API luaopen_rapidjson(lua_State* L)
 {
     luaL_checkversion(L);
 
