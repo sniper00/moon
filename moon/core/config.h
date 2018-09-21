@@ -31,11 +31,6 @@ namespace moon
     using message_size_t = uint16_t;
     constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
 
-    inline uint8_t worker_id(uint32_t serviceid) noexcept
-    {
-        return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
-    }
-
 	constexpr  string_view_t STR_LF = "\n"sv;
 	constexpr  string_view_t STR_CRLF = "\r\n"sv;
 	constexpr  string_view_t STR_DCRLF = "\r\n\r\n"sv;

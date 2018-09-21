@@ -40,7 +40,7 @@ namespace moon
 
 		size_t workernum() const;
 
-		uint32_t new_service(const std::string& service_type, bool unique, bool shareth, int workerid, const string_view_t& config);
+		uint32_t new_service(const std::string& service_type, bool unique, bool shareth, int32_t workerid, const string_view_t& config);
 
 		void remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed = false);
 
@@ -74,7 +74,15 @@ namespace moon
 
 		void stop_server();
 	private:
-		bool workerid_valid(uint8_t);
+		inline int32_t worker_id(uint32_t serviceid) const
+		{
+			return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
+		}
+
+		bool workerid_valid(int32_t workerid) const
+		{
+			return (workerid > 0 && workerid <= static_cast<int32_t>(workers_.size()));
+		}
 
 		worker* next_worker();
 	
@@ -82,7 +90,7 @@ namespace moon
 
 		bool try_add_serviceid(uint32_t serviceid);
 	private:
-		std::atomic<uint32_t> next_workerid_;
+		std::atomic<int32_t> next_workerid_;
 		std::vector<std::shared_ptr<worker>>& workers_;
 		std::unordered_map<std::string, register_func > regservices_;
 		mutable rwlock serviceids_lck_;

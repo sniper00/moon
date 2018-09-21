@@ -33,7 +33,7 @@ namespace moon
 		return workers_.size();
 	}
 
-	uint32_t router::new_service(const std::string & service_type, bool unique, bool shared, int workerid, const string_view_t& config)
+	uint32_t router::new_service(const std::string & service_type, bool unique, bool shared, int32_t workerid, const string_view_t& config)
 	{
 		auto iter = regservices_.find(service_type);
 		if (iter == regservices_.end())
@@ -45,7 +45,7 @@ namespace moon
 		auto s = iter->second();
 
 		worker* wk;
-		if(workerid_valid(static_cast<uint8_t>(workerid)))
+		if(workerid_valid(workerid))
 		{
 			wk = workers_[workerid - 1].get();
 		}
@@ -94,7 +94,7 @@ namespace moon
 		}
 		else
 		{
-			auto content = moon::format("rmservice worker %d not found.", workerid);
+			auto content = moon::format("router::remove_service worker %d not found.", workerid);
 			make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
 		}
 	}
@@ -115,7 +115,7 @@ namespace moon
 		case moon::chash_string("worker"):
 			{
 				int32_t workerid = moon::string_convert<int32_t>(params[1]);
-				if (workerid_valid(static_cast<uint8_t>(workerid)))
+				if (workerid_valid(workerid))
 				{
 					workers_[workerid - 1]->runcmd(sender, cmd, responseid);
 					return;
@@ -125,7 +125,7 @@ namespace moon
 		case moon::chash_string("service"):
 			{
 				uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
-				uint8_t workerid = worker_id(serviceid);
+				int32_t workerid = worker_id(serviceid);
 				if (workerid_valid(workerid))
 				{
 					workers_[workerid - 1]->runcmd(sender, cmd, responseid);
@@ -143,8 +143,8 @@ namespace moon
 	{
 		MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
 		MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
-		uint8_t id = worker_id(msg->receiver());
-		MOON_CHECK(id > 0 && id <= workers_.size(), "invalid message receiver serviceid.");
+		int32_t id = worker_id(msg->receiver());
+		MOON_CHECK(workerid_valid(id), "invalid message receiver serviceid.");
 		if (id - 1 < workers_.size())
 		{
 			workers_[id - 1]->send(msg);
@@ -248,7 +248,7 @@ namespace moon
 
 	worker* router::next_worker()
 	{
-		uint32_t  id = 0;
+		int32_t  id = 0;
 		for (uint8_t i = 0; i <  workers_.size(); i++)
 		{
 			id = next_workerid_.fetch_add(1);
@@ -287,8 +287,8 @@ namespace moon
 
 	asio::io_service & router::get_io_service(uint32_t serviceid)
 	{
-		uint32_t workerid = worker_id(serviceid);
-		MOON_CHECK(workerid > 0 && workerid <= workers_.size(), "router::get_io_service: invalid serviceid");
+		int32_t workerid = worker_id(serviceid);
+		MOON_CHECK(workerid_valid(workerid), "router::get_io_service: invalid serviceid");
 		return workers_[workerid - 1]->io_service();
 	}
 
@@ -300,10 +300,5 @@ namespace moon
 	void router::stop_server()
 	{
 		stop_();
-	}
-
-	bool router::workerid_valid(uint8_t workerid)
-	{
-		return (workerid > 0 && workerid <= workers_.size());
 	}
 }
