@@ -12,6 +12,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <locale>
 #include <cmath>
 #include <sstream>
+#include <cctype>
 #include "macro_define.hpp"
 
 #define MAX_FMT_LEN 8*1024
@@ -202,14 +203,29 @@ namespace moon
 		}
 	}
 
+	//https://en.cppreference.com/w/cpp/string/byte/tolower
+	//the behavior of std::tolower is undefined if the argument's value is neither representable 
+	//as unsigned char nor equal to EOF. 
+	//To use these functions safely with plain chars (or signed chars), 
+	//	the argument should first be converted to unsigned char
+	inline char toupper(unsigned char c)
+	{
+		return static_cast<char>(std::toupper(c));
+	}
+
+	inline char tolower(unsigned char c)
+	{
+		return static_cast<char>(std::tolower(c));
+	}
+
 	inline void upper(std::string& src)
 	{
-		std::transform(src.begin(), src.end(), src.begin(), [](char c) { return std::toupper(c, std::locale()); });
+		std::transform(src.begin(), src.end(), src.begin(), toupper);
 	}
 
 	inline void lower(std::string& src)
 	{
-		std::transform(src.begin(), src.end(), src.begin(), [](char c) { return std::tolower(c, std::locale()); });
+		std::transform(src.begin(), src.end(), src.begin(), tolower);
 	}
 
 	//! case insensitive
@@ -226,7 +242,7 @@ namespace moon
 
 		for (;iter1begin != iter1end && iter2begin != iter2end; ++iter1begin, ++iter2begin)
 		{
-			if (!(std::toupper(*iter1begin, Loc) == std::toupper(*iter2begin, Loc)))
+			if (!(toupper(*iter1begin, Loc) == toupper(*iter2begin, Loc)))
 			{
 				return false;
 			}
