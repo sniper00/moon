@@ -63,7 +63,7 @@ static void bind_param_one(lua_State *L,std::vector<MYSQL_BIND>& params, std::li
 		break;
 	}
 	default:
-		luaL_error(L, "Unsupport type %s to concat.", lua_typename(L, type)));
+		luaL_error(L, "Unsupport type %s to concat.", lua_typename(L, type));
 	}
 	params.push_back(param);
 }
