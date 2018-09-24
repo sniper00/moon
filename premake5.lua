@@ -173,7 +173,7 @@ end)
 ]]
 
 -- ---------------------mysql-----------------------
--- add_lua_module("./lualib/mysql","mysql",
+-- add_lua_module("./lualib-src/mysql","mysql",
 -- function()
 --     language "C++"
 -- end,
