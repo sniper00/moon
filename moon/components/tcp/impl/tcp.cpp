@@ -337,6 +337,10 @@ namespace moon
         }
 		msg->set_receiver(parent_->id());
 		parent_->handle_message(msg);
+		if (msg->type()== PTYPE_ERROR || msg->subtype() == static_cast<uint8_t>(socket_data_type::socket_close))
+		{
+			conns_.erase(msg->sender());
+		}
     }
 
     void tcp::check()
@@ -392,13 +396,15 @@ namespace moon
 		switch (type_)
 		{
 		case moon::protocol_type::protocol_default:
-			conn = std::make_shared<moon_connection>(io_service(), this);
+		{
+			conn = std::make_shared<moon_connection>(this, io_service());
 			break;
+		}
 		case moon::protocol_type::protocol_custom:
-			conn = std::make_shared<custom_connection>(io_service(), this);
+			conn = std::make_shared<custom_connection>(this, io_service());
 			break;
 		case moon::protocol_type::protocol_websocket:
-			conn = std::make_shared<ws_connection>(io_service(), this);
+			conn = std::make_shared<ws_connection>(this, io_service());
 			break;
 		default:
 			break;

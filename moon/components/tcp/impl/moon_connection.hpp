@@ -12,8 +12,9 @@ namespace moon
 
         using base_connection_t = base_connection;
 
-        explicit moon_connection(asio::io_service& ios, tcp* t)
-            :base_connection(ios, t)
+		template <typename... Args>
+        explicit moon_connection(Args&&... args)
+            :base_connection(std::forward<Args>(args)...)
             , continue_(false)
             , header_(0)
         {

@@ -33,20 +33,24 @@ namespace moon
         int32_t responseid;
     };
 
+	class tcp;
+
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
     public:
         using socket_t = asio::ip::tcp::socket;
 
-        explicit base_connection(asio::io_service& ios, tcp* t)
+		using message_handler_t = std::function<void(const message_ptr_t&)>;
+
+		template <typename... Args>
+        explicit base_connection(tcp* t, Args&&... args)
             :sending_(false)
+			, tcp_(t)
             , frame_flag_(frame_enable_flag::none)
             , id_(0)
             , last_recv_time_(0)
             , logic_error_(network_logic_error::ok)
-            , ios_(ios)
-            , tcp_(t)
-            , socket_(ios)
+            , socket_(std::forward<Args>(args)...)
             , log_(nullptr)
         {
         }
@@ -114,10 +118,10 @@ namespace moon
                 socket_.close(ignore_ec);
             }
 
-            if (exit)
-            {
-                tcp_ = nullptr;
-            }
+			if (exit)
+			{
+				tcp_ = nullptr;
+			}
         }
 
         socket_t& socket()
@@ -170,7 +174,6 @@ namespace moon
         {
             frame_flag_ = t;
         }
-
     protected:
         virtual void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf)
         {
@@ -255,7 +258,7 @@ namespace moon
                 msg->write_string(content);
                 msg->set_sender(id_);
                 msg->set_type(PTYPE_SOCKET);
-                handle_message(msg);
+				handle_message(msg);
             }
 
             //closed
@@ -265,36 +268,24 @@ namespace moon
                 msg->set_sender(id_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 msg->set_type(PTYPE_SOCKET);
-                handle_message(msg);
-            }
-            remove(id_);
-        }
-
-        void remove(uint32_t connid)
-        {
-            if (nullptr != tcp_)
-            {
-                tcp_->close(connid);
-                tcp_ = nullptr;
+				handle_message(msg);
             }
         }
 
-        void handle_message(const message_ptr_t& msg)
-        {
-            if (nullptr != tcp_)
-            {
-                tcp_->handle_message(msg);
-            }
-        }
-
+		void handle_message(const message_ptr_t& msg)
+		{
+			if (nullptr != tcp_)
+			{
+				tcp_->handle_message(msg);
+			}
+		}
     protected:
         bool sending_;
+		tcp* tcp_;
         frame_enable_flag frame_flag_;
         uint32_t id_;
         time_t last_recv_time_;
         network_logic_error logic_error_;
-        asio::io_service& ios_;
-        tcp* tcp_;
         socket_t socket_;
         handler_allocator allocator_;
         const_buffers_holder  buffers_holder_;

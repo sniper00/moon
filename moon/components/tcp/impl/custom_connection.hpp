@@ -8,8 +8,9 @@ namespace moon
     public:
         using base_connection_t = base_connection;
 
-        explicit custom_connection(asio::io_service& ios, tcp* t)
-            :base_connection(ios, t)
+		template <typename... Args>
+		explicit custom_connection(Args&&... args)
+			:base_connection_t(std::forward<Args>(args)...)
             , restore_write_offset_(0)
             , prew_read_offset_(0)
         {
@@ -31,7 +32,7 @@ namespace moon
                 if (response_msg_->size() > 0)
                 {
                     //guarantee read is async operation
-                    ios_.post([this] {
+					socket_.get_io_service().post([this] {
                         handle_read_request();
                     });
                 }
@@ -163,7 +164,6 @@ namespace moon
                     make_response(response_msg_, PTYPE_ERROR);
                 }
             }
-            remove(id_);
         }
 
         void make_response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
@@ -171,7 +171,7 @@ namespace moon
             msg->set_type(mtype);
             msg->set_responseid(-read_request_.responseid);
             read_request_.responseid = 0;
-            handle_message(msg);
+			handle_message(msg);
         }
     protected:
         int restore_write_offset_;

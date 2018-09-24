@@ -112,8 +112,9 @@ namespace moon
 		static constexpr const string_view_t UPGRADE = "upgrade"sv;
 		static constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
    
-        explicit ws_connection(asio::io_service& ios,tcp* t)
-            :base_connection(ios,t)
+		template <typename... Args>
+		explicit ws_connection(Args&&... args)
+			:base_connection_t(std::forward<Args>(args)...)
             , header_delim_(STR_DCRLF.data(),STR_DCRLF.size())
         {
         }
@@ -256,7 +257,7 @@ namespace moon
             msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             msg->set_type(PTYPE_SOCKET);
-            handle_message(msg);
+			handle_message(msg);
             return true;
         }
 
@@ -402,7 +403,7 @@ namespace moon
                 msg_package_->set_sender(id_);
                 msg_package_->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
                 msg_package_->set_type(PTYPE_SOCKET);
-                handle_message(msg_package_);
+				handle_message(msg_package_);
             }
 
             if (fh.op == ws::opcode::close)
