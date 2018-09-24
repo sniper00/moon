@@ -35,7 +35,7 @@ namespace moon
         {
             if (!data->has_flag(static_cast<uint8_t>(buffer_flag::pack_size)))
             {
-                bool enable = (static_cast<int>(frame_type_)&static_cast<int>(frame_enable_type::send)) !=0;
+                bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::send)) !=0;
                 if (data->size() > MAX_MSG_FRAME_SIZE)
                 {
                     if (!enable)
@@ -105,7 +105,7 @@ namespace moon
                 last_recv_time_ = std::time(nullptr);
                 net2host(header_);
 
-                bool enable = (static_cast<int>(frame_type_)&static_cast<int>(frame_enable_type::receive)) != 0;
+                bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
                 if (enable)
                 {
                     //check is continue message

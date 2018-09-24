@@ -21,7 +21,7 @@ namespace moon
 		, connuid_(1)
 		, timeout_(0)
 		, type_(protocol_type::protocol_default)
-		, frame_type_(frame_enable_type::none)
+		, frame_type_(frame_enable_flag::none)
 		, parent_(nullptr)
     {
     }
@@ -82,18 +82,18 @@ namespace moon
 		{
 		case moon::chash_string("r"):
 		{
-			frame_type_ = moon::frame_enable_type::receive;
+			frame_type_ = moon::frame_enable_flag::receive;
 			break;
 		}
 		case moon::chash_string("w"):
 		{
-			frame_type_ = moon::frame_enable_type::send;
+			frame_type_ = moon::frame_enable_flag::send;
 			break;
 		}
 		case moon::chash_string("wr"):
 		case moon::chash_string("rw"):
 		{
-			frame_type_ = moon::frame_enable_type::both;
+			frame_type_ = moon::frame_enable_flag::both;
 			break;
 		}
 		default:
@@ -126,7 +126,7 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_WARN(logger(), "tcp bind error %s(%d )", e.what(), e.code().value());
+            CONSOLE_ERROR(logger(), "tcp bind error %s(%d )", e.what(), e.code().value());
             return false;
         }
     }
@@ -138,7 +138,7 @@ namespace moon
         if (!acceptor_->is_open())
             return;
 
-        auto conn = create_connection(this);
+        auto conn = create_connection();
         acceptor_->async_accept(conn->socket(), [this, self = shared_from_this(), conn, responseid](const asio::error_code& e)
         {
             if (nullptr == self || !self->ok())
@@ -188,7 +188,7 @@ namespace moon
             asio::ip::tcp::resolver resolver(io_service());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-            auto conn = create_connection(this);
+            auto conn = create_connection();
             asio::async_connect(conn->socket(), endpoint_iterator,
                 [this, self = shared_from_this(), conn, ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
@@ -226,8 +226,7 @@ namespace moon
             asio::ip::tcp::resolver resolver(io_service());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-            auto conn = create_connection(this);
+            auto conn = create_connection();
             asio::connect(conn->socket(), endpoint_iterator);
             conn->set_enable_frame(frame_type_);
             conn->set_id(make_connid());
@@ -387,24 +386,24 @@ namespace moon
 		handle_message(response_msg_);
 	}
 
-	tcp::connection_ptr_t tcp::create_connection(tcp * t)
+	tcp::connection_ptr_t tcp::create_connection()
 	{
 		connection_ptr_t conn;
 		switch (type_)
 		{
 		case moon::protocol_type::protocol_default:
-			conn = std::make_shared<moon_connection>(io_service(), t);
+			conn = std::make_shared<moon_connection>(io_service(), this);
 			break;
 		case moon::protocol_type::protocol_custom:
-			conn = std::make_shared<custom_connection>(io_service(), t);
+			conn = std::make_shared<custom_connection>(io_service(), this);
 			break;
 		case moon::protocol_type::protocol_websocket:
-			conn = std::make_shared<ws_connection>(io_service(), t);
+			conn = std::make_shared<ws_connection>(io_service(), this);
 			break;
 		default:
 			break;
 		}
-		conn->logger(t->logger());
+		conn->logger(this->logger());
 		return conn;
 	}
 }

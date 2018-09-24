@@ -58,7 +58,7 @@ namespace moon
         LF,// \n
     };
 
-    enum class frame_enable_type :std::uint8_t
+    enum class frame_enable_flag :std::uint8_t
     {
         none = 0,
         send = 1<<0,//
@@ -120,13 +120,13 @@ namespace moon
 
 		void make_response(string_view_t data, const std::string& header, int32_t responseid, uint8_t mtype = PTYPE_SOCKET);
 
-		connection_ptr_t create_connection(tcp* t);
+		connection_ptr_t create_connection();
     private:
 		asio::io_service* ios_;
 		uint32_t connuid_;
 		uint32_t timeout_;
 		protocol_type type_;
-		frame_enable_type frame_type_;
+		frame_enable_flag frame_type_;
 		service* parent_;
 		std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
 		std::shared_ptr<asio::steady_timer> checker_;

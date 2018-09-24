@@ -40,7 +40,7 @@ namespace moon
 
         explicit base_connection(asio::io_service& ios, tcp* t)
             :sending_(false)
-            , frame_type_(frame_enable_type::none)
+            , frame_flag_(frame_enable_flag::none)
             , id_(0)
             , last_recv_time_(0)
             , logic_error_(network_logic_error::ok)
@@ -166,9 +166,9 @@ namespace moon
             log_ = l;
         }
 
-        void set_enable_frame(frame_enable_type t)
+        void set_enable_frame(frame_enable_flag t)
         {
-            frame_type_ = t;
+            frame_flag_ = t;
         }
 
     protected:
@@ -289,7 +289,7 @@ namespace moon
 
     protected:
         bool sending_;
-        frame_enable_type frame_type_;
+        frame_enable_flag frame_flag_;
         uint32_t id_;
         time_t last_recv_time_;
         network_logic_error logic_error_;

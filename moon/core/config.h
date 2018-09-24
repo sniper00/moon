@@ -35,8 +35,6 @@ namespace moon
 	constexpr  string_view_t STR_CRLF = "\r\n"sv;
 	constexpr  string_view_t STR_DCRLF = "\r\n\r\n"sv;
 
-	#define TCP_COMP_NAME "NETWROK"s
-
 	enum class buffer_flag:uint8_t
 	{
 		pack_size = 1 << 0,
@@ -46,6 +44,7 @@ namespace moon
 	};
 }
 
+#define TCP_COMP_NAME "NETWROK"s
 
 
 
