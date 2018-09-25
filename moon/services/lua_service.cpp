@@ -190,7 +190,7 @@ bool lua_service::init(const string_view_t& config)
             lua_bind.bind_service(this)
                 .bind_log(logger())
                 .bind_util()
-                .bind_path()
+                .bind_filesystem()
                 .bind_timer(&timer_)
                 .bind_message()
                 .bind_socket()
@@ -210,20 +210,20 @@ bool lua_service::init(const string_view_t& config)
 			auto package_path = scfg.get_value<std::string>("path");
             lua_.script(moon::format("package.path = './?.lua;./lualib/?.lua;'  package.path ='%s'..package.path", package_path.data()));
 
-			if (!path::exist(luafile))
+			if (!directory::exists(luafile))
 			{
 				auto paths = moon::split<std::string>(package_path, ";");
 				paths.push_back("./");
 				std::string file;
 				for (auto& p : paths)
 				{
-					file = path::find_file(path::directory(p), luafile);
+					file = directory::find_file(fs::path(p).parent_path().string(), luafile);
 					if (!file.empty())
 					{
 						break;
 					}
 				}
-				MOON_CHECK(path::exist(file), moon::format("luafile %s not found",luafile.data()).data());
+				MOON_CHECK(directory::exists(file), moon::format("luafile %s not found",luafile.data()).data());
 				luafile = file;
 			}
 
@@ -306,7 +306,10 @@ void lua_service::update()
     if (error_) return;
     try
     {
-        timer_.update();
+		if (auto n = timer_.update(); n > 1000)
+		{
+			CONSOLE_WARN(logger(), "service(%s:%u) timer update takes too long: %" PRId64 "ms", name().data(), id(), n);
+		}
 		if (cache_uuid_ != 0)
 		{
 			cache_uuid_ = 0;

@@ -126,10 +126,10 @@ namespace moon
 		uint32_t connuid_;
 		uint32_t timeout_;
 		protocol_type type_;
-		frame_enable_flag frame_type_;
+		frame_enable_flag frame_flag_;
 		service* parent_;
-		std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
-		std::shared_ptr<asio::steady_timer> checker_;
+		std::unique_ptr<asio::ip::tcp::acceptor> acceptor_;
+		std::unique_ptr<asio::steady_timer> checker_;
 		message_ptr_t  response_msg_;
 		std::unordered_map<uint32_t, connection_ptr_t> conns_;
     };
