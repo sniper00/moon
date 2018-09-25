@@ -93,7 +93,7 @@ namespace moon
         base_timer()
             : stop_(false)
             , tick_(0)
-            , prew_tick_(0)
+            , previous_tick_(0)
         {
             wheels_.emplace_back();
             wheels_.emplace_back();
@@ -108,20 +108,17 @@ namespace moon
         {
         }
 
-        void update()
+        int64_t update()
         {
             auto now_tick = detail::millseconds();
-            if (prew_tick_ == 0)
+            if (previous_tick_ == 0)
             {
-                prew_tick_ = now_tick;
+                previous_tick_ = now_tick;
             }
-            tick_ += (now_tick - prew_tick_);
-            prew_tick_ = now_tick;
+            tick_ += (now_tick - previous_tick_);
+            previous_tick_ = now_tick;
 
-			if (tick_ > 1000)
-			{
-				printf("warning timer update takes too long : %" PRId64 "ms\r\n", tick_);
-			}
+			auto old_tick = tick_;
 
             auto& wheels = wheels_;
             while (tick_ >= PRECISION)
@@ -164,6 +161,7 @@ namespace moon
                     }
                 }
             }
+			return old_tick;
         }
 
         void stop_all_timer()
@@ -238,7 +236,7 @@ namespace moon
     private:
         bool stop_;
         int64_t tick_;
-        int64_t prew_tick_;
+        int64_t previous_tick_;
         std::vector <timer_wheel_t> wheels_;
     };
 
