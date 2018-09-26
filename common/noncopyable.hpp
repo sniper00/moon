@@ -10,15 +10,15 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	class noncopyable
-	{
-	public:
-		noncopyable() {}
-		~noncopyable() {}
+    class noncopyable
+    {
+    public:
+        noncopyable() {}
+        ~noncopyable() {}
 
-		noncopyable(const noncopyable&) = delete;
-		noncopyable& operator=(const noncopyable&) = delete;
-	};
+        noncopyable(const noncopyable&) = delete;
+        noncopyable& operator=(const noncopyable&) = delete;
+    };
 }
 
 

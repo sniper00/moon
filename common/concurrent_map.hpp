@@ -35,14 +35,14 @@ namespace moon
             }
         };
     }
-    
-    template<typename Key,typename Value,typename Lock = std::shared_timed_mutex >
+
+    template<typename Key, typename Value, typename Lock = std::shared_timed_mutex >
     class concurrent_map : noncopyable
     {
     public:
         concurrent_map() = default;
-  
-        template<class TKey,class TValue>
+
+        template<class TKey, class TValue>
         bool set(TKey&& key, TValue&& value)
         {
             UNIQUE_LOCK_GURAD(lock_);
@@ -62,7 +62,7 @@ namespace moon
         bool try_get_value(const Key& key, Value& value) const
         {
             SHARED_LOCK_GURAD(lock_)
-            return detail::try_get_value<Key, Value>::get(data_, key, value);
+                return detail::try_get_value<Key, Value>::get(data_, key, value);
         }
 
         bool erase(const Key& key)
