@@ -30,20 +30,20 @@ namespace moon
         template<typename TContainer, uint8_t Size>
         class timer_wheel
         {
-			using container_t = TContainer;
+            using container_t = TContainer;
         public:
             timer_wheel()
                 :head_(0)
             {
             }
 
-			container_t& operator[](uint8_t pos)
+            container_t& operator[](uint8_t pos)
             {
                 assert(pos < Size);
                 return array_[pos];
             }
 
-			container_t& front()
+            container_t& front()
             {
                 assert(head_ < Size);
                 return array_[head_];
@@ -70,7 +70,7 @@ namespace moon
                 return head_;
             }
         private:
-			container_t 	array_[Size];
+            container_t 	array_[Size];
             uint32_t	head_;
         };
     }
@@ -117,7 +117,7 @@ namespace moon
             tick_ += (now_tick - previous_tick_);
             previous_tick_ = now_tick;
 
-			auto old_tick = tick_;
+            auto old_tick = tick_;
 
             auto& wheels = wheels_;
             while (tick_ >= PRECISION)
@@ -160,7 +160,7 @@ namespace moon
                     }
                 }
             }
-			return old_tick;
+            return old_tick;
         }
 
         void stop_all_timer()
@@ -239,91 +239,91 @@ namespace moon
         std::vector <timer_wheel_t> wheels_;
     };
 
-	class timer_context
-	{
-	public:
-		static constexpr int32_t times_mask = 0xFFFFFFF;
+    class timer_context
+    {
+    public:
+        static constexpr int32_t times_mask = 0xFFFFFFF;
 
-		enum flag
-		{
-			removed = 1 << 29,
-			infinite = 1 << 30,
-		};
+        enum flag
+        {
+            removed = 1 << 29,
+            infinite = 1 << 30,
+        };
 
-		timer_context(int32_t duration, int32_t times)
-			:duration_(duration)
-			, times_(times)
-		{
-		}
+        timer_context(int32_t duration, int32_t times)
+            :duration_(duration)
+            , times_(times)
+        {
+        }
 
-		~timer_context()
-		{
-		}
+        ~timer_context()
+        {
+        }
 
-		int32_t duration()  const noexcept
-		{
-			return duration_;
-		}
+        int32_t duration()  const noexcept
+        {
+            return duration_;
+        }
 
-		bool times(int32_t value) noexcept
-		{
-			times_ = value;
-			return (times_& times_mask) > 0;
-		}
+        bool times(int32_t value) noexcept
+        {
+            times_ = value;
+            return (times_& times_mask) > 0;
+        }
 
-		int32_t times()  const noexcept
-		{
-			return times_;
-		}
+        int32_t times()  const noexcept
+        {
+            return times_;
+        }
 
-		void set_flag(flag v) noexcept
-		{
-			times_ |= static_cast<int32_t>(v);
-		}
+        void set_flag(flag v) noexcept
+        {
+            times_ |= static_cast<int32_t>(v);
+        }
 
-		bool has_flag(flag v) const noexcept
-		{
-			return ((times_& static_cast<int32_t>(v)) != 0);
-		}
+        bool has_flag(flag v) const noexcept
+        {
+            return ((times_& static_cast<int32_t>(v)) != 0);
+        }
 
-		void clear_flag(flag v) noexcept
-		{
-			times_ &= ~static_cast<int32_t>(v);
-		}
-	private:
-		int32_t	duration_;
-		int32_t	times_;
-	};
+        void clear_flag(flag v) noexcept
+        {
+            times_ &= ~static_cast<int32_t>(v);
+        }
+    private:
+        int32_t	duration_;
+        int32_t	times_;
+    };
 
-    class timer:public base_timer<timer>
+    class timer :public base_timer<timer>
     {
         static constexpr int MAX_TIMER_NUM = (1 << 24) - 1;
 
-		using timer_handler_t = std::function<void(timer_id_t)>;
+        using timer_handler_t = std::function<void(timer_id_t)>;
 
-		friend class base_timer<timer>;
-        
-		class context:public timer_context
-		{
-		public:
-			context(int32_t duration, int32_t times, timer_handler_t handler)
-				:timer_context(duration, times)
-				, handler_(std::forward<timer_handler_t>(handler))
-			{
-			}
+        friend class base_timer<timer>;
 
-			~context()
-			{
-			}
+        class context :public timer_context
+        {
+        public:
+            context(int32_t duration, int32_t times, timer_handler_t handler)
+                :timer_context(duration, times)
+                , handler_(std::forward<timer_handler_t>(handler))
+            {
+            }
 
-			void  expired(timer_id_t id)
-			{
-				assert(nullptr != handler_);
-				handler_(id);
-			}
-		private:
-			timer_handler_t handler_;
-		};
+            ~context()
+            {
+            }
+
+            void  expired(timer_id_t id)
+            {
+                assert(nullptr != handler_);
+                handler_(id);
+            }
+        private:
+            timer_handler_t handler_;
+        };
 
     public:
         timer_id_t repeat(int32_t duration, int32_t times, timer_handler_t hander)
@@ -333,7 +333,7 @@ namespace moon
                 duration = PRECISION;
             }
 
-			assert(times < timer_context::times_mask);
+            assert(times < timer_context::times_mask);
 
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
                 uuid_ = 1;
@@ -343,14 +343,14 @@ namespace moon
                 ++uuid_;
             }
 
-			if (times <= 0)
-			{
-				times = (0|timer_context::infinite);
-			}
+            if (times <= 0)
+            {
+                times = (0 | timer_context::infinite);
+            }
 
             timer_id_t id = uuid_;
             insert_timer(duration, id);
-            timers_.emplace(id, context{ duration,times, hander});
+            timers_.emplace(id, context{ duration,times, hander });
             return id;
         }
 
@@ -359,12 +359,12 @@ namespace moon
             auto iter = timers_.find(timerid);
             if (iter != timers_.end())
             {
-				iter->second.set_flag(timer_context::removed);
+                iter->second.set_flag(timer_context::removed);
                 return;
             }
         }
 
-	private:
+    private:
         timer_id_t create_timerid()
         {
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
@@ -387,7 +387,7 @@ namespace moon
             auto&ctx = iter->second;
             if (!ctx.has_flag(timer_context::removed))
             {
-				ctx.expired(id);
+                ctx.expired(id);
                 if (ctx.has_flag(timer_context::infinite) || ctx.times(ctx.times() - 1))
                 {
                     return ctx.duration();
@@ -400,6 +400,6 @@ namespace moon
     private:
         uint32_t uuid_ = 0;
         std::unordered_map<uint32_t, context> timers_;
-	};
+    };
 }
 

@@ -20,25 +20,25 @@ namespace moon
         error(const std::string& str) : std::runtime_error(""), w(str) {}
         error(std::string&& str) : std::runtime_error(""), w(std::move(str)) {}
 
-		error(const std::string& str, const char* file, int line)
-			: std::runtime_error(""),w(str)
-		{
-			w.append("(");
-			w.append(file);
-			w.append(":");
-			w.append(std::to_string(line));
-			w.append(")");
-		}
+        error(const std::string& str, const char* file, int line)
+            : std::runtime_error(""), w(str)
+        {
+            w.append("(");
+            w.append(file);
+            w.append(":");
+            w.append(std::to_string(line));
+            w.append(")");
+        }
 
-		error(std::string&& str, const char* file, int line)
-			: std::runtime_error(""), w(std::move(str))
-		{
-			w.append("(");
-			w.append(file);
-			w.append(":");
-			w.append(std::to_string(line));
-			w.append(")");
-		}
+        error(std::string&& str, const char* file, int line)
+            : std::runtime_error(""), w(std::move(str))
+        {
+            w.append("(");
+            w.append(file);
+            w.append(":");
+            w.append(std::to_string(line));
+            w.append(")");
+        }
 
         error(const error& e) = default;
         error(error&& e) = default;
