@@ -13,14 +13,15 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <vector>
 #include <cassert>
 #include <atomic>
+#include <type_traits>
 
 namespace moon
 {
 	template<bool v>
-	struct queue_empty_check{};
+	struct queue_block_empty :std::false_type {};
 
 	template<>
-	struct queue_empty_check<true>
+	struct queue_block_empty<true> :std::true_type
 	{
 		std::condition_variable notempty_;
 		template<typename TLock,typename TCond>
@@ -40,28 +41,11 @@ namespace moon
 		}
 	};
 
-	template<>
-	struct queue_empty_check<false>
-	{
-		template<typename TLock, typename TCond>
-		void check(TLock&, TCond&&)
-		{
-		}
-
-		void notify_one()
-		{
-		}
-
-		void notify_all()
-		{
-		}
-	};
-
 	template<bool v>
-	struct queue_full_check{};
+	struct queue_block_full:std::false_type {};
 
 	template<>
-	struct queue_full_check<true>
+	struct queue_block_full<true>:std::true_type
 	{
 		std::condition_variable notfull_;
 
@@ -82,31 +66,14 @@ namespace moon
 		}
 	};
 
-	template<>
-	struct queue_full_check<false>
-	{
-		template<typename TLock, typename TCond>
-		void check(TLock&, TCond&&)
-		{
-		}
-
-		void notify_one()
-		{
-		}
-
-		void notify_all()
-		{
-		}
-	};
-
-	template<class T,typename LockType = std::mutex, bool CheckEmpty = false,bool CheckFull = false>
-	class concurrent_queue :public queue_empty_check<CheckEmpty>,public queue_full_check<CheckFull>
+	template<class T,typename LockType = std::mutex,template <class> class Container = std::vector, bool BlockEmpty = false,bool BlockFull = false>
+	class concurrent_queue :public queue_block_empty<BlockEmpty>,public queue_block_full<BlockFull>
 	{
 	public:
-		using queue_type = std::vector<T>;
+		using container_type = Container<T>;
 		using lock_t = LockType;
-		using empty_check_t = queue_empty_check<CheckEmpty>;
-		using full_check_t = queue_full_check<CheckFull>;
+		using block_empty = queue_block_empty<BlockEmpty>;
+		using block_full = queue_block_full<BlockFull>;
 
 		concurrent_queue()
 			:exit_(false)
@@ -127,30 +94,41 @@ namespace moon
 		{		
 			std::unique_lock<lock_t> lck(mutex_);
 
-			full_check_t::check(lck, [this] {
-				return exit_ || (queue_.size() < max_size_);
-			});
+			if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+			{
+				block_full::check(lck, [this] {
+					return (queue_.size() < max_size_) || exit_;
+				});
+			}
 
 			queue_.push_back(std::forward<TData>(x));
 
-			empty_check_t::notify_one();
-
+			if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+			{
+				block_empty::notify_one();
+			}
             return queue_.size();
 		}
 
 		bool try_pop(T& t)
 		{
 			std::unique_lock<lock_t> lck(mutex_);
-			empty_check_t::check(lck, [this] {
-				return exit_ || (queue_.size()>0);
-			});
+			if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+			{
+				block_empty::check(lck, [this] {
+					return (queue_.size() > 0) || exit_;
+				});
+			}
 			if (queue_.empty())
 			{
 				return false;
 			}		
             t = queue_.front();
 			queue_.pop_front();
-			full_check_t::notify_one();
+			if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+			{
+				block_full::notify_one();
+			}
 			return true;
 		}
 
@@ -160,27 +138,39 @@ namespace moon
 			return queue_.size();
 		}
 
-		void  swap(queue_type& other)
+		void  swap(container_type& other)
 		{
 			std::unique_lock<lock_t> lck(mutex_);
-			empty_check_t::check(lck, [this] {
-				return exit_ || (queue_.size()>0);
-			});
+			if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+			{
+				block_empty::check(lck, [this] {
+					return (queue_.size() > 0) || exit_;
+				});
+			}
 			queue_.swap(other);
-			full_check_t::notify_one();
+			if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+			{
+				block_full::notify_one();
+			}
 		}
 
 		void exit()
 		{
             std::unique_lock<lock_t> lck(mutex_);
             exit_ = true;
-            full_check_t::notify_all();
-            empty_check_t::notify_all();
+			if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+			{
+				block_full::notify_all();
+			}
+			if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+			{
+				block_empty::notify_all();
+			}
 		}
 
 	private:
 		mutable lock_t mutex_;
-		queue_type queue_;
+		container_type queue_;
 		std::atomic_bool exit_;
 		size_t max_size_;
 	};

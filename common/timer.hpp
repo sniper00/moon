@@ -15,7 +15,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include <vector>
 #include <unordered_map>
 #include <list>
-#include <cinttypes>
 
 namespace moon
 {
