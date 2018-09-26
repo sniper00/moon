@@ -30,7 +30,7 @@ namespace moon
         std::string inner_host;
         std::string startup;
         std::string log;
-		std::string path;
+        std::string path;
         std::vector<service_config> services;
     };
 
@@ -75,7 +75,7 @@ namespace moon
             return config_;
         }
 
-        bool parse(const std::string& config,int32_t sid)
+        bool parse(const std::string& config, int32_t sid)
         {
             try
             {
@@ -99,13 +99,13 @@ namespace moon
                     scfg.startup = rapidjson::get_value<std::string>(&c, "startup");
                     scfg.log = rapidjson::get_value<std::string>(&c, "log");
                     scfg.loglevel = rapidjson::get_value<std::string>(&c, "loglevel", "DEBUG");
-					scfg.path = rapidjson::get_value<std::string>(&c, "path", "");
+                    scfg.path = rapidjson::get_value<std::string>(&c, "path", "");
                     if (scfg.log.find("#date") != std::string::npos)
                     {
                         time_t now = std::time(nullptr);
                         std::tm m;
                         moon::time::localtime(&now, &m);
-                        char buff[50 + 1] = {0};
+                        char buff[50 + 1] = { 0 };
                         std::strftime(buff, 50, "%Y%m%d%H%M%S", &m);
                         moon::replace(scfg.log, "#date", buff);
                     }
@@ -124,7 +124,7 @@ namespace moon
                             sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
                             sc.name = rapidjson::get_value<std::string>(&s, "name");
 
-							s.AddMember("path", rapidjson::Value::StringRefType(scfg.path.data()),doc.GetAllocator());
+                            s.AddMember("path", rapidjson::Value::StringRefType(scfg.path.data()), doc.GetAllocator());
 
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

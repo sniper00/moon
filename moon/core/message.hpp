@@ -75,28 +75,28 @@ namespace moon
         {
             if (header.size() != 0)
             {
-				if (nullptr == header_)
-				{
-					header_ = std::make_unique<std::string>(header.data(), header.size());
-				}
-				else
-				{
-					header_->clear();
-					header_->assign(header.data(), header.size());
-				}
-            }       
+                if (nullptr == header_)
+                {
+                    header_ = std::make_unique<std::string>(header.data(), header.size());
+                }
+                else
+                {
+                    header_->clear();
+                    header_->assign(header.data(), header.size());
+                }
+            }
         }
 
-		string_view_t header() const
+        string_view_t header() const
         {
-			if (nullptr == header_)
-			{
-				return string_view_t{};
-			}
-			else
-			{
-				return string_view_t{ header_->data(),header_->size() };
-			}
+            if (nullptr == header_)
+            {
+                return string_view_t{};
+            }
+            else
+            {
+                return string_view_t{ header_->data(),header_->size() };
+            }
         }
 
         void set_responseid(int32_t v)
@@ -135,7 +135,7 @@ namespace moon
             {
                 return string_view_t(nullptr, 0);
             }
-            return string_view_t(reinterpret_cast<const char*>(data_->data()),data_->size());
+            return string_view_t(reinterpret_cast<const char*>(data_->data()), data_->size());
         }
 
         string_view_t substr(int pos, size_t len = string_view_t::npos) const
@@ -151,7 +151,7 @@ namespace moon
 
         void write_string(const std::string& s)
         {
-            data_->write_back(s.data(), 0, s.size()+1);
+            data_->write_back(s.data(), 0, s.size() + 1);
         }
 
         const char* data() const
@@ -181,7 +181,7 @@ namespace moon
 
         void set_broadcast(bool v)
         {
-            v?data_->set_flag(static_cast<uint8_t>(buffer_flag::broadcast)): data_->clear_flag(static_cast<uint8_t>(buffer_flag::broadcast));
+            v ? data_->set_flag(static_cast<uint8_t>(buffer_flag::broadcast)) : data_->clear_flag(static_cast<uint8_t>(buffer_flag::broadcast));
         }
 
         void* pointer()
@@ -191,12 +191,12 @@ namespace moon
 
         void reset()
         {
-           init();
-		   if (nullptr != header_)
-		   {
-			   header_->clear();
-		   }
-           data_->clear();
+            init();
+            if (nullptr != header_)
+            {
+                header_->clear();
+            }
+            data_->clear();
         }
     private:
         void init()

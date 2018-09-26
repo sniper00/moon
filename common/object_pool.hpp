@@ -16,16 +16,16 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-	class nonlock
-	{
-	public:
-		void lock()
-		{
-		}
-		void unlock()
-		{
-		}
-	};
+    class nonlock
+    {
+    public:
+        void lock()
+        {
+        }
+        void unlock()
+        {
+        }
+    };
 
     template<class T, size_t PoolSize = 0, typename TLock = nonlock>
     class pointer_pool
@@ -33,7 +33,7 @@ namespace moon
     public:
         using lock_t = TLock;
         using object_t = T;
-        using object_pointer_t = T*;
+        using object_pointer_t = T * ;
 
         pointer_pool()
         {
@@ -49,7 +49,7 @@ namespace moon
 
         void release(object_pointer_t t)
         {
-            if ((PoolSize!=0) && objects_.size() >= PoolSize)
+            if ((PoolSize != 0) && objects_.size() >= PoolSize)
             {
                 delete t;
                 return;
@@ -96,7 +96,7 @@ namespace moon
             }
             objects_.clear();
         }
- 
+
     private:
         std::vector<object_pointer_t> objects_;
         lock_t	 lock_;
@@ -111,7 +111,7 @@ namespace moon
         shared_pointer_pool()
             :pool_()
         {
-            release_ = std::bind(&pointer_pool_t::release,&pool_,std::placeholders::_1);
+            release_ = std::bind(&pointer_pool_t::release, &pool_, std::placeholders::_1);
         }
 
         shared_pointer_pool(const shared_pointer_pool&) = delete;

@@ -12,9 +12,9 @@ namespace moon
     {
         rapidjson::Document doc;
     public:
-        bool parse(TService* s,const string_view_t& config)
+        bool parse(TService* s, const string_view_t& config)
         {
-            doc.Parse(config.data(),config.size());
+            doc.Parse(config.data(), config.size());
             if (doc.HasParseError() || !doc.IsObject())
             {
                 CONSOLE_ERROR(s->logger(), "Lua service parse config %s failed,errorcode %d", std::string{ config.data(),config.size() }, doc.GetParseError());
@@ -29,9 +29,9 @@ namespace moon
                 auto timeout = rapidjson::get_value<int32_t>(&doc, "network.timeout", 0);
                 auto ip = rapidjson::get_value<std::string>(&doc, "network.ip");
                 auto port = rapidjson::get_value<std::string>(&doc, "network.port");
-                auto type = rapidjson::get_value<std::string>(&doc, "network.type","listen");
-                auto protocol = rapidjson::get_value<std::string>(&doc, "network.protocol","default");
-				auto frame_flag = rapidjson::get_value<std::string>(&doc, "network.frame_flag", "none");
+                auto type = rapidjson::get_value<std::string>(&doc, "network.type", "listen");
+                auto protocol = rapidjson::get_value<std::string>(&doc, "network.protocol", "default");
+                auto frame_flag = rapidjson::get_value<std::string>(&doc, "network.frame_flag", "none");
 
                 if (ip.empty() || port.empty())
                 {
@@ -42,10 +42,13 @@ namespace moon
                 auto n = s->template add_component<moon::tcp>(TCP_COMP_NAME);
                 n->setprotocol(protocol);
                 n->settimeout(timeout);
-				n->set_enable_frame(frame_flag);
+                n->set_enable_frame(frame_flag);
                 if (type == "listen")
                 {
-                    n->listen(ip, port);
+                    if (!n->listen(ip, port))
+                    {
+                        return false;
+                    }
                 }
             }
             return true;

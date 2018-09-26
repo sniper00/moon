@@ -72,7 +72,7 @@ namespace moon
         return nullptr;
     }
 
-    bool component::add_component_imp(const std::string& name,component_ptr_t v)
+    bool component::add_component_imp(const std::string& name, component_ptr_t v)
     {
         auto iter = component_imp_->components_.emplace(name, v);
         MOON_CHECK(iter.second, "The component is already exist!");
@@ -89,7 +89,7 @@ namespace moon
 
     bool component::remove(const std::string & name)
     {
-        auto iter =  component_imp_->components_.find(name);
+        auto iter = component_imp_->components_.find(name);
         if (iter != component_imp_->components_.end())
         {
             iter->second->destroy();

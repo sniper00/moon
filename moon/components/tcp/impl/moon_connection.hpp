@@ -7,12 +7,12 @@ namespace moon
     class moon_connection : public base_connection
     {
     public:
-		static constexpr message_size_t INCOMPLETE_FLAG = 0x8000;
-		static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
+        static constexpr message_size_t INCOMPLETE_FLAG = 0x8000;
+        static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
 
         using base_connection_t = base_connection;
 
-		template <typename... Args>
+        template <typename... Args>
         explicit moon_connection(Args&&... args)
             :base_connection(std::forward<Args>(args)...)
             , continue_(false)
@@ -36,26 +36,26 @@ namespace moon
         {
             if (!data->has_flag(static_cast<uint8_t>(buffer_flag::pack_size)))
             {
-                bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::send)) !=0;
+                bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::send)) != 0;
                 if (data->size() > MAX_MSG_FRAME_SIZE)
                 {
                     if (!enable)
                     {
                         error(asio::error_code(), int(network_logic_error::send_message_size_max));
                         return false;
-                    }         
+                    }
                     data->set_flag(static_cast<uint8_t>(buffer_flag::framing));
                 }
                 else
                 {
                     message_size_t size = static_cast<message_size_t>(data->size());
                     host2net(size);
-					bool res = data->write_front(&size, 0, 1);
+                    bool res = data->write_front(&size, 0, 1);
                     MOON_DCHECK(res, "tcp::send write front failed");
-					if (res)
-					{
-						data->set_flag(static_cast<uint8_t>(buffer_flag::pack_size));
-					}
+                    if (res)
+                    {
+                        data->set_flag(static_cast<uint8_t>(buffer_flag::pack_size));
+                    }
                 }
             }
             return base_connection_t::send(data);
@@ -65,10 +65,10 @@ namespace moon
         void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf) override
         {
             size_t n = buf->size();
-            holder.framing_begin(buf, n/MAX_NET_MSG_SIZE+1);
+            holder.framing_begin(buf, n / MAX_NET_MSG_SIZE + 1);
             do
             {
-                message_size_t  size=0,header = 0;
+                message_size_t  size = 0, header = 0;
                 if (n > MAX_NET_MSG_SIZE)
                 {
                     header = size = MAX_NET_MSG_SIZE;
@@ -78,7 +78,7 @@ namespace moon
                 {
                     header = size = static_cast<message_size_t>(n);
                 }
-                const char* data = buf->data()+(buf->size()-n);
+                const char* data = buf->data() + (buf->size() - n);
                 n -= size;
                 host2net(header);
                 holder.push_framing(header, data, size);
@@ -93,7 +93,7 @@ namespace moon
             {
                 if (e)
                 {
-					error(e, int(logic_error_));
+                    error(e, int(logic_error_));
                     return;
                 }
 
@@ -129,22 +129,22 @@ namespace moon
 
         void read_body(message_size_t size)
         {
-            if(nullptr == buf_)
+            if (nullptr == buf_)
             {
-                buf_ = message::create_buffer(continue_?5*size:size);
+                buf_ = message::create_buffer(continue_ ? 5 * size : size);
             }
             else
-			{
+            {
                 buf_->check_space(size);
             }
 
-            asio::async_read(socket_, asio::buffer((buf_->data()+buf_->size()), size),
+            asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
                 make_custom_alloc_handler(allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
                 {
-					error(e, int(logic_error_));
+                    error(e, int(logic_error_));
                     return;
                 }
 

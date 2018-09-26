@@ -8,9 +8,9 @@ namespace moon
     public:
         using base_connection_t = base_connection;
 
-		template <typename... Args>
-		explicit custom_connection(Args&&... args)
-			:base_connection_t(std::forward<Args>(args)...)
+        template <typename... Args>
+        explicit custom_connection(Args&&... args)
+            :base_connection_t(std::forward<Args>(args)...)
             , restore_write_offset_(0)
             , prew_read_offset_(0)
         {
@@ -32,7 +32,7 @@ namespace moon
                 if (response_msg_->size() > 0)
                 {
                     //guarantee read is async operation
-					socket_.get_io_service().post([this] {
+                    socket_.get_io_service().post([this] {
                         handle_read_request();
                     });
                 }
@@ -142,16 +142,16 @@ namespace moon
 
         void error(const asio::error_code& e, int logicerr, const char* lerrmsg = nullptr) override
         {
-			(void)lerrmsg;
+            (void)lerrmsg;
             {
                 switch (logicerr)
                 {
-                case int(moon::network_logic_error::timeout) :
-                    response_msg_->set_header("timeout");
-                    break;
-                default:
-                    response_msg_->set_header("closed");
-                    break;
+                    case int(moon::network_logic_error::timeout) :
+                        response_msg_->set_header("timeout");
+                        break;
+                    default:
+                        response_msg_->set_header("closed");
+                        break;
                 }
 
                 if (e && e != asio::error::eof)
@@ -171,7 +171,7 @@ namespace moon
             msg->set_type(mtype);
             msg->set_responseid(-read_request_.responseid);
             read_request_.responseid = 0;
-			handle_message(msg);
+            handle_message(msg);
         }
     protected:
         int restore_write_offset_;

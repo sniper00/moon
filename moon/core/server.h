@@ -32,18 +32,18 @@ namespace moon
 
         void stop();
 
-		log* logger();
+        log* logger();
 
-		router* get_router();
+        router* get_router();
 
-		size_t workernum() const;
-	private:
-		void wait();
+        size_t workernum() const;
     private:
-		std::atomic<state> state_;
-		std::vector<std::unique_ptr<worker>> workers_;
-		log default_log_;
-		router router_;
+        void wait();
+    private:
+        std::atomic<state> state_;
+        std::vector<std::unique_ptr<worker>> workers_;
+        log default_log_;
+        router router_;
     };
 };
 

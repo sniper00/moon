@@ -45,7 +45,7 @@ using namespace std::literals::string_view_literals;
 namespace moon
 {
     using string_view_t = std::string_view;
-    using wstring_view_t =  std::wstring_view;
+    using wstring_view_t = std::wstring_view;
 }
 
 #undef min
@@ -86,13 +86,13 @@ using classname##_wptr_t = std::weak_ptr<classname>;
 
 namespace moon
 {
-	enum  class state
-	{
-		init,
-		ready,
-		stopping,
-		exited
-	};
+    enum  class state
+    {
+        init,
+        ready,
+        stopping,
+        exited
+    };
 }
 
 

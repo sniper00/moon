@@ -36,25 +36,25 @@ namespace moon
 
         asio::io_service& io_service();
 
-		int32_t workerid() const;
+        int32_t workerid() const;
 
-		uint32_t servicenum() const;
+        uint32_t servicenum() const;
 
-		uint32_t make_serviceid();
+        uint32_t make_serviceid();
 
-		void add_service(const service_ptr_t& s);
+        void add_service(const service_ptr_t& s);
 
-		void send(const message_ptr_t& msg);
+        void send(const message_ptr_t& msg);
 
-		void workerid(int32_t id);
+        void workerid(int32_t id);
 
-		void shared(bool v);
+        void shared(bool v);
 
-		bool shared() const;
+        bool shared() const;
 
-		service* find_service(uint32_t serviceid) const;
+        service* find_service(uint32_t serviceid) const;
 
-		void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
+        void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
     private:
         void run();
 
@@ -74,31 +74,31 @@ namespace moon
 
         void update();
 
-        void handle_one(service* ser,const message_ptr_t& msg);
+        void handle_one(service* ser, const message_ptr_t& msg);
 
-		void register_commands();
+        void register_commands();
     private:
-		//To prevent post too many update event
-		std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
-		std::atomic<state> state_;
+        //To prevent post too many update event
+        std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
+        std::atomic<state> state_;
         std::atomic_bool shared_;
-		int32_t workerid_;
+        int32_t workerid_;
         std::atomic<uint16_t> serviceuid_;
         std::atomic<uint32_t> servicenum_;
 
-		int64_t work_time_;
-		router*  router_;
+        int64_t work_time_;
+        router*  router_;
         std::thread thread_;
         asio::io_service ios_;
         asio::io_service::work work_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
 
-		using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock,std::vector>;
-		queue_t::container_type swapqueue_;
-		queue_t mqueue_;
+        using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock, std::vector>;
+        queue_t::container_type swapqueue_;
+        queue_t mqueue_;
 
-		using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
-		std::unordered_map<std::string, command_hander_t> commands_;
+        using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
+        std::unordered_map<std::string, command_hander_t> commands_;
     };
 };
 

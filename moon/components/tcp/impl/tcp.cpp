@@ -18,11 +18,11 @@ namespace moon
 {
     tcp::tcp() noexcept
         :ios_(nullptr)
-		, connuid_(1)
-		, timeout_(0)
-		, type_(protocol_type::protocol_default)
-		, frame_flag_(frame_enable_flag::none)
-		, parent_(nullptr)
+        , connuid_(1)
+        , timeout_(0)
+        , type_(protocol_type::protocol_default)
+        , frame_flag_(frame_enable_flag::none)
+        , parent_(nullptr)
     {
     }
 
@@ -33,28 +33,28 @@ namespace moon
 
     void tcp::setprotocol(std::string flag)
     {
-		moon::lower(flag);
-		switch (moon::chash_string(flag.data()))
-		{
-		case moon::chash_string("default"):
-		{
-			type_ = moon::protocol_type::protocol_default;
-			break;
-		}
-		case moon::chash_string("custom"):
-		{
-			type_ = moon::protocol_type::protocol_custom;
-			break;
-		}
-		case moon::chash_string("websocket"):
-		{
-			type_ = moon::protocol_type::protocol_websocket;
-			break;
-		}
-		default:
-			CONSOLE_WARN(logger(), "tcp::setprotocol Unsupported  protocol %s.Support: 'default' 'custom' 'websocket'.", flag.data());
-			break;
-		}
+        moon::lower(flag);
+        switch (moon::chash_string(flag.data()))
+        {
+        case moon::chash_string("default"):
+        {
+            type_ = moon::protocol_type::protocol_default;
+            break;
+        }
+        case moon::chash_string("custom"):
+        {
+            type_ = moon::protocol_type::protocol_custom;
+            break;
+        }
+        case moon::chash_string("websocket"):
+        {
+            type_ = moon::protocol_type::protocol_websocket;
+            break;
+        }
+        default:
+            CONSOLE_WARN(logger(), "tcp::setprotocol Unsupported  protocol %s.Support: 'default' 'custom' 'websocket'.", flag.data());
+            break;
+        }
     }
 
     void tcp::settimeout(int seconds)
@@ -77,34 +77,34 @@ namespace moon
 
     void tcp::set_enable_frame(std::string flag)
     {
-		moon::lower(flag);
-		switch (moon::chash_string(flag.data()))
-		{
-		case moon::chash_string("none"):
-		{
-			frame_flag_ = moon::frame_enable_flag::none;
-			break;
-		}
-		case moon::chash_string("r"):
-		{
-			frame_flag_ = moon::frame_enable_flag::receive;
-			break;
-		}
-		case moon::chash_string("w"):
-		{
-			frame_flag_ = moon::frame_enable_flag::send;
-			break;
-		}
-		case moon::chash_string("wr"):
-		case moon::chash_string("rw"):
-		{
-			frame_flag_ = moon::frame_enable_flag::both;
-			break;
-		}
-		default:
-			CONSOLE_WARN(logger(), "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
-			break;
-		}
+        moon::lower(flag);
+        switch (moon::chash_string(flag.data()))
+        {
+        case moon::chash_string("none"):
+        {
+            frame_flag_ = moon::frame_enable_flag::none;
+            break;
+        }
+        case moon::chash_string("r"):
+        {
+            frame_flag_ = moon::frame_enable_flag::receive;
+            break;
+        }
+        case moon::chash_string("w"):
+        {
+            frame_flag_ = moon::frame_enable_flag::send;
+            break;
+        }
+        case moon::chash_string("wr"):
+        case moon::chash_string("rw"):
+        {
+            frame_flag_ = moon::frame_enable_flag::both;
+            break;
+        }
+        default:
+            CONSOLE_WARN(logger(), "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
+            break;
+        }
     }
 
     bool tcp::listen(const std::string & ip, const std::string & port)
@@ -156,7 +156,7 @@ namespace moon
                 conn->set_id(make_connid());
                 conns_.emplace(conn->id(), conn);
                 conn->start(true);
-                
+
                 switch (type_)
                 {
                 case protocol_type::protocol_default:
@@ -184,7 +184,7 @@ namespace moon
         });
     }
 
-    void tcp::async_connect(const std::string & ip, const std::string & port,int32_t responseid)
+    void tcp::async_connect(const std::string & ip, const std::string & port, int32_t responseid)
     {
         responseid = -responseid;
         try
@@ -238,12 +238,12 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_WARN(logger(), "tcp::connect error %s",  e.what());
+            CONSOLE_WARN(logger(), "tcp::connect error %s", e.what());
             return 0;
         }
     }
 
-    void tcp::read(uint32_t connid, size_t n, read_delim delim,int32_t responseid)
+    void tcp::read(uint32_t connid, size_t n, read_delim delim, int32_t responseid)
     {
         responseid = -responseid;
         do
@@ -286,7 +286,7 @@ namespace moon
 
     bool tcp::send_message(uint32_t connid, message * msg)
     {
-        return send(connid,*msg);
+        return send(connid, *msg);
     }
 
     bool tcp::close(uint32_t connid)
@@ -337,12 +337,12 @@ namespace moon
         {
             return;
         }
-		msg->set_receiver(parent_->id());
-		parent_->handle_message(msg);
-		if (msg->type()== PTYPE_ERROR || msg->subtype() == static_cast<uint8_t>(socket_data_type::socket_close))
-		{
-			conns_.erase(msg->sender());
-		}
+        msg->set_receiver(parent_->id());
+        parent_->handle_message(msg);
+        if (msg->type() == PTYPE_ERROR || msg->subtype() == static_cast<uint8_t>(socket_data_type::socket_close))
+        {
+            conns_.erase(msg->sender());
+        }
     }
 
     void tcp::check()
@@ -352,69 +352,69 @@ namespace moon
             if (e || !self->ok())
             {
                 return;
-            }      
+            }
             auto now = std::time(nullptr);
             for (auto& conn : conns_)
             {
-                conn.second->timeout_check(now,timeout_);
+                conn.second->timeout_check(now, timeout_);
             }
             check();
         });
     }
 
-	asio::io_service & tcp::io_service()
-	{
-		return *ios_;
-	}
+    asio::io_service & tcp::io_service()
+    {
+        return *ios_;
+    }
 
-	uint32_t tcp::make_connid()
-	{
-		if (connuid_ == 0xFFFF)
-			connuid_ = 1;
-		auto id = connuid_++;
-		while (conns_.find(id) != conns_.end())
-		{
-			id = connuid_++;
-		}
-		return id;
-	}
-	void tcp::make_response(string_view_t data, const std::string & header, int32_t responseid, uint8_t mtype)
-	{
-		if (0 == responseid)
-			return;
-		response_msg_->set_receiver(parent_->id());
-		response_msg_->get_buffer()->clear();
-		response_msg_->get_buffer()->write_back(data.data(), 0, data.size());
-		response_msg_->set_header(header);
-		response_msg_->set_responseid(-responseid);
-		response_msg_->set_type(mtype);
+    uint32_t tcp::make_connid()
+    {
+        if (connuid_ == 0xFFFF)
+            connuid_ = 1;
+        auto id = connuid_++;
+        while (conns_.find(id) != conns_.end())
+        {
+            id = connuid_++;
+        }
+        return id;
+    }
+    void tcp::make_response(string_view_t data, const std::string & header, int32_t responseid, uint8_t mtype)
+    {
+        if (0 == responseid)
+            return;
+        response_msg_->set_receiver(parent_->id());
+        response_msg_->get_buffer()->clear();
+        response_msg_->get_buffer()->write_back(data.data(), 0, data.size());
+        response_msg_->set_header(header);
+        response_msg_->set_responseid(-responseid);
+        response_msg_->set_type(mtype);
 
-		handle_message(response_msg_);
-	}
+        handle_message(response_msg_);
+    }
 
-	tcp::connection_ptr_t tcp::create_connection()
-	{
-		connection_ptr_t conn;
-		switch (type_)
-		{
-		case moon::protocol_type::protocol_default:
-		{
-			conn = std::make_shared<moon_connection>(this, io_service());
-			break;
-		}
-		case moon::protocol_type::protocol_custom:
-			conn = std::make_shared<custom_connection>(this, io_service());
-			break;
-		case moon::protocol_type::protocol_websocket:
-			conn = std::make_shared<ws_connection>(this, io_service());
-			break;
-		default:
-			break;
-		}
-		conn->logger(this->logger());
-		conn->set_enable_frame(frame_flag_);
-		return conn;
-	}
+    tcp::connection_ptr_t tcp::create_connection()
+    {
+        connection_ptr_t conn;
+        switch (type_)
+        {
+        case moon::protocol_type::protocol_default:
+        {
+            conn = std::make_shared<moon_connection>(this, io_service());
+            break;
+        }
+        case moon::protocol_type::protocol_custom:
+            conn = std::make_shared<custom_connection>(this, io_service());
+            break;
+        case moon::protocol_type::protocol_websocket:
+            conn = std::make_shared<ws_connection>(this, io_service());
+            break;
+        default:
+            break;
+        }
+        conn->logger(this->logger());
+        conn->set_enable_frame(frame_flag_);
+        return conn;
+    }
 }
 
 

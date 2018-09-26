@@ -37,7 +37,7 @@ namespace moon
         {
             auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
             int n = lua_gettop(L);
-            for (int i = 1;i <= n;i++) {
+            for (int i = 1; i <= n; i++) {
                 pack_one(L, buf, i, 0);
             }
             lua_pushlightuserdata(L, buf);
@@ -48,7 +48,7 @@ namespace moon
         {
             buffer buf;
             int n = lua_gettop(L);
-            for (int i = 1;i <= n;i++) {
+            for (int i = 1; i <= n; i++) {
                 pack_one(L, &buf, i, 0);
             }
             lua_pushlstring(L, buf.data(), buf.size());
@@ -87,7 +87,7 @@ namespace moon
 
             buffer_view br(pdata, len);
 
-            for (int i = 0;;i++)
+            for (int i = 0;; i++)
             {
                 if (i % 8 == 7)
                 {
@@ -157,7 +157,7 @@ namespace moon
         static void wb_integer(buffer* buf, lua_Integer v) {
             int type = TYPE_NUMBER;
             if (v == 0) {
-                uint8_t n =(uint8_t) COMBINE_TYPE(type, TYPE_NUMBER_ZERO);
+                uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_ZERO);
                 buf->write_back(&n);
             }
             else if (v != (int32_t)v) {
@@ -366,7 +366,7 @@ namespace moon
             case TYPE_NUMBER_ZERO:
                 return 0;
             case TYPE_NUMBER_BYTE: {
-				uint8_t n{};
+                uint8_t n{};
                 if (!buf->read(&n))
                     invalid_stream(L, buf);
                 return n;
@@ -438,7 +438,7 @@ namespace moon
             luaL_checkstack(L, LUA_MINSTACK, NULL);
             lua_createtable(L, array_size, 0);
             int i;
-            for (i = 1;i <= array_size;i++) {
+            for (i = 1; i <= array_size; i++) {
                 unpack_one(L, buf);
                 lua_rawseti(L, -2, i);
             }
@@ -453,7 +453,7 @@ namespace moon
             }
         }
 
-        static void push_value(lua_State *L, buffer_view* buf, int type, int cookie) 
+        static void push_value(lua_State *L, buffer_view* buf, int type, int cookie)
         {
             switch (type) {
             case TYPE_NIL:
@@ -525,9 +525,9 @@ namespace moon
             if (luaL_getmetafield(L, index, "__pairs") != LUA_TNIL) {
                 luaL_error(L, "Unsupport table hash type  to concat");
             }
-            else 
+            else
             {
-               concat_table_array(L, buf, index, depth);
+                concat_table_array(L, buf, index, depth);
             }
         }
 
@@ -541,15 +541,15 @@ namespace moon
             switch (type) {
             case LUA_TNIL:
                 break;
-            case LUA_TNUMBER: 
+            case LUA_TNUMBER:
             {
-                if (lua_isinteger(L, index)) 
+                if (lua_isinteger(L, index))
                 {
                     lua_Integer x = lua_tointeger(L, index);
                     auto s = std::to_string(x);
                     b->write_back(s.data(), 0, s.size());
                 }
-                else 
+                else
                 {
                     lua_Number n = lua_tonumber(L, index);
                     auto s = std::to_string(n);
@@ -582,7 +582,7 @@ namespace moon
                 delete b;
                 luaL_error(L, "Unsupport type %s to concat", lua_typename(L, type));
             }
-        } 
+        }
     };
 }
 

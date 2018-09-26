@@ -89,59 +89,59 @@ const lua_bind & lua_bind::bind_util() const
 
 static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
 {
-	directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
-		auto result = func(path.string(), isdir);
-		if (!result.valid())
-		{
-			sol::error err = result;
-			luaL_error(s.lua_state(), err.what());
-			return false;
-		}
-		else
-		{
-			if (result.return_count())
-			{
-				return  ((bool)result);
-			}
-			return true;
-		}
-	});
+    directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
+        auto result = func(path.string(), isdir);
+        if (!result.valid())
+        {
+            sol::error err = result;
+            luaL_error(s.lua_state(), err.what());
+            return false;
+        }
+        else
+        {
+            if (result.return_count())
+            {
+                return  ((bool)result);
+            }
+            return true;
+        }
+    });
 }
 
 const lua_bind & lua_bind::bind_filesystem() const
 {
-	lua.set_function("traverse_folder", traverse_folder);
-	lua.set_function("exists", directory::exists);
-	lua.set_function("create_directory", directory::create_directory);
-	lua.set_function("current_directory", directory::current_directory);
+    lua.set_function("traverse_folder", traverse_folder);
+    lua.set_function("exists", directory::exists);
+    lua.set_function("create_directory", directory::create_directory);
+    lua.set_function("current_directory", directory::current_directory);
 
-	sol::table tb = lua.create_named("path");
-	tb.set_function("parent_path", [](const moon::string_view_t& s) {
-		return fs::absolute(fs::path(s)).parent_path().string();
-	});
+    sol::table tb = lua.create_named("path");
+    tb.set_function("parent_path", [](const moon::string_view_t& s) {
+        return fs::absolute(fs::path(s)).parent_path().string();
+    });
 
-	tb.set_function("filename", [](const moon::string_view_t& s) {
-		return fs::path(s).filename().string();
-	});
+    tb.set_function("filename", [](const moon::string_view_t& s) {
+        return fs::path(s).filename().string();
+    });
 
-	tb.set_function("extension", [](const moon::string_view_t& s) {
-		return fs::path(s).extension().string();
-	});
+    tb.set_function("extension", [](const moon::string_view_t& s) {
+        return fs::path(s).extension().string();
+    });
 
-	tb.set_function("root_path", [](const moon::string_view_t& s) {
-		return fs::path(s).root_path().string();
-	});
+    tb.set_function("root_path", [](const moon::string_view_t& s) {
+        return fs::path(s).root_path().string();
+    });
 
-	//filename_without_extension
-	tb.set_function("stem", [](const moon::string_view_t& s) {
-		return fs::path(s).stem().string();
-	});
-	return *this;
+    //filename_without_extension
+    tb.set_function("stem", [](const moon::string_view_t& s) {
+        return fs::path(s).stem().string();
+    });
+    return *this;
 }
 
 const lua_bind & lua_bind::bind_log(moon::log* logger) const
 {
-    lua.set_function("LOGV",&moon::log::logstring,logger);
+    lua.set_function("LOGV", &moon::log::logstring, logger);
     return *this;
 }
 
@@ -152,7 +152,7 @@ static void redirect_message(message* m, const moon::string_view_t& header, uint
         m->set_header(header);
     }
     m->set_receiver(receiver);
-	m->set_type(mtype);
+    m->set_type(mtype);
 }
 
 static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::string_view_t& header, int32_t responseid, uint8_t mtype)
@@ -197,7 +197,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     {
         auto msg = message::create(data);
         msg->set_type(type);
-		router_->broadcast(sender, msg);
+        router_->broadcast(sender, msg);
     };
 
     lua.set_function("name", &lua_service::name, s);
@@ -206,18 +206,18 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("make_cache", &lua_service::make_cache, s);
     lua.set_function("get_tcp", &lua_service::get_tcp, s);
     lua.set_function("remove_component", &lua_service::remove, s);
-    lua.set_function("set_init", &lua_service::set_init,s);
-    lua.set_function("set_start", &lua_service::set_start,s);
-    lua.set_function("set_exit", &lua_service::set_exit,s);
-    lua.set_function("set_dispatch", &lua_service::set_dispatch,s);
-    lua.set_function("set_destroy", &lua_service::set_destroy,s);
-	lua.set_function("set_on_timer", &lua_service::set_on_timer, s);
-	lua.set_function("set_remove_timer", &lua_service::set_remove_timer, s);
-	lua.set_function("register_command", &lua_service::register_command, s);
+    lua.set_function("set_init", &lua_service::set_init, s);
+    lua.set_function("set_start", &lua_service::set_start, s);
+    lua.set_function("set_exit", &lua_service::set_exit, s);
+    lua.set_function("set_dispatch", &lua_service::set_dispatch, s);
+    lua.set_function("set_destroy", &lua_service::set_destroy, s);
+    lua.set_function("set_on_timer", &lua_service::set_on_timer, s);
+    lua.set_function("set_remove_timer", &lua_service::set_remove_timer, s);
+    lua.set_function("register_command", &lua_service::register_command, s);
     lua.set_function("memory_use", &lua_service::memory_use, s);
     lua.set_function("send", &router::send, router_);
     lua.set_function("new_service", &router::new_service, router_);
-	lua.set_function("remove_service", &router::remove_service, router_);
+    lua.set_function("remove_service", &router::remove_service, router_);
     lua.set_function("runcmd", &router::runcmd, router_);
     lua.set_function("broadcast", broadcast);
     lua.set_function("workernum", &router::workernum, router_);
@@ -255,7 +255,7 @@ const lua_bind & lua_bind::bind_http() const
     lua.new_usertype<moon::http_request>("http_request"
         , sol::constructors<sol::types<>>()
         , "parse", (&moon::http_request::parse_string)
-        , "method",sol::readonly(&moon::http_request::method)
+        , "method", sol::readonly(&moon::http_request::method)
         , "path", sol::readonly(&moon::http_request::path)
         , "query_string", sol::readonly(&moon::http_request::query_string)
         , "http_version", sol::readonly(&moon::http_request::http_version)
@@ -268,7 +268,7 @@ const lua_bind & lua_bind::bind_http() const
 const char* lua_traceback(lua_State * L)
 {
     luaL_traceback(L, L, NULL, 1);
-    auto s =  lua_tostring(L, -1);
+    auto s = lua_tostring(L, -1);
     if (nullptr != s)
     {
         return "";

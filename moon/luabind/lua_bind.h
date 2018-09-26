@@ -12,7 +12,7 @@ namespace moon
     class log;
 }
 
-class lua_bind:public moon::noncopyable
+class lua_bind :public moon::noncopyable
 {
 public:
     explicit lua_bind(sol::table& lua);
@@ -39,7 +39,7 @@ private:
 
 const char* lua_traceback(lua_State* _state);
 
-extern "C" 
+extern "C"
 {
     int luaopen_rapidjson(lua_State* L);
 }

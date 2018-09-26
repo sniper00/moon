@@ -33,17 +33,17 @@ public:
 
     void set_destroy(sol_function_t f);
 
-	void set_on_timer(sol_function_t f);
+    void set_on_timer(sol_function_t f);
 
-	void set_remove_timer(sol_function_t f);
+    void set_remove_timer(sol_function_t f);
 
-	void register_command(const std::string&, sol_function_t f);
+    void register_command(const std::string&, sol_function_t f);
 
     moon::tcp* get_tcp();
 
-	uint32_t make_cache(const moon::buffer_ptr_t & buf);
+    uint32_t make_cache(const moon::buffer_ptr_t & buf);
 
-	void send_cache(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
+    void send_cache(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
 
 private:
     bool init(const moon::string_view_t& config) override;
@@ -62,7 +62,7 @@ private:
 
     static void* lalloc(void * ud, void *ptr, size_t osize, size_t nsize);
 
-	void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid)  override;
+    void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid)  override;
 public:
     size_t mem = 0;
     size_t mem_limit = 0;
@@ -76,9 +76,9 @@ private:
     sol_function_t exit_;
     sol_function_t destroy_;
     moon::lua_timer timer_;
-	uint32_t cache_uuid_;
-	std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
+    uint32_t cache_uuid_;
+    std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
 
-	using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
-	std::unordered_map<std::string, command_hander_t> commands_;
+    using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
+    std::unordered_map<std::string, command_hander_t> commands_;
 };
