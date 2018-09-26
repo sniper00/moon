@@ -39,7 +39,7 @@ namespace moon
 
         for (int i = 0; i != worker_num; i++)
         {
-			auto& w =workers_.emplace_back(std::make_shared<worker>(&router_));
+			auto& w =workers_.emplace_back(std::make_unique<worker>(&router_));
             w->workerid(i+1);
         }
 
@@ -75,7 +75,7 @@ namespace moon
 
             size_t stoped_worker_num = 0;
 
-            for (auto w : workers_)
+            for (auto& w : workers_)
             {
                 if (w->stoped())
                 {

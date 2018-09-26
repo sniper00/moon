@@ -35,7 +35,7 @@ namespace moon
     public:
         static int pack(lua_State* L)
         {
-            auto buf = new buffer(256- BUFFER_HEAD_RESERVED, BUFFER_HEAD_RESERVED);
+            auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
             int n = lua_gettop(L);
             for (int i = 1;i <= n;i++) {
                 pack_one(L, buf, i, 0);
@@ -46,7 +46,7 @@ namespace moon
 
         static int packstring(lua_State* L)
         {
-            buffer buf(256- BUFFER_HEAD_RESERVED, BUFFER_HEAD_RESERVED);
+            buffer buf;
             int n = lua_gettop(L);
             for (int i = 1;i <= n;i++) {
                 pack_one(L, &buf, i, 0);
@@ -106,7 +106,7 @@ namespace moon
 
         static int concat(lua_State* L)
         {
-            auto buf = new buffer(256- BUFFER_HEAD_RESERVED, BUFFER_HEAD_RESERVED);
+            auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
             int n = lua_gettop(L);
             for (int i = 1; i <= n; i++) {
                 concat_one(L, buf, i, 0);
@@ -117,7 +117,7 @@ namespace moon
 
         static int concatstring(lua_State *L)
         {
-            buffer buf(256- BUFFER_HEAD_RESERVED, BUFFER_HEAD_RESERVED);
+            buffer buf;
             int n = lua_gettop(L);
             for (int i = 1; i <= n; i++) {
                 concat_one(L, &buf, i, 0);

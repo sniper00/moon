@@ -290,8 +290,15 @@ void lua_service::dispatch(message* msg)
         if (!result.valid())
         {
             sol::error err = result;
-			get_router()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
-        }
+			if (msg->responseid() == 0)
+			{
+				CONSOLE_ERROR(logger(), "lua_service::dispatch:%s", err.what());
+			}
+			else
+			{
+				get_router()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
+			}
+		}
     }
     catch (std::exception& e)
     {

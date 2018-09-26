@@ -17,7 +17,7 @@ namespace moon
 {
     class router;
 
-    class worker: public std::enable_shared_from_this<worker>
+    class worker
     {
     public:
         static const uint16_t MAX_SERVICE_NUM = 0xFFFF;
@@ -92,8 +92,10 @@ namespace moon
         asio::io_service ios_;
         asio::io_service::work work_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
-        std::vector<message_ptr_t> swapqueue_;
-		concurrent_queue<message_ptr_t, moon::spin_lock> mqueue_;
+
+		using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock,std::vector>;
+		queue_t::container_type swapqueue_;
+		queue_t mqueue_;
 
 		using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
 		std::unordered_map<std::string, command_hander_t> commands_;

@@ -41,7 +41,7 @@ namespace moon
 		void wait();
     private:
 		std::atomic<state> state_;
-		std::vector<std::shared_ptr<worker>> workers_;
+		std::vector<std::unique_ptr<worker>> workers_;
 		log default_log_;
 		router router_;
     };

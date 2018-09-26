@@ -133,7 +133,8 @@ namespace moon
             {
                 buf_ = message::create_buffer(continue_?5*size:size);
             }
-            else{
+            else
+			{
                 buf_->check_space(size);
             }
 

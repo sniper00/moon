@@ -35,9 +35,7 @@ namespace moon
     void worker::run()
     {
 		register_commands();
-
-		auto self = shared_from_this();
-        thread_ = std::thread([this, self]() {
+        thread_ = std::thread([this]() {
 			state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(router_->logger(), "WORKER-%d START", workerid_);
             ios_.run();
@@ -161,15 +159,13 @@ namespace moon
         {
             post([this]() {
                 auto begin_time = time::millsecond();
+				size_t count = 0;
                 if (mqueue_.size() != 0)
                 {
                     service* ser = nullptr;
                     swapqueue_.clear();
                     mqueue_.swap(swapqueue_);
-                    if (swapqueue_.size() > 1000)
-                    {
-                        CONSOLE_DEBUG(router_->logger(), "worker %d queue_size too long, %zu", workerid_, swapqueue_.size());
-                    }
+					count = swapqueue_.size();
                     for (auto& msg : swapqueue_)
                     {
                         handle_one(ser, msg);
@@ -177,6 +173,10 @@ namespace moon
                 }
                 auto difftime = time::millsecond() - begin_time;
                 work_time_ += difftime;
+				if (difftime > 1000)
+				{
+					CONSOLE_WARN(router_->logger(), "worker handle cost %" PRId64 "ms queue size %zu", difftime, count);
+				}
             });
         }
     }

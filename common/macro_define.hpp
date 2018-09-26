@@ -9,6 +9,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 #pragma once
 #include "platform_define.hpp"
+#include <cinttypes>
 #include <string_view>
 #include <algorithm>
 #include <cstdint>

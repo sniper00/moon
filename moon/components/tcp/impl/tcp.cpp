@@ -80,6 +80,11 @@ namespace moon
 		moon::lower(flag);
 		switch (moon::chash_string(flag.data()))
 		{
+		case moon::chash_string("none"):
+		{
+			frame_flag_ = moon::frame_enable_flag::none;
+			break;
+		}
 		case moon::chash_string("r"):
 		{
 			frame_flag_ = moon::frame_enable_flag::receive;
