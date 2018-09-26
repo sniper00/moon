@@ -38,7 +38,7 @@ moon.start(function()
 
     moon.dispatch('lua',function(msg,p)
         local header = msg:header()
-        docmd(header, p.unpack(msg:bytes()))
+        docmd(header, p.unpack(msg))
     end)
 
     moon.repeated(1000, -1, function()
