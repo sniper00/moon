@@ -42,7 +42,7 @@ local function do_log(bcle,level,fmt, ... )
 end
 
 print = function(...)
-    local s = c.concat_string(...)
+    local s = c.concat_print(...)
     logV(true, M.LOG_INFO, s)
 end
 
