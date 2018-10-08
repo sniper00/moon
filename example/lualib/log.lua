@@ -42,17 +42,8 @@ local function do_log(bcle,level,fmt, ... )
 end
 
 print = function(...)
-    local tb = table.pack(...)
-    local len = #tb
-    for i=1,len do
-        tb[i] = tostring(tb[i])
-        -- if tb[i] == nil then
-        --     tb[i] = "nil"
-        -- else
-
-        -- end
-    end
-    logV(true, M.LOG_INFO, table.concat(tb,"    "))
+    local s = c.concat_string(...)
+    logV(true, M.LOG_INFO, s)
 end
 
 local print = print

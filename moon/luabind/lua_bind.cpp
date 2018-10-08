@@ -70,6 +70,28 @@ string_view_t unpack_cluster_message(message* msg)
     return string_view_t{ header,header_size };
 }
 
+static int lua_concat_print(lua_State *L) {
+    int n = lua_gettop(L);  /* number of arguments */
+    int i;
+    lua_getglobal(L, "tostring");
+    buffer buf;
+    for (i = 1; i <= n; i++) {
+        const char *s;
+        size_t l;
+        lua_pushvalue(L, -1);  /* function to be called */
+        lua_pushvalue(L, i);   /* value to print */
+        lua_call(L, 1, 1);
+        s = lua_tolstring(L, -1, &l);  /* get result */
+        if (s == NULL)
+            return luaL_error(L, "'tostring' must return a string to 'print'");
+        if (i > 1) buf.write_back("\t");
+        buf.write_back(s, 0, l);
+        lua_pop(L, 1);  /* pop result */
+    }
+    lua_pushlstring(L, buf.data(), buf.size());
+    return 1;
+}
+
 const lua_bind & lua_bind::bind_util() const
 {
     lua.set_function("millsecond", (&time::millsecond));
@@ -84,6 +106,10 @@ const lua_bind & lua_bind::bind_util() const
     lua_getglobal(lua.lua_state(), "table");
     lua_pushcclosure(lua.lua_state(), new_table, 0);
     lua_setfield(lua.lua_state(), -2, "new_table");
+
+    lua.push();
+    lua_pushcclosure(lua.lua_state(), lua_concat_print, 0);
+    lua_setfield(lua.lua_state(), -2, "concat_print");
     return *this;
 }
 

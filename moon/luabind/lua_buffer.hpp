@@ -12,10 +12,10 @@ namespace sol
         struct checker<moon::buffer_ptr_t> {
             template <typename Handler>
             static bool check(lua_State* L, int index, Handler&& handler, record& tracking) {
-                tracking.use(1);
                 type t = type_of(L, index);
                 if (t == type::nil || t == type::userdata || t == type::lightuserdata || t == type::string)
                 {
+                    tracking.use(1);
                     return true;
                 }
                 else
