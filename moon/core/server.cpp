@@ -133,7 +133,7 @@ namespace moon
     void server::wait()
     {
         auto state_ready = state::ready;
-        if (!state_.compare_exchange_strong(state_ready, state::exited))
+        if (!state_.compare_exchange_strong(state_ready, state::stopping))
         {
             return;
         }
@@ -142,9 +142,13 @@ namespace moon
         {
             (*iter)->wait();
         }
-
         CONSOLE_INFO(logger(), "STOP");
         default_log_.wait();
+        state_.store(state::exited);
+    }
+    bool server::stoped()
+    {
+        return state_.load() == state::exited;
     }
 }
 

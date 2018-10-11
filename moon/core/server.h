@@ -37,6 +37,8 @@ namespace moon
         router* get_router();
 
         size_t workernum() const;
+
+        bool stoped();
     private:
         void wait();
     private:

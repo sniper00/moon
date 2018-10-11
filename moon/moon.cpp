@@ -26,11 +26,17 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 
     switch (dwCtrlType)
     {
+    case CTRL_C_EVENT:
+        svr->stop();
+        return TRUE;
     case CTRL_CLOSE_EVENT:
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
-    case CTRL_C_EVENT:
         svr->stop();
+        while (!svr->stoped())
+        {
+            std::this_thread::yield();
+        }
         return TRUE;
     default:
         break;
@@ -99,7 +105,7 @@ int main(int argc, char*argv[])
         }
         else
         {
-            printf("warn : server sid=%d last run not close successfully.\n", sid);
+            printf("warn : server sid=%d last run not closed successfully.\n", sid);
         }
     }
 

@@ -131,7 +131,7 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_ERROR(logger(), "tcp bind error %s(%d )", e.what(), e.code().value());
+            CONSOLE_ERROR(logger(), "%s:%s %s(%d)",ip.data(),port.data(), e.what(), e.code().value());
             return false;
         }
     }
@@ -174,11 +174,11 @@ namespace moon
             {
                 if (type_ == protocol_type::protocol_default || type_ == protocol_type::protocol_websocket)
                 {
-                    CONSOLE_WARN(logger(), "tcp async_accept error %s(%d )", e.message().data(), e.value());
+                    CONSOLE_WARN(logger(), "tcp async_accept error %s(%d)", e.message().data(), e.value());
                 }
                 else
                 {
-                    make_response(moon::format("tcp async_accept error %s(%d )", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
+                    make_response(moon::format("tcp async_accept error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
                 }
             }
         });
@@ -210,13 +210,13 @@ namespace moon
                 }
                 else
                 {
-                    make_response(moon::format("tcp async_connect error %s(%d )", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
+                    make_response(moon::format("tcp async_connect error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
                 }
             });
         }
         catch (asio::system_error& e)
         {
-            make_response(moon::format("tcp async_connect error %s(%d )", e.what(), e.code().value())
+            make_response(moon::format("tcp async_connect error %s(%d)", e.what(), e.code().value())
                 , "error"
                 , responseid, PTYPE_ERROR);
         }
@@ -238,7 +238,7 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_WARN(logger(), "tcp::connect error %s", e.what());
+            CONSOLE_WARN(logger(), "%s:%s %s(%d)", ip.data(), port.data(), e.what(),e.code().value());
             return 0;
         }
     }
@@ -378,7 +378,7 @@ namespace moon
         }
         return id;
     }
-    void tcp::make_response(string_view_t data, const std::string & header, int32_t responseid, uint8_t mtype)
+    void tcp::make_response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype)
     {
         if (0 == responseid)
             return;
