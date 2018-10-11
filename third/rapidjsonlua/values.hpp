@@ -148,7 +148,7 @@ namespace values {
 			return true;
 		}
 		bool EndArray(rapidjson::SizeType elementCount) {
-			assert(elementCount == context_.index_);
+			assert(static_cast<int>(elementCount) == context_.index_);
 			context_ = stack_.back();
 			stack_.pop_back();
 			context_.submit(L);
