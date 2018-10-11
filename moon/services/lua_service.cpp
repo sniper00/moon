@@ -168,7 +168,6 @@ bool lua_service::init(const string_view_t& config)
     service_config<lua_service> scfg;
     if (!scfg.parse(this, config))
     {
-        CONSOLE_ERROR(logger(), "Lua service parse config failed");
         return false;
     }
 
