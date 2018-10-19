@@ -92,32 +92,8 @@ int main(int argc, char*argv[])
     }
     else
     {
-        sid = 1;
+        sid = 1;//default start server 1
     }
-
-    std::string lock_file = moon::format("%d.lock", sid);
-    if (directory::exists(moon::format("%d.lock", sid)))
-    {
-        if (!directory::remove(lock_file))
-        {
-            printf("server sid=%d already start.\n", sid);
-            return -1;
-        }
-        else
-        {
-            printf("warn : server sid=%d last run not closed successfully.\n", sid);
-        }
-    }
-
-    std::ofstream os(lock_file);
-    if (!os.is_open())
-    {
-        printf("write server lock file failed\n");
-        return -1;
-    }
-
-    std::string lock_content = std::to_string(sid);
-    os.write(lock_content.data(), lock_content.size());
 
     register_signal();
 
@@ -142,11 +118,11 @@ int main(int argc, char*argv[])
             lua_bind.bind_filesystem()
                 .bind_log(server_->logger());
 
+            lua["package"]["loaded"]["moon_core"] = module;
+
             router_->register_service("lua", []()->service_ptr_t {
                 return std::make_shared<lua_service>();
             });
-
-            lua["package"]["loaded"]["moon_core"] = module;
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
             lua.script("package.cpath = './clib/?.dll;'");
@@ -189,8 +165,6 @@ int main(int argc, char*argv[])
         }
     }
     luaS_exitshr();
-    os.close();
-    directory::remove(moon::format("%d.lock", sid));
     return 0;
 }
 
