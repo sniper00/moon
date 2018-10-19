@@ -60,7 +60,7 @@ namespace moon
 #define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILENAME__,__LINE__};}
 
 #ifdef DEBUG
-#define MOON_DCHECK(cnd,msg) MOON_CHECK((cnd),(msg))
+#define MOON_DCHECK(cnd,msg) assert(cnd && msg);
 #else
 #define MOON_DCHECK(cnd,msg)
 #endif
