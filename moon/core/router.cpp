@@ -101,8 +101,6 @@ namespace moon
 
     void  router::runcmd(uint32_t sender, const std::string& cmd, int32_t responseid)
     {
-        responseid = -responseid;
-
         auto params = moon::split<std::string>(cmd, ".");
         if (params.size() < 3)
         {
@@ -237,7 +235,7 @@ namespace moon
         rmsg->set_header(header);
         rmsg->set_receiver(sender);
         rmsg->set_type(mtype);
-        rmsg->set_responseid(-resp);
+        rmsg->set_responseid(resp);
         rmsg->write_data(content);
         send_message(rmsg);
     }

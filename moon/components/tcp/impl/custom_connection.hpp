@@ -169,7 +169,7 @@ namespace moon
         void make_response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
         {
             msg->set_type(mtype);
-            msg->set_responseid(-read_request_.responseid);
+            msg->set_responseid(read_request_.responseid);
             read_request_.responseid = 0;
             handle_message(msg);
         }

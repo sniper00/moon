@@ -301,6 +301,7 @@ namespace moon
             ser = find_service(msg->receiver());
             if (nullptr == ser)
             {
+                msg->set_responseid(-msg->responseid());
                 router_->make_response(msg->sender(), "error", "call dead service.", msg->responseid(), PTYPE_ERROR);
                 return;
             }

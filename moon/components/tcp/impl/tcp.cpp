@@ -138,8 +138,6 @@ namespace moon
 
     void tcp::async_accept(int32_t responseid)
     {
-        responseid = -responseid;
-
         if (!acceptor_->is_open())
             return;
 
@@ -186,7 +184,6 @@ namespace moon
 
     void tcp::async_connect(const std::string & ip, const std::string & port, int32_t responseid)
     {
-        responseid = -responseid;
         try
         {
             asio::ip::tcp::resolver resolver(io_service());
@@ -245,7 +242,6 @@ namespace moon
 
     void tcp::read(uint32_t connid, size_t n, read_delim delim, int32_t responseid)
     {
-        responseid = -responseid;
         do
         {
             auto iter = conns_.find(connid);
@@ -386,7 +382,7 @@ namespace moon
         response_msg_->get_buffer()->clear();
         response_msg_->get_buffer()->write_back(data.data(), 0, data.size());
         response_msg_->set_header(header);
-        response_msg_->set_responseid(-responseid);
+        response_msg_->set_responseid(responseid);
         response_msg_->set_type(mtype);
 
         handle_message(response_msg_);

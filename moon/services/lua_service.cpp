@@ -295,6 +295,7 @@ void lua_service::dispatch(message* msg)
             }
             else
             {
+                msg->set_responseid(-msg->responseid());
                 get_router()->make_response(msg->sender(), "dispatch error", err.what(), msg->responseid(), PTYPE_ERROR);
             }
         }
