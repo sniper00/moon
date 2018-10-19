@@ -3,6 +3,7 @@ local moon   = require("moon")
 local command = {}
 
 command.ADD =  function(a,b)
+    assert(false)
     return a+b
 end
 
@@ -21,6 +22,10 @@ command.ACCUM = function(...)
         total = total + v
     end
     return total
+end
+
+command.EXIT = function()
+    moon.removeself()
 end
 
 local function docmd(sender,responseid, CMD,...)

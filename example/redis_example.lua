@@ -93,9 +93,10 @@ local function run_example()
             print("error",err)
             return
         end
+        local index = 1
         while true do
             redis.get("dog")
-            local ret,errmsg = redis:set("dog", "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+            local ret,errmsg = redis:set("dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
             if not ret then
                 print("set", errmsg)
                 moon.remove_timer(timerid)
@@ -103,6 +104,7 @@ local function run_example()
             end
             assert ('OK'== ret,ret)
             n=n+1
+            index = index+1
         end
         pool:close(redis)
     end)
