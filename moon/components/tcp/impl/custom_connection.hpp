@@ -45,7 +45,7 @@ namespace moon
         void read_some()
         {
             socket_.async_read_some(asio::buffer(buffer_),
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)

@@ -54,7 +54,7 @@ public:
 
 private:
     // Storage space used for handler-based custom memory allocation.
-    typename std::aligned_storage<1024>::type storage_;
+    typename std::aligned_storage<512>::type storage_;
 
     // Whether the handler-based custom allocation storage has been used.
     bool in_use_;

@@ -140,7 +140,7 @@ namespace moon
         {
             auto sbuf = std::make_shared<asio::streambuf>(MAX_REQUEST_STREAMBUF_SIZE);
             asio::async_read_until(socket_,*sbuf, header_delim_,
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -185,7 +185,7 @@ namespace moon
         void read_some()
         {
             socket_.async_read_some(asio::buffer(buffer_),
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)

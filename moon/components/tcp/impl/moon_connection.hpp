@@ -88,7 +88,7 @@ namespace moon
         void read_header()
         {
             asio::async_read(socket_, asio::buffer(&header_, sizeof(header_)),
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -139,7 +139,7 @@ namespace moon
             }
 
             asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)

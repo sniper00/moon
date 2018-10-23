@@ -45,11 +45,11 @@ namespace moon
 		template <typename... Args>
         explicit base_connection(tcp* t, Args&&... args)
             :sending_(false)
-			, tcp_(t)
             , frame_flag_(frame_enable_flag::none)
-            , id_(0)
-            , last_recv_time_(0)
             , logic_error_(network_logic_error::ok)
+            , id_(0)
+			, tcp_(t)
+            , last_recv_time_(0)
             , socket_(std::forward<Args>(args)...)
             , log_(nullptr)
         {
@@ -208,7 +208,7 @@ namespace moon
             asio::async_write(
                 socket_,
                 buffers_holder_.buffers(),
-                make_custom_alloc_handler(allocator_,
+                make_custom_alloc_handler(write_allocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
                 sending_ = false;
@@ -281,13 +281,14 @@ namespace moon
 		}
     protected:
         bool sending_;
-		tcp* tcp_;
         frame_enable_flag frame_flag_;
-        uint32_t id_;
-        time_t last_recv_time_;
         network_logic_error logic_error_;
+        uint32_t id_;
+		tcp* tcp_;
+        time_t last_recv_time_;
         socket_t socket_;
-        handler_allocator allocator_;
+        handler_allocator read_allocator_;
+        handler_allocator write_allocator_;
         const_buffers_holder  buffers_holder_;
         std::string remote_addr_;
         std::deque<buffer_ptr_t> send_queue_;
