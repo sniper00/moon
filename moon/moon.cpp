@@ -109,7 +109,7 @@ int main(int argc, char*argv[])
 
             MOON_CHECK(directory::exists("config.json"), "can not found config file: config.json");
             moon::server_config_manger scfg;
-            MOON_CHECK(scfg.parse(moon::file::read_all_text("config.json"), sid), "failed");
+            MOON_CHECK(scfg.parse(moon::file::read_all("config.json",std::ios::binary|std::ios::in), sid), "failed");
             lua.open_libraries();
             lua.require("json", luaopen_rapidjson);
 

@@ -27,7 +27,7 @@ local moon = {
 
 setmetatable(moon, {__index = core})
 
--- export global variable
+--export global variable
 local _g = _G
 moon.exports = {}
 setmetatable(
@@ -46,10 +46,14 @@ setmetatable(
 setmetatable(
     _g,
     {
-        __newindex = function(_, name)
-            local msg = string.format('USE "moon.exports.%s = <value>" INSTEAD OF SET GLOBAL VARIABLE', name)
-            print(debug.traceback(msg, 2))
-            print("")
+        __newindex = function(_, name,value)
+            if name:sub(1,4)~='sol.' then --ignore sol2 registed library
+                local msg = string.format('USE "moon.exports.%s = <value>" INSTEAD OF SET GLOBAL VARIABLE', name)
+                print(debug.traceback(msg, 2))
+                print("")
+            else
+                rawset(_g, name, value)
+            end
         end
     }
 )

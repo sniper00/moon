@@ -6,7 +6,9 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "rapidjson/error/en.h"
 #include "rapidjson/rapidjson_helper.hpp"
+
 
 namespace moon
 {
@@ -44,8 +46,8 @@ namespace moon
             rapidjson::CursorStreamWrapper<rapidjson::StringStream> csw(ss);
             rapidjson::Document doc;
             doc.ParseStream<rapidjson::kParseCommentsFlag>(csw);
-            MOON_CHECK(!doc.HasParseError(), moon::format("Parse server config failed,rapidjson errorcode %d,line %d col %d", doc.GetParseError(), csw.GetLine(), csw.GetColumn()));
-            MOON_CHECK(doc.IsArray(), "Server config format error: must be json array");
+            MOON_CHECK(!doc.HasParseError(), moon::format("Parse server config failed:%s(%d).line %d col %d", rapidjson::GetParseError_En(doc.GetParseError()), doc.GetParseError(), csw.GetLine(), csw.GetColumn()));
+            MOON_CHECK(doc.IsArray(), "Server config format error: must be json array.");
             for (auto&c : doc.GetArray())
             {
                 if (config_.size() > 1)
@@ -84,8 +86,8 @@ namespace moon
                 rapidjson::CursorStreamWrapper<rapidjson::StringStream> csw(ss);
                 rapidjson::Document doc;
                 doc.ParseStream<rapidjson::kParseCommentsFlag>(csw);
-                MOON_CHECK(!doc.HasParseError(), moon::format("Parse server config failed,rapidjson errorcode %d,line %d col %d", doc.GetParseError(), csw.GetLine(), csw.GetColumn()));
-                MOON_CHECK(doc.IsArray(), "Server config format error: must be json array");
+                MOON_CHECK(!doc.HasParseError(), moon::format("Parse server config failed:%s(%d).line %d col %d", rapidjson::GetParseError_En(doc.GetParseError()), doc.GetParseError(), csw.GetLine(), csw.GetColumn()));
+                MOON_CHECK(doc.IsArray(), "Server config format error: must be json array.");
                 for (auto&c : doc.GetArray())
                 {
                     server_config scfg;
