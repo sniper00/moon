@@ -62,7 +62,7 @@ tcp.on("message", function(sessionid, msg)
                     return
                 end
 
-                msg:resend(moon.sid(),receiver,"",responseid,moon.PLUA)
+                msg:resend(moon.sid(),receiver,"",responseid,moon.PTYPE_LUA)
 
                 response_watch[responseid] = sessionid
                 local ret,err2 = co_yield()
@@ -84,7 +84,7 @@ tcp.on("message", function(sessionid, msg)
     else
         --调用者
         remove_send_watch(sessionid,receiver,-rresponseid)
-        msg:resend(moon.sid(),receiver,"",-rresponseid,moon.PLUA)
+        msg:resend(moon.sid(),receiver,"",-rresponseid,moon.PTYPE_LUA)
     end
 end)
 
@@ -201,7 +201,7 @@ moon.init(function( config )
     moon.register_protocol(
     {
         name = "lua",
-        PTYPE = moon.PLUA,
+        PTYPE = moon.PTYPE_LUA,
         pack = function(...)return ...end,
         unpack = function(...) return ... end,
         dispatch =  function(msg, _)
