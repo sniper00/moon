@@ -13,7 +13,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 #include "common/log.hpp"
 
 namespace asio {
-    class io_service;
+    class io_context;
 }
 
 namespace moon
@@ -68,7 +68,7 @@ namespace moon
 
         void on_service_remove(uint32_t serviceid);
 
-        asio::io_service& get_io_service(uint32_t serviceid);
+        asio::io_context& get_io_context(uint32_t serviceid);
 
         void set_stop(std::function<void()> f);
 

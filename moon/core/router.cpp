@@ -279,7 +279,7 @@ namespace moon
         MOON_CHECK(count == 1, "erase failed!");
     }
 
-    asio::io_service & router::get_io_service(uint32_t serviceid)
+    asio::io_context & router::get_io_context(uint32_t serviceid)
     {
         int32_t workerid = worker_id(serviceid);
         MOON_CHECK(workerid_valid(workerid), "router::get_io_service: invalid serviceid");

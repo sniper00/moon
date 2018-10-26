@@ -23,8 +23,8 @@ namespace moon
         , serviceuid_(1)
         , work_time_(0)
         , router_(r)
-        , ios_(1)
-        , work_(ios_)
+        , io_ctx_(1)
+        , work_(asio::make_work_guard(io_ctx_))
     {
     }
 
@@ -38,7 +38,7 @@ namespace moon
         thread_ = std::thread([this]() {
             state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(router_->logger(), "WORKER-%d START", workerid_);
-            ios_.run();
+            io_ctx_.run();
             CONSOLE_INFO(router_->logger(), "WORKER-%d STOP", workerid_);
         });
         while (state_.load(std::memory_order_acquire) != state::ready);
@@ -68,7 +68,7 @@ namespace moon
 
     void worker::wait()
     {
-        ios_.stop();
+        io_ctx_.stop();
         if (thread_.joinable())
         {
             thread_.join();
@@ -148,9 +148,9 @@ namespace moon
         });
     }
 
-    asio::io_service & worker::io_service()
+    asio::io_context & worker::io_service()
     {
-        return ios_;
+        return io_ctx_;
     }
 
     void worker::send(const message_ptr_t & msg)

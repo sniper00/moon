@@ -17,7 +17,7 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
     tcp::tcp() noexcept
-        :ios_(nullptr)
+        :io_ctx_(nullptr)
         , connuid_(1)
         , timeout_(0)
         , type_(protocol_type::protocol_default)
@@ -59,7 +59,7 @@ namespace moon
 
     void tcp::settimeout(int seconds)
     {
-        checker_ = std::make_unique<asio::steady_timer>(io_service());
+        checker_ = std::make_unique<asio::steady_timer>(io_context());
         timeout_ = seconds;
         check();
     }
@@ -111,7 +111,7 @@ namespace moon
     {
         try
         {
-            acceptor_ = std::make_unique<asio::ip::tcp::acceptor>(io_service());
+            acceptor_ = std::make_unique<asio::ip::tcp::acceptor>(io_context());
             asio::ip::tcp::resolver resolver(acceptor_->get_io_service());
             asio::ip::tcp::resolver::query query(ip, port);
             resolver.resolve(query);
@@ -186,7 +186,7 @@ namespace moon
     {
         try
         {
-            asio::ip::tcp::resolver resolver(io_service());
+            asio::ip::tcp::resolver resolver(io_context());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
             auto conn = create_connection();
@@ -223,7 +223,7 @@ namespace moon
     {
         try
         {
-            asio::ip::tcp::resolver resolver(io_service());
+            asio::ip::tcp::resolver resolver(io_context());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
             auto conn = create_connection();
@@ -254,7 +254,7 @@ namespace moon
             }
             return;
         } while (0);
-        io_service().post([this, responseid]() {
+        io_context().post([this, responseid]() {
             make_response("read a invlid socket", "closed", responseid, PTYPE_ERROR);
         });
     }
@@ -302,7 +302,7 @@ namespace moon
         component::init();
         parent_ = parent<service>();
         MOON_DCHECK(parent_ != nullptr, "tcp::init service is null");
-        ios_ = &(parent_->get_router()->get_io_service(parent_->id()));
+        io_ctx_ = &(parent_->get_router()->get_io_context(parent_->id()));
         response_msg_ = message::create();
     }
 
@@ -358,9 +358,9 @@ namespace moon
         });
     }
 
-    asio::io_service & tcp::io_service()
+    asio::io_context & tcp::io_context()
     {
-        return *ios_;
+        return *io_ctx_;
     }
 
     uint32_t tcp::make_connid()
@@ -395,14 +395,14 @@ namespace moon
         {
         case moon::protocol_type::protocol_default:
         {
-            conn = std::make_shared<moon_connection>(this, io_service());
+            conn = std::make_shared<moon_connection>(this, io_context());
             break;
         }
         case moon::protocol_type::protocol_custom:
-            conn = std::make_shared<custom_connection>(this, io_service());
+            conn = std::make_shared<custom_connection>(this, io_context());
             break;
         case moon::protocol_type::protocol_websocket:
-            conn = std::make_shared<ws_connection>(this, io_service());
+            conn = std::make_shared<ws_connection>(this, io_context());
             break;
         default:
             break;

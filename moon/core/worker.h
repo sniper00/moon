@@ -67,7 +67,7 @@ namespace moon
         template<typename THandler>
         void post(THandler&& h)
         {
-            ios_.post(std::forward<THandler>(h));
+            asio::post(io_ctx_, std::forward<THandler>(h));
         }
     private:
         void start();
@@ -89,8 +89,8 @@ namespace moon
         int64_t work_time_;
         router*  router_;
         std::thread thread_;
-        asio::io_service ios_;
-        asio::io_service::work work_;
+        asio::io_context io_ctx_;
+        asio::executor_work_guard<asio::io_context::executor_type> work_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
 
         using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock, std::vector>;

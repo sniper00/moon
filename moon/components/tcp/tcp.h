@@ -114,7 +114,7 @@ namespace moon
 
         void check();
 
-		asio::io_service& io_service();
+		asio::io_context& io_context();
 
 		uint32_t make_connid();
 
@@ -122,7 +122,7 @@ namespace moon
 
 		connection_ptr_t create_connection();
     private:
-		asio::io_service* ios_;
+		asio::io_context* io_ctx_;
 		uint32_t connuid_;
 		uint32_t timeout_;
 		protocol_type type_;
