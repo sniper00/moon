@@ -16,18 +16,20 @@
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12345"
-                }
-            },
-            {
-                "name": "websocket_example",
-                "file": "network_example.lua",
-                "network": {
+                },
+                "network-ws": {
                     "name": "network",
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12346",
                     "protocol":"websocket"
                 }
+            },
+            {
+                "name": "socket_example",
+                "file": "socket_example.lua",
+                "ip": "#inner_host",
+                "port": "8001"
             }
         ]
     },
@@ -136,22 +138,6 @@
     },
     {
         "sid": 7,
-        "name": "server_#sid",
-        "outer_host": "127.0.0.1",
-        "inner_host": "127.0.0.1",
-        "log": "log/#sid_#date.log",
-        "services": [
-            {
-                "unique": true,
-                "name": "socket_example",
-                "file": "socket_example.lua",
-                "ip": "#inner_host",
-                "port": "8001"
-            }
-        ]
-    },
-    {
-        "sid": 8,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
         "services": [
