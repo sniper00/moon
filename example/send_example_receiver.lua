@@ -16,12 +16,9 @@ local function docmd(sender,header,...)
 	end
 end
 
-moon.start(function()
-
-	moon.dispatch('lua',function(msg,p)
-		local sender = msg:sender()
-        local header = msg:header()
-        docmd(sender,header, p.unpack(msg))
-    end)
+moon.dispatch('lua',function(msg,p)
+	local sender = msg:sender()
+	local header = msg:header()
+	docmd(sender,header, p.unpack(msg))
 end)
 
