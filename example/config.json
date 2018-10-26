@@ -12,13 +12,11 @@
                 "name": "network_example",
                 "file": "network_example.lua",
                 "network": {
-                    "name": "network",
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12345"
                 },
                 "network-ws": {
-                    "name": "network",
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "12346",
@@ -99,7 +97,6 @@
                 "name": "clusterd",
                 "file": "service/clusterd.lua",
                 "network": {
-                    "name": "network",
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "10001"
@@ -123,7 +120,6 @@
                 "name": "clusterd",
                 "file": "service/clusterd.lua",
                 "network": {
-                    "name": "network",
                     "type": "listen",
                     "ip": "#inner_host",
                     "port": "10002"

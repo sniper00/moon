@@ -23,9 +23,11 @@ Windows Platform:
 
 Linux Platform:
 ```shell
-    premake5 gmake
+    ./premake5 gmake
+    #Debug
     make
-    # Release版
+    # Release
+    # make clean config=release_linux
     # make config=release_linux
 ```
 
@@ -35,7 +37,7 @@ Linux Platform:
 https://github.com/sniper00/BallGame
 
 ### Echo Example
-网络通信和websocket示例
+网络通信,websocket,协程socket示例
 - 命令行输入 `./moon 1`运行服务器
 - 2字节大端表示长度的协议：python 运行echoclient.py 脚本
 - websocket： wesocket_client.html
@@ -54,8 +56,7 @@ https://github.com/sniper00/BallGame
 - 命令行输入 `./moon 5`
 - 命令行输入 `./moon 6`
 
-### Socket API Example
-用Socket API和协程实现的简单HttpServer示例
+### Mysql API Example
 - 命令行输入 `./moon 7`
 
 
