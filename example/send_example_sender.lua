@@ -30,16 +30,16 @@ local function docmd(header,...)
       end
 end
 
+moon.dispatch('lua',function(msg,p)
+    local header = msg:header()
+    docmd(header, p.unpack(msg))
+end)
+
 moon.start(function()
     receiver1 = moon.unique_service("send_example_receiver1")
     receiver2 = moon.unique_service("send_example_receiver2")
     receiver3 = moon.unique_service("send_example_receiver3")
     receiver4 = moon.unique_service("send_example_receiver4")
-
-    moon.dispatch('lua',function(msg,p)
-        local header = msg:header()
-        docmd(header, p.unpack(msg))
-    end)
 
     moon.repeated(1000, -1, function()
         sttime = moon.millsecond()
