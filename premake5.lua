@@ -85,23 +85,8 @@ project "moon"
     links{"lua53","rapidjson"}
     defines {
         "ASIO_STANDALONE" ,
-        "ASIO_HAS_STD_ARRAY",
-        "ASIO_HAS_STD_TYPE_TRAITS",
-        "ASIO_HAS_STD_SHARED_PTR",
-        "ASIO_HAS_CSTDINT",
-        "ASIO_DISABLE_SERIAL_PORT",
-        "ASIO_HAS_STD_CHRONO",
-        "ASIO_HAS_MOVE",
-        "ASIO_HAS_VARIADIC_TEMPLATES",
-        "ASIO_HAS_CONSTEXPR",
-        "ASIO_HAS_STD_SYSTEM_ERROR",
-        "ASIO_HAS_STD_ATOMIC",
-        "ASIO_HAS_STD_FUNCTION",
-        "ASIO_HAS_STD_THREAD",
-        "ASIO_HAS_STD_MUTEX_AND_CONDVAR",
-        "ASIO_HAS_STD_ADDRESSOF",
-
-        "SOL_CHECK_ARGUMENTS"
+        "SOL_CHECK_ARGUMENTS",
+        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING" ,
     }
     postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
     filter { "system:windows" }
