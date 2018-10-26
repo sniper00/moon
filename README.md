@@ -2,7 +2,7 @@
 一个轻量级的游戏服务器框架，底层采用C++17编写,逻辑层采用Lua脚本。
 
 ## Dependencies
-- [asio-1.10.6](https://github.com/chriskohlhoff/asio)(without boost)
+- [asio-1.12.1](https://github.com/chriskohlhoff/asio)(without boost)
 - [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
 - [sol2](https://github.com/ThePhD/sol2)(a C++ library binding to Lua)
 - [rapidjson](https://github.com/Tencent/rapidjson)
