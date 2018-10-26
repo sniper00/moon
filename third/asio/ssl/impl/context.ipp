@@ -3,7 +3,7 @@
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2005 Voipster / Indrek dot Juhani at voipster dot com
-// Copyright (c) 2005-2016 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2005-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -18,20 +18,16 @@
 
 #include "asio/detail/config.hpp"
 
-#if !defined(ASIO_ENABLE_OLD_SSL)
-# include <cstring>
-# include "asio/detail/throw_error.hpp"
-# include "asio/error.hpp"
-# include "asio/ssl/context.hpp"
-# include "asio/ssl/error.hpp"
-#endif // !defined(ASIO_ENABLE_OLD_SSL)
+#include <cstring>
+#include "asio/detail/throw_error.hpp"
+#include "asio/error.hpp"
+#include "asio/ssl/context.hpp"
+#include "asio/ssl/error.hpp"
 
 #include "asio/detail/push_options.hpp"
 
 namespace asio {
 namespace ssl {
-
-#if !defined(ASIO_ENABLE_OLD_SSL)
 
 struct context::bio_cleanup
 {
@@ -70,16 +66,15 @@ context::context(context::method m)
 
   switch (m)
   {
-#if defined(OPENSSL_NO_SSL2) \
-  || (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+    // SSL v2.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) || defined(OPENSSL_NO_SSL2)
   case context::sslv2:
   case context::sslv2_client:
   case context::sslv2_server:
     asio::detail::throw_error(
         asio::error::invalid_argument, "context");
     break;
-#else // defined(OPENSSL_NO_SSL2)
-      // || (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#else // (OPENSSL_VERSION_NUMBER >= 0x10100000L) || defined(OPENSSL_NO_SSL2)
   case context::sslv2:
     handle_ = ::SSL_CTX_new(::SSLv2_method());
     break;
@@ -89,9 +84,35 @@ context::context(context::method m)
   case context::sslv2_server:
     handle_ = ::SSL_CTX_new(::SSLv2_server_method());
     break;
-#endif // defined(OPENSSL_NO_SSL2)
-       // || (OPENSSL_VERSION_NUMBER >= 0x10100000L)
-#if defined(OPENSSL_NO_SSL3)
+#endif // (OPENSSL_VERSION_NUMBER >= 0x10100000L) || defined(OPENSSL_NO_SSL2)
+
+    // SSL v3.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+  case context::sslv3:
+    handle_ = ::SSL_CTX_new(::TLS_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, SSL3_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, SSL3_VERSION);
+    }
+    break;
+  case context::sslv3_client:
+    handle_ = ::SSL_CTX_new(::TLS_client_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, SSL3_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, SSL3_VERSION);
+    }
+    break;
+  case context::sslv3_server:
+    handle_ = ::SSL_CTX_new(::TLS_server_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, SSL3_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, SSL3_VERSION);
+    }
+    break;
+#elif defined(OPENSSL_NO_SSL3)
   case context::sslv3:
   case context::sslv3_client:
   case context::sslv3_server:
@@ -109,7 +130,34 @@ context::context(context::method m)
     handle_ = ::SSL_CTX_new(::SSLv3_server_method());
     break;
 #endif // defined(OPENSSL_NO_SSL3)
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+
+    // TLS v1.0.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+  case context::tlsv1:
+    handle_ = ::SSL_CTX_new(::TLS_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_VERSION);
+    }
+    break;
+  case context::tlsv1_client:
+    handle_ = ::SSL_CTX_new(::TLS_client_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_VERSION);
+    }
+    break;
+  case context::tlsv1_server:
+    handle_ = ::SSL_CTX_new(::TLS_server_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_VERSION);
+    }
+    break;
+#else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
   case context::tlsv1:
     handle_ = ::SSL_CTX_new(::TLSv1_method());
     break;
@@ -119,18 +167,35 @@ context::context(context::method m)
   case context::tlsv1_server:
     handle_ = ::SSL_CTX_new(::TLSv1_server_method());
     break;
-#endif // (OPENSSL_VERSION_NUMBER < 0x10100000L)
-  case context::sslv23:
-    handle_ = ::SSL_CTX_new(::SSLv23_method());
+#endif // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+
+    // TLS v1.1.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+  case context::tlsv11:
+    handle_ = ::SSL_CTX_new(::TLS_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_1_VERSION);
+    }
     break;
-  case context::sslv23_client:
-    handle_ = ::SSL_CTX_new(::SSLv23_client_method());
+  case context::tlsv11_client:
+    handle_ = ::SSL_CTX_new(::TLS_client_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_1_VERSION);
+    }
     break;
-  case context::sslv23_server:
-    handle_ = ::SSL_CTX_new(::SSLv23_server_method());
+  case context::tlsv11_server:
+    handle_ = ::SSL_CTX_new(::TLS_server_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_1_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_1_VERSION);
+    }
     break;
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
-#if defined(SSL_TXT_TLSV1_1)
+#elif defined(SSL_TXT_TLSV1_1)
   case context::tlsv11:
     handle_ = ::SSL_CTX_new(::TLSv1_1_method());
     break;
@@ -148,7 +213,34 @@ context::context(context::method m)
         asio::error::invalid_argument, "context");
     break;
 #endif // defined(SSL_TXT_TLSV1_1)
-#if defined(SSL_TXT_TLSV1_2)
+
+    // TLS v1.2.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+  case context::tlsv12:
+    handle_ = ::SSL_CTX_new(::TLS_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_2_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_2_VERSION);
+    }
+    break;
+  case context::tlsv12_client:
+    handle_ = ::SSL_CTX_new(::TLS_client_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_2_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_2_VERSION);
+    }
+    break;
+  case context::tlsv12_server:
+    handle_ = ::SSL_CTX_new(::TLS_server_method());
+    if (handle_)
+    {
+      SSL_CTX_set_min_proto_version(handle_, TLS1_2_VERSION);
+      SSL_CTX_set_max_proto_version(handle_, TLS1_2_VERSION);
+    }
+    break;
+#elif defined(SSL_TXT_TLSV1_1)
   case context::tlsv12:
     handle_ = ::SSL_CTX_new(::TLSv1_2_method());
     break;
@@ -158,31 +250,61 @@ context::context(context::method m)
   case context::tlsv12_server:
     handle_ = ::SSL_CTX_new(::TLSv1_2_server_method());
     break;
-#else // defined(SSL_TXT_TLSV1_2) 
+#else // defined(SSL_TXT_TLSV1_1)
   case context::tlsv12:
   case context::tlsv12_client:
   case context::tlsv12_server:
     asio::detail::throw_error(
         asio::error::invalid_argument, "context");
     break;
-#endif // defined(SSL_TXT_TLSV1_2) 
-#else // (OPENSSL_VERSION_NUMBER < 0x10100000L)
-  case context::tlsv1:
-  case context::tlsv11:
-  case context::tlsv12:
+#endif // defined(SSL_TXT_TLSV1_1)
+
+    // Any supported SSL/TLS version.
+  case context::sslv23:
+    handle_ = ::SSL_CTX_new(::SSLv23_method());
+    break;
+  case context::sslv23_client:
+    handle_ = ::SSL_CTX_new(::SSLv23_client_method());
+    break;
+  case context::sslv23_server:
+    handle_ = ::SSL_CTX_new(::SSLv23_server_method());
+    break;
+
+    // Any supported TLS version.
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
+  case context::tls:
     handle_ = ::SSL_CTX_new(::TLS_method());
+    if (handle_)
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
     break;
-  case context::tlsv1_client:
-  case context::tlsv11_client:
-  case context::tlsv12_client:
+  case context::tls_client:
     handle_ = ::SSL_CTX_new(::TLS_client_method());
+    if (handle_)
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
     break;
-  case context::tlsv1_server:
-  case context::tlsv11_server:
-  case context::tlsv12_server:
+  case context::tls_server:
     handle_ = ::SSL_CTX_new(::TLS_server_method());
+    if (handle_)
+      SSL_CTX_set_min_proto_version(handle_, TLS1_VERSION);
     break;
-#endif // (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+  case context::tls:
+    handle_ = ::SSL_CTX_new(::SSLv23_method());
+    if (handle_)
+      SSL_CTX_set_options(handle_, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+    break;
+  case context::tls_client:
+    handle_ = ::SSL_CTX_new(::SSLv23_client_method());
+    if (handle_)
+      SSL_CTX_set_options(handle_, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+    break;
+  case context::tls_server:
+    handle_ = ::SSL_CTX_new(::SSLv23_server_method());
+    if (handle_)
+      SSL_CTX_set_options(handle_, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+    break;
+#endif // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+
   default:
     handle_ = ::SSL_CTX_new(0);
     break;
@@ -197,14 +319,6 @@ context::context(context::method m)
   }
 
   set_options(no_compression);
-}
-
-context::context(asio::io_service&, context::method m)
-  : handle_(0)
-{
-  context tmp(m);
-  handle_ = tmp.handle_;
-  tmp.handle_ = 0;
 }
 
 #if defined(ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
@@ -227,7 +341,7 @@ context::~context()
 {
   if (handle_)
   {
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
     void* cb_userdata = handle_->default_passwd_callback_userdata;
@@ -238,7 +352,7 @@ context::~context()
         static_cast<detail::password_callback_base*>(
             cb_userdata);
       delete callback;
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
       ::SSL_CTX_set_default_passwd_cb_userdata(handle_, 0);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
       handle_->default_passwd_callback_userdata = 0;
@@ -263,11 +377,6 @@ context::native_handle_type context::native_handle()
   return handle_;
 }
 
-context::impl_type context::impl()
-{
-  return handle_;
-}
-
 void context::clear_options(context::options o)
 {
   asio::error_code ec;
@@ -275,7 +384,7 @@ void context::clear_options(context::options o)
   asio::detail::throw_error(ec, "clear_options");
 }
 
-asio::error_code context::clear_options(
+ASIO_SYNC_OP_VOID context::clear_options(
     context::options o, asio::error_code& ec)
 {
 #if (OPENSSL_VERSION_NUMBER >= 0x009080DFL) \
@@ -299,7 +408,7 @@ asio::error_code context::clear_options(
   ec = asio::error::operation_not_supported;
 #endif // (OPENSSL_VERSION_NUMBER >= 0x009080DFL)
        //   && (OPENSSL_VERSION_NUMBER != 0x00909000L)
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::set_options(context::options o)
@@ -309,7 +418,7 @@ void context::set_options(context::options o)
   asio::detail::throw_error(ec, "set_options");
 }
 
-asio::error_code context::set_options(
+ASIO_SYNC_OP_VOID context::set_options(
     context::options o, asio::error_code& ec)
 {
 #if !defined(SSL_OP_NO_COMPRESSION)
@@ -326,7 +435,7 @@ asio::error_code context::set_options(
   ::SSL_CTX_set_options(handle_, o);
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::set_verify_mode(verify_mode v)
@@ -336,13 +445,13 @@ void context::set_verify_mode(verify_mode v)
   asio::detail::throw_error(ec, "set_verify_mode");
 }
 
-asio::error_code context::set_verify_mode(
+ASIO_SYNC_OP_VOID context::set_verify_mode(
     verify_mode v, asio::error_code& ec)
 {
   ::SSL_CTX_set_verify(handle_, v, ::SSL_CTX_get_verify_callback(handle_));
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::set_verify_depth(int depth)
@@ -352,13 +461,13 @@ void context::set_verify_depth(int depth)
   asio::detail::throw_error(ec, "set_verify_depth");
 }
 
-asio::error_code context::set_verify_depth(
+ASIO_SYNC_OP_VOID context::set_verify_depth(
     int depth, asio::error_code& ec)
 {
   ::SSL_CTX_set_verify_depth(handle_, depth);
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::load_verify_file(const std::string& filename)
@@ -368,7 +477,7 @@ void context::load_verify_file(const std::string& filename)
   asio::detail::throw_error(ec, "load_verify_file");
 }
 
-asio::error_code context::load_verify_file(
+ASIO_SYNC_OP_VOID context::load_verify_file(
     const std::string& filename, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -378,11 +487,11 @@ asio::error_code context::load_verify_file(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::add_certificate_authority(const const_buffer& ca)
@@ -392,7 +501,7 @@ void context::add_certificate_authority(const const_buffer& ca)
   asio::detail::throw_error(ec, "add_certificate_authority");
 }
 
-asio::error_code context::add_certificate_authority(
+ASIO_SYNC_OP_VOID context::add_certificate_authority(
     const const_buffer& ca, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -400,24 +509,27 @@ asio::error_code context::add_certificate_authority(
   bio_cleanup bio = { make_buffer_bio(ca) };
   if (bio.p)
   {
-    x509_cleanup cert = { ::PEM_read_bio_X509(bio.p, 0, 0, 0) };
-    if (cert.p)
+    if (X509_STORE* store = ::SSL_CTX_get_cert_store(handle_))
     {
-      if (X509_STORE* store = ::SSL_CTX_get_cert_store(handle_))
+      for (;;)
       {
-        if (::X509_STORE_add_cert(store, cert.p) == 1)
+        x509_cleanup cert = { ::PEM_read_bio_X509(bio.p, 0, 0, 0) };
+        if (!cert.p)
+          break;
+
+        if (::X509_STORE_add_cert(store, cert.p) != 1)
         {
-          ec = asio::error_code();
-          return ec;
+          ec = asio::error_code(
+              static_cast<int>(::ERR_get_error()),
+              asio::error::get_ssl_category());
+          ASIO_SYNC_OP_VOID_RETURN(ec);
         }
       }
     }
   }
 
-  ec = asio::error_code(
-      static_cast<int>(::ERR_get_error()),
-      asio::error::get_ssl_category());
-  return ec;
+  ec = asio::error_code();
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::set_default_verify_paths()
@@ -427,7 +539,7 @@ void context::set_default_verify_paths()
   asio::detail::throw_error(ec, "set_default_verify_paths");
 }
 
-asio::error_code context::set_default_verify_paths(
+ASIO_SYNC_OP_VOID context::set_default_verify_paths(
     asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -437,11 +549,11 @@ asio::error_code context::set_default_verify_paths(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::add_verify_path(const std::string& path)
@@ -451,7 +563,7 @@ void context::add_verify_path(const std::string& path)
   asio::detail::throw_error(ec, "add_verify_path");
 }
 
-asio::error_code context::add_verify_path(
+ASIO_SYNC_OP_VOID context::add_verify_path(
     const std::string& path, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -461,11 +573,11 @@ asio::error_code context::add_verify_path(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_certificate(
@@ -476,7 +588,7 @@ void context::use_certificate(
   asio::detail::throw_error(ec, "use_certificate");
 }
 
-asio::error_code context::use_certificate(
+ASIO_SYNC_OP_VOID context::use_certificate(
     const const_buffer& certificate, file_format format,
     asio::error_code& ec)
 {
@@ -485,11 +597,11 @@ asio::error_code context::use_certificate(
   if (format == context_base::asn1)
   {
     if (::SSL_CTX_use_certificate_ASN1(handle_,
-          static_cast<int>(buffer_size(certificate)),
-          buffer_cast<const unsigned char*>(certificate)) == 1)
+          static_cast<int>(certificate.size()),
+          static_cast<const unsigned char*>(certificate.data())) == 1)
     {
       ec = asio::error_code();
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
   else if (format == context_base::pem)
@@ -503,7 +615,7 @@ asio::error_code context::use_certificate(
         if (::SSL_CTX_use_certificate(handle_, cert.p) == 1)
         {
           ec = asio::error_code();
-          return ec;
+          ASIO_SYNC_OP_VOID_RETURN(ec);
         }
       }
     }
@@ -511,13 +623,13 @@ asio::error_code context::use_certificate(
   else
   {
     ec = asio::error::invalid_argument;
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_certificate_file(
@@ -528,7 +640,7 @@ void context::use_certificate_file(
   asio::detail::throw_error(ec, "use_certificate_file");
 }
 
-asio::error_code context::use_certificate_file(
+ASIO_SYNC_OP_VOID context::use_certificate_file(
     const std::string& filename, file_format format,
     asio::error_code& ec)
 {
@@ -544,7 +656,7 @@ asio::error_code context::use_certificate_file(
   default:
     {
       ec = asio::error::invalid_argument;
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
 
@@ -555,11 +667,11 @@ asio::error_code context::use_certificate_file(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_certificate_chain(const const_buffer& chain)
@@ -569,7 +681,7 @@ void context::use_certificate_chain(const const_buffer& chain)
   asio::detail::throw_error(ec, "use_certificate_chain");
 }
 
-asio::error_code context::use_certificate_chain(
+ASIO_SYNC_OP_VOID context::use_certificate_chain(
     const const_buffer& chain, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -577,7 +689,7 @@ asio::error_code context::use_certificate_chain(
   bio_cleanup bio = { make_buffer_bio(chain) };
   if (bio.p)
   {
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -592,7 +704,7 @@ asio::error_code context::use_certificate_chain(
     {
       ec = asio::error_code(ERR_R_PEM_LIB,
           asio::error::get_ssl_category());
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
 
     int result = ::SSL_CTX_use_certificate(handle_, cert.p);
@@ -601,7 +713,7 @@ asio::error_code context::use_certificate_chain(
       ec = asio::error_code(
           static_cast<int>(::ERR_get_error()),
           asio::error::get_ssl_category());
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10002000L) && !defined(LIBRESSL_VERSION_NUMBER)
@@ -623,7 +735,7 @@ asio::error_code context::use_certificate_chain(
         ec = asio::error_code(
             static_cast<int>(::ERR_get_error()),
             asio::error::get_ssl_category());
-        return ec;
+        ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
   
@@ -633,14 +745,14 @@ asio::error_code context::use_certificate_chain(
     {
       ::ERR_clear_error();
       ec = asio::error_code();
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
 
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_certificate_chain_file(const std::string& filename)
@@ -650,7 +762,7 @@ void context::use_certificate_chain_file(const std::string& filename)
   asio::detail::throw_error(ec, "use_certificate_chain_file");
 }
 
-asio::error_code context::use_certificate_chain_file(
+ASIO_SYNC_OP_VOID context::use_certificate_chain_file(
     const std::string& filename, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -660,11 +772,11 @@ asio::error_code context::use_certificate_chain_file(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_private_key(
@@ -675,13 +787,13 @@ void context::use_private_key(
   asio::detail::throw_error(ec, "use_private_key");
 }
 
-asio::error_code context::use_private_key(
+ASIO_SYNC_OP_VOID context::use_private_key(
     const const_buffer& private_key, context::file_format format,
     asio::error_code& ec)
 {
   ::ERR_clear_error();
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -706,7 +818,7 @@ asio::error_code context::use_private_key(
     default:
       {
         ec = asio::error::invalid_argument;
-        return ec;
+        ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
 
@@ -715,7 +827,7 @@ asio::error_code context::use_private_key(
       if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
       {
         ec = asio::error_code();
-        return ec;
+        ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
   }
@@ -723,7 +835,7 @@ asio::error_code context::use_private_key(
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_private_key_file(
@@ -742,13 +854,13 @@ void context::use_rsa_private_key(
   asio::detail::throw_error(ec, "use_rsa_private_key");
 }
 
-asio::error_code context::use_rsa_private_key(
+ASIO_SYNC_OP_VOID context::use_rsa_private_key(
     const const_buffer& private_key, context::file_format format,
     asio::error_code& ec)
 {
   ::ERR_clear_error();
 
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -773,7 +885,7 @@ asio::error_code context::use_rsa_private_key(
     default:
       {
         ec = asio::error::invalid_argument;
-        return ec;
+        ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
 
@@ -782,7 +894,7 @@ asio::error_code context::use_rsa_private_key(
       if (::SSL_CTX_use_RSAPrivateKey(handle_, rsa_private_key.p) == 1)
       {
         ec = asio::error_code();
-        return ec;
+        ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
   }
@@ -790,10 +902,10 @@ asio::error_code context::use_rsa_private_key(
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
-asio::error_code context::use_private_key_file(
+ASIO_SYNC_OP_VOID context::use_private_key_file(
     const std::string& filename, context::file_format format,
     asio::error_code& ec)
 {
@@ -809,7 +921,7 @@ asio::error_code context::use_private_key_file(
   default:
     {
       ec = asio::error::invalid_argument;
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
 
@@ -820,11 +932,11 @@ asio::error_code context::use_private_key_file(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_rsa_private_key_file(
@@ -835,7 +947,7 @@ void context::use_rsa_private_key_file(
   asio::detail::throw_error(ec, "use_rsa_private_key_file");
 }
 
-asio::error_code context::use_rsa_private_key_file(
+ASIO_SYNC_OP_VOID context::use_rsa_private_key_file(
     const std::string& filename, context::file_format format,
     asio::error_code& ec)
 {
@@ -851,7 +963,7 @@ asio::error_code context::use_rsa_private_key_file(
   default:
     {
       ec = asio::error::invalid_argument;
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
 
@@ -863,11 +975,11 @@ asio::error_code context::use_rsa_private_key_file(
     ec = asio::error_code(
         static_cast<int>(::ERR_get_error()),
         asio::error::get_ssl_category());
-    return ec;
+    ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_tmp_dh(const const_buffer& dh)
@@ -877,7 +989,7 @@ void context::use_tmp_dh(const const_buffer& dh)
   asio::detail::throw_error(ec, "use_tmp_dh");
 }
 
-asio::error_code context::use_tmp_dh(
+ASIO_SYNC_OP_VOID context::use_tmp_dh(
     const const_buffer& dh, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -891,7 +1003,7 @@ asio::error_code context::use_tmp_dh(
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 void context::use_tmp_dh_file(const std::string& filename)
@@ -901,7 +1013,7 @@ void context::use_tmp_dh_file(const std::string& filename)
   asio::detail::throw_error(ec, "use_tmp_dh_file");
 }
 
-asio::error_code context::use_tmp_dh_file(
+ASIO_SYNC_OP_VOID context::use_tmp_dh_file(
     const std::string& filename, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -915,10 +1027,10 @@ asio::error_code context::use_tmp_dh_file(
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
-asio::error_code context::do_use_tmp_dh(
+ASIO_SYNC_OP_VOID context::do_use_tmp_dh(
     BIO* bio, asio::error_code& ec)
 {
   ::ERR_clear_error();
@@ -929,17 +1041,17 @@ asio::error_code context::do_use_tmp_dh(
     if (::SSL_CTX_set_tmp_dh(handle_, dh.p) == 1)
     {
       ec = asio::error_code();
-      return ec;
+      ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
 
   ec = asio::error_code(
       static_cast<int>(::ERR_get_error()),
       asio::error::get_ssl_category());
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
-asio::error_code context::do_set_verify_callback(
+ASIO_SYNC_OP_VOID context::do_set_verify_callback(
     detail::verify_callback_base* callback, asio::error_code& ec)
 {
   if (SSL_CTX_get_app_data(handle_))
@@ -955,7 +1067,7 @@ asio::error_code context::do_set_verify_callback(
       &context::verify_callback_function);
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 int context::verify_callback_function(int preverified, X509_STORE_CTX* ctx)
@@ -984,10 +1096,10 @@ int context::verify_callback_function(int preverified, X509_STORE_CTX* ctx)
   return 0;
 }
 
-asio::error_code context::do_set_password_callback(
+ASIO_SYNC_OP_VOID context::do_set_password_callback(
     detail::password_callback_base* callback, asio::error_code& ec)
 {
-#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
   void* old_callback = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
   ::SSL_CTX_set_default_passwd_cb_userdata(handle_, callback);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -1002,7 +1114,7 @@ asio::error_code context::do_set_password_callback(
   SSL_CTX_set_default_passwd_cb(handle_, &context::password_callback_function);
 
   ec = asio::error_code();
-  return ec;
+  ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 int context::password_callback_function(
@@ -1035,11 +1147,9 @@ int context::password_callback_function(
 BIO* context::make_buffer_bio(const const_buffer& b)
 {
   return ::BIO_new_mem_buf(
-      const_cast<void*>(buffer_cast<const void*>(b)),
-      static_cast<int>(buffer_size(b)));
+      const_cast<void*>(b.data()),
+      static_cast<int>(b.size()));
 }
-
-#endif // !defined(ASIO_ENABLE_OLD_SSL)
 
 } // namespace ssl
 } // namespace asio
