@@ -15,13 +15,6 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 
 namespace moon
 {
-    enum  class protocol_type:std::uint8_t
-    {
-        protocol_default,
-        protocol_custom,
-        protocol_websocket
-    };
-
     enum class socket_data_type :std::uint8_t
     {
         socket_connect = 1,
@@ -79,7 +72,7 @@ namespace moon
 
         virtual ~tcp();
 
-        void setprotocol(std::string flag);
+        void setprotocol(uint8_t v);
 
         void settimeout(int seconds);
 
@@ -118,15 +111,15 @@ namespace moon
 
 		uint32_t make_connid();
 
-		void make_response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype = PTYPE_SOCKET);
+		void make_response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype);
 
 		connection_ptr_t create_connection();
     private:
-		asio::io_context* io_ctx_;
+        uint8_t type_;
+        frame_enable_flag frame_flag_;
 		uint32_t connuid_;
 		uint32_t timeout_;
-		protocol_type type_;
-		frame_enable_flag frame_flag_;
+        asio::io_context* io_ctx_;
 		service* parent_;
 		std::unique_ptr<asio::ip::tcp::acceptor> acceptor_;
 		std::unique_ptr<asio::steady_timer> checker_;

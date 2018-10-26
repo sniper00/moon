@@ -257,7 +257,6 @@ namespace moon
 
                 msg->write_string(content);
                 msg->set_sender(id_);
-                msg->set_type(PTYPE_SOCKET);
 				handle_message(msg);
             }
 
@@ -267,7 +266,6 @@ namespace moon
                 msg->write_string(remote_addr_);
                 msg->set_sender(id_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
-                msg->set_type(PTYPE_SOCKET);
 				handle_message(msg);
             }
         }

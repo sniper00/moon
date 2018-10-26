@@ -63,8 +63,7 @@ local n = 0;
 function socket.new()
     n=n+1
     local tb = {}
-    tb.sock = moon.get_tcp()
-    tb.sock:setprotocol("custom")
+    tb.sock = moon.get_tcp("custom")
     return setmetatable(tb,socket)
 end
 

@@ -256,7 +256,6 @@ namespace moon
             msg->write_string(remote_addr_);
             msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
-            msg->set_type(PTYPE_SOCKET);
 			handle_message(msg);
             return true;
         }
@@ -402,7 +401,6 @@ namespace moon
                 cache_.seek(int(need + fh.len), buffer::Current);
                 msg_package_->set_sender(id_);
                 msg_package_->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                msg_package_->set_type(PTYPE_SOCKET);
 				handle_message(msg_package_);
             }
 

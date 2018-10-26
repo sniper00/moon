@@ -17,11 +17,11 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 namespace moon
 {
     tcp::tcp() noexcept
-        :io_ctx_(nullptr)
+        :type_(PTYPE_SOCKET)
+        , frame_flag_(frame_enable_flag::none)
         , connuid_(1)
         , timeout_(0)
-        , type_(protocol_type::protocol_default)
-        , frame_flag_(frame_enable_flag::none)
+        , io_ctx_(nullptr)
         , parent_(nullptr)
     {
     }
@@ -31,30 +31,9 @@ namespace moon
 
     }
 
-    void tcp::setprotocol(std::string flag)
+    void tcp::setprotocol(uint8_t v)
     {
-        moon::lower(flag);
-        switch (moon::chash_string(flag.data()))
-        {
-        case moon::chash_string("default"):
-        {
-            type_ = moon::protocol_type::protocol_default;
-            break;
-        }
-        case moon::chash_string("custom"):
-        {
-            type_ = moon::protocol_type::protocol_custom;
-            break;
-        }
-        case moon::chash_string("websocket"):
-        {
-            type_ = moon::protocol_type::protocol_websocket;
-            break;
-        }
-        default:
-            CONSOLE_WARN(logger(), "tcp::setprotocol Unsupported  protocol %s.Support: 'default' 'custom' 'websocket'.", flag.data());
-            break;
-        }
+        type_ = v;
     }
 
     void tcp::settimeout(int seconds)
@@ -123,7 +102,7 @@ namespace moon
 #endif
             acceptor_->bind(endpoint);
             acceptor_->listen(std::numeric_limits<int>::max());
-            if (type_ == protocol_type::protocol_default || type_ == protocol_type::protocol_websocket)
+            if (type_ == PTYPE_SOCKET || type_ == PTYPE_SOCKET_WS)
             {
                 async_accept(0);
             }
@@ -131,7 +110,7 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_ERROR(logger(), "%s:%s %s(%d)",ip.data(),port.data(), e.what(), e.code().value());
+            CONSOLE_ERROR(logger(), "%s:%s %s(%d)", ip.data(), port.data(), e.what(), e.code().value());
             return false;
         }
     }
@@ -155,28 +134,24 @@ namespace moon
                 conns_.emplace(conn->id(), conn);
                 conn->start(true);
 
-                switch (type_)
+                if (responseid != 0)
                 {
-                case protocol_type::protocol_default:
-                case protocol_type::protocol_websocket:
-                    async_accept(0);
-                    break;
-                case protocol_type::protocol_custom:
                     make_response(std::to_string(conn->id()), "", responseid, PTYPE_TEXT);
-                    break;
-                default:
-                    break;
+                }
+                else
+                {
+                    async_accept(0);
                 }
             }
             else
             {
-                if (type_ == protocol_type::protocol_default || type_ == protocol_type::protocol_websocket)
+                if (responseid != 0)
                 {
-                    CONSOLE_WARN(logger(), "tcp async_accept error %s(%d)", e.message().data(), e.value());
+                    make_response(moon::format("tcp async_accept error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
                 }
                 else
                 {
-                    make_response(moon::format("tcp async_accept error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
+                    CONSOLE_WARN(logger(), "tcp async_accept error %s(%d)", e.message().data(), e.value());
                 }
             }
         });
@@ -235,7 +210,7 @@ namespace moon
         }
         catch (asio::system_error& e)
         {
-            CONSOLE_WARN(logger(), "%s:%s %s(%d)", ip.data(), port.data(), e.what(),e.code().value());
+            CONSOLE_WARN(logger(), "%s:%s %s(%d)", ip.data(), port.data(), e.what(), e.code().value());
             return 0;
         }
     }
@@ -333,6 +308,12 @@ namespace moon
         {
             return;
         }
+
+        if (msg->type()==0)
+        {
+            msg->set_type(type_);
+        }
+
         msg->set_receiver(parent_->id());
         parent_->handle_message(msg);
         if (msg->type() == PTYPE_ERROR || msg->subtype() == static_cast<uint8_t>(socket_data_type::socket_close))
@@ -393,17 +374,21 @@ namespace moon
         connection_ptr_t conn;
         switch (type_)
         {
-        case moon::protocol_type::protocol_default:
+        case PTYPE_SOCKET:
         {
             conn = std::make_shared<moon_connection>(this, io_context());
             break;
         }
-        case moon::protocol_type::protocol_custom:
+        case PTYPE_TEXT:
+        {
             conn = std::make_shared<custom_connection>(this, io_context());
             break;
-        case moon::protocol_type::protocol_websocket:
+        }
+        case PTYPE_SOCKET_WS:
+        {
             conn = std::make_shared<ws_connection>(this, io_context());
             break;
+        }
         default:
             break;
         }

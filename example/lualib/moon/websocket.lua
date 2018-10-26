@@ -3,7 +3,7 @@ local moon = require("moon")
 local handler = {1, 2, 3, 4, 5, 6}
 
 moon.dispatch(
-    "socket",
+    "websocket",
     function(msg)
         local sessionid = msg:sender()
         local subtype = msg:subtype()
@@ -16,7 +16,7 @@ moon.dispatch(
 
 local M = {}
 
-local tcp = moon.get_tcp('default')
+local tcp = moon.get_tcp('websocket')
 
 local type_map = {
     connect = 1,
@@ -25,10 +25,6 @@ local type_map = {
     close = 4,
     error = 5
 }
-
-function M.connect( ... )
-    return tcp:connect(...)
-end
 
 function M.settimeout( ... )
     tcp:settimeout(...)
@@ -51,10 +47,6 @@ end
 
 function M.send_then_close(sessionid, str)
     return tcp:send_then_close(sessionid, str)
-end
-
-function M.set_enable_frame(flag)
-    tcp:set_enable_frame(flag)
 end
 
 function M.close(sessionid)

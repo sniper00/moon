@@ -39,7 +39,7 @@ public:
 
     void register_command(const std::string&, sol_function_t f);
 
-    moon::tcp* get_tcp();
+    moon::tcp* get_tcp(const std::string& protocol);
 
     uint32_t make_cache(const moon::buffer_ptr_t & buf);
 

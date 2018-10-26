@@ -63,15 +63,38 @@ lua_service::~lua_service()
 {
 }
 
-moon::tcp * lua_service::get_tcp()
+moon::tcp * lua_service::get_tcp(const std::string& protocol)
 {
-    auto p = get_component<moon::tcp>(TCP_COMP_NAME);
+    uint8_t v = 0;
+    switch (moon::chash_string(protocol.data()))
+    {
+    case moon::chash_string("default"):
+    {
+        v = PTYPE_SOCKET;
+        break;
+    }
+    case moon::chash_string("custom"):
+    {
+        v = PTYPE_TEXT;
+        break;
+    }
+    case moon::chash_string("websocket"):
+    {
+        v = PTYPE_SOCKET_WS;
+        break;
+    }
+    default:
+        CONSOLE_ERROR(logger(), "Unsupported tcp  protocol %s.Support: 'default' 'custom' 'websocket'.", protocol.data());
+        return nullptr;
+    }
+
+    auto p = get_component<moon::tcp>(protocol);
     if (nullptr == p)
     {
-        p = add_component<moon::tcp>(TCP_COMP_NAME);
-        return ((p != nullptr) ? p.get() : nullptr);
+        p = add_component<moon::tcp>(protocol);
     }
-    return p.get();
+    p->setprotocol(v);
+    return ((p != nullptr) ? p.get() : nullptr);
 }
 
 uint32_t lua_service::make_cache(const moon::buffer_ptr_t & buf)

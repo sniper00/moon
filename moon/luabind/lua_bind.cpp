@@ -268,7 +268,6 @@ const lua_bind & lua_bind::bind_socket() const
         , "send", (&moon::tcp::send)
         , "send_then_close", (&moon::tcp::send_then_close)
         , "send_message", (&moon::tcp::send_message)
-        , "setprotocol", (&moon::tcp::setprotocol)
         , "settimeout", (&moon::tcp::settimeout)
         , "setnodelay", (&moon::tcp::setnodelay)
         , "set_enable_frame", (&moon::tcp::set_enable_frame)
