@@ -1,93 +1,39 @@
 local moon = require("moon")
-local socket = require("moon.socket")
-local seri = require("seri")
+local http_server = require("moon.http_server")
+local http_client = require("moon.http_client")
 
-local function read_line_example(session)
-    moon.async(function()
-        while true do
-            local data, err = session:co_readline()
-            if not data then
-                print(session.connid, err)
-                return
-            else
-                if data == 'exit' then
-                    print("exit")
-                    assert(session:close())
-                    return
-                else
-                    session:send(data)
-                end
-            end
-        end
-    end)
+http_server.error = function(session, err)
+    print("http server session",session.connid," disconnected:",  err)
 end
 
-local function http_example(session)
-    moon.async(function()
-        local http_request = moon.http_request.new()
-        while true do
-            local data, err = session:co_read('\r\n\r\n')
-            if not data then
-                print(session.connid, err)
-                return
-            else
-                --print(data)
-                local n = http_request:parse(data)
-                if n == -1 then
-                    --print("parse http header failed")
-                    return
-                end
-
-                --print(http_request.query_string)
-
-                local da = os.date("!Date: %a, %d %b %Y %X GMT\r\n",os.time())
-
-                local conn_type = http_request:get_header("Connection")
-                if not conn_type or 0== #conn_type then
-                    conn_type = 'close'
-                end
-
-                local response = {
-                    'HTTP/1.1 200 OK\r\n',
-                    'Content-Type: text/plain\r\n',
-                    'Content-Length: 10\r\n',
-                    da,
-                    'Connection: '..conn_type..'\r\n',
-                    '\r\n',
-                    'Helloworld'
-                }
-                --print(seri.concatstring(response))
-                if conn_type == 'close' then
-                    --print("will close")
-                    session:send(seri.concat(response),true)
-                else
-                    session:send(seri.concat(response))
-                end
-            end
-        end
-    end)
-end
-
-moon.init(function( config )
-    local server =  socket.new()
-
-    --server:settimeout(10)
-
-    server:listen(config.ip,config.port)
-
-    print("service http_example listen on",config.ip,config.port)
-
-    moon.async(function()
-        while true do
-            local session = server:co_accept()
-            if session then
-                http_example(session)
-            end
-        end
-    end)
-    return true
+http_server.on("/",function(request, response, data)
+    print("SERVER: http_version",request.http_version)
+    print("SERVER: query_string",request.query_string)
+    print("SERVER: Content-Type",request:header("Content-Type"))
+    print("SERVER: data",data)
+    response:write_header("Content-Type","text/plain")
+    response:write("Hello World/")
 end)
 
+http_server.on("/home",function(request, response, data)
+    print("SERVER: http_version",request.http_version)
+    print("SERVER: query_string",request.query_string)
+    print("SERVER: Content-Type",request:header("Content-Type"))
+    print("SERVER: data",data)
+    response:write_header("Content-Type","text/plain")
+    response:write("Hello World/home")
+end)
 
+http_server.listen("127.0.0.1",8001)
 
-
+moon.async(function ()
+    local client = http_client.new("127.0.0.1:8001")
+    local header,data = client:request("GET","/home","HAHAHA")
+    if not header then
+        print("error",data)
+        return
+    end
+    print("CLIENT: http_version",header.version)
+    print("CLIENT: status_code",header.status_code)
+    print("CLIENT: data",data)
+end)

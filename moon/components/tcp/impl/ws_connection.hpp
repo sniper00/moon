@@ -1,6 +1,6 @@
 #pragma once
 #include "base_connection.hpp"
-#include "common/http_request.hpp"
+#include "common/http_util.hpp"
 #include "common/base64.hpp"
 #include "common/byte_convert.hpp"
 #include "common/sha1.hpp"
@@ -73,8 +73,8 @@ namespace moon
             binary = 2,
             rsv3 = 3,
             rsv4 = 4,
-            rsv5 =5,
-            rsv6 =6,
+            rsv5 = 5,
+            rsv6 = 6,
             rsv7 = 7,
             close = 8,
             ping = 9,
@@ -99,23 +99,23 @@ namespace moon
         };
     }
 
-    class ws_connection: public base_connection
+    class ws_connection : public base_connection
     {
     public:
         using base_connection_t = base_connection;
 
-		static constexpr size_t PAYLOAD_MIN_LEN = 125;
-		static constexpr size_t PAYLOAD_MID_LEN = 126;
-		static constexpr size_t PAYLOAD_MAX_LEN = 127;
+        static constexpr size_t PAYLOAD_MIN_LEN = 125;
+        static constexpr size_t PAYLOAD_MID_LEN = 126;
+        static constexpr size_t PAYLOAD_MAX_LEN = 127;
 
-		static constexpr const string_view_t WEBSOCKET = "websocket"sv;
-		static constexpr const string_view_t UPGRADE = "upgrade"sv;
-		static constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
-   
-		template <typename... Args>
-		explicit ws_connection(Args&&... args)
-			:base_connection_t(std::forward<Args>(args)...)
-            , header_delim_(STR_DCRLF.data(),STR_DCRLF.size())
+        static constexpr const string_view_t WEBSOCKET = "websocket"sv;
+        static constexpr const string_view_t UPGRADE = "upgrade"sv;
+        static constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
+
+        template <typename... Args>
+        explicit ws_connection(Args&&... args)
+            :base_connection_t(std::forward<Args>(args)...)
+            , header_delim_(STR_DCRLF.data(), STR_DCRLF.size())
         {
         }
 
@@ -139,13 +139,13 @@ namespace moon
         void read_header()
         {
             auto sbuf = std::make_shared<asio::streambuf>(MAX_REQUEST_STREAMBUF_SIZE);
-            asio::async_read_until(socket_,*sbuf, header_delim_,
+            asio::async_read_until(socket_, *sbuf, header_delim_,
                 make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
                 {
-					error(e, int(logic_error_));
+                    error(e, int(logic_error_));
                     return;
                 }
 
@@ -177,7 +177,7 @@ namespace moon
                 else
                 {
                     printf("websocket handshake failed\n");
-                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n",true);
+                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
             }));
         }
@@ -190,7 +190,7 @@ namespace moon
             {
                 if (e)
                 {
-					error(e, int(logic_error_));
+                    error(e, int(logic_error_));
                     return;
                 }
 
@@ -219,8 +219,8 @@ namespace moon
             {
                 return false;
             }
-            
-            http_request request;
+
+            http::request_parser request;
             int consumed = request.parse(string_view_t{ asio::buffer_cast<const char*>(buf->data()), buf->size() });
             if (-1 == consumed)
             {
@@ -231,11 +231,11 @@ namespace moon
             if (request.method != "GET"sv)
                 return false;
 
-            auto h = request.get_header("connection"sv);
+            auto h = request.header("connection"sv);
             if (h.empty())
                 return false;
 
-            auto u = request.get_header("upgrade"sv);
+            auto u = request.header("upgrade"sv);
             if (u.empty())
                 return false;
 
@@ -245,22 +245,22 @@ namespace moon
             if (!iequal_string(u, WEBSOCKET))
                 return false;
 
-            auto sec_ws_key_ = request.get_header("sec-websocket-key"sv);
+            auto sec_ws_key_ = request.header("sec-websocket-key"sv);
             if (sec_ws_key_.empty() || sec_ws_key_.size() != 24)
                 return false;
 
             handshaked_ = true;
-            auto answer = upgrade_response(sec_ws_key_,request.get_header("Sec-WebSocket-Protocol"sv));
+            auto answer = upgrade_response(sec_ws_key_, request.header("Sec-WebSocket-Protocol"sv));
             send_response(answer);
             auto msg = message::create();
             msg->write_string(remote_addr_);
             msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
-			handle_message(msg);
+            handle_message(msg);
             return true;
         }
 
-        void send_response(const std::string& s, bool bclose =false)
+        void send_response(const std::string& s, bool bclose = false)
         {
             auto buf = message::create_buffer();
             buf->write_back(s.data(), 0, s.size());
@@ -385,7 +385,7 @@ namespace moon
 
             if (fh.mask)
             {
-                fh.key = *((int32_t*)(tmp+(need-sizeof(fh.key))));
+                fh.key = *((int32_t*)(tmp + (need - sizeof(fh.key))));
                 // unmask data:
                 uint8_t* d = (uint8_t*)(tmp + need);
                 for (uint64_t i = 0; i < fh.len; i++)
@@ -401,7 +401,7 @@ namespace moon
                 cache_.seek(int(need + fh.len), buffer::Current);
                 msg_package_->set_sender(id_);
                 msg_package_->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-				handle_message(msg_package_);
+                handle_message(msg_package_);
             }
 
             if (fh.op == ws::opcode::close)
@@ -448,11 +448,11 @@ namespace moon
             std::memcpy(keybuf + seckey.size(), WS_MAGICKEY.data(), WS_MAGICKEY.size());
 
             uint8_t shakey[sha1::sha1_context::digest_size] = { 0 };
-            sha1::sha1_context ctx;    
+            sha1::sha1_context ctx;
             sha1::init(ctx);
             sha1::update(ctx, keybuf, sizeof(keybuf));
             sha1::finish(ctx, shakey);
-            std::string sha1str  = base64_encode(shakey, sizeof(shakey));
+            std::string sha1str = base64_encode(shakey, sizeof(shakey));
 
             std::string response;
             response.append("HTTP/1.1 101 Switching Protocols\r\n");

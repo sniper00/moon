@@ -327,9 +327,14 @@ function moon.wait_all( ... )
     local cos = {...}
     local ctx = {count = #cos,results={},cur=currentco}
     for k,co in pairs(cos) do
-        --assert(not waitallco[co])
-        ctx.results[k]=""
-        waitallco[co]={ctx=ctx,idx=k}
+        assert(not waitallco[co])
+        if type(co) == "thread" then
+            ctx.results[k]=""
+            waitallco[co]={ctx=ctx,idx=k}
+        else
+            ctx.results[k]=co
+            ctx.count = ctx.count -1
+        end
     end
     return co_yield()
 end

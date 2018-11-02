@@ -182,15 +182,17 @@ namespace moon
                 }
                 else
                 {
-                    make_response(moon::format("tcp async_connect error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
+                    make_response("", moon::format("error async_connect %s(%d)", e.message().data(), e.value()), responseid, PTYPE_ERROR);
                 }
             });
         }
-        catch (asio::system_error& e)
+        catch (const asio::system_error& e)
         {
-            make_response(moon::format("tcp async_connect error %s(%d)", e.what(), e.code().value())
-                , "error"
-                , responseid, PTYPE_ERROR);
+            asio::post(*io_ctx_, [this, responseid, self = shared_from_this(),e]() {
+                make_response(""
+                    , moon::format("error async_connect error %s(%d)", e.what(), e.code().value())
+                    , responseid, PTYPE_ERROR);
+            });
         }
     }
 

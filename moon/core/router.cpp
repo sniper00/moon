@@ -282,7 +282,6 @@ namespace moon
     asio::io_context & router::get_io_context(uint32_t serviceid)
     {
         int32_t workerid = worker_id(serviceid);
-        MOON_CHECK(workerid_valid(workerid), "router::get_io_service: invalid serviceid");
         return workers_[workerid - 1]->io_service();
     }
 

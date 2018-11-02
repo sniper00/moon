@@ -8,10 +8,12 @@ Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 ****************************************************************************/
 #pragma once
 #include "config.h"
+#include "common/utils.hpp"
 #include "component.h"
 #include "service.h"
 #include "router.h"
 #include "worker.h"
+
 
 namespace moon
 {
@@ -40,6 +42,10 @@ namespace moon
 			"send message size too long",
 			"timeout" 
 		};
+        if (logic_errcode >= static_cast<int>(array_szie(errmsg)))
+        {
+            return "closed";
+        }
 		return errmsg[logic_errcode];
 	}
 

@@ -65,6 +65,11 @@ namespace moon
                 last_recv_time_ = std::time(nullptr);
                 restore_buffer_offset();
                 response_msg_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
+                if (response_msg_->get_buffer()->size() > MAX_NET_CUSOM_PROTOCOL_SIZE)
+                {
+                    error(e, int(network_logic_error::read_message_size_max));
+                    return;
+                }
                 handle_read_request();
                 read_some();
             }));
@@ -143,20 +148,16 @@ namespace moon
         void error(const asio::error_code& e, int logicerr, const char* lerrmsg = nullptr) override
         {
             (void)lerrmsg;
-            {
-                switch (logicerr)
-                {
-                    case int(moon::network_logic_error::timeout) :
-                        response_msg_->set_header("timeout");
-                        break;
-                    default:
-                        response_msg_->set_header("closed");
-                        break;
-                }
 
+            {
                 if (e && e != asio::error::eof)
                 {
+                    response_msg_->set_header("closed");
                     response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
+                }
+                else
+                {
+                    response_msg_->set_header(logic_errmsg(logicerr));
                 }
 
                 if (read_request_.responseid != 0)
@@ -177,7 +178,7 @@ namespace moon
         int restore_write_offset_;
         int prew_read_offset_;
         message_ptr_t  response_msg_;
-        std::array<uint8_t, 1024> buffer_;
+        std::array<uint8_t, 8192> buffer_;
         read_request read_request_;
     };
 }

@@ -26,6 +26,10 @@ local type_map = {
     error = 5
 }
 
+function M.connect( ... )
+    return tcp:connect(...)
+end
+
 function M.settimeout( ... )
     tcp:settimeout(...)
 end

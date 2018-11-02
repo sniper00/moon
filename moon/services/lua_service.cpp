@@ -73,17 +73,17 @@ moon::tcp * lua_service::get_tcp(const std::string& protocol)
         v = PTYPE_SOCKET;
         break;
     }
-    case moon::chash_string("custom"):
-    {
-        v = PTYPE_TEXT;
-        break;
-    }
     case moon::chash_string("websocket"):
     {
         v = PTYPE_SOCKET_WS;
         break;
     }
     default:
+        if (protocol.find("custom") != std::string::npos)
+        {
+            v = PTYPE_TEXT;
+            break;
+        }
         CONSOLE_ERROR(logger(), "Unsupported tcp  protocol %s.Support: 'default' 'custom' 'websocket'.", protocol.data());
         return nullptr;
     }

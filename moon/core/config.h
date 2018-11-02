@@ -32,6 +32,8 @@ namespace moon
     using message_size_t = uint16_t;
     constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
 
+    constexpr size_t MAX_NET_CUSOM_PROTOCOL_SIZE = 200*1024*1024;//200MB
+
     constexpr  string_view_t STR_LF = "\n"sv;
     constexpr  string_view_t STR_CRLF = "\r\n"sv;
     constexpr  string_view_t STR_DCRLF = "\r\n\r\n"sv;

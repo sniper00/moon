@@ -4,7 +4,7 @@
 #include "common/directory.hpp"
 #include "common/buffer_writer.hpp"
 #include "common/hash.hpp"
-#include "common/http_request.hpp"
+#include "common/http_util.hpp"
 #include "common/log.hpp"
 #include "components/tcp/tcp.h"
 #include "message.hpp"
@@ -277,14 +277,24 @@ const lua_bind & lua_bind::bind_socket() const
 
 const lua_bind & lua_bind::bind_http() const
 {
-    lua.new_usertype<moon::http_request>("http_request"
+    lua.new_usertype<moon::http::request_parser>("http_request_parser"
         , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http_request::parse_string)
-        , "method", sol::readonly(&moon::http_request::method)
-        , "path", sol::readonly(&moon::http_request::path)
-        , "query_string", sol::readonly(&moon::http_request::query_string)
-        , "http_version", sol::readonly(&moon::http_request::http_version)
-        , "get_header", (&moon::http_request::get_header)
+        , "parse", (&moon::http::request_parser::parse_string)
+        , "method", sol::readonly(&moon::http::request_parser::method)
+        , "path", sol::readonly(&moon::http::request_parser::path)
+        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
+        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
+        , "header", (&moon::http::request_parser::header)
+        , "has_header", (&moon::http::request_parser::has_header)
+        );
+
+    lua.new_usertype<moon::http::response_parser>("http_response_parser"
+        , sol::constructors<sol::types<>>()
+        , "parse", (&moon::http::response_parser::parse_string)
+        , "version", sol::readonly(&moon::http::response_parser::version)
+        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
+        , "header", (&moon::http::response_parser::header)
+        , "has_header", (&moon::http::response_parser::has_header)
         );
 
     return *this;
