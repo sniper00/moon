@@ -146,7 +146,9 @@ namespace moon
                 readpos_ += (pos + 2);
                 return string_view_t(strref.data(), pos);
             }
-            return string_view_t();
+            pos = size();
+            readpos_ += pos;
+            return string_view_t(strref.data(), pos);
         }
 
         string_view_t read_delim(char c)
