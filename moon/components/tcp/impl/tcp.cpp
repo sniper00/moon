@@ -1,11 +1,3 @@
-/****************************************************************************
-
-Git <https://github.com/sniper00/MoonNetLua>
-E-Mail <hanyongtao@live.com>
-Copyright (c) 2015-2017 moon
-Licensed under the MIT License <http://opensource.org/licenses/MIT>.
-
-****************************************************************************/
 #include "components/tcp/tcp.h"
 #include "common/log.hpp"
 #include "common/string.hpp"
