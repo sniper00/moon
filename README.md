@@ -60,6 +60,6 @@ https://github.com/sniper00/BallGame
 - 命令行输入 `./moon 7`
 
 
-QQ交流群543833695
+#QQ交流群543833695
 
-[see more](https://github.com/sniper00/MoonNetLua/wiki)
+#[文档](https://github.com/sniper00/MoonNetLua/wiki)
