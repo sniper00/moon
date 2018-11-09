@@ -34,7 +34,7 @@ const lua_bind & lua_bind::bind_timer(moon::lua_timer* t) const
     return *this;
 }
 
-static int new_table(lua_State* L)
+static int lua_new_table(lua_State* L)
 {
     auto arrn = luaL_checkinteger(L, -2);
     auto hn = luaL_checkinteger(L, -1);
@@ -70,7 +70,8 @@ string_view_t unpack_cluster_message(message* msg)
     return string_view_t{ header,header_size };
 }
 
-static int lua_concat_print(lua_State *L) {
+static int my_lua_print(lua_State *L) {
+    moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
     int n = lua_gettop(L);  /* number of arguments */
     int i;
     lua_getglobal(L, "tostring");
@@ -88,8 +89,22 @@ static int lua_concat_print(lua_State *L) {
         buf.write_back(s, 0, l);
         lua_pop(L, 1);  /* pop result */
     }
-    lua_pushlstring(L, buf.data(), buf.size());
-    return 1;
+    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() });
+    return 0;
+}
+
+static void register_lua_print(sol::table& lua, moon::log* logger)
+{
+    lua_pushlightuserdata(lua.lua_state(), logger);
+    lua_pushcclosure(lua.lua_state(), my_lua_print, 1);
+    lua_setglobal(lua.lua_state(), "print");
+}
+
+static void register_lua_cfunction(sol::table& lua, lua_CFunction f, const char* name)
+{
+    lua.push();
+    lua_pushcclosure(lua.lua_state(), f, 0);
+    lua_setfield(lua.lua_state(), -2, name);
 }
 
 const lua_bind & lua_bind::bind_util() const
@@ -103,13 +118,7 @@ const lua_bind & lua_bind::bind_util() const
     lua.set_function("unpack_cluster", unpack_cluster_message);
     lua.set_function("make_cluster_message", make_cluster_message);
 
-    lua_getglobal(lua.lua_state(), "table");
-    lua_pushcclosure(lua.lua_state(), new_table, 0);
-    lua_setfield(lua.lua_state(), -2, "new_table");
-
-    lua.push();
-    lua_pushcclosure(lua.lua_state(), lua_concat_print, 0);
-    lua_setfield(lua.lua_state(), -2, "concat_print");
+    register_lua_cfunction(lua, lua_new_table, "new_table");
     return *this;
 }
 
@@ -168,6 +177,7 @@ const lua_bind & lua_bind::bind_filesystem() const
 const lua_bind & lua_bind::bind_log(moon::log* logger) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
+    register_lua_print(lua, logger);
     return *this;
 }
 

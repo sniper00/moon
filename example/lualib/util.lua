@@ -108,7 +108,7 @@ function M.table_equal(t1,t2)
 end
 
 function M.table_contains( arraytable, value )
-    for k,v in pairs(arraytable) do
+    for _,v in pairs(arraytable) do
         if v == value then
             return true
         end

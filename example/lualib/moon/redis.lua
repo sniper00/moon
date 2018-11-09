@@ -13,7 +13,7 @@ local socket	= require("moon.socket")
 local seri	= require("seri")
 
 
-local new_table = table.new_table or function() return {} end
+local new_table = moon.new_table or function() return {} end
 
 local common_cmds = {
 	"get",
@@ -112,12 +112,12 @@ function redis:close()
 end
 
 function redis:_readreplay()
-	local line, err = self.conn:co_read('\r\n')
+	local line, err1 = self.conn:co_read('\r\n')
 	if not line then
 		-- line:closed,timeout
-		print("redis read error", err)
+		print("redis read error", err1)
 		self.conn = nil
-		return nil, err
+		return nil, err1
 	end
 
 	local prefix = byte(line)
@@ -128,18 +128,18 @@ function redis:_readreplay()
 			return moon.null
 		end
 
-		local data, err = self.conn:co_read(size)
+		local data, err2 = self.conn:co_read(size)
 		if not data then
-			if err == "timeout" then
+			if err2 == "timeout" then
 				self.conn = nil
 			end
-			return nil, err
+			return nil, err2
 		end
 
-		local dummy, err = self.conn:co_read(2)
+		local dummy, err3 = self.conn:co_read(2)
 		-- ignore CRLF
 		if not dummy then
-			return nil, err
+			return nil, err3
 		end
 
 		return data
@@ -155,7 +155,7 @@ function redis:_readreplay()
 
 		local vals = new_table(n, 0)
 		local nvals = 0
-		for i = 1, n do
+		for _ = 1, n do
 			local res, err = self:_readreplay()
 			if res then
 				nvals = nvals + 1
@@ -288,21 +288,21 @@ function redis:commit_pipeline()
 
 	self.reqs = nil
 
-	local sock = rawget(self, "conn")
-	if not sock then
+	local conn = rawget(self, "conn")
+	if not conn then
 		return nil, "not initialized"
 	end
 
-	local bytes, err = sock:send(seri.concat(reqs))
-	if not bytes then
-		return nil, err
+	local ok = conn:send(seri.concat(reqs))
+	if not ok then
+		return nil
 	end
 
 	local nvals = 0
 	local nreqs = #reqs
 	local vals = new_table(nreqs, 0)
-	for i = 1, nreqs do
-		local res, err = self:_readreplay(sock)
+	for _ = 1, nreqs do
+		local res, err = self:_readreplay(conn)
 		if res then
 			nvals = nvals + 1
 			vals[nvals] = res

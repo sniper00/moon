@@ -20,7 +20,7 @@ local function read_chunked(session, chunkdata)
     end
     local length = tonumber(data)
     if not length then
-        return false, protocol_error
+        return false, "protocol error"
     end
     if length >0 then
         data, err = session:co_read(length)
@@ -33,7 +33,7 @@ local function read_chunked(session, chunkdata)
             return false,err
         end
     elseif length <0 then
-        return false, protocol_error
+        return false, "protocol error"
     end
     return true
 end

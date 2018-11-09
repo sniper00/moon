@@ -133,13 +133,13 @@ end
 
 ------------------------request-------------------------------
 local function read_chunked(session, chunkdata)
-    local data, err = session:co_read('\r\n')
+    local data, err = session:co_read('\r\n')--security issue
     if not data then
         return false,err
     end
     local length = tonumber(data)
     if not length then
-        return false, protocol_error
+        return false, "protocol error"
     end
     if length >0 then
         data, err = session:co_read(length)
@@ -147,12 +147,12 @@ local function read_chunked(session, chunkdata)
             return false,err
         end
         table.insert( chunkdata, data )
-        data, err = session:co_read('\r\n')
+        data, err = session:co_read('\r\n')--security issue
         if not data then
             return false,err
         end
     elseif length <0 then
-        return false, protocol_error
+        return false, "protocol error"
     end
     return true
 end

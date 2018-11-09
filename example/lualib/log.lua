@@ -41,11 +41,6 @@ local function do_log(bcle,level,fmt, ... )
     logV(bcle, level, table.concat({str,"(",string_trim(traceback[2]),")"}))
 end
 
-print = function(...)
-    local s = c.concat_print(...)
-    logV(true, M.LOG_INFO, s)
-end
-
 local print = print
 
 local function _dump_value(v)
@@ -59,33 +54,34 @@ function M.dump(value, desciption, nesting, _print)
     if type(nesting) ~= "number" then nesting = 3 end
     _print = _print or print
 
-    local dumpstr = ""
+    local dumpstr
     local lookup = {}
     local result = {}
     local traceback = string_split(debug_traceback("", 2), "\n")
     dumpstr = "\ndump from: " .. string_trim(traceback[2]).."\n"
 
-    local function _dump(value, desciption, indent, nest, keylen)
-        desciption = desciption or "<var>"
+    local function _dump(_value, _desciption, _indent, nest, keylen)
+        _desciption = _desciption or "<var>"
         local spc = ""
         if type(keylen) == "number" then
-            spc = string_rep(" ", keylen - string_len(_dump_value(desciption)))
+            spc = string_rep(" ", keylen - string_len(_dump_value(_desciption)))
         end
-        if type(value) ~= "table" then
-            result[#result + 1] = string_format("%s%s%s = %s", indent, _dump_value(desciption), spc, _dump_value(value))
-        elseif lookup[tostring(value)] then
-            result[#result + 1] = string_format("%s%s%s = *REF*", indent, _dump_value(desciption), spc)
+        if type(_value) ~= "table" then
+            result[#result + 1] = string_format("%s%s%s = %s", _indent, _dump_value(_desciption),
+            spc, _dump_value(_value))
+        elseif lookup[tostring(_value)] then
+            result[#result + 1] = string_format("%s%s%s = *REF*", _indent, _dump_value(_desciption), spc)
         else
-            lookup[tostring(value)] = true
+            lookup[tostring(_value)] = true
             if nest > nesting then
-                result[#result + 1] = string_format("%s%s = *MAX NESTING*", indent, _dump_value(desciption))
+                result[#result + 1] = string_format("%s%s = *MAX NESTING*", _indent, _dump_value(_desciption))
             else
-                result[#result + 1] = string_format("%s%s = {", indent, _dump_value(desciption))
-                local indent2 = indent .. "    "
+                result[#result + 1] = string_format("%s%s = {", _indent, _dump_value(_desciption))
+                local indent2 = _indent .. "    "
                 local keys = {}
-                local keylen = 0
+                keylen = 0
                 local values = {}
-                for k, v in pairs(value) do
+                for k, v in pairs(_value) do
                     keys[#keys + 1] = k
                     local vk = _dump_value(k)
                     local vkl = string_len(vk)
@@ -102,7 +98,7 @@ function M.dump(value, desciption, nesting, _print)
                 for _, k in ipairs(keys) do
                     _dump(values[k], k, indent2, nest + 1, keylen)
                 end
-                result[#result + 1] = string_format("%s}", indent)
+                result[#result + 1] = string_format("%s}", _indent)
             end
         end
     end

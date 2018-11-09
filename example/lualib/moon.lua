@@ -1,7 +1,6 @@
 local core = require("moon_core")
 local json = require("json")
 local seri = require("seri")
-require("log") -- hook print
 
 local json_encode = json.encode
 local json_decode = json.decode
@@ -123,7 +122,8 @@ end
 
 --[[
     注册server退出回掉,必须在回掉函数中 调用moon.removeself ,否则server退出流程将阻塞。
-    常用于带有异步流程的服务（如带协程的数据库服务），收到退出信号后，处理数据保存任务，然后removeself
+    常用于带有异步流程的服务（如带协程的数据库服务），收到退出信号后，
+    处理数据保存任务，然后removeself
 	@param callback 函数签名 function() end
 ]]
 function moon.exit(callback)
@@ -240,7 +240,8 @@ end
     @param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)
     @param unique 是否是唯一服务，唯一服务可以用moon.unique_service(name) 查询服务id
 	@param shared 可选，是否共享工作者线程，默认true
-	@workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者线程中
+    @workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作
+    者线程中
 	@return int 返回所创建的服务ID, 0代表创建失败
 ]]
 function moon.new_service(stype, config, unique, shared, workerid)
@@ -561,7 +562,7 @@ reg_protocol{
     name = "socket",
     PTYPE = PTYPE_SOCKET,
     pack = function(...) return ... end,
-    dispatch = function(msg)
+    dispatch = function(_)
         error("PTYPE_SOCKET dispatch not implemented")
     end
 }
@@ -570,7 +571,7 @@ reg_protocol{
     name = "websocket",
     PTYPE = PTYPE_SOCKET_WS,
     pack = function(...) return ... end,
-    dispatch = function(msg)
+    dispatch = function(_)
         error("PTYPE_SOCKET_WS dispatch not implemented")
     end
 }

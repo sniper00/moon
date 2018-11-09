@@ -1,6 +1,6 @@
 local moon = require("moon")
 
-local handler = {1, 2, 3, 4, 5, 6}
+local handler = moon.new_table(0,6)
 
 moon.dispatch(
     "socket",

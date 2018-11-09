@@ -65,11 +65,6 @@ namespace moon
                 last_recv_time_ = std::time(nullptr);
                 restore_buffer_offset();
                 response_msg_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
-                if (response_msg_->get_buffer()->size() > MAX_NET_CUSOM_PROTOCOL_SIZE)
-                {
-                    error(e, int(network_logic_error::read_message_size_max));
-                    return;
-                }
                 handle_read_request();
                 read_some();
             }));
