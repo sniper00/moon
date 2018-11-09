@@ -1,4 +1,3 @@
-local moon = require("moon")
 --Echo Server Example
 
 do
