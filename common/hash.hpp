@@ -127,5 +127,19 @@ namespace moon
             hash_combine(seed, *first);
         }
     }
+
+    inline constexpr uint64_t chash_string(const char* str, size_t len, uint64_t seed = 0)
+    {
+        return 0 == len ? seed : chash_string(str + 1, len-1, seed ^ (static_cast<uint64_t>(*str) + 0x9e3779b9 + (seed << 6) + (seed >> 2)));
+    }
+
+    inline uint64_t chash_string(const std::string& s, uint64_t seed = 0)
+    {
+        return chash_string(s.data(),s.size(), seed);
+    }
+
+    inline constexpr uint64_t operator""_csh(const char *string, size_t len) {
+        return chash_string(string, len);
+    }
 }
 
