@@ -1,5 +1,6 @@
 #include "router.h"
 #include "common/string.hpp"
+#include "common/hash.hpp"
 #include "common/time.hpp"
 #include "worker.h"
 #include "message.hpp"
@@ -100,9 +101,9 @@ namespace moon
             return;
         }
 
-        switch (moon::chash_string(params[0].data()))
+        switch (moon::chash_string(params[0]))
         {
-        case moon::chash_string("worker"):
+        case "worker"_csh:
         {
             int32_t workerid = moon::string_convert<int32_t>(params[1]);
             if (workerid_valid(workerid))
@@ -112,7 +113,7 @@ namespace moon
             }
             break;
         }
-        case moon::chash_string("service"):
+        case "service"_csh:
         {
             uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
             int32_t workerid = worker_id(serviceid);

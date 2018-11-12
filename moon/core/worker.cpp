@@ -1,6 +1,7 @@
 #include "worker.h"
 #include "common/time.hpp"
 #include "common/string.hpp"
+#include "common/hash.hpp"
 #include "service.h"
 #include "message.hpp"
 #include "common/log.hpp"
@@ -198,9 +199,9 @@ namespace moon
         post([this, sender, cmd, responseid] {
             auto params = moon::split<std::string>(cmd, ".");
 
-            switch (moon::chash_string(params[0].data()))
+            switch (moon::chash_string(params[0]))
             {
-            case moon::chash_string("worker"):
+            case "worker"_csh:
             {
                 if (auto iter = commands_.find(params[2]); iter != commands_.end())
                 {
@@ -208,7 +209,7 @@ namespace moon
                 }
                 break;
             }
-            case moon::chash_string("service"):
+            case "service"_csh:
             {
                 uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
                 if (service* s = find_service(serviceid); s != nullptr)

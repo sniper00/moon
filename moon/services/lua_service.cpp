@@ -1,7 +1,7 @@
 #include "lua_service.h"
 #include "message.hpp"
 #include "router.h"
-#include "common/string.hpp"
+#include "common/hash.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson_helper.hpp"
 #include "luabind/lua_serialize.hpp"
@@ -66,14 +66,14 @@ lua_service::~lua_service()
 moon::tcp * lua_service::get_tcp(const std::string& protocol)
 {
     uint8_t v = 0;
-    switch (moon::chash_string(protocol.data()))
+    switch (moon::chash_string(protocol))
     {
-    case moon::chash_string("default"):
+    case "default"_csh:
     {
         v = PTYPE_SOCKET;
         break;
     }
-    case moon::chash_string("websocket"):
+    case "websocket"_csh:
     {
         v = PTYPE_SOCKET_WS;
         break;

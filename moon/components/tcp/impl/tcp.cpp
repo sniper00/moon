@@ -1,6 +1,7 @@
 #include "components/tcp/tcp.h"
 #include "common/log.hpp"
 #include "common/string.hpp"
+#include "common/hash.hpp"
 #include "message.hpp"
 #include "moon_connection.hpp"
 #include "custom_connection.hpp"
@@ -49,25 +50,25 @@ namespace moon
     void tcp::set_enable_frame(std::string flag)
     {
         moon::lower(flag);
-        switch (moon::chash_string(flag.data()))
+        switch (moon::chash_string(flag))
         {
-        case moon::chash_string("none"):
+        case "none"_csh:
         {
             frame_flag_ = moon::frame_enable_flag::none;
             break;
         }
-        case moon::chash_string("r"):
+        case "r"_csh:
         {
             frame_flag_ = moon::frame_enable_flag::receive;
             break;
         }
-        case moon::chash_string("w"):
+        case "w"_csh:
         {
             frame_flag_ = moon::frame_enable_flag::send;
             break;
         }
-        case moon::chash_string("wr"):
-        case moon::chash_string("rw"):
+        case "wr"_csh:
+        case "rw"_csh:
         {
             frame_flag_ = moon::frame_enable_flag::both;
             break;
