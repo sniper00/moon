@@ -78,7 +78,7 @@ namespace moon
         return 0;
     }
 
-    void router::remove_service(uint32_t serviceid, uint32_t sender, uint32_t responseid, bool crashed)
+    void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t responseid, bool crashed)
     {
         auto workerid = worker_id(serviceid);
         if (workerid_valid(workerid))
@@ -87,8 +87,8 @@ namespace moon
         }
         else
         {
-            auto content = moon::format("router::remove_service worker %d not found.", workerid);
-            make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
+            auto content = moon::format("worker %d not found.", workerid);
+            make_response(sender, "router::remove_service "sv, content, responseid, PTYPE_ERROR);
         }
     }
 
@@ -97,7 +97,7 @@ namespace moon
         auto params = moon::split<std::string>(cmd, ".");
         if (params.size() < 3)
         {
-            make_response(sender, "error"sv, moon::format("router::runcmd param too few: %s", cmd.data()), responseid, PTYPE_ERROR);
+            make_response(sender, "router::runcmd "sv, moon::format("param too few: %s", cmd.data()), responseid, PTYPE_ERROR);
             return;
         }
 
@@ -126,8 +126,8 @@ namespace moon
         }
         }
 
-        auto content = moon::format("router::runcmd invalid cmd: %s.", cmd.data());
-        make_response(sender, "error"sv, content, responseid, PTYPE_ERROR);
+        auto content = moon::format("invalid cmd: %s.", cmd.data());
+        make_response(sender, "router::runcmd "sv, content, responseid, PTYPE_ERROR);
     }
 
     void router::send_message(const message_ptr_t & msg) const
@@ -213,9 +213,9 @@ namespace moon
         return logger_;
     }
 
-    void router::make_response(uint32_t sender, const string_view_t&header, const string_view_t& content, int32_t resp, uint8_t mtype) const
+    void router::make_response(uint32_t sender, const string_view_t&header, const string_view_t& content, int32_t responseid, uint8_t mtype) const
     {
-        if (sender == 0 || resp == 0)
+        if (sender == 0 || responseid == 0)
         {
             if (mtype == PTYPE_ERROR && !content.empty())
             {
@@ -228,7 +228,7 @@ namespace moon
         rmsg->set_header(header);
         rmsg->set_receiver(sender);
         rmsg->set_type(mtype);
-        rmsg->set_responseid(resp);
+        rmsg->set_responseid(responseid);
         rmsg->write_data(content);
         send_message(rmsg);
     }

@@ -131,7 +131,7 @@ namespace moon
             }
             else
             {
-                router_->make_response(sender, "error"sv, "remove_service:service not found"sv, respid, PTYPE_ERROR);
+                router_->make_response(sender, "worker::remove_service "sv, "service not found"sv, respid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
@@ -218,7 +218,7 @@ namespace moon
                 }
                 else
                 {
-                    router_->make_response(sender, "error"sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
+                    router_->make_response(sender, "worker::runcmd "sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
                 }
                 break;
             }
@@ -295,7 +295,7 @@ namespace moon
             if (nullptr == ser)
             {
                 msg->set_responseid(-msg->responseid());
-                router_->make_response(msg->sender(), "error", "call dead service.", msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "worker::handle_one ", "call dead service.", msg->responseid(), PTYPE_ERROR);
                 return;
             }
         }

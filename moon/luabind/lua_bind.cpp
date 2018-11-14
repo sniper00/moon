@@ -262,6 +262,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", [router_](const std::string& key) { return *router_->get_env(key); });
     lua.set_function("set_loglevel", [router_](string_view_t s) { router_->logger()->set_level(s); });
+    lua.set_function("abort", [router_]() { router_->stop_server(); });
     return *this;
 }
 

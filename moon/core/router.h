@@ -34,7 +34,7 @@ namespace moon
 
         uint32_t new_service(const std::string& service_type, bool unique, bool shareth, int32_t workerid, const string_view_t& config);
 
-        void remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed = false);
+        void remove_service(uint32_t serviceid, uint32_t sender, int32_t respid, bool crashed = false);
 
         void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
 
@@ -56,16 +56,16 @@ namespace moon
 
         log* logger() const;
 
-        void make_response(uint32_t sender, const string_view_t&, const string_view_t& content, int32_t resp, uint8_t mtype = PTYPE_TEXT) const;
+        void make_response(uint32_t sender, const string_view_t&, const string_view_t& content, int32_t responseid, uint8_t mtype = PTYPE_TEXT) const;
 
         void on_service_remove(uint32_t serviceid);
 
         asio::io_context& get_io_context(uint32_t serviceid);
 
-        void set_stop(std::function<void()> f);
-
         void stop_server();
     private:
+        void set_stop(std::function<void()> f);
+
         inline int32_t worker_id(uint32_t serviceid) const
         {
             return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);

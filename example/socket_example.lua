@@ -26,14 +26,20 @@ end)
 
 http_server.listen("127.0.0.1",8001)
 
-moon.async(function ()
-    local client = http_client.new("127.0.0.1:8001")
-    local header,data = client:request("GET","/home","HAHAHA")
-    if not header then
-        print("error",data)
-        return
-    end
-    print("CLIENT: http_version",header.version)
-    print("CLIENT: status_code",header.status_code)
-    print("CLIENT: data",data)
+
+moon.start(function (  )
+    moon.async(function ()
+        local client = http_client.new("127.0.0.1:8001")
+        while true do
+            local header,data = client:request("GET","/home","HAHAHA")
+            if not header then
+                print("error",data)
+                return
+            end
+            print("CLIENT: http_version",header.version)
+            print("CLIENT: status_code",header.status_code)
+            print("CLIENT: data",data)
+            moon.co_wait(1000)
+        end
+    end)
 end)

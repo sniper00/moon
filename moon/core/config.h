@@ -5,7 +5,7 @@ namespace moon
 {
     constexpr int32_t WORKER_ID_SHIFT = 24;
     constexpr int64_t EVENT_UPDATE_INTERVAL = 10;
-    constexpr size_t BUFFER_HEAD_RESERVED = 8;
+    constexpr int32_t BUFFER_HEAD_RESERVED = 8;
     constexpr size_t MAX_REQUEST_STREAMBUF_SIZE = 8192;
 
     DECLARE_SHARED_PTR(message);

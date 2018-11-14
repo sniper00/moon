@@ -32,7 +32,7 @@ namespace moon
                 if (response_msg_->size() > 0)
                 {
                     //guarantee read is async operation
-                    socket_.get_io_service().post([this] {
+                    asio::post(socket_.get_io_context(),[this] {
                         handle_read_request();
                     });
                 }
@@ -148,6 +148,7 @@ namespace moon
                 if (e && e != asio::error::eof)
                 {
                     response_msg_->set_header("closed");
+                    response_msg_->get_buffer()->clear();
                     response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
                 }
                 else

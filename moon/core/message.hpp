@@ -7,12 +7,12 @@ namespace moon
     class  message final
     {
     public:
-        static buffer_ptr_t create_buffer(size_t capacity = 64, size_t headreserved = BUFFER_HEAD_RESERVED)
+        static buffer_ptr_t create_buffer(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
         {
             return std::make_shared<buffer>(capacity, headreserved);
         }
 
-        static message_ptr_t create(size_t capacity = 64, size_t headreserved = BUFFER_HEAD_RESERVED)
+        static message_ptr_t create(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
         {
             return std::make_shared<message>(capacity, headreserved);
         }
@@ -22,7 +22,7 @@ namespace moon
             return std::make_shared<message>(v);
         }
 
-        message(size_t capacity = 64, size_t headreserved = 0)
+        message(size_t capacity = 64, uint32_t headreserved = 0)
         {
             init();
             data_ = std::make_shared<buffer>(capacity, headreserved);

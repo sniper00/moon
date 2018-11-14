@@ -130,10 +130,10 @@ namespace moon
         {
             luaL_Reg l[] = {
                 {"pack",pack},
-                {"packstring",packstring },
+                {"packs",packstring },
                 {"unpack",unpack},
                 {"concat",concat },
-                {"concatstring",concatstring },
+                {"concats",concatstring },
                 {NULL,NULL},
             };
 
