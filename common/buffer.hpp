@@ -245,7 +245,7 @@ namespace moon
         using const_pointer = typename const_iterator::pointer;
 
         //buffer default size
-        constexpr static size_t   STACK_CAPACITY = 256 - 5 * sizeof(std::size_t) - sizeof(std::unique_ptr<value_type[]>);
+        constexpr static size_t   STACK_CAPACITY = 256 - 4 * sizeof(size_t) - sizeof(std::unique_ptr<value_type[]>);
 
         enum seek_origin
         {
@@ -254,12 +254,12 @@ namespace moon
             End
         };
 
-        buffer(size_t capacity = STACK_CAPACITY, size_t headreserved = 0)
+        buffer(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
             :flag_(0)
+            , headreserved_(headreserved)
             , capacity_(sizeof(stack_data_))
             , readpos_(headreserved)
             , writepos_(headreserved)
-            , headreserved_(headreserved)
         {
             if (capacity + headreserved > capacity_)
             {
@@ -275,7 +275,7 @@ namespace moon
 
         buffer& operator=(buffer &&) = default;
 
-        void init(size_t capacity = STACK_CAPACITY, size_t headreserved = 0)
+        void init(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
         {
             readpos_ = headreserved;
             writepos_ = headreserved;
@@ -290,7 +290,7 @@ namespace moon
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Indata || 0 == count)
                 return;
-            std::size_t n = sizeof(T)*count;
+            size_t n = sizeof(T)*count;
 
             check_space(n);
 
@@ -306,7 +306,7 @@ namespace moon
             if (nullptr == Indata || 0 == count || offset >= count)
                 return false;
 
-            std::size_t n = sizeof(T)*count;
+            size_t n = sizeof(T)*count;
 
             if (n > readpos_)
             {
@@ -326,7 +326,7 @@ namespace moon
             if (nullptr == Outdata || 0 == count)
                 return false;
 
-            std::size_t n = sizeof(T)*count;
+            size_t n = sizeof(T)*count;
 
             if (readpos_ + n > writepos_)
             {
@@ -339,7 +339,7 @@ namespace moon
             return true;
         }
 
-        std::size_t seek(int offset, seek_origin s = seek_origin::Current)  noexcept
+        size_t seek(int offset, seek_origin s = seek_origin::Current)  noexcept
         {
             switch (s)
             {
@@ -375,19 +375,19 @@ namespace moon
         template<typename ValueType>
         void set_flag(ValueType v) noexcept
         {
-            flag_ |= static_cast<std::size_t>(v);
+            flag_ |= static_cast<uint32_t>(v);
         }
 
         template<typename ValueType>
         bool has_flag(ValueType v) const noexcept
         {
-            return ((flag_&static_cast<std::size_t>(v)) != 0);
+            return ((flag_&static_cast<uint32_t>(v)) != 0);
         }
 
         template<typename ValueType>
         void clear_flag(ValueType v) noexcept
         {
-            flag_ &= ~static_cast<std::size_t>(v);
+            flag_ &= ~static_cast<uint32_t>(v);
         }
 
         //mark
@@ -431,17 +431,17 @@ namespace moon
         }
 
         //readable size
-        std::size_t size() const noexcept
+        size_t size() const noexcept
         {
             return writepos_ - readpos_;
         }
 
-        std::size_t max_size() const noexcept
+        size_t max_size() const noexcept
         {
             return capacity_;
         }
 
-        void check_space(std::size_t need)
+        void check_space(size_t need)
         {
             if (writeablesize() >= need)
             {
@@ -467,7 +467,7 @@ namespace moon
             }
             else
             {
-                std::size_t readable = size();
+                size_t readable = size();
                 if (readable != 0)
                 {
                     memcpy(data_() + headreserved_, data_() + readpos_, readable);
@@ -478,13 +478,13 @@ namespace moon
         }
 
     protected:
-        std::size_t writeablesize() const
+        size_t writeablesize() const
         {
             assert(capacity_ >= writepos_);
             return capacity_ - writepos_;
         }
 
-        std::size_t next_pow2(std::size_t x)
+        size_t next_pow2(size_t x)
         {
             if (!(x & (x - 1)))
             {
@@ -509,15 +509,15 @@ namespace moon
         }
 
     protected:
-        std::size_t flag_;
+        uint32_t flag_;
 
-        std::size_t capacity_;
+        uint32_t headreserved_;
+
+        size_t capacity_;
         //read position
-        std::size_t readpos_;
+        size_t readpos_;
         //write position
-        std::size_t writepos_;
-
-        std::size_t headreserved_;
+        size_t writepos_;
 
         std::unique_ptr<value_type[]> heap_data_;
 
