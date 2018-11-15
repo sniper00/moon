@@ -68,7 +68,7 @@ project "rapidjson"
     kind "StaticLib"
     language "C++"
     targetdir "bin/%{cfg.buildcfg}"
-    includedirs {"./third","./third/rapidjson","./third/rapidjsonlua"} 
+    includedirs {"./third","./third/lua53","./third/rapidjsonlua"}
     --links{"lua53"}
     files { "./third/rapidjsonlua/**.hpp", "./third/rapidjsonlua/**.cpp"}
     filter {"system:linux"}
@@ -80,7 +80,7 @@ project "moon"
     kind "ConsoleApp"
     language "C++"
     targetdir "bin/%{cfg.buildcfg}"
-    includedirs {"./","./moon","./moon/core","./third","./clib"}
+    includedirs {"./","./moon","./moon/core","./third","./third/lua53"}
     files {"./moon/**.h", "./moon/**.hpp","./moon/**.cpp" }
     links{"lua53","rapidjson"}
     defines {
@@ -118,7 +118,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon 
     location ("build/"..name) -- 生成的工程文件目录
     kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
     targetdir "bin/%{cfg.buildcfg}" --目标文件目录
-    includedirs {"./third/lua53","./third"} --头文件搜索目录
+    includedirs {"./third","./third/lua53"} --头文件搜索目录
     files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
     targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
     language "C"
