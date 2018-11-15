@@ -202,8 +202,7 @@ function moon.raw_send(PTYPE, receiver, header, data, responseid)
     end
 
     if services_exited[receiver] then
-        print("moon.raw_send send to a crashed service")
-        return false
+        return false,"moon.raw_send send to dead service"
 	end
     header = header or ''
     responseid = responseid or 0

@@ -38,7 +38,9 @@ function session:co_read(n)
 end
 
 function session:send(data,bclose)
-    assert(self.connid,"attemp send an invalid session")
+    if not self.connid then
+        return false,"session:send:attemp send an invalid session"
+    end
     if bclose then
         return self.sock:send_then_close(self.connid,data)
     else
