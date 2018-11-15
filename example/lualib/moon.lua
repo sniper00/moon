@@ -88,7 +88,7 @@ local function make_response(receiver)
 
     if receiver then
         if services_exited[receiver] then
-            return false,"dead service"
+            return false, string.format( "[%u] attempt send to dead service [%d]", sid_, receiver)
         end
         response_wacther[response_uid] = receiver
     end
@@ -395,9 +395,9 @@ function moon.co_call(PTYPE, receiver, ...)
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
 
-    local rspid = make_response(receiver)
+    local rspid,err = make_response(receiver)
     if not rspid then
-        return false, "call a exited service"
+        return false, err
     end
 
 	_send(sid_, receiver, p.pack(...), "", rspid, p.PTYPE)

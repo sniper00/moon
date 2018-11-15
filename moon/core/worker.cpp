@@ -295,7 +295,7 @@ namespace moon
             if (nullptr == ser)
             {
                 msg->set_responseid(-msg->responseid());
-                router_->make_response(msg->sender(), "worker::handle_one ", "call dead service.", msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "worker::handle_one ", moon::format("[%u] attempt send to dead service [%u].",msg->sender(),msg->receiver()).data(), msg->responseid(), PTYPE_ERROR);
                 return;
             }
         }
