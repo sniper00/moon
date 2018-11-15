@@ -114,9 +114,6 @@ end
 function redis:_readreplay()
 	local line, err1 = self.conn:co_read('\r\n')
 	if not line then
-		-- line:closed,timeout
-		print("redis read error", err1)
-		self.conn = nil
 		return nil, err1
 	end
 
@@ -130,9 +127,6 @@ function redis:_readreplay()
 
 		local data, err2 = self.conn:co_read(size)
 		if not data then
-			if err2 == "timeout" then
-				self.conn = nil
-			end
 			return nil, err2
 		end
 
@@ -227,7 +221,11 @@ function redis:docmd(...)
 		return nil, "closed"
 	end
 
-	return self:_readreplay()
+	local res,err = self:_readreplay()
+	if res == nil then
+		self.conn = nil
+	end
+	return res,err
 end
 
 function redis:readreplay()
@@ -236,6 +234,9 @@ function redis:readreplay()
 	end
 
 	local res, err = self:_readreplay()
+	if res == nil then
+		self.conn = nil
+	end
 	return res, err
 end
 
@@ -307,9 +308,7 @@ function redis:commit_pipeline()
 			nvals = nvals + 1
 			vals[nvals] = res
 		elseif res == nil then
-			if err == "timeout" then
-				self:close()
-			end
+			self.conn = nil
 			return nil, err
 		else
 			-- be a valid redis error value

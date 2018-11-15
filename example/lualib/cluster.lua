@@ -1,21 +1,30 @@
 local moon = require("moon")
 local seri = require("seri")
-local seri_packstr = seri.packstring
+local packs = seri.packs
+local pack = seri.pack
+local co_yield = coroutine.yield
 
 local M = {}
 
 local clusterd
 
-local call = moon.co_call_with_header
+local send = moon.raw_send
 
 function M.call(rnode, rservice, ...)
     if not clusterd then
         clusterd = moon.unique_service("clusterd")
         if 0 == clusterd then
-            return false,"clusterd service not start"
+            return false, "clusterd service not start"
         end
     end
-    return call("lua", clusterd,seri_packstr("CALL",rnode,rservice),...)
+
+    local responseid,err = moon.make_response(clusterd)
+    if not responseid then
+        return false, err
+    end
+
+    send('lua',clusterd,packs("CALL", rnode, rservice),pack(...),responseid)
+    return co_yield()
 end
 
 return M

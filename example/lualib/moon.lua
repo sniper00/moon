@@ -88,7 +88,7 @@ local function make_response(receiver)
 
     if receiver then
         if services_exited[receiver] then
-            return false
+            return false,"dead service"
         end
         response_wacther[response_uid] = receiver
     end
@@ -195,7 +195,7 @@ end
 	@param header:message header
     @param data 消息内容 string 类型
 ]]
-function moon.raw_send(PTYPE, receiver, header, data)
+function moon.raw_send(PTYPE, receiver, header, data, responseid)
 	local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
@@ -206,24 +206,8 @@ function moon.raw_send(PTYPE, receiver, header, data)
         return false
 	end
     header = header or ''
-	_send(sid_, receiver, data, header, 0, p.PTYPE)
-end
-
-function moon.co_call_with_header(PTYPE, receiver, header, ...)
-    local p = protocol[PTYPE]
-    if not p then
-        error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
-    end
-
-    if services_exited[receiver] then
-        return false, "call a exited service"
-	end
-
-    local responseid = make_response()
-    response_wacther[responseid] = receiver
-    header = header or ''
-	_send(sid_, receiver, p.pack(...), header, responseid, p.PTYPE)
-    return co_yield()
+    responseid = responseid or 0
+	return _send(sid_, receiver, data, header, responseid, p.PTYPE)
 end
 
 --[[
@@ -514,10 +498,10 @@ reg_protocol {
         local responseid = msg:responseid()
         local topic = msg:header()
         local data = p.unpack(msg)
-        --print("moon.PTYPE_ERROR",topic,data)
+        --print("PTYPE_ERROR",topic,data)
         local co = resplistener[responseid]
         if co then
-            co_resume(co, false, topic, data)
+            co_resume(co, false, topic..data)
             resplistener[responseid] = nil
             return
         end

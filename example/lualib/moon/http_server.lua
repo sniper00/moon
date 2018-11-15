@@ -228,9 +228,9 @@ function M.listen(ip,port,timeout)
                 moon.async(function()
                     local parser = moon.http_request_parser.new()
                     while true do
-                        local ok, err = session_handler(session,router,parser)
+                        local ok, err2 = session_handler(session,router,parser)
                         if not ok and M.error  then
-                            M.error(session,err)
+                            M.error(session,err2)
                             return
                         end
                     end

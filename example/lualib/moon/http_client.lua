@@ -149,7 +149,7 @@ function M:request( method,path,content,header)
         self.parser = moon.http_response_parser.new()
     end
 
-    --print(seri.concatstring(cache))
+    --print(seri.concats(cache))
     self.conn:send(seri.concat(cache))
 
     local data,err = response_handler(self.conn,self.parser)
