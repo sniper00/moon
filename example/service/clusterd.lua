@@ -9,7 +9,7 @@ local clusters = {}
 local pack_cluster = moon.pack_cluster
 local unpack_cluster = moon.unpack_cluster
 
-local seri_packstr = seri.packstring
+local seri_packstr = seri.packs
 local seri_unpack = seri.unpack
 local co_yield = coroutine.yield
 local unique_service = moon.unique_service
