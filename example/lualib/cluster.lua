@@ -10,6 +10,7 @@ local clusterd
 
 local send = moon.raw_send
 
+
 function M.call(rnode, rservice, ...)
     if not clusterd then
         clusterd = moon.unique_service("clusterd")
@@ -23,7 +24,7 @@ function M.call(rnode, rservice, ...)
         return false, err
     end
 
-    send('lua',clusterd,packs("CALL", rnode, rservice),pack(...),responseid)
+    send('lua',clusterd,packs(rnode, rservice,"CALL"),pack(...),responseid)
     return co_yield()
 end
 

@@ -7,7 +7,7 @@ moon.start(function()
 
     local args = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}
     moon.async(function()
-        
+
         while true do
             local ret ,err = cluster.call('server_5','cluster_example_receiver',"ACCUM",table.unpack(args))
             if not ret then
