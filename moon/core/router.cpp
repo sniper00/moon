@@ -69,7 +69,7 @@ namespace moon
         {
             if (!unique || unique_services_.set(s->name(), s->id()))
             {
-                wk->add_service(s);
+                wk->add_service(std::move(s));
                 return serviceid;
             }
         }

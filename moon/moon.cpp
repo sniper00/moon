@@ -121,7 +121,7 @@ int main(int argc, char*argv[])
             lua["package"]["loaded"]["moon_core"] = module;
 
             router_->register_service("lua", []()->service_ptr_t {
-                return std::make_shared<lua_service>();
+                return std::make_unique<lua_service>();
             });
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS

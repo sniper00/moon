@@ -10,7 +10,7 @@ namespace moon
 
     DECLARE_SHARED_PTR(message);
     DECLARE_SHARED_PTR(buffer);
-    DECLARE_SHARED_PTR(service);
+    DECLARE_UNIQUE_PTR(service);
 
     constexpr uint8_t PTYPE_UNKNOWN = 0;
     constexpr uint8_t PTYPE_SYSTEM = 1;

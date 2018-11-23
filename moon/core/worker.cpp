@@ -83,14 +83,16 @@ namespace moon
         return tmp;
     }
 
-    void worker::add_service(const service_ptr_t & s)
+    void worker::add_service(service_ptr_t&& s)
     {
-        post([this, s]() {
-            bool res = services_.try_emplace(s->id(), s).second;
-            MOON_CHECK(res, "serviceid repeated");
-            s->ok(true);
+        //The operator () of a lambda is const by default
+        post([this, s=std::move(s)]() mutable {
+            auto id = s->id();
+            auto res = services_.try_emplace(id, std::move(s));
+            MOON_CHECK(res.second, "serviceid repeated");
+            res.first->second->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
-            CONSOLE_INFO(router_->logger(), "[WORKER %d] new service [%s:%u]", workerid(), s->name().data(), s->id());
+            CONSOLE_INFO(router_->logger(), "[WORKER %d] new service [%s:%u]", workerid(), res.first->second->name().data(), res.first->second->id());
         });
     }
 

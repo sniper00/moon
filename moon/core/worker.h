@@ -33,7 +33,7 @@ namespace moon
 
         uint32_t make_serviceid();
 
-        void add_service(const service_ptr_t& s);
+        void add_service(service_ptr_t&& s);
 
         void send(const message_ptr_t& msg);
 
