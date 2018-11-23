@@ -73,6 +73,22 @@ namespace moon
         try
         {
             dispatch(msg.get());
+            if (msg->receiver() != id() && msg->receiver() != 0)
+            {
+                MOON_CHECK(false, "can not redirect this message");
+            }
+        }
+        catch (std::exception& e)
+        {
+            CONSOLE_ERROR(logger(), "service::handle_message exception: %s", e.what());
+        }
+    }
+
+    void service::handle_message(message_ptr_t && msg)
+    {
+        try
+        {
+            dispatch(msg.get());
             //redirect message
             if (msg->receiver() != id() && msg->receiver() != 0)
             {
@@ -80,7 +96,7 @@ namespace moon
                 MOON_DCHECK(!b, "can not redirect broadcast message");
                 if (!b)
                 {
-                    router_->send_message(msg);
+                    router_->send_message(std::move(msg));
                 }
             }
         }

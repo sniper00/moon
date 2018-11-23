@@ -35,7 +35,7 @@ namespace moon
 
         void add_service(service_ptr_t&& s);
 
-        void send(const message_ptr_t& msg);
+        void send(message_ptr_t&& msg);
 
         void workerid(int32_t id);
 
@@ -65,7 +65,7 @@ namespace moon
 
         void update();
 
-        void handle_one(service* ser, const message_ptr_t& msg);
+        void handle_one(service* ser, message_ptr_t&& msg);
 
         void register_commands();
     private:

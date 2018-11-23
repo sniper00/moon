@@ -130,13 +130,13 @@ namespace moon
         make_response(sender, "router::runcmd "sv, content, responseid, PTYPE_ERROR);
     }
 
-    void router::send_message(const message_ptr_t & msg) const
+    void router::send_message(message_ptr_t&& msg) const
     {
         MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(msg->receiver());
         MOON_CHECK(workerid_valid(id), "invalid message receiver serviceid.");
-        workers_[id - 1]->send(msg);
+        workers_[id - 1]->send(std::forward<message_ptr_t>(msg));
     }
 
     void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, const string_view_t& header, int32_t responseid, uint8_t type) const
@@ -151,17 +151,19 @@ namespace moon
         }
         msg->set_type(type);
         msg->set_responseid(responseid);
-        send_message(msg);
+        send_message(std::move(msg));
     }
 
-    void router::broadcast(uint32_t sender, const message_ptr_t & msg)
+    void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, const string_view_t& header, uint8_t type)
     {
-        MOON_DCHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
-        msg->set_broadcast(true);
-        msg->set_sender(sender);
         for (auto& w : workers_)
         {
-            w->send(msg);
+            auto m = message::create(buf);
+            m->set_broadcast(true);
+            m->set_header(header);
+            m->set_sender(sender);
+            m->set_type(type);
+            w->send(std::move(m));
         }
     }
 
@@ -230,7 +232,7 @@ namespace moon
         rmsg->set_type(mtype);
         rmsg->set_responseid(responseid);
         rmsg->write_data(content);
-        send_message(rmsg);
+        send_message(std::move(rmsg));
     }
 
     worker* router::next_worker()

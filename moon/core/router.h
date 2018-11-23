@@ -38,11 +38,11 @@ namespace moon
 
         void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
 
-        void send_message(const message_ptr_t& msg) const;
+        void send_message(message_ptr_t&& msg) const;
 
-        void send(uint32_t sender, uint32_t receiver, const buffer_ptr_t& buf, const string_view_t& header, int32_t responseid, uint8_t mtype) const;
+        void send(uint32_t sender, uint32_t receiver, const buffer_ptr_t& buf, const string_view_t& header, int32_t responseid, uint8_t type) const;
 
-        void broadcast(uint32_t sender, const message_ptr_t& msg);
+        void broadcast(uint32_t sender, const buffer_ptr_t& buf, const string_view_t& header, uint8_t type);
 
         bool register_service(const std::string& type, register_func func);
 

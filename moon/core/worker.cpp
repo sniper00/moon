@@ -118,18 +118,19 @@ namespace moon
                 CONSOLE_INFO(router_->logger(), "[WORKER %d]service [%s:%u] destroy", workerid(), s->name().data(), s->id());
                 services_.erase(iter);
 
-                auto m = message::create();
-                m->set_header("exit");
-                m->set_type(PTYPE_SYSTEM);
+                string_view_t header{ "exit" };
+                auto buf = message::create_buffer();
                 if (crashed)
                 {
-                    m->write_string("service crashed");
+                    string_view_t str{ "service crashed" };
+                    buf->write_back(str.data(), str.size());
                 }
                 else
                 {
-                    m->write_string("service exit");
+                    string_view_t str{ "service exit" };
+                    buf->write_back(str.data(), str.size());
                 }
-                router_->broadcast(id, m);
+                router_->broadcast(id, buf, header, PTYPE_SYSTEM);
             }
             else
             {
@@ -148,7 +149,7 @@ namespace moon
         return io_ctx_;
     }
 
-    void worker::send(const message_ptr_t & msg)
+    void worker::send(message_ptr_t&& msg)
     {
         if (mqueue_.push_back(std::move(msg)) == 1)
         {
@@ -163,7 +164,7 @@ namespace moon
                     count = swapqueue_.size();
                     for (auto& msg : swapqueue_)
                     {
-                        handle_one(ser, msg);
+                        handle_one(ser, std::move(msg));
                     }
                 }
                 auto difftime = time::millsecond() - begin_time;
@@ -276,7 +277,7 @@ namespace moon
         });
     }
 
-    void worker::handle_one(service* ser, const message_ptr_t & msg)
+    void worker::handle_one(service* ser, message_ptr_t&& msg)
     {
         if (msg->broadcast())
         {
@@ -285,7 +286,7 @@ namespace moon
                 auto& s = it.second;
                 if (s->ok() && s->id() != msg->sender())
                 {
-                    s->handle_message(msg);
+                    s->handle_message(std::forward<message_ptr_t>(msg));
                 }
             }
             return;
@@ -301,7 +302,7 @@ namespace moon
                 return;
             }
         }
-        ser->handle_message(msg);
+        ser->handle_message(std::forward<message_ptr_t>(msg));
     }
 
     void worker::register_commands()

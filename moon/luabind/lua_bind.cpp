@@ -229,13 +229,6 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
 
     lua.set("null", (void*)(router_));
 
-    auto broadcast = [router_](uint32_t sender, const buffer_ptr_t & data, uint8_t type)
-    {
-        auto msg = message::create(data);
-        msg->set_type(type);
-        router_->broadcast(sender, msg);
-    };
-
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("send_cache", &lua_service::send_cache, s);
@@ -255,7 +248,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("new_service", &router::new_service, router_);
     lua.set_function("remove_service", &router::remove_service, router_);
     lua.set_function("runcmd", &router::runcmd, router_);
-    lua.set_function("broadcast", broadcast);
+    lua.set_function("broadcast", &router::broadcast, router_);
     lua.set_function("workernum", &router::workernum, router_);
     lua.set_function("unique_service", &router::get_unique_service, router_);
     lua.set_function("set_unique_service", &router::set_unique_service, router_);

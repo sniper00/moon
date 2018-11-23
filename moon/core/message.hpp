@@ -14,12 +14,12 @@ namespace moon
 
         static message_ptr_t create(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
         {
-            return std::make_shared<message>(capacity, headreserved);
+            return std::make_unique<message>(capacity, headreserved);
         }
 
         static message_ptr_t create(const buffer_ptr_t & v)
         {
-            return std::make_shared<message>(v);
+            return std::make_unique<message>(v);
         }
 
         message(size_t capacity = 64, uint32_t headreserved = 0)

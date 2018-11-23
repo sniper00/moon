@@ -297,26 +297,6 @@ namespace moon
         }
     }
 
-    void tcp::handle_message(const message_ptr_t & msg)
-    {
-        if (!ok())
-        {
-            return;
-        }
-
-        if (msg->type()==0)
-        {
-            msg->set_type(type_);
-        }
-
-        msg->set_receiver(parent_->id());
-        parent_->handle_message(msg);
-        if (msg->type() == PTYPE_ERROR || msg->subtype() == static_cast<uint8_t>(socket_data_type::socket_close))
-        {
-            conns_.erase(msg->sender());
-        }
-    }
-
     void tcp::check()
     {
         checker_->expires_from_now(std::chrono::seconds(10));

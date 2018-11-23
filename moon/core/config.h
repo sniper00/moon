@@ -8,7 +8,7 @@ namespace moon
     constexpr int32_t BUFFER_HEAD_RESERVED = 8;
     constexpr size_t MAX_REQUEST_STREAMBUF_SIZE = 8192;
 
-    DECLARE_SHARED_PTR(message);
+    DECLARE_UNIQUE_PTR(message);
     DECLARE_SHARED_PTR(buffer);
     DECLARE_UNIQUE_PTR(service);
 

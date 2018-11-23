@@ -257,7 +257,7 @@ namespace moon
 
                 msg->write_string(content);
                 msg->set_sender(id_);
-				handle_message(msg);
+                handle_message(std::move(msg));
             }
 
             //closed
@@ -266,15 +266,16 @@ namespace moon
                 msg->write_string(remote_addr_);
                 msg->set_sender(id_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
-				handle_message(msg);
+				handle_message(std::move(msg));
             }
         }
 
-		void handle_message(const message_ptr_t& msg)
+        template<typename TMsg>
+		void handle_message(TMsg&& msg)
 		{
 			if (nullptr != tcp_)
 			{
-				tcp_->handle_message(msg);
+				tcp_->handle_message(std::forward<TMsg>(msg));
 			}
 		}
     protected:

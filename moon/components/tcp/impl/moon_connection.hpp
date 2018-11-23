@@ -27,7 +27,7 @@ namespace moon
             msg->write_string(remote_addr_);
             msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(accepted ? socket_data_type::socket_accept : socket_data_type::socket_connect));
-            handle_message(msg);
+            handle_message(std::move(msg));
             read_header();
         }
 
@@ -160,7 +160,7 @@ namespace moon
                     buf_.reset();
                     msg->set_sender(id_);
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                    handle_message(msg);
+                    handle_message(std::move(msg));
                 }
                 read_header();
             }));

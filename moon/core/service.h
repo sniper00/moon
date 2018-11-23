@@ -28,6 +28,8 @@ namespace moon
 
         void handle_message(const message_ptr_t& msg);
 
+        void handle_message(message_ptr_t&& msg);
+
         void removeself(bool crashed = false);
     public:
         virtual void exit();
