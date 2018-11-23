@@ -52,19 +52,14 @@ namespace moon
 
 #define VA_ARGS_NUM(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
 
-#define PROPERTY_READONLY(varType,varName,funName)\
-protected: varType varName =varType();\
-public: const varType& get_##funName(void) const { return varName; }\
-protected:void set_##funName(const varType& v) { varName = v; }
-
-#define PROPERTY_READWRITE(varType,varName,funName)\
-protected: varType varName =varType();\
-public: const varType& get_##funName(void) const { return varName; }\
-	void set_##funName(const varType& v) { varName = v; }
 
 #define DECLARE_SHARED_PTR(classname)\
 class classname;\
 using classname##_ptr_t = std::shared_ptr<classname>;
+
+#define DECLARE_UNIQUE_PTR(classname)\
+class classname;\
+using classname##_ptr_t = std::unique_ptr<classname>;
 
 #define DECLARE_WEAK_PTR(classname)\
 class classname;\
