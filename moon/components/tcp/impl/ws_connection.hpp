@@ -266,7 +266,7 @@ namespace moon
             buf->write_back(s.data(), 0, s.size());
             if (bclose)
             {
-                buf->set_flag(static_cast<uint8_t>(buffer_flag::close));
+                buf->set_flag(buffer_flag::close);
             }
             base_connection::send(buf);
         }
@@ -471,8 +471,8 @@ namespace moon
         }
 
     protected:
-        const std::string header_delim_;
         bool handshaked_ = false;
+        const std::string header_delim_;
         message_ptr_t  response_msg_;
         std::array<uint8_t, 1024> buffer_;
         buffer cache_;

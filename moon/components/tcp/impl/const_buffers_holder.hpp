@@ -12,7 +12,7 @@ namespace moon
 
         void push_back(const buffer_ptr_t& buf)
         {
-            if (buf->has_flag(static_cast<uint8_t>(buffer_flag::close)))
+            if (buf->has_flag(buffer_flag::close))
             {
                 close_ = true;
             }
@@ -22,7 +22,7 @@ namespace moon
 
         void push_back(buffer_ptr_t&& buf)
         {
-            if (buf->has_flag(static_cast<uint8_t>(buffer_flag::close)))
+            if (buf->has_flag(buffer_flag::close))
             {
                 close_ = true;
             }

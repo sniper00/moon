@@ -167,12 +167,12 @@ namespace moon
 
         bool broadcast() const
         {
-            return data_->has_flag(static_cast<uint8_t>(buffer_flag::broadcast));
+            return data_->has_flag(buffer_flag::broadcast);
         }
 
         void set_broadcast(bool v)
         {
-            v ? data_->set_flag(static_cast<uint8_t>(buffer_flag::broadcast)) : data_->clear_flag(static_cast<uint8_t>(buffer_flag::broadcast));
+            v ? data_->set_flag(buffer_flag::broadcast) : data_->clear_flag(buffer_flag::broadcast);
         }
 
         void* pointer()
