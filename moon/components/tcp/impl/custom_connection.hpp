@@ -82,6 +82,13 @@ namespace moon
         void read_with_delim(buffer* buf, const string_view_t& delim)
         {
             size_t dszie = buf->size();
+            if (read_request_.size != 0 && dszie > read_request_.size)
+            {
+                error(asio::error_code(), int(network_logic_error::read_message_size_max));
+                base_connection_t::close();
+                return;
+            }
+
             string_view_t strref(buf->data(), dszie);
             size_t pos = strref.find(delim);
             if (pos != string_view_t::npos)
@@ -144,22 +151,21 @@ namespace moon
         {
             (void)lerrmsg;
 
-            {
-                if (e && e != asio::error::eof)
-                {
-                    response_msg_->set_header("closed");
-                    response_msg_->get_buffer()->clear();
-                    response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
-                }
-                else
-                {
-                    response_msg_->set_header(logic_errmsg(logicerr));
-                }
+            response_msg_->get_buffer()->clear();
 
-                if (read_request_.responseid != 0)
-                {
-                    make_response(response_msg_, PTYPE_ERROR);
-                }
+            if (e && e != asio::error::eof)
+            {
+                response_msg_->set_header("closed");
+                response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
+            }
+            else
+            {
+                response_msg_->set_header(logic_errmsg(logicerr));
+            }
+
+            if (read_request_.responseid != 0)
+            {
+                make_response(response_msg_, PTYPE_ERROR);
             }
         }
 

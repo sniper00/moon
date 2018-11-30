@@ -23,14 +23,14 @@ function session.new(sock,connid,ip,host)
     return setmetatable(tb,session)
 end
 
-function session:co_read(n)
+function session:co_read(n,n2)
     local delim = 0
     if type(n) == 'string' then
         delim = read_delim[n]
         if not delim  then
             return nil,"unsupported read delim "..tostring(n)
         end
-        n = 0
+        n = n2 or 0
     end
     local respid = make_response()
     self.sock:read(self.connid,n,delim,respid)
@@ -38,9 +38,7 @@ function session:co_read(n)
 end
 
 function session:send(data,bclose)
-    if not self.connid then
-        return false,"session:send:attemp send an invalid session"
-    end
+    assert(self.connid,"attemp send an invalid session")
     if bclose then
         return self.sock:send_then_close(self.connid,data)
     else

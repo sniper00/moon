@@ -131,9 +131,14 @@ function http_response:tb()
     return cache
 end
 
-------------------------request-------------------------------
+----------------------------------------------------------
+
+local M = {}
+
+local routers = {}
+
 local function read_chunked(session, chunkdata)
-    local data, err = session:co_read('\r\n')--security issue
+    local data, err = session:co_read('\r\n',M.chunk_max_len)--security
     if not data then
         return false,err
     end
@@ -147,7 +152,7 @@ local function read_chunked(session, chunkdata)
             return false,err
         end
         table.insert( chunkdata, data )
-        data, err = session:co_read('\r\n')--security issue
+        data, err = session:co_read('\r\n',M.chunk_max_len)--security
         if not data then
             return false,err
         end
@@ -157,7 +162,7 @@ local function read_chunked(session, chunkdata)
     return true
 end
 
-local function request_handler(session, routers, request, data )
+local function request_handler(session, request, data )
     local response = http_response.new()
     local conn_type = request:header("Connection")
     local handler =  routers[request.path]
@@ -171,8 +176,8 @@ local function request_handler(session, routers, request, data )
     end
 end
 
-local function session_handler(session,routers,parser)
-    local data, err = session:co_read("\r\n\r\n")
+local function session_handler(session,parser)
+    local data, err = session:co_read("\r\n\r\n",M.header_max_len)
     if not data then
         return false, err
     else
@@ -186,12 +191,18 @@ local function session_handler(session,routers,parser)
             if not content_length then
                 return false, "Content-Length is not number"
             end
+
+            if M.content_max_len and content_length> M.content_max_len then
+                session:close()
+                return false, string.format( "content length %d, limit %d",content_length,M.content_max_len )
+            end
+
             data, err = session:co_read(content_length)
             if not data then
                 return false,err
             end
             --print("Content-Length",content_length)
-            request_handler(session,routers,parser,data)
+            request_handler(session,parser,data)
             return true
         elseif parser:header("Transfer-Encoding") == 'chunked' then
             local chunkdata = {}
@@ -199,19 +210,15 @@ local function session_handler(session,routers,parser)
             if not result then
                 return false,errmsg
             end
-            request_handler(session,routers,parser,table.concat( chunkdata ))
+            request_handler(session,parser,table.concat( chunkdata ))
             return true
         end
-        request_handler(session,routers,parser)
+        request_handler(session,parser)
         return true
     end
 end
 
 -----------------------------------------------------------------
-
-local M = {}
-
-local router = {}
 
 local server
 
@@ -228,22 +235,26 @@ function M.listen(ip,port,timeout)
                 moon.async(function()
                     local parser = moon.http_request_parser.new()
                     while true do
-                        local ok, err2 = session_handler(session,router,parser)
-                        if not ok and M.error  then
-                            M.error(session,err2)
+                        local ok, err2 = session_handler(session,parser)
+                        if not ok then
+                            if M.error then
+                                M.error(session,err2)
+                            else
+                                print("httpserver session error",err2)
+                            end
                             return
                         end
                     end
                 end)--async
             else
-                print(err)
+                print("httpserver accept",err)
             end--if
         end--while
     end)
 end
 
 function M.on( path, cb )
-    router[path] = cb
+    routers[path] = cb
 end
 
 return M

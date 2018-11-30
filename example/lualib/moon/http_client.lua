@@ -89,6 +89,13 @@ function M.new(host_port, timeout, proxy)
     return setmetatable(o, M)
 end
 
+function M:close()
+    if self.conn then
+        self.conn:close()
+        self.conn = nil
+    end
+end
+
 function M:request( method,path,content,header)
     if not path or path=="" then
         path = "/"

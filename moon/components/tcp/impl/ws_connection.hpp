@@ -104,6 +104,8 @@ namespace moon
     public:
         using base_connection_t = base_connection;
 
+        static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 8192;
+
         static constexpr size_t PAYLOAD_MIN_LEN = 125;
         static constexpr size_t PAYLOAD_MID_LEN = 126;
         static constexpr size_t PAYLOAD_MAX_LEN = 127;
@@ -138,7 +140,7 @@ namespace moon
     protected:
         void read_header()
         {
-            auto sbuf = std::make_shared<asio::streambuf>(MAX_REQUEST_STREAMBUF_SIZE);
+            auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
             asio::async_read_until(socket_, *sbuf, header_delim_,
                 make_custom_alloc_handler(read_allocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
@@ -164,11 +166,8 @@ namespace moon
                     {
                         auto data = asio::buffer_cast<const char*>(sbuf->data());
                         cache_.write_back(data, 0, num_additional_bytes);
-                        auto cod = decode_frame();
-                        if (ws::close_code::none != cod)
+                        if (!handle_frame())
                         {
-                            close();
-                            error(asio::error_code(), int(cod), std::string((const char*)cache_.data(), cache_.size()).data());
                             return;
                         }
                     }
@@ -203,12 +202,11 @@ namespace moon
                 last_recv_time_ = std::time(nullptr);
                 cache_.write_back(buffer_.data(), 0, bytes_transferred);
 
-                auto close_code = decode_frame();
-                if (ws::close_code::none != close_code)
+                if (!handle_frame())
                 {
-                    error(asio::error_code(), int(close_code), std::string(cache_.data(), cache_.size()).data());
                     return;
                 }
+
                 read_some();
             }));
         }
@@ -269,6 +267,18 @@ namespace moon
                 buf->set_flag(buffer_flag::close);
             }
             base_connection::send(buf);
+        }
+
+        bool handle_frame()
+        {
+            auto close_code = decode_frame();
+            if (ws::close_code::none != close_code)
+            {
+                error(asio::error_code(), int(close_code), std::string(cache_.data(), cache_.size()).data());
+                base_connection::close();
+                return false;
+            }
+            return true;
         }
 
         ws::close_code decode_frame()

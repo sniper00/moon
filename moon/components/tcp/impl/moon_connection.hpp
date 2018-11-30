@@ -41,6 +41,7 @@ namespace moon
                     if (!enable)
                     {
                         error(asio::error_code(), int(network_logic_error::send_message_size_max));
+                        base_connection_t::close();
                         return false;
                     }
                     data->set_flag(buffer_flag::framing);
