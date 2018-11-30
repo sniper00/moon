@@ -10,29 +10,20 @@ namespace moon
     public:
         const_buffers_holder() = default;
 
-        void push_back(const buffer_ptr_t& buf)
+        template<typename BufType>
+        void push_back(BufType&& buf)
         {
             if (buf->has_flag(buffer_flag::close))
             {
                 close_ = true;
             }
-            buffers_.push_back(asio::buffer(buf->data(), buf->size()));
-            datas_.push_back(buf);
+            buffers_.emplace_back(buf->data(), buf->size());
+            datas_.push_back(std::forward<BufType>(buf));
         }
 
-        void push_back(buffer_ptr_t&& buf)
-        {
-            if (buf->has_flag(buffer_flag::close))
-            {
-                close_ = true;
-            }
-            buffers_.push_back(asio::const_buffer(buf->data(), buf->size()));
-            datas_.push_back(std::forward<buffer_ptr_t>(buf));
-        }
 
-        void framing_begin(const buffer_ptr_t& buf, size_t framing_size)
+        void framing_begin(size_t framing_size)
         {
-            datas_.push_back(buf);
             headers_.reserve(framing_size);
         }
 
@@ -40,8 +31,14 @@ namespace moon
         {
             headers_.push_back(header);
             message_size_t& back = headers_.back();
-            buffers_.push_back(asio::buffer((const char*)&back, sizeof(back)));
-            buffers_.push_back(asio::buffer(data, len));
+            buffers_.emplace_back(reinterpret_cast<const char*>(&back), sizeof(back));
+            buffers_.emplace_back(data, len);
+        }
+
+        template<typename BufType>
+        void framing_end(BufType&& buf)
+        {
+            datas_.push_back(std::forward<BufType>(buf));
         }
 
         const auto& buffers() const

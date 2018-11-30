@@ -175,7 +175,7 @@ namespace moon
             frame_flag_ = t;
         }
     protected:
-        virtual void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf)
+        virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
         {
 			(void)holder;
 			(void)buf;
@@ -192,11 +192,11 @@ namespace moon
                 auto& msg = send_queue_.front();
                 if (msg->has_flag(buffer_flag::framing))
                 {
-                    message_framing(buffers_holder_, msg);
+                    message_framing(buffers_holder_, std::move(msg));
                 }
                 else
                 {
-                    buffers_holder_.push_back(msg);
+                    buffers_holder_.push_back(std::move(msg));
                 }
                 send_queue_.pop_front();
             }

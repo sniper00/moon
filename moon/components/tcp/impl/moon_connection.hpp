@@ -62,10 +62,10 @@ namespace moon
         }
 
     protected:
-        void message_framing(const_buffers_holder& holder, const buffer_ptr_t& buf) override
+        void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf) override
         {
             size_t n = buf->size();
-            holder.framing_begin(buf, n / MAX_NET_MSG_SIZE + 1);
+            holder.framing_begin(n / MAX_NET_MSG_SIZE + 1);
             do
             {
                 message_size_t  size = 0, header = 0;
@@ -83,6 +83,7 @@ namespace moon
                 host2net(header);
                 holder.push_framing(header, data, size);
             } while (n != 0);
+            holder.framing_end(std::forward<buffer_ptr_t>(buf));
         }
 
         void read_header()
