@@ -2,6 +2,9 @@ local moon = require("moon")
 local http_server = require("moon.http_server")
 local http_client = require("moon.http_client")
 
+-- http_server.header_max_len = 8192
+-- http_server.content_max_len = 8192
+
 http_server.error = function(session, err)
     print("http server session",session.connid," disconnected:",  err)
 end
@@ -34,6 +37,7 @@ moon.start(function (  )
             local header,data = client:request("GET","/home","HAHAHA")
             if not header then
                 print("error",data)
+                client:close()
                 return
             end
             print("CLIENT: http_version",header.version)
