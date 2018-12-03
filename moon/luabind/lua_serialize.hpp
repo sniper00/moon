@@ -33,13 +33,17 @@ namespace moon
     class lua_serialize
     {
     public:
+        static constexpr int32_t HEAP_BUFFER = 1;
+        
         static int pack(lua_State* L)
         {
             auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
+            buf->set_flag(HEAP_BUFFER);
             int n = lua_gettop(L);
             for (int i = 1; i <= n; i++) {
                 pack_one(L, buf, i, 0);
             }
+            buf->clear_flag(HEAP_BUFFER);
             lua_pushlightuserdata(L, buf);
             return 1;
         }
@@ -232,7 +236,7 @@ namespace moon
 
         static void pack_one(lua_State *L, buffer* b, int index, int depth) {
             if (depth > MAX_DEPTH) {
-                delete b;
+                if(b->has_flag(HEAP_BUFFER)) delete b;
                 luaL_error(L, "serialize can't pack too depth table");
             }
             int type = lua_type(L, index);
@@ -271,7 +275,7 @@ namespace moon
                 break;
             }
             default:
-                delete b;
+                if (b->has_flag(HEAP_BUFFER)) delete b;
                 luaL_error(L, "Unsupport type %s to serialize", lua_typename(L, type));
             }
         }

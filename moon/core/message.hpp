@@ -66,7 +66,7 @@ namespace moon
         {
             if (header.size() != 0)
             {
-                if (nullptr == header_)
+                if (!header_)
                 {
                     header_ = std::make_unique<std::string>(header.data(), header.size());
                 }
@@ -122,7 +122,7 @@ namespace moon
 
         string_view_t bytes() const
         {
-            if (nullptr == data_)
+            if (!data_)
             {
                 return string_view_t(nullptr, 0);
             }
@@ -131,28 +131,34 @@ namespace moon
 
         string_view_t substr(int pos, size_t len = string_view_t::npos) const
         {
+            if (!data_)
+            {
+                return string_view_t(nullptr, 0);
+            }
             string_view_t sr(reinterpret_cast<const char*>(data_->data()), data_->size());
             return sr.substr(pos, len);
         }
 
         void write_data(string_view_t s)
         {
+            assert(data_);
             data_->write_back(s.data(), 0, s.size());
         }
 
         void write_string(const std::string& s)
         {
+            assert(data_);
             data_->write_back(s.data(), 0, s.size() + 1);
         }
 
         const char* data() const
         {
-            return data_->data();
+            return data_ ? data_->data() : nullptr;
         }
 
         size_t size() const
         {
-            return data_->size();
+            return data_ ? data_->size():0;
         }
 
         operator const buffer_ptr_t&() const
@@ -167,27 +173,30 @@ namespace moon
 
         bool broadcast() const
         {
-            return data_->has_flag(buffer_flag::broadcast);
+            return data_?data_->has_flag(buffer_flag::broadcast):false;
         }
 
         void set_broadcast(bool v)
         {
+            if (!data_)
+            {
+                return;
+            }
             v ? data_->set_flag(buffer_flag::broadcast) : data_->clear_flag(buffer_flag::broadcast);
-        }
-
-        void* pointer()
-        {
-            return data_.get();
         }
 
         void reset()
         {
             init();
-            if (nullptr != header_)
+            if (header_)
             {
                 header_->clear();
             }
-            data_->clear();
+
+            if (data_)
+            {
+                data_->clear();
+            }
         }
     private:
         void init()

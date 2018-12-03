@@ -203,6 +203,11 @@ static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::s
     m->set_responseid(-responseid);
 }
 
+static void* message_get_buffer(message* m)
+{
+    return m->get_buffer();
+}
+
 const lua_bind & lua_bind::bind_message() const
 {
     lua.new_usertype<message>("message"
@@ -216,7 +221,7 @@ const lua_bind & lua_bind::bind_message() const
         , "bytes", (&message::bytes)
         , "size", (&message::size)
         , "substr", (&message::substr)
-        , "buffer", (&message::pointer)
+        , "buffer", message_get_buffer
         , "redirect", (redirect_message)
         , "resend", resend
         );

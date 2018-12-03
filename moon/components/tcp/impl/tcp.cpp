@@ -86,7 +86,6 @@ namespace moon
             acceptor_ = std::make_unique<asio::ip::tcp::acceptor>(io_context());
             asio::ip::tcp::resolver resolver(acceptor_->get_io_service());
             asio::ip::tcp::resolver::query query(ip, port);
-            resolver.resolve(query);
             auto iter = resolver.resolve(query);
             asio::ip::tcp::endpoint endpoint = *iter;
             acceptor_->open(endpoint.protocol());
@@ -159,7 +158,7 @@ namespace moon
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
             auto conn = create_connection();
             asio::async_connect(conn->socket(), endpoint_iterator,
-                [this, self = shared_from_this(), conn =std::move(conn), ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
+                [this, self = shared_from_this(), conn, ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
                 if (!self->ok())
                 {
