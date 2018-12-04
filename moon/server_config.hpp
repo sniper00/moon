@@ -14,9 +14,9 @@ namespace moon
 {
     struct service_config
     {
-        bool unique;
-        bool shared;
-        int32_t threadid;
+        bool unique = false;
+        bool shared = true;
+        int32_t threadid = 0;
         std::string type;
         std::string name;
         std::string config;
@@ -24,8 +24,8 @@ namespace moon
 
     struct server_config
     {
-        int32_t sid;
-        int32_t thread;
+        int32_t sid = 0;
+        int32_t thread = 0;
         std::string loglevel;
         std::string name;
         std::string outer_host;

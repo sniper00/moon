@@ -13,6 +13,7 @@ namespace moon
             :base_connection_t(std::forward<Args>(args)...)
             , restore_write_offset_(0)
             , prew_read_offset_(0)
+            , buffer_()
         {
         }
 
@@ -32,8 +33,11 @@ namespace moon
                 if (response_msg_->size() > 0)
                 {
                     //guarantee read is async operation
-                    asio::post(socket_.get_io_context(),[this] {
-                        handle_read_request();
+                    asio::post(socket_.get_io_context(),[this, self = shared_from_this()] {
+                        if (socket_.is_open())
+                        {
+                            handle_read_request();
+                        }
                     });
                 }
                 return true;

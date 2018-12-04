@@ -275,6 +275,7 @@ namespace moon
 		{
 			if (nullptr != tcp_)
 			{
+                msg->set_sender(id_);
 				tcp_->handle_message(std::forward<TMsg>(msg));
 			}
 		}
