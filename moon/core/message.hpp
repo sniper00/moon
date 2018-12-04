@@ -24,14 +24,13 @@ namespace moon
 
         message(size_t capacity = 64, uint32_t headreserved = 0)
         {
-            init();
             data_ = std::make_shared<buffer>(capacity, headreserved);
         }
 
         explicit message(const buffer_ptr_t & v)
+            :data_(v)
         {
-            init();
-            data_ = v;
+            
         }
 
         ~message()
@@ -187,7 +186,12 @@ namespace moon
 
         void reset()
         {
-            init();
+            type_ = 0;
+            subtype_ = 0;
+            sender_ = 0;
+            receiver_ = 0;
+            responseid_ = 0;
+
             if (header_)
             {
                 header_->clear();
@@ -199,21 +203,11 @@ namespace moon
             }
         }
     private:
-        void init()
-        {
-            type_ = 0;
-            subtype_ = 0;
-            sender_ = 0;
-            receiver_ = 0;
-            responseid_ = 0;
-        }
-
-    private:
-        uint8_t type_;
-        uint8_t subtype_;
-        uint32_t sender_;
-        uint32_t receiver_;
-        int32_t responseid_;
+        uint8_t type_ = 0;
+        uint8_t subtype_ = 0;
+        uint32_t sender_ = 0;
+        uint32_t receiver_ = 0;
+        int32_t responseid_ = 0;
         std::unique_ptr<std::string> header_;
         buffer_ptr_t data_;
     };

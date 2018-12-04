@@ -118,6 +118,7 @@ namespace moon
         explicit ws_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
             , header_delim_(STR_DCRLF.data(), STR_DCRLF.size())
+            , buffer_()
         {
         }
 
@@ -252,7 +253,6 @@ namespace moon
             send_response(answer);
             auto msg = message::create();
             msg->write_string(remote_addr_);
-            msg->set_sender(id_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return true;
@@ -406,12 +406,11 @@ namespace moon
 
             if (fh.op != ws::opcode::close &&  fh.fin)
             {
-                message_ptr_t msg_package = message::create(static_cast<size_t>(fh.len));
-                msg_package->get_buffer()->write_back((tmp + need), 0, static_cast<size_t>(fh.len));
+                message_ptr_t msg = message::create(static_cast<size_t>(fh.len));
+                msg->get_buffer()->write_back((tmp + need), 0, static_cast<size_t>(fh.len));
                 cache_.seek(int(need + fh.len), buffer::Current);
-                msg_package->set_sender(id_);
-                msg_package->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                handle_message(std::move(msg_package));
+                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                handle_message(std::move(msg));
             }
 
             if (fh.op == ws::opcode::close)
