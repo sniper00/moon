@@ -260,6 +260,7 @@ namespace moon
             , capacity_(sizeof(stack_data_))
             , readpos_(headreserved)
             , writepos_(headreserved)
+            , stack_data_()
         {
             if (capacity + headreserved > capacity_)
             {

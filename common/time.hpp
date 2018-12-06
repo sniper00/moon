@@ -31,8 +31,8 @@ namespace moon
             time_t now = mill / 1000;
             std::tm m;
             moon::time::localtime(&now, &m);
-            uint64_t ymd = (m.tm_year + 1900) * moon::pow10(15)
-                + (m.tm_mon + 1) * moon::pow10(12)
+            uint64_t ymd = (m.tm_year + 1900ULL) * moon::pow10(15)
+                + (m.tm_mon + 1900ULL) * moon::pow10(12)
                 + m.tm_mday*moon::pow10(9)
                 + m.tm_hour*moon::pow10(6)
                 + m.tm_min*moon::pow10(3)
