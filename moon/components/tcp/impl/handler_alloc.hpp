@@ -20,7 +20,8 @@ class handler_allocator
 {
 public:
     handler_allocator()
-        : in_use_(false)
+        :storage_()
+        , in_use_(false)
     {
     }
 

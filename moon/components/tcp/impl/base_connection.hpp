@@ -97,9 +97,15 @@ namespace moon
 
             send_queue_.push_back(data);
 
-            if (send_queue_.size() > 100)
+            if (send_queue_.size() >= WARN_NET_SEND_QUEUE_SIZE)
             {
-                CONSOLE_DEBUG(logger(), "network send_queue too long %zu", send_queue_.size());
+                CONSOLE_DEBUG(logger(), "network send queue too long. size:%zu", send_queue_.size());
+                if (send_queue_.size() >= MAX_NET_SEND_QUEUE_SIZE)
+                {
+                    logic_error_ = network_logic_error::send_message_queue_size_max;
+                    close();
+                    return false;
+                }
             }
 
             if (!sending_)

@@ -24,6 +24,7 @@ namespace moon
         read_message_size_max = 1, // read message size too long
         send_message_size_max = 2, // send message size too long
         timeout = 3, //socket read time out
+        send_message_queue_size_max = 4, // send message queue size too long
     };
 
 	inline const char* logic_errmsg(int logic_errcode)
@@ -32,7 +33,8 @@ namespace moon
 			"ok",
 			"read message size too long",
 			"send message size too long",
-			"timeout" 
+			"timeout",
+            "send message queue size too long"
 		};
         if (logic_errcode >= static_cast<int>(array_szie(errmsg)))
         {
