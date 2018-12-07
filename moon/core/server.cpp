@@ -81,9 +81,9 @@ namespace moon
                 break;
             }
 
-            if (diff <= EVENT_UPDATE_INTERVAL + sleep_duration)
+            if (diff <= UPDATE_INTERVAL + sleep_duration)
             {
-                sleep_duration = EVENT_UPDATE_INTERVAL + sleep_duration - diff;
+                sleep_duration = UPDATE_INTERVAL + sleep_duration - diff;
                 thread_sleep(sleep_duration);
             }
             else

@@ -4,7 +4,7 @@
 namespace moon
 {
     constexpr int32_t WORKER_ID_SHIFT = 24;
-    constexpr int64_t EVENT_UPDATE_INTERVAL = 10;
+    constexpr int64_t UPDATE_INTERVAL = 10; //ms
     constexpr int32_t BUFFER_HEAD_RESERVED = 8;
 
     DECLARE_UNIQUE_PTR(message);
@@ -22,6 +22,8 @@ namespace moon
     //network
     using message_size_t = uint16_t;
     constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
+    constexpr size_t WARN_NET_SEND_QUEUE_SIZE = 200;
+    constexpr size_t MAX_NET_SEND_QUEUE_SIZE = 300;
 
     constexpr  string_view_t STR_LF = "\n"sv;
     constexpr  string_view_t STR_CRLF = "\r\n"sv;
