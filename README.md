@@ -1,6 +1,21 @@
 ﻿# Moon
 一个轻量级的游戏服务器框架，底层采用C++17编写,逻辑层采用Lua脚本。
 
+## 主要特性有
+- **async** lua协程封装异步操作，取代传统的回掉模式。
+  
+- **timer** 轮式定时器的实现，配合lua协程，更加方便处理定时任务。
+  
+- **coroutine socket**  协程socket的封装，方便编写自定义协议的网络模块。
+  
+- **async redis client**    协程socket封装的redis DB异步客户端。
+  
+- **websocket** 支持websocket协议(暂时只支持作为服务端)。
+  
+- **cluster**   提供集群间通信（暂时通过统一的配置文件作为服务发现，不支持动态增删)。
+  
+- **extensible**    利用```sol2```库可以方便编写```C/C++```、```lua```交互的扩展模块。
+
 ## Dependencies
 - [asio-1.12.1](https://github.com/chriskohlhoff/asio)(without boost)
 - [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
@@ -29,38 +44,12 @@ Linux Platform:
     # Release
     # make clean config=release_linux
     # make config=release_linux
+    cd example
+    ./moon 1
 ```
 
-## Example
+## [更多文档](https://github.com/sniper00/moon/wiki)
 
-### 一个简单的游戏示例
-https://github.com/sniper00/BallGame
-
-### Echo Example
-网络通信,websocket,协程socket示例
-- 命令行输入 `./moon 1`运行服务器
-- 2字节大端表示长度的协议：python 运行echoclient.py 脚本
-- websocket： wesocket_client.html
-
-### Redis Client Example
-非阻塞redis client, 默认连接 127.0.0.1 6379
-- 命令行输入 `./moon 2`
-
-### Service Send/Call Message
-服务间发送消息示例
-- 命令行输入 `./moon 3`
-- 命令行输入 `./moon 4` call示例
-
-### Cluster Example
-进程间发送消息示例
-- 命令行输入 `./moon 5`
-- 命令行输入 `./moon 6`
-
-### Mysql API Example
-- 命令行输入 `./moon 7`
-
-## [文档](https://github.com/sniper00/MoonNetLua/wiki)
-
-# QQ交流群543833695
+## QQ交流群543833695
 
 
