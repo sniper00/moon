@@ -1,4 +1,5 @@
-local core = require("moon_core")
+---@class core
+local core = require("core")
 local json = require("json")
 local seri = require("seri")
 
@@ -18,6 +19,8 @@ local PTYPE_SOCKET = 4
 local PTYPE_ERROR = 5
 local PTYPE_SOCKET_WS = 6
 
+
+---@class moon : core
 local moon = {
     PTYPE_LUA = PTYPE_LUA
 }
@@ -77,7 +80,7 @@ local function co_resume(co, ...)
     end
 end
 
--- map co with uid
+---make map<coroutine,responseid>
 local function make_response(receiver)
     repeat
         response_uid = response_uid + 1
@@ -100,45 +103,43 @@ end
 
 moon.make_response = make_response
 
-
---[[
-	注册服务初始化回掉函数,服务被创建时会调用回掉函数
-	@param callback 函数签名 function(config:table) return bool end ;config 服务的启动配置，参见config.json.
-	注意 回掉函数返回true：初始化成功. false 服务创建失败.
-]]
+---
+--- 注册服务初始化回掉函数,服务对象创建时会调用,可以在这里做服务自身的初始化操作
+--- 回掉函数需要返回bool:true 初始化成功; false 服务始化失败.
+---@param callback fun(config:table):boolean
 function moon.init(callback)
     core.set_init(function ( str )
         return callback(json_decode(str))
     end)
 end
 
---[[
-	注册服务启动回掉函数，这个函数会在init之后调用
-	@param callback 函数签名 function() end
-]]
+---
+---注册服务启动回掉函数,这个函数的调用时机:
+---1.如果服务是在配置文件中配置的服务，回掉函数会在所有配置的服务
+---被创建之后调用。所以可以在回掉函数内查询其它唯一服务的 serviceid。
+---2.运行时动态创建的服务，会在init之后，第一次update之前调用
+---@param callback fun()
 function moon.start(callback)
     core.set_start(callback)
 end
 
---[[
-    注册server退出回掉,必须在回掉函数中 调用moon.removeself ,否则server退出流程将阻塞。
-    常用于带有异步流程的服务（如带协程的数据库服务），收到退出信号后，
-    处理数据保存任务，然后removeself
-	@param callback 函数签名 function() end
-]]
+---注册server退出回掉,常用于带有异步流程的服务处理退出逻辑（如带协程的数据库服务，
+---收到退出信号后，保存数据）。
+---注意：处理完成后必须要调用moon.removeself，使服务自身退出,否则server将无法正常退出。
+---@param callback fun()
 function moon.exit(callback)
     core.set_exit(callback)
 end
 
---[[
-    注册服务销毁回掉函数，这个函数会在服务正常销毁时调用
-	@param callback: function() end
-]]
+
+---注册服务对象销毁时的回掉函数，这个函数会在服务正常销毁时调用
+---@param callback fun()
 function moon.destroy(callback)
     core.set_destroy(callback)
 end
 
--- default handle
+---@param msg core.message
+---@param PTYPE string
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
     if not p then
@@ -168,13 +169,16 @@ end
 
 core.set_dispatch(_default_dispatch)
 
---[[
-    向指定服务发送消息,消息内容会根据协议类型进行打包
-	@param PTYPE:协议类型
-	@param receiver:接收者服务id
-	@param header:message header
-	@param ...:消息内容,注意不能发送函数类型
-]]
+---
+---向指定服务发送消息,消息内容会根据协议类型进行打包<br>
+---param PTYPE:协议类型<br>
+---param receiver:接收者服务id<br>
+---param header:message header<br>
+---param ...:消息内容<br>
+---@param PTYPE string
+---@param receiver int
+---@param header string
+---@return boolean
 function moon.send(PTYPE, receiver, header, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -185,16 +189,21 @@ function moon.send(PTYPE, receiver, header, ...)
         return false,"send to a exited service"
     end
     header = header or ''
-    return _send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
+    _send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
+    return true
 end
 
---[[
-    向指定服务发送消息，消息内容不进行协议打包
-	@param PTYPE:协议类型
-	@param receiver:接收者服务id
-	@param header:message header
-    @param data 消息内容 string 类型
-]]
+---向指定服务发送消息，消息内容不进行协议打包<br>
+---param PTYPE:协议类型<br>
+---param receiver:接收者服务id<br>
+---param header:message header<br>
+---param data 消息内容 string 类型<br>
+---@param PTYPE string
+---@param receiver int
+---@param header string
+---@param data string|userdata
+---@param responseid int
+---@return boolean
 function moon.raw_send(PTYPE, receiver, header, data, responseid)
 	local p = protocol[PTYPE]
     if not p then
@@ -206,27 +215,29 @@ function moon.raw_send(PTYPE, receiver, header, data, responseid)
 	end
     header = header or ''
     responseid = responseid or 0
-	return _send(sid_, receiver, data, header, responseid, p.PTYPE)
+    _send(sid_, receiver, data, header, responseid, p.PTYPE)
+	return true
 end
 
---[[
-    获取当前的服务id
-	@return int
-]]
+---获取当前的服务id
+---@return int
 function moon.sid()
     return sid_
 end
 
---[[
-	创建一个新的服务
-	@param stype 服务类型，根据所注册的服务类型，可选有 'lua'
-    @param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)
-    @param unique 是否是唯一服务，唯一服务可以用moon.unique_service(name) 查询服务id
-	@param shared 可选，是否共享工作者线程，默认true
-    @workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作
-    者线程中
-	@return int 返回所创建的服务ID, 0代表创建失败
-]]
+---创建一个新的服务,返回创建服务ID. 0表示服务创建失败<br>
+---param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
+---param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)<br>
+---param unique 是否是唯一服务，唯一服务可以用moon.unique_service(name) 查询服务id<br>
+---param shared 可选，是否共享工作者线程，默认true<br>
+---workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者
+---线程中<br>
+---@param stype string
+---@param config table
+---@param unique boolean
+---@param shared boolean
+---@param workerid int
+---@return int
 function moon.new_service(stype, config, unique, shared, workerid)
     unique = unique or false
     shared = shared or true
@@ -235,11 +246,13 @@ function moon.new_service(stype, config, unique, shared, workerid)
     return core.new_service(stype, unique, shared, workerid, config)
 end
 
---[[
-	异步移除指定的服务
-	@param 服务id
-	@param 可选，为true时可以 使用协程等待移除结果
-]]
+
+---异步移除指定的服务
+---param sid 服务id
+---param bresponse 可选，为true时可以 使用协程等待移除结果
+---@param sid int
+---@param bresponse boolean
+---@return string
 function moon.remove_service(sid, bresponse)
     if bresponse then
         local rspid = make_response()
@@ -250,16 +263,15 @@ function moon.remove_service(sid, bresponse)
     end
 end
 
---[[
-	使当前服务退出
-]]
+
+---使当前服务退出
 function moon.removeself()
     moon.remove_service(sid_)
 end
 
---[[
-	根据服务name获取服务id,注意只能查询创建时unique配置为true的服务
-]]
+---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
+---@param name string
+---@return int
 function moon.unique_service(name)
 	if type(name)=='string' then
 		return core.unique_service(name)
@@ -267,6 +279,8 @@ function moon.unique_service(name)
 	return name
 end
 
+---@param name string
+---@param id int
 function moon.set_unique_service(name,id)
 	core.set_unique_service(name,id)
 end
@@ -297,6 +311,9 @@ local function routine(func)
     end
 end
 
+---启动一个异步
+---@param func function
+---@return coroutine
 function moon.async(func)
     local co = table_remove(co_pool)
     if not co then
@@ -307,10 +324,11 @@ function moon.async(func)
 end
 
 function moon.wait_all( ... )
+    ---@type coroutine
     local currentco = co_running()
-    local cos = {...}
-    local ctx = {count = #cos,results={},cur=currentco}
-    for k,co in pairs(cos) do
+    local ctx = {count = select("#",...),results={},cur=currentco}
+    for k=1,ctx.count do
+        local co = select(k,...)
         assert(not waitallco[co])
         if type(co) == "thread" then
             ctx.results[k]=""
@@ -326,6 +344,10 @@ end
 --------------------------timer-------------
 local timer_cb = {}
 
+---@param mills int
+---@param times int
+---@param cb function
+---@return int
 function moon.repeated(mills, times, cb)
     local timerid = core.repeated(mills, times)
     timer_cb[timerid] = cb
@@ -349,6 +371,8 @@ core.set_remove_timer(
 
 local _repeated = moon.repeated
 
+---@param mills int
+---@return int
 function moon.co_wait(mills)
     local co = co_running()
     _repeated(
@@ -362,32 +386,29 @@ function moon.co_wait(mills)
 end
 ------------------------------------------
 
+---@param serviceid int
+---@return string
 function moon.co_remove_service(serviceid)
     return moon.remove_service(serviceid, true)
 end
 
+---@param command string
+---@return string
 function moon.co_runcmd(command)
     local rspid = make_response()
     core.runcmd(moon.sid(), command, rspid)
     return co_yield()
 end
 
--- function moon.co_query_worktime(workerid)
---     local header = "workertime." .. workerid
---     local rspid = make_response()
---     core.runcmd(moon.sid(), "", header, rspid)
---     return co_yield()
--- end
-
---[[
-	send-response 形式调用，发送消息附带一个responseid，对方收到后把
-	responseid发送回来，必须调用moon.response应答.
-
-	@param PTYPE:协议类型
-	@param receiver:接收者服务id
-	@param ...:发送的数据
-	如果没有错误, 返回调用结果。如果发生错误第一个参数是false, 后面是错误信息
-]]
+---send-response 形式调用，发送消息附带一个responseid，对方收到后把responseid发送回来，
+---必须调用moon.response应答.如果没有错误, 返回调用结果。如果发生错误第一个参数是false,
+---后面是错误信息。
+---param PTYPE:协议类型
+---param receiver:接收者服务id
+---param ...:发送的数据
+---@param PTYPE string
+---@param receiver int
+---@return any
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -403,13 +424,14 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
---[[
-	回应moon.call
-	@param PTYPE:协议类型
-	@param receiver:调用者服务id
-	@param responseid:调用者的responseid
-	@param ...:数据
-]]
+---回应moon.call
+---param PTYPE 协议类型
+---param receiver 调用者服务id
+---param responseid 调用者的responseid
+---param ... 数据
+---@param PTYPE string
+---@param receiver int
+---@param responseid int
 function moon.response(PTYPE, receiver, responseid, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -427,10 +449,11 @@ end
 
 local reg_protocol = moon.register_protocol
 
---[[
-    给指定协议消息，设置消息处理函数
-    cb 函数签名 function(msg:message,p:table)
-]]
+
+---设置指定协议消息的消息处理函数
+---@param PTYPE string
+---@param cb fun(msg:core.message,ptype:table)
+---@return boolean
 function moon.dispatch(PTYPE, cb)
     local p = protocol[PTYPE]
     if cb then
