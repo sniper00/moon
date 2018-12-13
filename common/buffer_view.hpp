@@ -4,7 +4,7 @@
 #include <memory>
 #include <type_traits>
 #include <string>
-#include "macro_define.hpp"
+#include <string_view>
 
 namespace moon
 {
@@ -128,30 +128,30 @@ namespace moon
             }
         }
 
-        string_view_t readline()
+        std::string_view readline()
         {
-            string_view_t strref(data_ + readpos_, size());
+            std::string_view strref(data_ + readpos_, size());
             size_t pos = strref.find("\r\n");
-            if (pos != string_view_t::npos)
+            if (pos != std::string_view::npos)
             {
                 readpos_ += (pos + 2);
-                return string_view_t(strref.data(), pos);
+                return std::string_view(strref.data(), pos);
             }
             pos = size();
             readpos_ += pos;
-            return string_view_t(strref.data(), pos);
+            return std::string_view(strref.data(), pos);
         }
 
-        string_view_t read_delim(char c)
+        std::string_view read_delim(char c)
         {
-            string_view_t strref(data_ + readpos_, size());
+            std::string_view strref(data_ + readpos_, size());
             size_t pos = strref.find(c);
-            if (pos != string_view_t::npos)
+            if (pos != std::string_view::npos)
             {
                 readpos_ += (pos + sizeof(c));
-                return string_view_t(strref.data(), pos);
+                return std::string_view(strref.data(), pos);
             }
-            return string_view_t();
+            return std::string_view();
         }
 
     private:
