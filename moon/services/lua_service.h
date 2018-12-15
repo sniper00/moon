@@ -9,6 +9,14 @@
 class lua_service :public moon::service
 {
 public:
+    static constexpr std::string_view LUA_PATH_STR = "/?.lua;"sv;
+
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+    static constexpr std::string_view LUA_CPATH_STR = "/?.dll;"sv;
+#else
+    static constexpr std::string_view LUA_CPATH_STR = "/?.so;"sv;
+#endif
+
     using lua_state_ptr_t = std::unique_ptr<lua_State, void(*)(lua_State*)>;
     /*
     http://sol2.readthedocs.io/en/latest/safety.html
@@ -45,6 +53,7 @@ public:
 
     void send_cache(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
 
+    static const fs::path& work_path();
 private:
     bool init(const moon::string_view_t& config) override;
 

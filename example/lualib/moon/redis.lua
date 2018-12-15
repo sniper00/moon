@@ -9,9 +9,8 @@ local tonumber = tonumber
 local tostring = tostring
 
 local moon	= require("moon")
-local socket	= require("moon.socket")
 local seri	= require("seri")
-
+local socket	= require("moon.socket")
 
 local new_table = moon.new_table or function() return {} end
 

@@ -466,18 +466,17 @@ function moon.dispatch(PTYPE, cb)
 end
 
 --mark
-moon.pack = seri.pack
-moon.unpack = seri.unpack
+local unpack = seri.unpack
 
 reg_protocol {
     name = "lua",
     PTYPE = PTYPE_LUA,
     pack = seri.pack,
     unpack = function(arg)
-        if type(arg) == "string" then
-            return seri.unpack(arg)
-        else -- message
-            return seri.unpack(arg:buffer())
+        if arg.buffer then
+            return unpack(arg:buffer())
+        else
+            return unpack(arg)
         end
     end,
     dispatch = function()
@@ -492,10 +491,10 @@ reg_protocol {
         return ...
     end,
     unpack = function(arg)
-        if type(arg) == "string" then
-            return arg
-        else -- message
+        if arg.bytes then
             return arg:bytes()
+        else
+            return arg
         end
     end,
     dispatch = function()
@@ -510,10 +509,10 @@ reg_protocol {
         return ...
     end,
     unpack = function(arg)
-        if type(arg) == "string" then
-            return arg
-        else -- message
+        if arg.bytes then
             return arg:bytes()
+        else
+            return arg
         end
     end,
     dispatch = function(msg, p)
@@ -537,10 +536,10 @@ reg_protocol {
         return ...
     end,
     unpack = function(arg)
-        if type(arg) == "string" then
-            return arg
-        else -- message
+        if arg.bytes then
             return arg:bytes()
+        else
+            return arg
         end
     end,
     dispatch = function(msg, _)
@@ -568,7 +567,7 @@ reg_protocol{
     name = "socket",
     PTYPE = PTYPE_SOCKET,
     pack = function(...) return ... end,
-    dispatch = function(_)
+    dispatch = function()
         error("PTYPE_SOCKET dispatch not implemented")
     end
 }

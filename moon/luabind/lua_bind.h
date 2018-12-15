@@ -22,8 +22,6 @@ public:
 
     const lua_bind& bind_util() const;
 
-    const lua_bind& bind_filesystem() const;
-
     const lua_bind& bind_log(moon::log* logger) const;
 
     const lua_bind& bind_message() const;
@@ -42,5 +40,7 @@ const char* lua_traceback(lua_State* _state);
 extern "C"
 {
     int luaopen_rapidjson(lua_State* L);
+
+    int luaopen_fs(lua_State* L);
 }
 

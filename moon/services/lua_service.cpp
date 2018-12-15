@@ -3,7 +3,6 @@
 #include "router.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
-#include "rapidjson/rapidjson_helper.hpp"
 #include "luabind/lua_serialize.hpp"
 #include "service_config.hpp"
 
@@ -50,6 +49,12 @@ void lua_service::runcmd(uint32_t sender, const std::string & cmd, int32_t respo
     {
         get_router()->make_response(sender, "", iter->second(params), responseid);
     }
+}
+
+const fs::path& lua_service::work_path()
+{
+    static auto current_path = fs::current_path();
+    return current_path;
 }
 
 lua_service::lua_service()
@@ -212,29 +217,48 @@ bool lua_service::init(const string_view_t& config)
             lua_bind.bind_service(this)
                 .bind_log(logger())
                 .bind_util()
-                .bind_filesystem()
                 .bind_timer(&timer_)
                 .bind_message()
                 .bind_socket()
                 .bind_http();
 
+            lua_.require("fs", luaopen_fs);
             lua_.require("seri", lua_serialize::open);
             lua_.require("codecache", luaopen_cache);
             lua_.require("json", luaopen_rapidjson);
 
             lua_["package"]["loaded"]["moon_core"] = module;
 
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-            lua_.script("package.cpath = './clib/?.dll;'");
-#else
-            lua_.script("package.cpath = './clib/?.so;'");
-#endif
-            auto package_path = scfg.get_value<std::string>("path");
-            lua_.script(moon::format("package.path = './?.lua;./lualib/?.lua;'  package.path ='%s'..package.path", package_path.data()));
+            auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
+            {
+                cpaths.emplace_back("./clib");
+                std::string strpath;
+                strpath.append("package.cpath ='");
+                for (auto& v : cpaths)
+                {
+                    strpath.append(v.data(), v.size());
+                    strpath.append(LUA_CPATH_STR);
+                }
+                strpath.append("'..package.cpath");
+                lua_.script(strpath);
+            }
+
+            auto paths = scfg.get_value<std::vector<std::string_view>>("path");
+            {
+                paths.emplace_back("./lualib");
+                std::string strpath;
+                strpath.append("package.path ='");
+                for (auto& v : paths)
+                {
+                    strpath.append(v.data(), v.size());
+                    strpath.append(LUA_PATH_STR);
+                }
+                strpath.append("'..package.path");
+                lua_.script(strpath);
+            }
 
             if (!directory::exists(luafile))
             {
-                auto paths = moon::split<std::string>(package_path, ";");
                 paths.push_back("./");
                 std::string file;
                 for (auto& p : paths)
@@ -249,12 +273,16 @@ bool lua_service::init(const string_view_t& config)
                 luafile = file;
             }
 
-            lua_.script_file(luafile);
-
+            if (auto result = lua_.script_file(luafile);!result.valid())
+            {
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
+                return false;
+            }
+ 
             if (init_.valid())
             {
-                auto result = init_(config);
-                if (result.valid())
+                if (auto result = init_(config); result.valid())
                 {
                     error_ = (!(bool)result);
                 }
@@ -409,7 +437,7 @@ void lua_service::error(const std::string & msg)
     removeself(true);
     if (unique())
     {
-        CONSOLE_ERROR(logger(), "unique service %s crashed, server will stop.", name().data());
+        CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
         get_router()->stop_server();
     }
 }

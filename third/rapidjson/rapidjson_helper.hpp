@@ -1,10 +1,19 @@
 #pragma once
-
+#include <type_traits>
 namespace rapidjson
 {
 	namespace detail
 	{
-		template<typename T>
+        template<typename T>
+        struct  is_vector :std::false_type {};
+
+        template<typename T>
+        struct  is_vector<std::vector<T>> :std::true_type {};
+
+        template<typename T>
+        using is_vector_t = typename is_vector<T>::type;
+
+		template<typename T, std::enable_if_t<!is_vector<std::decay_t<T>>::value, int> = 0>
         inline T get_value(rapidjson::Value* value, const T& dv = T());
 
         using json_value_pointer = rapidjson::Value*;
@@ -72,6 +81,24 @@ namespace rapidjson
             if (value->IsString())
             {
                 return moon::string_view_t(value->GetString(), value->GetStringLength());
+            }
+            return dv;
+        }
+
+        template<typename T,std::enable_if_t<is_vector<std::decay_t<T>>::value,int> =0 >
+        inline T get_value(rapidjson::Value* value, const T& dv)
+        {
+            using vector_type = std::decay_t <T>;
+            using value_type = typename vector_type::value_type;
+            if (value->IsArray())
+            {
+                vector_type vec;
+                auto arr = value->GetArray();
+                for (auto& v : arr)
+                {
+                    vec.emplace_back(get_value<value_type>(&v, value_type{}));
+                }
+                return std::move(vec);
             }
             return dv;
         }
