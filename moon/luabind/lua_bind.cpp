@@ -122,58 +122,6 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
-{
-    directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
-        auto result = func(path.string(), isdir);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            luaL_error(s.lua_state(), err.what());
-            return false;
-        }
-        else
-        {
-            if (result.return_count())
-            {
-                return  ((bool)result);
-            }
-            return true;
-        }
-    });
-}
-
-const lua_bind & lua_bind::bind_filesystem() const
-{
-    lua.set_function("traverse_folder", traverse_folder);
-    lua.set_function("exists", directory::exists);
-    lua.set_function("create_directory", directory::create_directory);
-    lua.set_function("current_directory", directory::current_directory);
-
-    sol::table tb = lua.create_named("path");
-    tb.set_function("parent_path", [](const moon::string_view_t& s) {
-        return fs::absolute(fs::path(s)).parent_path().string();
-    });
-
-    tb.set_function("filename", [](const moon::string_view_t& s) {
-        return fs::path(s).filename().string();
-    });
-
-    tb.set_function("extension", [](const moon::string_view_t& s) {
-        return fs::path(s).extension().string();
-    });
-
-    tb.set_function("root_path", [](const moon::string_view_t& s) {
-        return fs::path(s).root_path().string();
-    });
-
-    //filename_without_extension
-    tb.set_function("stem", [](const moon::string_view_t& s) {
-        return fs::path(s).stem().string();
-    });
-    return *this;
-}
-
 const lua_bind & lua_bind::bind_log(moon::log* logger) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
@@ -307,6 +255,68 @@ const lua_bind & lua_bind::bind_http() const
         );
 
     return *this;
+}
+
+
+static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
+{
+    directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
+        auto result = func(path.string(), isdir);
+        if (!result.valid())
+        {
+            sol::error err = result;
+            luaL_error(s.lua_state(), err.what());
+            return false;
+        }
+        else
+        {
+            if (result.return_count())
+            {
+                return  ((bool)result);
+            }
+            return true;
+        }
+    });
+}
+
+static sol::table lua_fs(sol::this_state L)
+{
+    sol::state_view lua(L);
+    sol::table module = lua.create_table();
+    module.set_function("traverse_folder", traverse_folder);
+    module.set_function("exists", directory::exists);
+    module.set_function("create_directory", directory::create_directory);
+    module.set_function("current_directory", directory::current_directory);
+    module.set_function("parent_path", [](const moon::string_view_t& s) {
+        return fs::absolute(fs::path(s)).parent_path().string();
+    });
+
+    module.set_function("filename", [](const moon::string_view_t& s) {
+        return fs::path(s).filename().string();
+    });
+
+    module.set_function("extension", [](const moon::string_view_t& s) {
+        return fs::path(s).extension().string();
+    });
+
+    module.set_function("root_path", [](const moon::string_view_t& s) {
+        return fs::path(s).root_path().string();
+    });
+
+    //filename_without_extension
+    module.set_function("stem", [](const moon::string_view_t& s) {
+        return fs::path(s).stem().string();
+    });
+
+    module.set_function("relative_work_path", [](const moon::string_view_t& p) {
+        return  fs::absolute(p).lexically_relative(lua_service::work_path()).replace_extension().string();
+    });
+    return module;
+}
+
+int luaopen_fs(lua_State* L)
+{
+    return sol::stack::call_lua(L, 1, lua_fs);
 }
 
 const char* lua_traceback(lua_State * L)

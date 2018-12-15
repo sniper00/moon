@@ -71,6 +71,31 @@ namespace moon
             }
             config_.append("]");
         }
+
+        template<typename TAllocator>
+        void merge_path_array(TAllocator& allocator, rapidjson::Value& value,std::string_view name,const std::vector<std::string_view>& paths)
+        {
+            auto name_value = rapidjson::Value::ValueType(name.data(), static_cast<rapidjson::SizeType>(name.size()));
+            auto iter = value.FindMember(name_value);
+            if (iter != value.MemberEnd() && iter->value.IsArray())
+            {
+                auto arr = iter->value.GetArray();
+                for (auto& v : paths)
+                {
+                    arr.PushBack(rapidjson::Value::ValueType(v.data(), static_cast<rapidjson::SizeType>(v.size())), allocator);
+                }
+            }
+            else
+            {
+                rapidjson::Value array_objects(rapidjson::kArrayType);
+                auto arr = array_objects.GetArray();
+                for (auto& v : paths)
+                {
+                    arr.PushBack(rapidjson::Value::ValueType(v.data(), static_cast<rapidjson::SizeType>(v.size())), allocator);
+                }
+                value.AddMember(name_value, array_objects, allocator);
+            }
+        }
     public:
         const std::string config()
         {
@@ -101,7 +126,9 @@ namespace moon
                     scfg.startup = rapidjson::get_value<std::string>(&c, "startup");
                     scfg.log = rapidjson::get_value<std::string>(&c, "log");
                     scfg.loglevel = rapidjson::get_value<std::string>(&c, "loglevel", "DEBUG");
-                    scfg.path = rapidjson::get_value<std::string>(&c, "path", "");
+                    auto array_path  = rapidjson::get_value<std::vector<std::string_view>>(&c, "path");
+                    auto array_cpath = rapidjson::get_value<std::vector<std::string_view>>(&c, "cpath");
+
                     if (scfg.log.find("#date") != std::string::npos)
                     {
                         time_t now = std::time(nullptr);
@@ -126,8 +153,16 @@ namespace moon
                             sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
                             sc.name = rapidjson::get_value<std::string>(&s, "name");
 
-                            s.AddMember("path", rapidjson::Value::StringRefType(scfg.path.data()), doc.GetAllocator());
+                            if (!array_path.empty())
+                            {
+                                merge_path_array(doc.GetAllocator(), s, "path", array_path);
+                            }
 
+                            if (!array_cpath.empty())
+                            {
+                                merge_path_array(doc.GetAllocator(), s, "cpath", array_cpath);
+                            }
+      
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             s.Accept(writer);

@@ -1,6 +1,6 @@
 local moon = require("moon")
-local socket = require("moon.socket")
 local seri = require("seri")
+local socket = require("moon.socket")
 
 -----------------------------------------------------------------
 
