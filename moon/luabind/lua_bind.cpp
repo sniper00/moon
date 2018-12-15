@@ -309,7 +309,7 @@ static sol::table lua_fs(sol::this_state L)
     });
 
     module.set_function("relative_work_path", [](const moon::string_view_t& p) {
-        return  fs::absolute(p).lexically_relative(lua_service::work_path()).replace_extension().string();
+        return  fs::relative(fs::absolute(p), lua_service::work_path()).replace_extension().string();
     });
     return module;
 }
