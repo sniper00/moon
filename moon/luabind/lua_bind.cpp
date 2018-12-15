@@ -279,6 +279,85 @@ static void traverse_folder(const std::string& dir, int depth, sol::protected_fu
     });
 }
 
+inline fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
+{
+    using namespace std::string_view_literals; // TRANSITION, VSO#571749
+    constexpr std::wstring_view _Dot = L"."sv;
+    constexpr std::wstring_view _Dot_dot = L".."sv;
+    fs::path _Result;
+    if (p.root_name() != _Base.root_name()
+        || p.is_absolute() != _Base.is_absolute()
+        || (!p.has_root_directory() && _Base.has_root_directory()))
+    {
+        return (_Result);
+    }
+
+    const fs::path::iterator _This_end = p.end();
+    const fs::path::iterator _Base_begin = _Base.begin();
+    const fs::path::iterator _Base_end = _Base.end();
+
+    auto _Mismatched = std::mismatch(p.begin(), _This_end, _Base_begin, _Base_end);
+    fs::path::iterator& _A_iter = _Mismatched.first;
+    fs::path::iterator& _B_iter = _Mismatched.second;
+
+    if (_A_iter == _This_end && _B_iter == _Base_end)
+    {
+        _Result = _Dot;
+        return (_Result);
+    }
+
+    {	// Skip root-name and root-directory elements, N4727 30.11.7.5 [fs.path.itr]/4.1, 4.2
+        ptrdiff_t _B_dist = std::distance(_Base_begin, _B_iter);
+
+        const ptrdiff_t _Base_root_dist = static_cast<ptrdiff_t>(_Base.has_root_name())
+            + static_cast<ptrdiff_t>(_Base.has_root_directory());
+
+        while (_B_dist < _Base_root_dist)
+        {
+            ++_B_iter;
+            ++_B_dist;
+        }
+    }
+
+    ptrdiff_t _Num = 0;
+
+    for (; _B_iter != _Base_end; ++_B_iter)
+    {
+        const fs::path& _Elem = *_B_iter;
+
+        if (_Elem.empty())
+        {	// skip empty element, N4727 30.11.7.5 [fs.path.itr]/4.4
+        }
+        else if (_Elem == _Dot)
+        {	// skip filename elements that are dot, N4727 30.11.7.4.11 [fs.path.gen]/4.2
+        }
+        else if (_Elem == _Dot_dot)
+        {
+            --_Num;
+        }
+        else
+        {
+            ++_Num;
+        }
+    }
+
+    if (_Num < 0)
+    {
+        return (_Result);
+    }
+
+    for (; _Num > 0; --_Num)
+    {
+        _Result /= _Dot_dot;
+    }
+
+    for (; _A_iter != _This_end; ++_A_iter)
+    {
+        _Result /= *_A_iter;
+    }
+    return (_Result);
+}
+
 static sol::table lua_fs(sol::this_state L)
 {
     sol::state_view lua(L);
@@ -309,7 +388,7 @@ static sol::table lua_fs(sol::this_state L)
     });
 
     module.set_function("relative_work_path", [](const moon::string_view_t& p) {
-        return  fs::relative(fs::absolute(p), lua_service::work_path()).replace_extension().string();
+        return  lexically_relative(fs::absolute(p), lua_service::work_path()).string();
     });
     return module;
 }
