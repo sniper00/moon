@@ -61,10 +61,8 @@ namespace moon
         void on_service_remove(uint32_t serviceid);
 
         asio::io_context& get_io_context(uint32_t serviceid);
-
-        void stop_server();
     private:
-        void set_stop(std::function<void()> f);
+        void set_server(server* sv);
 
         inline int32_t worker_id(uint32_t serviceid) const
         {
@@ -90,6 +88,6 @@ namespace moon
         env_t env_;
         unique_service_db_t unique_services_;
         log* logger_;
-        std::function<void()> stop_;
+        server* server_;
     };
 }

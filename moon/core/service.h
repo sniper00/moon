@@ -20,9 +20,9 @@ namespace moon
 
         log* logger() const override;
 
-        router* get_router() const;
+        const server_context& get_server_context() const;
 
-        void set_router(router* r);
+        void set_server_context(server_context sctx);
 
         bool unique() const;
 
@@ -37,16 +37,14 @@ namespace moon
         virtual bool init(const string_view_t& config) = 0;
 
         virtual void dispatch(message* msg) = 0;
-
-        virtual void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
     protected:
         void set_unique(bool v);
 
         void set_id(uint32_t v);
-    private:
+    protected:
         bool unique_;
         uint32_t id_;
-        router* router_;
+        server_context sctx_;
     };
 }
 

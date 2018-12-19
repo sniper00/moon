@@ -8,7 +8,6 @@ namespace moon
     service::service()
         :unique_(false)
         , id_(0)
-        , router_(nullptr)
     {
 
     }
@@ -40,27 +39,22 @@ namespace moon
 
     log * service::logger() const
     {
-        return router_->logger();
+        return sctx_.this_logger;
     }
 
-    router * service::get_router() const
+    const server_context& service::get_server_context() const
     {
-        return router_;
+        return sctx_;
     }
 
-    void service::set_router(router * r)
+    void service::set_server_context(server_context sctx)
     {
-        router_ = r;
+        sctx_ = sctx;
     }
 
     void service::removeself(bool crashed)
     {
-        router_->remove_service(id_, 0, 0, crashed);
-    }
-
-    void service::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
-    {
-        CONSOLE_WARN(logger(), "service::runcmd [%s] not Implemented: sender[%u] responseid[%d]", cmd.data(), sender, responseid);
+        sctx_.this_router->remove_service(id_, 0, 0, crashed);
     }
 
     void service::set_unique(bool v)
@@ -96,7 +90,7 @@ namespace moon
                 MOON_DCHECK(!b, "can not redirect broadcast message");
                 if (!b)
                 {
-                    router_->send_message(std::move(msg));
+                    sctx_.this_router->send_message(std::forward<message_ptr_t>(msg));
                 }
             }
         }

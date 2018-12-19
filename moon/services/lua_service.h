@@ -31,21 +31,7 @@ public:
 
     size_t memory_use();
 
-    void set_init(sol_function_t f);
-
-    void set_start(sol_function_t f);
-
-    void set_dispatch(sol_function_t f);
-
-    void set_exit(sol_function_t f);
-
-    void set_destroy(sol_function_t f);
-
-    void set_on_timer(sol_function_t f);
-
-    void set_remove_timer(sol_function_t f);
-
-    void register_command(const std::string&, sol_function_t f);
+    void set_callback(char c, sol_function_t f);
 
     moon::tcp* get_tcp(const std::string& protocol);
 
@@ -70,8 +56,6 @@ private:
     void error(const std::string& msg);
 
     static void* lalloc(void * ud, void *ptr, size_t osize, size_t nsize);
-
-    void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid)  override;
 public:
     size_t mem = 0;
     size_t mem_limit = 0;
@@ -87,7 +71,4 @@ private:
     moon::lua_timer timer_;
     uint32_t cache_uuid_;
     std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
-
-    using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
-    std::unordered_map<std::string, command_hander_t> commands_;
 };

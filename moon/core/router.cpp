@@ -5,6 +5,7 @@
 #include "worker.h"
 #include "message.hpp"
 #include "service.h"
+#include "server.h"
 
 namespace moon
 {
@@ -12,6 +13,7 @@ namespace moon
         :next_workerid_(0)
         , workers_(workers)
         , logger_(logger)
+        , server_(nullptr)
     {
     }
 
@@ -62,11 +64,12 @@ namespace moon
 
         wk->shared(shared);
         s->set_id(serviceid);
-        s->set_router(this);
         s->set_unique(unique);
-
+        s->set_server_context({ server_,this,wk,logger_ });
         if (s->init(config))
         {
+
+
             if (!unique || unique_services_.set(s->name(), s->id()))
             {
                 wk->add_service(std::move(s));
@@ -106,17 +109,6 @@ namespace moon
         case "worker"_csh:
         {
             int32_t workerid = moon::string_convert<int32_t>(params[1]);
-            if (workerid_valid(workerid))
-            {
-                workers_[workerid - 1]->runcmd(sender, cmd, responseid);
-                return;
-            }
-            break;
-        }
-        case "service"_csh:
-        {
-            uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
-            int32_t workerid = worker_id(serviceid);
             if (workerid_valid(workerid))
             {
                 workers_[workerid - 1]->runcmd(sender, cmd, responseid);
@@ -280,13 +272,8 @@ namespace moon
         return workers_[workerid - 1]->io_service();
     }
 
-    void router::set_stop(std::function<void()> f)
+    void router::set_server(server * sv)
     {
-        stop_ = f;
-    }
-
-    void router::stop_server()
-    {
-        stop_();
+        server_ = sv;
     }
 }

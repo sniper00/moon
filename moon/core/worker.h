@@ -15,7 +15,7 @@ namespace moon
 
         friend class server;
 
-        explicit worker(router* r);
+        explicit worker(server* srv, router* r);
 
         ~worker();
 
@@ -65,7 +65,7 @@ namespace moon
 
         void update();
 
-        void handle_one(service* ser, message_ptr_t&& msg);
+        void handle_one(service*& ser, message_ptr_t&& msg);
 
         void register_commands();
     private:
@@ -79,6 +79,7 @@ namespace moon
 
         int64_t work_time_;
         router*  router_;
+        server*  server_;
         std::thread thread_;
         asio::io_context io_ctx_;
         asio::executor_work_guard<asio::io_context::executor_type> work_;

@@ -74,7 +74,7 @@ namespace moon
             remote_addr_ = addr.to_string(ec) + ":";
             remote_addr_ += std::to_string(ep.port());
 
-            last_recv_time_ = std::time(nullptr);
+            last_recv_time_ = now();
         }
 
         virtual bool read(const read_request& ctx)
@@ -285,6 +285,18 @@ namespace moon
 				tcp_->handle_message(std::forward<TMsg>(msg));
 			}
 		}
+
+        int64_t now()
+        {
+            if (nullptr != tcp_)
+            {
+                return tcp_->now();
+            }
+            else
+            {
+                return -1;
+            }
+        }
     protected:
         bool sending_;
         frame_enable_flag frame_flag_;

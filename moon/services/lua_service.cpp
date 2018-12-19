@@ -1,5 +1,6 @@
 #include "lua_service.h"
 #include "message.hpp"
+#include "server.h"
 #include "router.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
@@ -39,15 +40,6 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
     else
     {
         return realloc(ptr, nsize);
-    }
-}
-
-void lua_service::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
-{
-    auto params = moon::split<std::string>(cmd, ".");
-    if (auto iter = commands_.find(params[2]); iter != commands_.end())
-    {
-        get_router()->make_response(sender, "", iter->second(params), responseid);
     }
 }
 
@@ -121,74 +113,7 @@ void lua_service::send_cache(uint32_t receiver, uint32_t cacheid, const string_v
         return;
     }
 
-    get_router()->send(id(), receiver, iter->second, header, responseid, type);
-}
-
-void lua_service::set_init(sol_function_t f)
-{
-    init_ = f;
-}
-
-void lua_service::set_start(sol_function_t f)
-{
-    start_ = f;
-}
-
-void lua_service::set_dispatch(sol_function_t f)
-{
-    dispatch_ = f;
-}
-
-void lua_service::set_exit(sol_function_t f)
-{
-    exit_ = f;
-}
-
-void lua_service::set_destroy(sol_function_t f)
-{
-    destroy_ = f;
-}
-
-void lua_service::set_on_timer(sol_function_t f)
-{
-    timer_.set_on_timer([this, f](timer_id_t tid) {
-        auto result = f(tid);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-        }
-    });
-}
-
-void lua_service::set_remove_timer(sol_function_t f)
-{
-    timer_.set_remove_timer([this, f](timer_id_t tid) {
-        auto result = f(tid);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-        }
-    });
-}
-
-void lua_service::register_command(const std::string & command, sol_function_t f)
-{
-    auto hander = [this, command, f](const std::vector<std::string>& params) {
-        auto result = f(params);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-            return std::string(err.what());
-        }
-        else
-        {
-            return result.get<std::string>();
-        }
-    };
-    commands_.try_emplace(command, hander);
+    sctx_.this_router->send(id(), receiver, iter->second, header, responseid, type);
 }
 
 bool lua_service::init(const string_view_t& config)
@@ -347,7 +272,7 @@ void lua_service::dispatch(message* msg)
             else
             {
                 msg->set_responseid(-msg->responseid());
-                get_router()->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
+                sctx_.this_router->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
             }
         }
     }
@@ -438,13 +363,70 @@ void lua_service::error(const std::string & msg)
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
-        get_router()->stop_server();
+        sctx_.this_server->stop();
     }
 }
 
 size_t lua_service::memory_use()
 {
     return  mem;
+}
+
+void lua_service::set_callback(char c, sol_function_t f)
+{
+    switch (c)
+    {
+    case 'i':
+    {
+        init_ = f;
+        break;
+    }
+    case 's':
+    {
+        start_ = f;
+        break;
+    }
+    case 'm':
+    {
+        dispatch_ = f;
+        break;
+    }
+    case 'e':
+    {
+        exit_ = f;
+        break;
+    }
+    case 'd':
+    {
+        destroy_ = f;
+        break;
+    }
+    case 't':
+    {
+        timer_.set_now_func([this]() {
+            return sctx_.this_server->now();
+        });
+
+        timer_.set_on_timer([this, f](timer_id_t tid) {
+            auto result = f(tid);
+            if (!result.valid())
+            {
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
+            }
+        });
+
+        timer_.set_remove_timer([this, f](timer_id_t tid) {
+            auto result = f(tid,true);
+            if (!result.valid())
+            {
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
+            }
+        });
+        break;
+    }
+    }
 }
 
 

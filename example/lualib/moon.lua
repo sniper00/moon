@@ -108,7 +108,7 @@ moon.make_response = make_response
 --- 回掉函数需要返回bool:true 初始化成功; false 服务始化失败.
 ---@param callback fun(config:table):boolean
 function moon.init(callback)
-    core.set_init(function ( str )
+    core.set_cb('i',function ( str )
         return callback(json_decode(str))
     end)
 end
@@ -120,7 +120,7 @@ end
 ---2.运行时动态创建的服务，会在init之后，第一次update之前调用
 ---@param callback fun()
 function moon.start(callback)
-    core.set_start(callback)
+    core.set_cb('s', callback)
 end
 
 ---注册server退出回掉,常用于带有异步流程的服务处理退出逻辑（如带协程的数据库服务，
@@ -128,14 +128,14 @@ end
 ---注意：处理完成后必须要调用moon.removeself，使服务自身退出,否则server将无法正常退出。
 ---@param callback fun()
 function moon.exit(callback)
-    core.set_exit(callback)
+    core.set_cb('e', callback)
 end
 
 
 ---注册服务对象销毁时的回掉函数，这个函数会在服务正常销毁时调用
 ---@param callback fun()
 function moon.destroy(callback)
-    core.set_destroy(callback)
+    core.set_cb('d', callback)
 end
 
 ---@param msg core.message
@@ -167,7 +167,7 @@ local function _default_dispatch(msg, PTYPE)
     end
 end
 
-core.set_dispatch(_default_dispatch)
+core.set_cb('m', _default_dispatch)
 
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包<br>
@@ -354,18 +354,16 @@ function moon.repeated(mills, times, cb)
     return timerid
 end
 
-core.set_on_timer(
-    function(timerid)
-        local cb = timer_cb[timerid]
-        if cb then
-            cb(timerid)
+core.set_cb('t',
+    function(timerid, brm)
+        if not brm then
+            local cb = timer_cb[timerid]
+            if cb then
+                cb(timerid)
+            end
+        else
+            timer_cb[timerid] = nil
         end
-    end
-)
-
-core.set_remove_timer(
-    function(timerid)
-        timer_cb[timerid] = nil
     end
 )
 

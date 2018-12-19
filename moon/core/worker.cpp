@@ -6,16 +6,18 @@
 #include "message.hpp"
 #include "common/log.hpp"
 #include "router.h"
+#include "server.h"
 
 namespace moon
 {
-    worker::worker(router* r)
+    worker::worker(server* srv, router* r)
         : state_(state::init)
         , shared_(true)
         , workerid_(0)
         , serviceuid_(1)
         , work_time_(0)
         , router_(r)
+        , server_(srv)
         , io_ctx_(1)
         , work_(asio::make_work_guard(io_ctx_))
     {
@@ -154,7 +156,7 @@ namespace moon
         if (mqueue_.push_back(std::move(msg)) == 1)
         {
             post([this]() {
-                auto begin_time = time::millsecond();
+                auto begin_time = server_->now();;
                 size_t count = 0;
                 if (mqueue_.size() != 0)
                 {
@@ -167,7 +169,7 @@ namespace moon
                         handle_one(ser, std::move(msg));
                     }
                 }
-                auto difftime = time::millsecond() - begin_time;
+                auto difftime = server_->now() - begin_time;
                 work_time_ += difftime;
                 if (difftime > 1000)
                 {
@@ -212,19 +214,6 @@ namespace moon
                 }
                 break;
             }
-            case "service"_csh:
-            {
-                uint32_t serviceid = moon::string_convert<uint32_t>(params[1]);
-                if (service* s = find_service(serviceid); s != nullptr)
-                {
-                    s->runcmd(sender, cmd, responseid);
-                }
-                else
-                {
-                    router_->make_response(sender, "worker::runcmd "sv, moon::format("runcmd:can not found service. %s", params[1].data()), responseid, PTYPE_ERROR);
-                }
-                break;
-            }
             }
         });
     }
@@ -263,21 +252,21 @@ namespace moon
         }
 
         post([this] {
-            auto begin_time = time::millsecond();
+            auto begin_time = server_->now();
 
             for (auto& it : services_)
             {
                 it.second->update();
             }
 
-            auto difftime = time::millsecond() - begin_time;
+            auto difftime = server_->now() - begin_time;
             work_time_ += difftime;
 
             update_state_.clear(std::memory_order_release);
         });
     }
 
-    void worker::handle_one(service* ser, message_ptr_t&& msg)
+    void worker::handle_one(service*& ser, message_ptr_t&& msg)
     {
         if (msg->broadcast())
         {
@@ -303,6 +292,7 @@ namespace moon
             }
         }
         ser->handle_message(std::forward<message_ptr_t>(msg));
+        ser->update();
     }
 
     void worker::register_commands()

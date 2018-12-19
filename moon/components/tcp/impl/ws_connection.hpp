@@ -158,7 +158,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = std::time(nullptr);
+                last_recv_time_ = now() / 1000;
 
                 size_t num_additional_bytes = sbuf->size() - bytes_transferred;
                 if (handshake(sbuf))
@@ -200,7 +200,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = std::time(nullptr);
+                last_recv_time_ = tcp_->now() / 1000;
                 cache_.write_back(buffer_.data(), 0, bytes_transferred);
 
                 if (!handle_frame())
