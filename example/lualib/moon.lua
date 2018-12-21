@@ -259,7 +259,7 @@ function moon.remove_service(sid, bresponse)
         core.remove_service(sid,sid_,rspid,false)
         return co_yield()
     else
-        core.remove_service(sid_,0,0,false)
+        core.remove_service(sid,0,0,false)
     end
 end
 

@@ -8,6 +8,9 @@ namespace moon
     service::service()
         :unique_(false)
         , id_(0)
+        , server_(nullptr)
+        , router_(nullptr)
+        , worker_(nullptr)
     {
 
     }
@@ -39,22 +42,34 @@ namespace moon
 
     log * service::logger() const
     {
-        return sctx_.this_logger;
+        return router_->logger();
     }
 
-    const server_context& service::get_server_context() const
+    void service::set_server_context(server * s, router * r, worker * w)
     {
-        return sctx_;
+        server_ = s;
+        router_ = r;
+        worker_ = w;
     }
 
-    void service::set_server_context(server_context sctx)
+    server * service::get_server()
     {
-        sctx_ = sctx;
+        return server_;
+    }
+
+    router * service::get_router()
+    {
+        return router_;
+    }
+
+    worker * service::get_worker()
+    {
+        return worker_;
     }
 
     void service::removeself(bool crashed)
     {
-        sctx_.this_router->remove_service(id_, 0, 0, crashed);
+        router_->remove_service(id_, 0, 0, crashed);
     }
 
     void service::set_unique(bool v)
@@ -90,7 +105,7 @@ namespace moon
                 MOON_DCHECK(!b, "can not redirect broadcast message");
                 if (!b)
                 {
-                    sctx_.this_router->send_message(std::forward<message_ptr_t>(msg));
+                    router_->send_message(std::forward<message_ptr_t>(msg));
                 }
             }
         }

@@ -65,11 +65,9 @@ namespace moon
         wk->shared(shared);
         s->set_id(serviceid);
         s->set_unique(unique);
-        s->set_server_context({ server_,this,wk,logger_ });
+        s->set_server_context(server_, this, wk);
         if (s->init(config))
         {
-
-
             if (!unique || unique_services_.set(s->name(), s->id()))
             {
                 wk->add_service(std::move(s));

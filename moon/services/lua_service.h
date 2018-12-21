@@ -35,9 +35,9 @@ public:
 
     moon::tcp* get_tcp(const std::string& protocol);
 
-    uint32_t make_cache(const moon::buffer_ptr_t & buf);
+    uint32_t prepare(const moon::buffer_ptr_t & buf);
 
-    void send_cache(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
+    void send_prepare(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
 
     static const fs::path& work_path();
 private:
@@ -45,13 +45,13 @@ private:
 
     void start()  override;
 
-    void update()  override;
-
     void exit() override;
 
     void destroy() override;
 
     void dispatch(moon::message* msg) override;
+
+    void on_timer(uint32_t timerid, bool remove) override;
 
     void error(const std::string& msg);
 
@@ -68,7 +68,5 @@ private:
     sol_function_t dispatch_;
     sol_function_t exit_;
     sol_function_t destroy_;
-    moon::lua_timer timer_;
-    uint32_t cache_uuid_;
-    std::unordered_map<uint32_t, moon::buffer_ptr_t> caches_;
+    sol_function_t on_timer_;
 };

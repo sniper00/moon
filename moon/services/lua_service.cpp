@@ -52,7 +52,6 @@ const fs::path& lua_service::work_path()
 lua_service::lua_service()
     :error_(true)
     , lua_(sol::default_at_panic, lalloc, this)
-    , cache_uuid_(0)
 {
 }
 
@@ -94,26 +93,14 @@ moon::tcp * lua_service::get_tcp(const std::string& protocol)
     return ((p != nullptr) ? p.get() : nullptr);
 }
 
-uint32_t lua_service::make_cache(const moon::buffer_ptr_t & buf)
+uint32_t lua_service::prepare(const moon::buffer_ptr_t & buf)
 {
-    auto iter = caches_.emplace(cache_uuid_++, buf);
-    if (iter.second)
-    {
-        return iter.first->first;
-    }
-    return 0;
+    return worker_->prepare(buf);
 }
 
-void lua_service::send_cache(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
+void lua_service::send_prepare(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
 {
-    auto iter = caches_.find(cacheid);
-    if (iter == caches_.end())
-    {
-        CONSOLE_DEBUG(logger(), "send_cache failed, can not find cache data id %s", cacheid);
-        return;
-    }
-
-    sctx_.this_router->send(id(), receiver, iter->second, header, responseid, type);
+    worker_->send_prepare(id(), receiver, cacheid, header, responseid, type);
 }
 
 bool lua_service::init(const string_view_t& config)
@@ -142,7 +129,7 @@ bool lua_service::init(const string_view_t& config)
             lua_bind.bind_service(this)
                 .bind_log(logger())
                 .bind_util()
-                .bind_timer(&timer_)
+                .bind_timer(this)
                 .bind_message()
                 .bind_socket()
                 .bind_http();
@@ -272,7 +259,7 @@ void lua_service::dispatch(message* msg)
             else
             {
                 msg->set_responseid(-msg->responseid());
-                sctx_.this_router->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
             }
         }
     }
@@ -282,26 +269,21 @@ void lua_service::dispatch(message* msg)
     }
 }
 
-void lua_service::update()
+void lua_service::on_timer(uint32_t timerid, bool remove)
 {
-    service::update();
-
     if (error_) return;
     try
     {
-        if (auto n = timer_.update(); n > 1000)
+        auto result = on_timer_(timerid, remove);
+        if (!result.valid())
         {
-            CONSOLE_WARN(logger(), "service(%s:%u) timer update takes too long: %" PRId64 "ms", name().data(), id(), n);
-        }
-        if (cache_uuid_ != 0)
-        {
-            cache_uuid_ = 0;
-            caches_.clear();
+            sol::error err = result;
+            CONSOLE_ERROR(logger(), "%s", err.what());
         }
     }
     catch (std::exception& e)
     {
-        error(moon::format("lua_service::update:\n%s\n", e.what()));
+        error(moon::format("lua_service::on_timer:\n%s\n", e.what()));
     }
 }
 
@@ -363,7 +345,7 @@ void lua_service::error(const std::string & msg)
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
-        sctx_.this_server->stop();
+        server_->stop();
     }
 }
 
@@ -376,56 +358,37 @@ void lua_service::set_callback(char c, sol_function_t f)
 {
     switch (c)
     {
-    case 'i':
-    {
-        init_ = f;
-        break;
-    }
-    case 's':
-    {
-        start_ = f;
-        break;
-    }
-    case 'm':
-    {
-        dispatch_ = f;
-        break;
-    }
-    case 'e':
-    {
-        exit_ = f;
-        break;
-    }
-    case 'd':
-    {
-        destroy_ = f;
-        break;
-    }
-    case 't':
-    {
-        timer_.set_now_func([this]() {
-            return sctx_.this_server->now();
-        });
-
-        timer_.set_on_timer([this, f](timer_id_t tid) {
-            auto result = f(tid);
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-        });
-
-        timer_.set_remove_timer([this, f](timer_id_t tid) {
-            auto result = f(tid,true);
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-        });
-        break;
-    }
+        case 'i':
+        {
+            init_ = f;
+            break;
+        }
+        case 's':
+        {
+            start_ = f;
+            break;
+        }
+        case 'm':
+        {
+            dispatch_ = f;
+            break;
+        }
+        case 'e':
+        {
+            exit_ = f;
+            break;
+        }
+        case 'd':
+        {
+            destroy_ = f;
+            break;
+        }
+        case 't':
+        {
+            on_timer_ = f;
+            break;
+            break;
+        }
     }
 }
 

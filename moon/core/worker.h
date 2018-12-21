@@ -3,6 +3,7 @@
 #include "asio.hpp"
 #include "common/concurrent_queue.hpp"
 #include "common/spinlock.hpp"
+#include "worker_timer.hpp"
 
 namespace moon
 {
@@ -46,6 +47,12 @@ namespace moon
         service* find_service(uint32_t serviceid) const;
 
         void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
+
+        uint32_t prepare(const moon::buffer_ptr_t & buf);
+
+        void send_prepare(uint32_t sender, uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
+    
+        worker_timer& timer();
     private:
         void run();
 
@@ -63,11 +70,13 @@ namespace moon
     private:
         void start();
 
-        void update();
+        void post_update();
 
         void handle_one(service*& ser, message_ptr_t&& msg);
 
         void register_commands();
+
+        void update();
     private:
         //To prevent post too many update event
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
@@ -91,6 +100,13 @@ namespace moon
 
         using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
         std::unordered_map<std::string, command_hander_t> commands_;
+
+        worker_timer timer_;
+
+        uint32_t prepare_uuid_;
+        std::unordered_map<uint32_t, moon::buffer_ptr_t> prepares_;
+
+        std::vector<uint32_t> will_start_;
     };
 };
 

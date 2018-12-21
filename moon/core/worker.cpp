@@ -20,6 +20,7 @@ namespace moon
         , server_(srv)
         , io_ctx_(1)
         , work_(asio::make_work_guard(io_ctx_))
+        , prepare_uuid_(1)
     {
     }
 
@@ -30,6 +31,18 @@ namespace moon
     void worker::run()
     {
         register_commands();
+
+        timer_.set_now_func([this]() {
+            return server_->now();
+        });
+
+        timer_.set_on_timer([this](timer_id_t timerid, uint32_t serviceid, bool remove) {
+            if (auto iter = services_.find(serviceid); iter != services_.end())
+            {
+                iter->second->on_timer(timerid, remove);
+            }
+        });
+
         thread_ = std::thread([this]() {
             state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(router_->logger(), "WORKER-%d START", workerid_);
@@ -94,6 +107,7 @@ namespace moon
             MOON_CHECK(res.second, "serviceid repeated");
             res.first->second->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
+            will_start_.push_back(id);
             CONSOLE_INFO(router_->logger(), "[WORKER %d] new service [%s:%u]", workerid(), res.first->second->name().data(), res.first->second->id());
         });
     }
@@ -218,6 +232,31 @@ namespace moon
         });
     }
 
+    uint32_t moon::worker::prepare(const moon::buffer_ptr_t & buf)
+    {
+        auto iter = prepares_.emplace(prepare_uuid_++, buf);
+        if (iter.second)
+        {
+            return iter.first->first;
+        }
+        return 0;
+    }
+
+    void moon::worker::send_prepare(uint32_t sender, uint32_t receiver, uint32_t cacheid, const moon::string_view_t & header, int32_t responseid, uint8_t type) const
+    {
+        if (auto iter = prepares_.find(cacheid); iter != prepares_.end())
+        {
+            router_->send(sender, receiver, iter->second, header, responseid, type);
+            return;
+        }
+        CONSOLE_DEBUG(server_->logger(), "send_cache failed, can not find cache data id %s", cacheid);
+    }
+
+    worker_timer& moon::worker::timer()
+    {
+        return timer_;
+    }
+
     void worker::shared(bool v)
     {
         shared_ = v;
@@ -243,7 +282,7 @@ namespace moon
         });
     }
 
-    void worker::update()
+    void worker::post_update()
     {
         //update_state is true
         if (update_state_.test_and_set(std::memory_order_acquire))
@@ -252,16 +291,7 @@ namespace moon
         }
 
         post([this] {
-            auto begin_time = server_->now();
-
-            for (auto& it : services_)
-            {
-                it.second->update();
-            }
-
-            auto difftime = server_->now() - begin_time;
-            work_time_ += difftime;
-
+            update();
             update_state_.clear(std::memory_order_release);
         });
     }
@@ -292,7 +322,7 @@ namespace moon
             }
         }
         ser->handle_message(std::forward<message_ptr_t>(msg));
-        ser->update();
+        timer_.update();
     }
 
     void worker::register_commands()
@@ -320,6 +350,30 @@ namespace moon
                 return content;
             };
             commands_.try_emplace("services", hander);
+        }
+    }
+
+    void moon::worker::update()
+    {
+        if (!will_start_.empty())
+        {
+            for (auto& sid : will_start_)
+            {
+                auto s = find_service(sid);
+                if (nullptr != s && !s->started())
+                {
+                    s->start();
+                }
+            }
+            will_start_.clear();
+        }
+
+        timer_.update();
+        
+        if (!prepares_.empty())
+        {
+            prepares_.clear();
+            prepare_uuid_ = 1;
         }
     }
 }

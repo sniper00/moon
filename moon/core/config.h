@@ -36,18 +36,6 @@ namespace moon
         framing = 1 << 2,
         broadcast = 1 << 3,
     };
-
-    class server;
-    class router;
-    class worker;
-    class log;
-    struct server_context
-    {
-        server* this_server = nullptr;
-        router* this_router = nullptr;
-        worker* this_worker = nullptr;
-        log* this_logger = nullptr;
-    };
 }
 
 

@@ -269,7 +269,7 @@ namespace moon
 
     int64_t tcp::now()
     {
-        return parent_->get_server_context().this_server->now();
+        return parent_->get_server()->now();
     }
 
     void tcp::init()
@@ -277,7 +277,7 @@ namespace moon
         component::init();
         parent_ = parent<service>();
         MOON_DCHECK(parent_ != nullptr, "tcp::init service is null");
-        io_ctx_ = &(parent_->get_server_context().this_router->get_io_context(parent_->id()));
+        io_ctx_ = &(parent_->get_router()->get_io_context(parent_->id()));
         response_msg_ = message::create();
     }
 

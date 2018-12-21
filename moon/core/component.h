@@ -75,8 +75,6 @@ namespace moon
         virtual void start();
 
         virtual void destroy();
-
-        virtual void update();
 	protected:
         component_ptr_t get_component_imp(const std::string& name) const;
 

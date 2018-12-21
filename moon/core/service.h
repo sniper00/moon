@@ -5,7 +5,9 @@
 namespace moon
 {
     class log;
+    class server;
     class router;
+    class worker;
 
     class service :public component
     {
@@ -20,9 +22,13 @@ namespace moon
 
         log* logger() const override;
 
-        const server_context& get_server_context() const;
+        void set_server_context(server* s, router* r, worker* w);
 
-        void set_server_context(server_context sctx);
+        server* get_server();
+
+        router* get_router();
+
+        worker* get_worker();
 
         bool unique() const;
 
@@ -37,6 +43,8 @@ namespace moon
         virtual bool init(const string_view_t& config) = 0;
 
         virtual void dispatch(message* msg) = 0;
+
+        virtual void on_timer(uint32_t, bool) {};
     protected:
         void set_unique(bool v);
 
@@ -44,7 +52,9 @@ namespace moon
     protected:
         bool unique_;
         uint32_t id_;
-        server_context sctx_;
+        server* server_;
+        router* router_;
+        worker* worker_;
     };
 }
 
