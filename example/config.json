@@ -143,5 +143,18 @@
                 "file": "example_mysql.lua"
             }
         ]
+    },
+    {
+        "sid": 8,
+        "name": "server_#sid",
+        "inner_host": "127.0.0.1",
+        "log_level": "DEBUG",
+        "services": [
+            {
+                "unique": true,
+                "name": "test",
+                "file": "test_moon.lua"
+            }
+        ]
     }
 ]
