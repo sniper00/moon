@@ -13,6 +13,7 @@ namespace moon
     using env_t = concurrent_map<std::string, std::string, rwlock>;
     using unique_service_db_t = concurrent_map<std::string, uint32_t, rwlock>;
 
+    class server;
     class worker;
 
     class router

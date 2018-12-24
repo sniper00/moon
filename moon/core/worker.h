@@ -7,6 +7,7 @@
 
 namespace moon
 {
+    class server;
     class router;
 
     class worker
