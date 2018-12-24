@@ -2,14 +2,12 @@ local moon = require("moon")
 
 local send_failed = function(s)
     local main_service = moon.unique_service("test")
-    moon.send("lua", main_service, "FAILED", moon.name(), s)
-    moon.removeself()
+    moon.send("lua", main_service, "FAILED", moon.name(),moon.id(),s)
 end
 
 local send_success = function()
     local main_service = moon.unique_service("test")
-    moon.send("lua", main_service, "SUCCESS", moon.name())
-    moon.removeself()
+    moon.send("lua", main_service, "SUCCESS", moon.name(),moon.id())
 end
 
 local equal = function(value, expect)

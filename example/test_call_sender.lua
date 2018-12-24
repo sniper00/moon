@@ -1,17 +1,22 @@
 local moon = require("moon")
 local test_assert = require("test_assert")
 
+local receiverid
+
+moon.init(function()
+    receiverid =
+    moon.new_service(
+    "lua",
+    {
+        name = "call_example_receiver",
+        file = "call_example_receiver.lua"
+    }
+    )
+    return true
+end)
+
 moon.start(
     function()
-        local receiverid =
-            moon.new_service(
-            "lua",
-            {
-                name = "call_example_receiver",
-                file = "call_example_receiver.lua"
-            }
-        )
-
         moon.async(
             function()
                 local res = moon.co_call("lua", receiverid, "SUB", 1000, 2000)
@@ -29,11 +34,6 @@ moon.start(
 
                 --Let receiver exit:
                 moon.co_call("lua", receiverid, "EXIT")
-
-                --This call will got service exited:
-                res = moon.co_call("lua", receiverid, "SUB", 1000, 2000)
-                test_assert.equal(res, false)
-
                 test_assert.success()
             end
         )
