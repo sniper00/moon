@@ -104,11 +104,11 @@ namespace moon
         post([this, s=std::move(s)]() mutable {
             auto id = s->id();
             auto res = services_.try_emplace(id, std::move(s));
-            MOON_CHECK(res.second, "serviceid repeated");
+            MOON_DCHECK(res.second, "serviceid repeated");
             res.first->second->ok(true);
             servicenum_.store(static_cast<uint32_t>(services_.size()));
             will_start_.push_back(id);
-            CONSOLE_INFO(router_->logger(), "[WORKER %d] new service [%s:%u]", workerid(), res.first->second->name().data(), res.first->second->id());
+            CONSOLE_INFO(router_->logger(), "[WORKER %d]new service [%s:%u]", workerid(), res.first->second->name().data(), res.first->second->id());
         });
     }
 
@@ -150,7 +150,7 @@ namespace moon
             }
             else
             {
-                router_->make_response(sender, "worker::remove_service "sv, "service not found"sv, respid, PTYPE_ERROR);
+                router_->make_response(sender, "worker::remove_service "sv,moon::format("service [%u] not found", id), respid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
@@ -317,7 +317,7 @@ namespace moon
             if (nullptr == ser)
             {
                 msg->set_responseid(-msg->responseid());
-                router_->make_response(msg->sender(), "worker::handle_one ", moon::format("[%u] attempt send to dead service [%u].",msg->sender(),msg->receiver()).data(), msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "worker::handle_one ", moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({msg->data(),msg->size()}).data()).data(), msg->responseid(), PTYPE_ERROR);
                 return;
             }
         }

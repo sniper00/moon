@@ -41,14 +41,20 @@ end
 
 local command = {}
 
-command.SUCCESS = function(name)
+command.SUCCESS = function(name,sid)
     print("SUCCESS",name)
-    next_case()
+    moon.async(function ()
+        moon.co_remove_service(sid)
+        next_case()
+    end)
 end
 
-command.FAILED = function(name, dsp)
+command.FAILED = function(name, sid, dsp)
     log.error("FAILED %s %s", tostring(name), tostring(dsp))
-    next_case()
+    moon.async(function ()
+        moon.co_remove_service(sid)
+        next_case()
+    end)
 end
 
 local function docmd(header,...)
