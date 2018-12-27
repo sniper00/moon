@@ -1,24 +1,20 @@
 local moon = require("moon")
 local test_assert = require("test_assert")
 
-local receiverid
-
-moon.init(function()
-    receiverid =
-    moon.new_service(
-    "lua",
-    {
-        name = "call_example_receiver",
-        file = "call_example_receiver.lua"
-    }
-    )
-    return true
-end)
 
 moon.start(
     function()
         moon.async(
             function()
+                local receiverid =
+                moon.co_new_service(
+                    "lua",
+                    {
+                        name = "call_example_receiver",
+                        file = "call_example_receiver.lua"
+                    }
+                )
+
                 local res = moon.co_call("lua", receiverid, "SUB", 1000, 2000)
                 test_assert.equal(res, -1000)
 
