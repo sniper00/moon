@@ -29,21 +29,18 @@ moon.dispatch(
 
 local receiver
 
-moon.init(function()
-    receiver = moon.new_service(
-        "lua",
-        {
-            name = "test_send_receiver",
-            file = "test_send_receiver.lua"
-        }
-    )
-
-    return true
-end)
-
 moon.start(
     function()
-        moon.send("lua", receiver, "HELLO", "123456789")
+        moon.async(function ()
+            receiver = moon.co_new_service(
+                "lua",
+                {
+                    name = "test_send_receiver",
+                    file = "test_send_receiver.lua"
+                }
+            )
+            moon.send("lua", receiver, "HELLO", "123456789")
+        end)
     end
 )
 
