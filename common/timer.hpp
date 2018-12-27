@@ -16,7 +16,7 @@ namespace moon
     {
         inline int64_t millseconds()
         {
-            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
         template<typename TContainer, uint8_t Size>
@@ -85,6 +85,7 @@ namespace moon
             : stop_(false)
             , tick_(0)
             , previous_tick_(0)
+            , now_(detail::millseconds)
         {
             wheels_.emplace_back();
             wheels_.emplace_back();
@@ -101,7 +102,7 @@ namespace moon
 
         int64_t update()
         {
-            auto now_tick = detail::millseconds();
+            auto now_tick = now_();
             if (previous_tick_ == 0)
             {
                 previous_tick_ = now_tick;
@@ -163,6 +164,12 @@ namespace moon
         void start_all_timer()
         {
             stop_ = false;
+        }
+
+        template<typename TFunc>
+        void set_now_func(TFunc&& f)
+        {
+            now_ = (f);
         }
 
     protected:
@@ -228,6 +235,7 @@ namespace moon
         bool stop_;
         int64_t tick_;
         int64_t previous_tick_;
+        std::function<int64_t()> now_;
         std::vector <timer_wheel_t> wheels_;
     };
 
