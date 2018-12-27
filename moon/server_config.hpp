@@ -15,7 +15,6 @@ namespace moon
     struct service_config
     {
         bool unique = false;
-        bool shared = true;
         int32_t threadid = 0;
         std::string type;
         std::string name;
@@ -149,7 +148,6 @@ namespace moon
                             service_config sc;
                             sc.type = rapidjson::get_value<std::string>(&s, "type", "lua");
                             sc.unique = rapidjson::get_value<bool>(&s, "unique", false);
-                            sc.shared = rapidjson::get_value<bool>(&s, "shared", true);
                             sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
                             sc.name = rapidjson::get_value<std::string>(&s, "name");
 

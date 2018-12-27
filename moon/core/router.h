@@ -13,6 +13,7 @@ namespace moon
     using env_t = concurrent_map<std::string, std::string, rwlock>;
     using unique_service_db_t = concurrent_map<std::string, uint32_t, rwlock>;
 
+    class server;
     class worker;
 
     class router
@@ -32,7 +33,7 @@ namespace moon
 
         size_t workernum() const;
 
-        uint32_t new_service(const std::string& service_type, bool unique, bool shareth, int32_t workerid, const string_view_t& config);
+        uint32_t new_service(const std::string& service_type, const string_view_t& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid);
 
         void remove_service(uint32_t serviceid, uint32_t sender, int32_t respid, bool crashed = false);
 
@@ -61,12 +62,10 @@ namespace moon
         void on_service_remove(uint32_t serviceid);
 
         asio::io_context& get_io_context(uint32_t serviceid);
-
-        void stop_server();
     private:
-        void set_stop(std::function<void()> f);
+        void set_server(server* sv);
 
-        inline int32_t worker_id(uint32_t serviceid) const
+        int32_t worker_id(uint32_t serviceid) const
         {
             return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
         }
@@ -90,6 +89,6 @@ namespace moon
         env_t env_;
         unique_service_db_t unique_services_;
         log* logger_;
-        std::function<void()> stop_;
+        server* server_;
     };
 }

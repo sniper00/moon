@@ -31,10 +31,13 @@ namespace moon
         size_t workernum() const;
 
         bool stoped();
+
+        int64_t now();
     private:
         void wait();
     private:
         std::atomic<state> state_;
+        int64_t now_;
         std::vector<std::unique_ptr<worker>> workers_;
         log default_log_;
         router router_;

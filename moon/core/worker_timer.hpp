@@ -3,17 +3,28 @@
 
 namespace moon
 {
-    class lua_timer :public base_timer<lua_timer>
+    class worker_timer :public base_timer<worker_timer>
     {
         static constexpr int MAX_TIMER_NUM = (1 << 24) - 1;
 
-        using timer_handler_t = std::function<void(timer_id_t)>;
+        using timer_handler_t = std::function<void(timer_id_t, uint32_t, bool)>;
 
-        friend class base_timer<lua_timer>;
-    public:
-        timer_id_t repeat(int32_t duration, int32_t times)
+        friend class base_timer<worker_timer>;
+
+        struct worker_timer_context:public timer_context
         {
-            if (!on_timer_ || !on_remove_)
+            worker_timer_context(int32_t duration, int32_t times, uint32_t sid)
+                :timer_context(duration, times)
+                , serviceid(sid)
+            {
+
+            }
+            uint32_t serviceid;
+        };
+    public:
+        timer_id_t repeat(int32_t duration, int32_t times, uint32_t serviceid)
+        {
+            if (!on_timer_)
             {
                 return 0;
             }
@@ -23,7 +34,7 @@ namespace moon
                 duration = PRECISION;
             }
 
-            assert(times < timer_context::times_mask);
+            assert(times < worker_timer_context::times_mask);
 
             if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
                 uuid_ = 1;
@@ -35,12 +46,12 @@ namespace moon
 
             if (times <= 0)
             {
-                times = (0 | timer_context::infinite);
+                times = (0 | worker_timer_context::infinite);
             }
 
             timer_id_t id = uuid_;
             insert_timer(duration, id);
-            timers_.emplace(id, timer_context{ duration,times });
+            timers_.emplace(id, worker_timer_context{ duration,times,serviceid });
             return id;
         }
 
@@ -49,17 +60,12 @@ namespace moon
             auto iter = timers_.find(timerid);
             if (iter != timers_.end())
             {
-                iter->second.set_flag(timer_context::removed);
+                iter->second.set_flag(worker_timer_context::removed);
                 return;
             }
         }
 
-        void set_remove_timer(const std::function<void(timer_id_t)>& v)
-        {
-            on_remove_ = v;
-        }
-
-        void set_on_timer(const std::function<void(timer_id_t)>& v)
+        void set_on_timer(const timer_handler_t& v)
         {
             on_timer_ = v;
         }
@@ -85,23 +91,22 @@ namespace moon
             }
 
             auto&ctx = iter->second;
-            if (!ctx.has_flag(timer_context::removed))
+            if (!ctx.has_flag(worker_timer_context::removed))
             {
-                on_timer_(id);
-                if (ctx.has_flag(timer_context::infinite) || ctx.times(ctx.times() - 1))
+                on_timer_(id, ctx.serviceid, false);
+                if (ctx.has_flag(worker_timer_context::infinite) || ctx.times(ctx.times() - 1))
                 {
                     return ctx.duration();
                 }
             }
-            on_remove_(id);
+            on_timer_(id, ctx.serviceid, true);
             timers_.erase(iter);
             return 0;
         }
     private:
         uint32_t uuid_ = 0;
-        std::unordered_map<uint32_t, timer_context> timers_;
-        std::function<void(timer_id_t)> on_remove_;
-        std::function<void(timer_id_t)> on_timer_;
+        std::unordered_map<uint32_t, worker_timer_context> timers_;
+        timer_handler_t on_timer_;
     };
 }
 

@@ -3,6 +3,7 @@
 #include "common/string.hpp"
 #include "common/hash.hpp"
 #include "message.hpp"
+#include "server.h"
 #include "moon_connection.hpp"
 #include "custom_connection.hpp"
 #include "ws_connection.hpp"
@@ -266,6 +267,11 @@ namespace moon
         return true;
     }
 
+    int64_t tcp::now()
+    {
+        return parent_->get_server()->now();
+    }
+
     void tcp::init()
     {
         component::init();
@@ -304,10 +310,10 @@ namespace moon
             {
                 return;
             }
-            auto now = std::time(nullptr);
+
             for (auto& conn : conns_)
             {
-                conn.second->timeout_check(now, timeout_);
+                conn.second->timeout_check(now()/1000, timeout_);
             }
             check();
         });

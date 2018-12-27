@@ -7,7 +7,7 @@ namespace moon
         component_imp() noexcept
             :enable_update_(false)
             , start_(false)
-            , ok_(false)
+            , ok_(true)
             , owner_(nullptr)
             , log_(nullptr)
         {
@@ -135,6 +135,11 @@ namespace moon
 
     void component::start()
     {
+        if (component_imp_->start_)
+        {
+            return;
+        }
+
         component_imp_->start_ = true;
 
         for (auto& it : component_imp_->components_)
@@ -149,24 +154,6 @@ namespace moon
         for (auto& it : component_imp_->components_)
         {
             it.second->destroy();
-        }
-    }
-
-    void component::update()
-    {
-        if (!ok()) return;
-
-        if (!component_imp_->start_)
-        {
-            start();
-        }
-
-        for (auto& it : component_imp_->components_)
-        {
-            if (it.second->enable_update())
-            {
-                it.second->update();
-            }
         }
     }
 }

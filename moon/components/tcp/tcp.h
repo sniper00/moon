@@ -98,6 +98,7 @@ namespace moon
 
         bool close(uint32_t connid);
 
+        int64_t now();
     private:
         void init() override;
 

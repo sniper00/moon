@@ -9,6 +9,7 @@
 #include "components/tcp/tcp.h"
 #include "message.hpp"
 #include "router.h"
+#include "server.h"
 #include "lua_buffer.hpp"
 #include "lua_serialize.hpp"
 
@@ -25,12 +26,18 @@ lua_bind::~lua_bind()
 {
 }
 
-const lua_bind & lua_bind::bind_timer(moon::lua_timer* t) const
+const lua_bind & lua_bind::bind_timer(lua_service* s) const
 {
-    lua.set_function("repeated", &moon::lua_timer::repeat, t);
-    lua.set_function("remove_timer", &moon::lua_timer::remove, t);
-    lua.set_function("pause_timer", &moon::lua_timer::stop_all_timer, t);
-    lua.set_function("start_all_timer", &moon::lua_timer::start_all_timer, t);
+    lua.set_function("repeated", [s](int32_t duration, int32_t times) 
+    { 
+        auto& timer = s->get_worker()->timer();
+        return timer.repeat(duration, times, s->id());
+    });
+    lua.set_function("remove_timer", [s](timer_id_t timerid)
+    {
+        auto& timer = s->get_worker()->timer();
+        timer.remove(timerid);
+    });
     return *this;
 }
 
@@ -179,23 +186,17 @@ const lua_bind & lua_bind::bind_message() const
 const lua_bind& lua_bind::bind_service(lua_service* s) const
 {
     auto router_ = s->get_router();
+    auto server_ = s->get_server();
 
     lua.set("null", (void*)(router_));
 
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
-    lua.set_function("send_cache", &lua_service::send_cache, s);
-    lua.set_function("make_cache", &lua_service::make_cache, s);
+    lua.set_function("send_prepare", &lua_service::send_prepare, s);
+    lua.set_function("prepare", &lua_service::prepare, s);
     lua.set_function("get_tcp", &lua_service::get_tcp, s);
     lua.set_function("remove_component", &lua_service::remove, s);
-    lua.set_function("set_init", &lua_service::set_init, s);
-    lua.set_function("set_start", &lua_service::set_start, s);
-    lua.set_function("set_exit", &lua_service::set_exit, s);
-    lua.set_function("set_dispatch", &lua_service::set_dispatch, s);
-    lua.set_function("set_destroy", &lua_service::set_destroy, s);
-    lua.set_function("set_on_timer", &lua_service::set_on_timer, s);
-    lua.set_function("set_remove_timer", &lua_service::set_remove_timer, s);
-    lua.set_function("register_command", &lua_service::register_command, s);
+    lua.set_function("set_cb", &lua_service::set_callback, s);
     lua.set_function("memory_use", &lua_service::memory_use, s);
     lua.set_function("send", &router::send, router_);
     lua.set_function("new_service", &router::new_service, router_);
@@ -207,8 +208,8 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_unique_service", &router::set_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", [router_](const std::string& key) { return *router_->get_env(key); });
-    lua.set_function("set_loglevel", [router_](string_view_t s) { router_->logger()->set_level(s); });
-    lua.set_function("abort", [router_]() { router_->stop_server(); });
+    lua.set_function("set_loglevel",(void(moon::log::*)(string_view_t))&log::set_level,router_->logger());
+    lua.set_function("abort", &server::stop, server_);
     return *this;
 }
 

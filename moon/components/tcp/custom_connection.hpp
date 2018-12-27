@@ -66,7 +66,7 @@ namespace moon
 
                 //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, moon::to_hex_string(string_view_t{ (char*)buffer_.data(), bytes_transferred }, " ").data(), "");
 
-                last_recv_time_ = std::time(nullptr);
+                last_recv_time_ = now() / 1000;
                 restore_buffer_offset();
                 response_msg_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
                 handle_read_request();

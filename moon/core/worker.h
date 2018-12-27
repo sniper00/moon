@@ -3,9 +3,11 @@
 #include "asio.hpp"
 #include "common/concurrent_queue.hpp"
 #include "common/spinlock.hpp"
+#include "worker_timer.hpp"
 
 namespace moon
 {
+    class server;
     class router;
 
     class worker
@@ -15,7 +17,7 @@ namespace moon
 
         friend class server;
 
-        explicit worker(router* r);
+        explicit worker(server* srv, router* r, int32_t id);
 
         ~worker();
 
@@ -25,19 +27,17 @@ namespace moon
 
         void remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed = false);
 
-        asio::io_service& io_service();
+        asio::io_context& io_context();
 
-        int32_t workerid() const;
+        int32_t id() const;
 
-        uint32_t servicenum() const;
+        size_t size() const;
 
         uint32_t make_serviceid();
 
-        void add_service(service_ptr_t&& s);
+        void add_service(service_ptr_t&& s, uint32_t creatorid, int32_t responseid);
 
         void send(message_ptr_t&& msg);
-
-        void workerid(int32_t id);
 
         void shared(bool v);
 
@@ -46,6 +46,12 @@ namespace moon
         service* find_service(uint32_t serviceid) const;
 
         void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
+
+        uint32_t prepare(const moon::buffer_ptr_t & buf);
+
+        void send_prepare(uint32_t sender, uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
+    
+        worker_timer& timer();
     private:
         void run();
 
@@ -63,22 +69,23 @@ namespace moon
     private:
         void start();
 
-        void update();
+        void post_update();
 
-        void handle_one(service* ser, message_ptr_t&& msg);
+        void handle_one(service*& ser, message_ptr_t&& msg);
 
         void register_commands();
+
+        void update();
     private:
         //To prevent post too many update event
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
         std::atomic<state> state_;
         std::atomic_bool shared_;
-        int32_t workerid_;
         std::atomic<uint16_t> serviceuid_;
-        std::atomic<uint32_t> servicenum_;
-
+        int32_t workerid_;
         int64_t work_time_;
         router*  router_;
+        server*  server_;
         std::thread thread_;
         asio::io_context io_ctx_;
         asio::executor_work_guard<asio::io_context::executor_type> work_;
@@ -90,6 +97,13 @@ namespace moon
 
         using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
         std::unordered_map<std::string, command_hander_t> commands_;
+
+        worker_timer timer_;
+
+        uint32_t prepare_uuid_;
+        std::unordered_map<uint32_t, moon::buffer_ptr_t> prepares_;
+
+        std::vector<uint32_t> will_start_;
     };
 };
 

@@ -1,5 +1,6 @@
 #include "lua_service.h"
 #include "message.hpp"
+#include "server.h"
 #include "router.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
@@ -42,15 +43,6 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
     }
 }
 
-void lua_service::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
-{
-    auto params = moon::split<std::string>(cmd, ".");
-    if (auto iter = commands_.find(params[2]); iter != commands_.end())
-    {
-        get_router()->make_response(sender, "", iter->second(params), responseid);
-    }
-}
-
 const fs::path& lua_service::work_path()
 {
     static auto current_path = fs::current_path();
@@ -58,9 +50,7 @@ const fs::path& lua_service::work_path()
 }
 
 lua_service::lua_service()
-    :error_(true)
-    , lua_(sol::default_at_panic, lalloc, this)
-    , cache_uuid_(0)
+    :lua_(sol::default_at_panic, lalloc, this)
 {
 }
 
@@ -102,96 +92,17 @@ moon::tcp * lua_service::get_tcp(const std::string& protocol)
     return ((p != nullptr) ? p.get() : nullptr);
 }
 
-uint32_t lua_service::make_cache(const moon::buffer_ptr_t & buf)
+uint32_t lua_service::prepare(const moon::buffer_ptr_t & buf)
 {
-    auto iter = caches_.emplace(cache_uuid_++, buf);
-    if (iter.second)
-    {
-        return iter.first->first;
-    }
-    return 0;
+    return worker_->prepare(buf);
 }
 
-void lua_service::send_cache(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
+void lua_service::send_prepare(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
 {
-    auto iter = caches_.find(cacheid);
-    if (iter == caches_.end())
-    {
-        CONSOLE_DEBUG(logger(), "send_cache failed, can not find cache data id %s", cacheid);
-        return;
-    }
-
-    get_router()->send(id(), receiver, iter->second, header, responseid, type);
+    worker_->send_prepare(id(), receiver, cacheid, header, responseid, type);
 }
 
-void lua_service::set_init(sol_function_t f)
-{
-    init_ = f;
-}
-
-void lua_service::set_start(sol_function_t f)
-{
-    start_ = f;
-}
-
-void lua_service::set_dispatch(sol_function_t f)
-{
-    dispatch_ = f;
-}
-
-void lua_service::set_exit(sol_function_t f)
-{
-    exit_ = f;
-}
-
-void lua_service::set_destroy(sol_function_t f)
-{
-    destroy_ = f;
-}
-
-void lua_service::set_on_timer(sol_function_t f)
-{
-    timer_.set_on_timer([this, f](timer_id_t tid) {
-        auto result = f(tid);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-        }
-    });
-}
-
-void lua_service::set_remove_timer(sol_function_t f)
-{
-    timer_.set_remove_timer([this, f](timer_id_t tid) {
-        auto result = f(tid);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-        }
-    });
-}
-
-void lua_service::register_command(const std::string & command, sol_function_t f)
-{
-    auto hander = [this, command, f](const std::vector<std::string>& params) {
-        auto result = f(params);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-            return std::string(err.what());
-        }
-        else
-        {
-            return result.get<std::string>();
-        }
-    };
-    commands_.try_emplace(command, hander);
-}
-
-bool lua_service::init(const string_view_t& config)
+bool lua_service::init(string_view_t config)
 {
     service_config<lua_service> scfg;
     if (!scfg.parse(this, config))
@@ -217,7 +128,7 @@ bool lua_service::init(const string_view_t& config)
             lua_bind.bind_service(this)
                 .bind_log(logger())
                 .bind_util()
-                .bind_timer(&timer_)
+                .bind_timer(this)
                 .bind_message()
                 .bind_socket()
                 .bind_http();
@@ -284,20 +195,16 @@ bool lua_service::init(const string_view_t& config)
             {
                 if (auto result = init_(config); result.valid())
                 {
-                    error_ = (!(bool)result);
+                    ok((bool)result);
                 }
                 else
                 {
-                    error_ = true;
+                    ok(false);
                     sol::error err = result;
                     CONSOLE_ERROR(logger(), "%s", err.what());
                 }
             }
-            else
-            {
-                error_ = false;
-            }
-            return  !error_;
+            return ok();
         }
         catch (std::exception& e)
         {
@@ -309,9 +216,8 @@ bool lua_service::init(const string_view_t& config)
 
 void lua_service::start()
 {
+    if (!ok()) return;
     service::start();
-
-    if (error_) return;
     try
     {
         if (start_.valid())
@@ -332,7 +238,7 @@ void lua_service::start()
 
 void lua_service::dispatch(message* msg)
 {
-    if (error_) return;
+    if (!ok()) return;
 
     try
     {
@@ -347,7 +253,7 @@ void lua_service::dispatch(message* msg)
             else
             {
                 msg->set_responseid(-msg->responseid());
-                get_router()->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
+                router_->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
             }
         }
     }
@@ -357,94 +263,127 @@ void lua_service::dispatch(message* msg)
     }
 }
 
-void lua_service::update()
+void lua_service::on_timer(uint32_t timerid, bool remove)
 {
-    service::update();
-
-    if (error_) return;
+    if (!ok()) return;
     try
     {
-        if (auto n = timer_.update(); n > 1000)
+        auto result = on_timer_(timerid, remove);
+        if (!result.valid())
         {
-            CONSOLE_WARN(logger(), "service(%s:%u) timer update takes too long: %" PRId64 "ms", name().data(), id(), n);
-        }
-        if (cache_uuid_ != 0)
-        {
-            cache_uuid_ = 0;
-            caches_.clear();
+            sol::error err = result;
+            CONSOLE_ERROR(logger(), "%s", err.what());
         }
     }
     catch (std::exception& e)
     {
-        error(moon::format("lua_service::update:\n%s\n", e.what()));
+        error(moon::format("lua_service::on_timer:\n%s\n", e.what()));
     }
 }
 
 void lua_service::exit()
 {
-    if (!error_)
+    if (!ok()) return;
+
+    try
     {
-        try
+        if (exit_.valid())
         {
-            if (exit_.valid())
+            auto result = exit_();
+            if (!result.valid())
             {
-                auto result = exit_();
-                if (!result.valid())
-                {
-                    sol::error err = result;
-                    CONSOLE_ERROR(logger(), "%s", err.what());
-                }
-                return;
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
             }
-        }
-        catch (std::exception& e)
-        {
-            error(moon::format("lua_service::exit :%s\n", e.what()));
+            return;
         }
     }
+    catch (std::exception& e)
+    {
+        error(moon::format("lua_service::exit :%s\n", e.what()));
+    }
+
     service::exit();
 }
 
 void lua_service::destroy()
 {
-    if (!error_)
+    if (!ok()) return;
+
+    try
     {
-        try
+        if (destroy_.valid())
         {
-            if (destroy_.valid())
+            auto result = destroy_();
+            if (!result.valid())
             {
-                auto result = destroy_();
-                if (!result.valid())
-                {
-                    sol::error err = result;
-                    CONSOLE_ERROR(logger(), "%s", err.what());
-                }
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
             }
         }
-        catch (std::exception& e)
-        {
-            error(moon::format("lua_service::destroy :%s\n", e.what()));
-        }
     }
+    catch (std::exception& e)
+    {
+        error(moon::format("lua_service::destroy :%s\n", e.what()));
+    }
+
     service::destroy();
 }
 
 void lua_service::error(const std::string & msg)
 {
-    error_ = true;
     std::string backtrace = lua_traceback(lua_.lua_state());
     CONSOLE_ERROR(logger(), "%s %s", name().data(), (msg + backtrace).data());
+    destroy();
     removeself(true);
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
-        get_router()->stop_server();
+        server_->stop();
     }
 }
 
 size_t lua_service::memory_use()
 {
     return  mem;
+}
+
+void lua_service::set_callback(char c, sol_function_t f)
+{
+    switch (c)
+    {
+        case 'i':
+        {
+            init_ = f;
+            break;
+        }
+        case 's':
+        {
+            start_ = f;
+            break;
+        }
+        case 'm':
+        {
+            dispatch_ = f;
+            break;
+        }
+        case 'e':
+        {
+            exit_ = f;
+            break;
+        }
+        case 'd':
+        {
+            destroy_ = f;
+            break;
+        }
+        case 't':
+        {
+            on_timer_ = f;
+            break;
+            break;
+        }
+    }
 }
 
 

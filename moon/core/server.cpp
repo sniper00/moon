@@ -5,6 +5,7 @@ namespace moon
 {
     server::server()
         :state_(state::init)
+        , now_(0)
         , workers_()
         , default_log_()
         , router_(workers_, &default_log_)
@@ -23,16 +24,13 @@ namespace moon
 
         logger()->init(logpath);
 
-        router_.set_stop([this]() {
-            stop();
-        });
+        router_.set_server(this);
 
         CONSOLE_INFO(logger(), "INIT with %d workers.", worker_num);
 
         for (int i = 0; i != worker_num; i++)
         {
-            auto& w = workers_.emplace_back(std::make_unique<worker>(&router_));
-            w->workerid(i + 1);
+            workers_.emplace_back(std::make_unique<worker>(this, &router_,i+1));
         }
 
         for (auto& w : workers_)
@@ -56,14 +54,14 @@ namespace moon
             w->start();
         }
 
-        int64_t previous_tick = time::millsecond();
+        int64_t previous_tick = time::steady_millsecond();
         int64_t sleep_duration = 0;
         while (true)
         {
-            auto now = time::millsecond();
-            auto diff = (now - previous_tick);
+            now_ = time::steady_millsecond();
+            auto diff = (now_ - previous_tick);
             diff = (diff < 0) ? 0 : diff;
-            previous_tick = now;
+            previous_tick = now_;
 
             size_t stoped_worker_num = 0;
 
@@ -73,7 +71,7 @@ namespace moon
                 {
                     stoped_worker_num++;
                 }
-                w->update();
+                w->post_update();
             }
 
             if (stoped_worker_num == workers_.size())
@@ -138,9 +136,15 @@ namespace moon
         default_log_.wait();
         state_.store(state::exited);
     }
+
     bool server::stoped()
     {
         return state_.load() == state::exited;
+    }
+
+    int64_t server::now()
+    {
+        return now_;
     }
 }
 

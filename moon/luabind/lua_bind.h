@@ -2,7 +2,6 @@
 #include <string>
 #include "sol.hpp"
 #include "common/noncopyable.hpp"
-#include "lua_timer.hpp"
 
 class lua_service;
 
@@ -18,7 +17,7 @@ public:
     explicit lua_bind(sol::table& lua);
     ~lua_bind();
 
-    const lua_bind& bind_timer(moon::lua_timer* t) const;
+    const lua_bind& bind_timer(lua_service* s) const;
 
     const lua_bind& bind_util() const;
 

@@ -103,7 +103,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = std::time(nullptr);
+                last_recv_time_ = now()/1000;
                 net2host(header_);
 
                 bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
