@@ -12,7 +12,7 @@ namespace moon
     {
         rapidjson::Document doc;
     public:
-        bool parse(TService* s, const string_view_t& config)
+        bool parse(TService* s,  string_view_t config)
         {
             doc.Parse(config.data(), config.size());
             if (doc.HasParseError() || !doc.IsObject())
@@ -26,8 +26,8 @@ namespace moon
             //parse network config
             for (auto& v : doc.GetObject())
             {
-                auto name = rapidjson::detail::get_value<std::string>(&v.name);
-                if (name.find("network") != std::string::npos)
+                auto name = rapidjson::detail::get_value<std::string_view>(&v.name);
+                if (name.find("network") != std::string_view::npos)
                 {
                     auto timeout = rapidjson::get_value<int32_t>(&v.value, "timeout", 0);
                     auto ip = rapidjson::get_value<std::string>(&v.value, "ip");

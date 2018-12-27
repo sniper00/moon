@@ -2,7 +2,6 @@
 #include "service.h"
 #include "common/log.hpp"
 #include "luabind/lua_bind.h"
-#include "luabind/lua_timer.hpp"
 #include "components/tcp/tcp.h"
 #include "common/buffer.hpp"
 
@@ -41,7 +40,7 @@ public:
 
     static const fs::path& work_path();
 private:
-    bool init(const moon::string_view_t& config) override;
+    bool init(moon::string_view_t config) override;
 
     void start()  override;
 
@@ -61,7 +60,6 @@ public:
     size_t mem_limit = 0;
     size_t mem_report = 8 * 1024 * 1024;
 private:
-    bool error_;
     sol::state lua_;
     sol_function_t init_;
     sol_function_t start_;

@@ -2,7 +2,6 @@
 #include <string>
 #include "sol.hpp"
 #include "common/noncopyable.hpp"
-#include "lua_timer.hpp"
 
 class lua_service;
 

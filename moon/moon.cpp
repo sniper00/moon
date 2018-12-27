@@ -146,15 +146,15 @@ int main(int argc, char*argv[])
             if (!c->startup.empty())
             {
                 MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, bool shareth, int workerid, const std::string& config)->uint32_t {
-                    return  router_->new_service(service_type, unique, shareth, workerid, config);
+                module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, int workerid, const std::string& config)->uint32_t {
+                    return  router_->new_service(service_type, config, unique, workerid, 0,0);
                 });
                 lua.script_file(c->startup);
             }
 
             for (auto&s : c->services)
             {
-                MOON_CHECK(0 != router_->new_service(s.type, s.unique, s.shared, s.threadid, s.config), "new_service failed");
+                MOON_CHECK(0 != router_->new_service(s.type, s.config, s.unique, s.threadid, 0,0), "new_service failed");
             }
             server_->run();
         }

@@ -28,17 +28,10 @@ namespace moon
         return workers_.size();
     }
 
-    uint32_t router::new_service(const std::string & service_type, bool unique, bool shared, int32_t workerid, const string_view_t& config)
+    uint32_t router::new_service(const std::string & service_type, const string_view_t& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
     {
         auto iter = regservices_.find(service_type);
-        if (iter == regservices_.end())
-        {
-            CONSOLE_ERROR(logger(), "new service failed:service type[%s] was not registered", service_type.data());
-            return 0;
-        }
-
-        auto s = iter->second();
-
+        MOON_DCHECK(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
         worker* wk;
         if (workerid_valid(workerid))
         {
@@ -55,14 +48,14 @@ namespace moon
         {
             if (counter >= worker::MAX_SERVICE_NUM)
             {
-                CONSOLE_ERROR(logger(), "new service failed: can not get more service id.worker[%d] servicenum[%u].", wk->workerid(), wk->servicenum());
+                CONSOLE_ERROR(logger(), "new service failed: can not get more service id.worker[%d] servicenum[%u].", wk->id(), wk->size());
                 return 0;
             }
             serviceid = wk->make_serviceid();
             ++counter;
         } while (!try_add_serviceid(serviceid));
 
-        wk->shared(shared);
+        auto s = iter->second();
         s->set_id(serviceid);
         s->set_unique(unique);
         s->set_server_context(server_, this, wk);
@@ -70,7 +63,11 @@ namespace moon
         {
             if (!unique || unique_services_.set(s->name(), s->id()))
             {
-                wk->add_service(std::move(s));
+                wk->add_service(std::move(s), creatorid, responseid);
+                if (workerid != 0)
+                {
+                    wk->shared(false);
+                }
                 return serviceid;
             }
         }
@@ -227,18 +224,22 @@ namespace moon
 
     worker* router::next_worker()
     {
-        int32_t  id = 0;
-        for (uint8_t i = 0; i < workers_.size(); i++)
+        int32_t  n = next_workerid_.fetch_add(1);
+        std::vector<int32_t> free_worker;
+        for (auto& w : workers_)
         {
-            id = next_workerid_.fetch_add(1);
-            id %= workers_.size();
-            auto& w = workers_[id];
-            if (!w->shared())
-                continue;
-            return w.get();
+            if (w->shared())
+            {
+                free_worker.push_back(w->id()-1);
+            }
         }
-
-        return workers_[id].get();
+        if (!free_worker.empty())
+        {
+            auto wkid = free_worker[n%free_worker.size()];
+            return workers_[wkid].get();
+        }
+        n %= workers_.size();
+        return workers_[n].get();
     }
 
     bool router::has_serviceid(uint32_t serviceid) const
@@ -267,7 +268,7 @@ namespace moon
     asio::io_context & router::get_io_context(uint32_t serviceid)
     {
         int32_t workerid = worker_id(serviceid);
-        return workers_[workerid - 1]->io_service();
+        return workers_[workerid - 1]->io_context();
     }
 
     void router::set_server(server * sv)

@@ -30,8 +30,7 @@ namespace moon
 
         for (int i = 0; i != worker_num; i++)
         {
-            auto& w = workers_.emplace_back(std::make_unique<worker>(this, &router_));
-            w->workerid(i + 1);
+            workers_.emplace_back(std::make_unique<worker>(this, &router_,i+1));
         }
 
         for (auto& w : workers_)

@@ -50,8 +50,7 @@ const fs::path& lua_service::work_path()
 }
 
 lua_service::lua_service()
-    :error_(true)
-    , lua_(sol::default_at_panic, lalloc, this)
+    :lua_(sol::default_at_panic, lalloc, this)
 {
 }
 
@@ -103,7 +102,7 @@ void lua_service::send_prepare(uint32_t receiver, uint32_t cacheid, const string
     worker_->send_prepare(id(), receiver, cacheid, header, responseid, type);
 }
 
-bool lua_service::init(const string_view_t& config)
+bool lua_service::init(string_view_t config)
 {
     service_config<lua_service> scfg;
     if (!scfg.parse(this, config))
@@ -196,20 +195,16 @@ bool lua_service::init(const string_view_t& config)
             {
                 if (auto result = init_(config); result.valid())
                 {
-                    error_ = (!(bool)result);
+                    ok((bool)result);
                 }
                 else
                 {
-                    error_ = true;
+                    ok(false);
                     sol::error err = result;
                     CONSOLE_ERROR(logger(), "%s", err.what());
                 }
             }
-            else
-            {
-                error_ = false;
-            }
-            return  !error_;
+            return ok();
         }
         catch (std::exception& e)
         {
@@ -221,9 +216,8 @@ bool lua_service::init(const string_view_t& config)
 
 void lua_service::start()
 {
+    if (!ok()) return;
     service::start();
-
-    if (error_) return;
     try
     {
         if (start_.valid())
@@ -244,7 +238,7 @@ void lua_service::start()
 
 void lua_service::dispatch(message* msg)
 {
-    if (error_) return;
+    if (!ok()) return;
 
     try
     {
@@ -271,7 +265,7 @@ void lua_service::dispatch(message* msg)
 
 void lua_service::on_timer(uint32_t timerid, bool remove)
 {
-    if (error_) return;
+    if (!ok()) return;
     try
     {
         auto result = on_timer_(timerid, remove);
@@ -289,58 +283,58 @@ void lua_service::on_timer(uint32_t timerid, bool remove)
 
 void lua_service::exit()
 {
-    if (!error_)
+    if (!ok()) return;
+
+    try
     {
-        try
+        if (exit_.valid())
         {
-            if (exit_.valid())
+            auto result = exit_();
+            if (!result.valid())
             {
-                auto result = exit_();
-                if (!result.valid())
-                {
-                    sol::error err = result;
-                    CONSOLE_ERROR(logger(), "%s", err.what());
-                }
-                return;
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
             }
-        }
-        catch (std::exception& e)
-        {
-            error(moon::format("lua_service::exit :%s\n", e.what()));
+            return;
         }
     }
+    catch (std::exception& e)
+    {
+        error(moon::format("lua_service::exit :%s\n", e.what()));
+    }
+
     service::exit();
 }
 
 void lua_service::destroy()
 {
-    if (!error_)
+    if (!ok()) return;
+
+    try
     {
-        try
+        if (destroy_.valid())
         {
-            if (destroy_.valid())
+            auto result = destroy_();
+            if (!result.valid())
             {
-                auto result = destroy_();
-                if (!result.valid())
-                {
-                    sol::error err = result;
-                    CONSOLE_ERROR(logger(), "%s", err.what());
-                }
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
             }
         }
-        catch (std::exception& e)
-        {
-            error(moon::format("lua_service::destroy :%s\n", e.what()));
-        }
     }
+    catch (std::exception& e)
+    {
+        error(moon::format("lua_service::destroy :%s\n", e.what()));
+    }
+
     service::destroy();
 }
 
 void lua_service::error(const std::string & msg)
 {
-    error_ = true;
     std::string backtrace = lua_traceback(lua_.lua_state());
     CONSOLE_ERROR(logger(), "%s %s", name().data(), (msg + backtrace).data());
+    destroy();
     removeself(true);
     if (unique())
     {

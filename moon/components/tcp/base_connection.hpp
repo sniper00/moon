@@ -33,22 +33,22 @@ namespace moon
         int32_t responseid;
     };
 
-	class tcp;
+    class tcp;
 
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
     public:
         using socket_t = asio::ip::tcp::socket;
 
-		using message_handler_t = std::function<void(const message_ptr_t&)>;
+        using message_handler_t = std::function<void(const message_ptr_t&)>;
 
-		template <typename... Args>
+        template <typename... Args>
         explicit base_connection(tcp* t, Args&&... args)
             :sending_(false)
             , frame_flag_(frame_enable_flag::none)
             , logic_error_(network_logic_error::ok)
             , id_(0)
-			, tcp_(t)
+            , tcp_(t)
             , last_recv_time_(0)
             , socket_(std::forward<Args>(args)...)
             , log_(nullptr)
@@ -124,10 +124,10 @@ namespace moon
                 socket_.close(ignore_ec);
             }
 
-			if (exit)
-			{
-				tcp_ = nullptr;
-			}
+            if (exit)
+            {
+                tcp_ = nullptr;
+            }
         }
 
         socket_t& socket()
@@ -183,8 +183,8 @@ namespace moon
     protected:
         virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
         {
-			(void)holder;
-			(void)buf;
+            (void)holder;
+            (void)buf;
         }
 
         void post_send()
@@ -248,18 +248,18 @@ namespace moon
                     content = moon::format("{\"addr\":\"%s\",\"logic_errcode\":%d,\"errmsg\":\"%s\"}"
                         , remote_addr_.data()
                         , lerrcode
-                        , (lerrmsg==nullptr?logic_errmsg(lerrcode): lerrmsg)
+                        , (lerrmsg == nullptr ? logic_errmsg(lerrcode) : lerrmsg)
                     );
-					msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
+                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
                 }
-				else if (e && e != asio::error::eof)
-				{
-					content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
-						, remote_addr_.data()
-						, e.value()
-						, e.message().data());
-					msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
-				}
+                else if (e && e != asio::error::eof)
+                {
+                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                        , remote_addr_.data()
+                        , e.value()
+                        , e.message().data());
+                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
+                }
 
                 msg->write_string(content);
                 msg->set_sender(id_);
@@ -272,19 +272,19 @@ namespace moon
                 msg->write_string(remote_addr_);
                 msg->set_sender(id_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
-				handle_message(std::move(msg));
+                handle_message(std::move(msg));
             }
         }
 
         template<typename TMsg>
-		void handle_message(TMsg&& msg)
-		{
-			if (nullptr != tcp_)
-			{
+        void handle_message(TMsg&& msg)
+        {
+            if (nullptr != tcp_)
+            {
                 msg->set_sender(id_);
-				tcp_->handle_message(std::forward<TMsg>(msg));
-			}
-		}
+                tcp_->handle_message(std::forward<TMsg>(msg));
+            }
+        }
 
         int64_t now()
         {
@@ -302,7 +302,7 @@ namespace moon
         frame_enable_flag frame_flag_;
         network_logic_error logic_error_;
         uint32_t id_;
-		tcp* tcp_;
+        tcp* tcp_;
         time_t last_recv_time_;
         socket_t socket_;
         handler_allocator read_allocator_;

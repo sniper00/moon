@@ -17,7 +17,7 @@ namespace moon
 
         friend class server;
 
-        explicit worker(server* srv, router* r);
+        explicit worker(server* srv, router* r, int32_t id);
 
         ~worker();
 
@@ -27,19 +27,17 @@ namespace moon
 
         void remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed = false);
 
-        asio::io_service& io_service();
+        asio::io_context& io_context();
 
-        int32_t workerid() const;
+        int32_t id() const;
 
-        uint32_t servicenum() const;
+        size_t size() const;
 
         uint32_t make_serviceid();
 
-        void add_service(service_ptr_t&& s);
+        void add_service(service_ptr_t&& s, uint32_t creatorid, int32_t responseid);
 
         void send(message_ptr_t&& msg);
-
-        void workerid(int32_t id);
 
         void shared(bool v);
 
@@ -83,10 +81,8 @@ namespace moon
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
         std::atomic<state> state_;
         std::atomic_bool shared_;
-        int32_t workerid_;
         std::atomic<uint16_t> serviceuid_;
-        std::atomic<uint32_t> servicenum_;
-
+        int32_t workerid_;
         int64_t work_time_;
         router*  router_;
         server*  server_;

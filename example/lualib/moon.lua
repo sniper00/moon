@@ -238,14 +238,24 @@ end
 ---@param shared boolean
 ---@param workerid int
 ---@return int
-function moon.new_service(stype, config, unique, shared, workerid)
+function moon.new_service(stype, config, unique, workerid)
     unique = unique or false
-    shared = shared or true
     workerid = workerid or 0
     config = json_encode(config)
-    return core.new_service(stype, unique, shared, workerid, config)
+    return core.new_service(stype, config, unique, workerid,  0, 0)
 end
 
+function moon.co_new_service(stype, config, unique, workerid)
+    unique = unique or false
+    workerid = workerid or 0
+    config = json_encode(config)
+    local responseid = make_response()
+    local id = core.new_service(stype, config, unique, workerid, sid_, responseid)
+    if 0 ~= id then
+        id = tonumber(co_yield())
+    end
+    return id
+end
 
 ---异步移除指定的服务
 ---param sid 服务id

@@ -7,7 +7,7 @@ namespace moon
         component_imp() noexcept
             :enable_update_(false)
             , start_(false)
-            , ok_(false)
+            , ok_(true)
             , owner_(nullptr)
             , log_(nullptr)
         {

@@ -40,7 +40,7 @@ namespace moon
     public:
         virtual void exit();
 
-        virtual bool init(const string_view_t& config) = 0;
+        virtual bool init(string_view_t config) = 0;
 
         virtual void dispatch(message* msg) = 0;
 
