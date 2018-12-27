@@ -19,6 +19,11 @@ namespace moon
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
 
+        static int64_t steady_millsecond()
+        {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        }
+
         //e. 2017-11-11 16:03:11.635
         static size_t milltimestamp(char* buf, size_t len)
         {
