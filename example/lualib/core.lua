@@ -88,13 +88,13 @@ end
 ---@param header string
 ---@param responseid int
 ---@param type int
-function core.send_cache(receiver,cacheid,header,responseid,type)
+function core.send_prepare(receiver,cacheid,header,responseid,type)
     ignore_param(receiver,cacheid,header,responseid,type)
 end
 
 ---@overload fun(buf:string)
 ---@param buf userdata
-function core.make_cache(buf)
+function core.prepare(buf)
     ignore_param(buf)
 end
 
