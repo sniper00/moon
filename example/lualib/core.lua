@@ -108,11 +108,6 @@ function core.remove_component(name)
     ignore_param(name)
 end
 
----@param cmd string
----@param callback fun(params:table)
-function core.register_command(cmd,callback)
-    ignore_param(cmd,callback)
-end
 
 ---@return int
 function core.memory_use()
