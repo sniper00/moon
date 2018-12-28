@@ -88,13 +88,13 @@ end
 ---@param header string
 ---@param responseid int
 ---@param type int
-function core.send_cache(receiver,cacheid,header,responseid,type)
+function core.send_prepare(receiver,cacheid,header,responseid,type)
     ignore_param(receiver,cacheid,header,responseid,type)
 end
 
 ---@overload fun(buf:string)
 ---@param buf userdata
-function core.make_cache(buf)
+function core.prepare(buf)
     ignore_param(buf)
 end
 
@@ -108,11 +108,6 @@ function core.remove_component(name)
     ignore_param(name)
 end
 
----@param cmd string
----@param callback fun(params:table)
-function core.register_command(cmd,callback)
-    ignore_param(cmd,callback)
-end
 
 ---@return int
 function core.memory_use()
