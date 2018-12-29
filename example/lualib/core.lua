@@ -17,16 +17,6 @@ function core.remove_timer(timerid)
     ignore_param(timerid)
 end
 
----Pause all timer.<br>
-function core.pause_timer()
-    -- body
-end
-
----Start all timer.<br>
-function core.start_all_timer()
-    -- body
-end
-
 ---Return current millsecond.<br>
 ---@return int
 function core.millsecond()
@@ -108,6 +98,11 @@ function core.remove_component(name)
     ignore_param(name)
 end
 
+---@param cmd string
+---@param callback fun(params:table)
+function core.register_command(cmd,callback)
+    ignore_param(cmd,callback)
+end
 
 ---@return int
 function core.memory_use()
