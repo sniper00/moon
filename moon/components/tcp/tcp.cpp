@@ -129,7 +129,7 @@ namespace moon
 
                 if (responseid != 0)
                 {
-                    make_response(std::to_string(conn->id()), "", responseid, PTYPE_TEXT);
+                    response(std::to_string(conn->id()), std::string_view{}, responseid, PTYPE_TEXT);
                 }
                 else
                 {
@@ -140,7 +140,7 @@ namespace moon
             {
                 if (responseid != 0)
                 {
-                    make_response(moon::format("tcp async_accept error %s(%d)", e.message().data(), e.value()), "error", responseid, PTYPE_ERROR);
+                    response(moon::format("tcp async_accept error %s(%d)", e.message().data(), e.value()), "error"sv, responseid, PTYPE_ERROR);
                 }
                 else
                 {
@@ -171,18 +171,18 @@ namespace moon
                     conn->set_id(make_connid());
                     conns_.emplace(conn->id(), conn);
                     conn->start(false);
-                    make_response(std::to_string(conn->id()), "", responseid, PTYPE_TEXT);
+                    response(std::to_string(conn->id()), std::string_view{}, responseid, PTYPE_TEXT);
                 }
                 else
                 {
-                    make_response("", moon::format("error async_connect %s(%d)", e.message().data(), e.value()), responseid, PTYPE_ERROR);
+                    response(std::string_view{}, moon::format("error async_connect %s(%d)", e.message().data(), e.value()), responseid, PTYPE_ERROR);
                 }
             });
         }
         catch (const asio::system_error& e)
         {
             asio::post(*io_ctx_, [this, responseid, self = shared_from_this(),e]() {
-                make_response(""
+                response(std::string_view{}
                     , moon::format("error async_connect error %s(%d)", e.what(), e.code().value())
                     , responseid, PTYPE_ERROR);
             });
@@ -214,18 +214,16 @@ namespace moon
     {
         do
         {
-            auto iter = conns_.find(connid);
-            if (iter == conns_.end())
-                break;
-
-            if (!iter->second->read(moon::read_request{ delim, n, responseid }))
+            if (auto iter = conns_.find(connid); iter != conns_.end())
             {
-                break;
+                if (iter->second->read(moon::read_request{ delim, n, responseid }))
+                {
+                    return;
+                }
             }
-            return;
         } while (0);
         io_context().post([this, responseid]() {
-            make_response("read a invlid socket", "closed", responseid, PTYPE_ERROR);
+            response("read an invalid socket", "closed", responseid, PTYPE_ERROR);
         });
     }
 
@@ -335,7 +333,7 @@ namespace moon
         }
         return id;
     }
-    void tcp::make_response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype)
+    void tcp::response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype)
     {
         if (0 == responseid)
             return;

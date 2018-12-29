@@ -10,7 +10,7 @@
 
 namespace moon
 {
-    worker::worker(server* srv, router* r, int32_t id)
+    worker::worker(server* srv, router* r, uint32_t id)
         : state_(state::init)
         , shared_(true)
         , serviceuid_(1)
@@ -49,9 +49,9 @@ namespace moon
 
         thread_ = std::thread([this]() {
             state_.store(state::ready, std::memory_order_release);
-            CONSOLE_INFO(router_->logger(), "WORKER-%d START", workerid_);
+            CONSOLE_INFO(router_->logger(), "WORKER-%u START", workerid_);
             io_ctx_.run();
-            CONSOLE_INFO(router_->logger(), "WORKER-%d STOP", workerid_);
+            CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
         while (state_.load(std::memory_order_acquire) != state::ready);
     }
@@ -110,11 +110,11 @@ namespace moon
             MOON_CHECK(res.second, "serviceid repeated");
             res.first->second->ok(true);
             will_start_.push_back(serviceid);
-            CONSOLE_INFO(router_->logger(), "[WORKER %d]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
+            CONSOLE_INFO(router_->logger(), "[WORKER %u]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
             
             if (0 != responseid)
             {
-                router_->make_response(creatorid, "", std::to_string(serviceid), responseid);
+                router_->response(creatorid, std::string_view{}, std::to_string(serviceid), responseid);
             }
         });
     }
@@ -134,9 +134,9 @@ namespace moon
                     router_->on_service_remove(serviceid);
                 }
 
-                auto response_content = moon::format(R"({"name":"%s","serviceid":%u})", s->name().data(), s->id());
-                router_->make_response(sender, "service destroy"sv, response_content, respid);
-                CONSOLE_INFO(router_->logger(), "[WORKER %d]service [%s:%u] destroy", id(), s->name().data(), s->id());
+                auto content = moon::format(R"({"name":"%s","serviceid":%u})", s->name().data(), s->id());
+                router_->response(sender, "service destroy"sv, content, respid);
+                CONSOLE_INFO(router_->logger(), "[WORKER %u]service [%s:%u] destroy", id(), s->name().data(), s->id());
                 services_.erase(serviceid);
 
                 string_view_t header{ "exit" };
@@ -155,7 +155,7 @@ namespace moon
             }
             else
             {
-                router_->make_response(sender, "worker::remove_service "sv,moon::format("service [%u] not found", serviceid), respid, PTYPE_ERROR);
+                router_->response(sender, "worker::remove_service "sv,moon::format("service [%u] not found", serviceid), respid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
@@ -198,7 +198,7 @@ namespace moon
         }
     }
 
-    int32_t worker::id() const
+    uint32_t worker::id() const
     {
         return workerid_;
     }
@@ -224,7 +224,7 @@ namespace moon
             {
                 if (auto iter = commands_.find(params[2]); iter != commands_.end())
                 {
-                    router_->make_response(sender, "", iter->second(params), responseid);
+                    router_->response(sender, std::string_view{}, iter->second(params), responseid);
                 }
                 break;
             }
@@ -317,7 +317,7 @@ namespace moon
             if (nullptr == ser)
             {
                 msg->set_responseid(-msg->responseid());
-                router_->make_response(msg->sender(), "worker::handle_one ", moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({msg->data(),msg->size()}).data()).data(), msg->responseid(), PTYPE_ERROR);
+                router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({msg->data(),msg->size()}).data()).data(), msg->responseid(), PTYPE_ERROR);
                 return;
             }
         }
@@ -357,7 +357,7 @@ namespace moon
     {
         if (!will_start_.empty())
         {
-            for (auto& sid : will_start_)
+            for (auto sid : will_start_)
             {
                 auto s = find_service(sid);
                 if (nullptr != s && !s->started())

@@ -253,7 +253,7 @@ void lua_service::dispatch(message* msg)
             else
             {
                 msg->set_responseid(-msg->responseid());
-                router_->make_response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
+                router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
             }
         }
     }

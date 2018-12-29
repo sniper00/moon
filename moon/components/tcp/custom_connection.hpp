@@ -100,7 +100,7 @@ namespace moon
                 buf->offset_writepos(-static_cast<int>(dszie - pos));
                 restore_write_offset_ = static_cast<int>(dszie - pos);
                 prew_read_offset_ = static_cast<int>(pos + delim.size());
-                make_response(response_msg_);
+                response(response_msg_);
             }
         }
 
@@ -123,7 +123,7 @@ namespace moon
                     buf->offset_writepos(-static_cast<int>(dszie - read_request_.size));
                     restore_write_offset_ = static_cast<int>(dszie - read_request_.size);
                     prew_read_offset_ = static_cast<int>(read_request_.size);
-                    make_response(response_msg_);
+                    response(response_msg_);
                     break;
                 }
                 else
@@ -169,11 +169,11 @@ namespace moon
 
             if (read_request_.responseid != 0)
             {
-                make_response(response_msg_, PTYPE_ERROR);
+                response(response_msg_, PTYPE_ERROR);
             }
         }
 
-        void make_response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
+        void response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
         {
             msg->set_type(mtype);
             msg->set_responseid(read_request_.responseid);
