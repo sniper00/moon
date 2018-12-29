@@ -72,7 +72,7 @@ namespace moon
 
         bool workerid_valid(uint32_t workerid) const
         {
-            return (workerid > 0 && workerid <= static_cast<int32_t>(workers_.size()));
+            return (workerid > 0 && workerid <= static_cast<uint32_t>(workers_.size()));
         }
 
         worker* get_worker(uint32_t workerid) const
