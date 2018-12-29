@@ -113,7 +113,7 @@ namespace moon
 
 		uint32_t make_connid();
 
-		void make_response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype);
+		void response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype);
 
 		connection_ptr_t create_connection();
     private:

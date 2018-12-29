@@ -17,7 +17,7 @@ namespace moon
 
         friend class server;
 
-        explicit worker(server* srv, router* r, int32_t id);
+        explicit worker(server* srv, router* r, uint32_t id);
 
         ~worker();
 
@@ -29,7 +29,7 @@ namespace moon
 
         asio::io_context& io_context();
 
-        int32_t id() const;
+        uint32_t id() const;
 
         size_t size() const;
 
@@ -82,7 +82,7 @@ namespace moon
         std::atomic<state> state_;
         std::atomic_bool shared_;
         std::atomic<uint16_t> serviceuid_;
-        int32_t workerid_;
+        uint32_t workerid_;
         int64_t work_time_;
         router*  router_;
         server*  server_;

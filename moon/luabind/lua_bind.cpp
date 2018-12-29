@@ -207,9 +207,10 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("unique_service", &router::get_unique_service, router_);
     lua.set_function("set_unique_service", &router::set_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
-    lua.set_function("get_env", [router_](const std::string& key) { return *router_->get_env(key); });
+    lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("set_loglevel",(void(moon::log::*)(string_view_t))&log::set_level,router_->logger());
     lua.set_function("abort", &server::stop, server_);
+    lua.set_function("now", &server::now, server_);
     return *this;
 }
 
