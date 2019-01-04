@@ -102,20 +102,41 @@ namespace moon
         return tmp;
     }
 
-    void worker::add_service(service_ptr_t&& s, uint32_t creatorid, int32_t responseid)
+    void worker::add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t responseid)
     {
-        post([this, s=std::move(s), creatorid, responseid]() mutable {
-            auto serviceid = s->id();
-            auto res = services_.try_emplace(serviceid, std::move(s));
-            MOON_CHECK(res.second, "serviceid repeated");
-            res.first->second->ok(true);
-            will_start_.push_back(serviceid);
-            CONSOLE_INFO(router_->logger(), "[WORKER %u]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
-            
+        post([this, s=std::move(s), config= std::move(config), creatorid, responseid]() mutable {
+            do
+            {
+                if (!s->init(config))
+                {
+                    break;
+                }
+
+                auto serviceid = s->id();
+                auto res = services_.try_emplace(serviceid, std::move(s));
+                if (!res.second)
+                {
+                    CONSOLE_ERROR(router_->logger(), "new service[%s] failed: serviceid repeated.", s->name().data());
+                    break;
+                }
+
+                res.first->second->ok(true);
+                will_start_.push_back(serviceid);
+                CONSOLE_INFO(router_->logger(), "[WORKER %u]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
+                if (0 != responseid)
+                {
+                    router_->response(creatorid, std::string_view{}, std::to_string(serviceid), responseid);
+                }
+                return;
+            } while (false);
+
+            router_->on_service_remove(s->id());
+            shared(services_.empty());
             if (0 != responseid)
             {
-                router_->response(creatorid, std::string_view{}, std::to_string(serviceid), responseid);
+                router_->response(creatorid, std::string_view{}, "0"sv, responseid);
             }
+            CONSOLE_ERROR(router_->logger(), "init service failed with config: %s", config.data());
         });
     }
 
@@ -125,10 +146,6 @@ namespace moon
             if (auto s =find_service(serviceid); nullptr != s)
             {
                 s->destroy();
-                if (services_.size() == 0)
-                {
-                    shared(true);
-                }
                 if (!crashed)
                 {
                     router_->on_service_remove(serviceid);
@@ -138,6 +155,8 @@ namespace moon
                 router_->response(sender, "service destroy"sv, content, respid);
                 CONSOLE_INFO(router_->logger(), "[WORKER %u]service [%s:%u] destroy", id(), s->name().data(), s->id());
                 services_.erase(serviceid);
+
+                if(services_.empty()) shared(true);
 
                 string_view_t header{ "exit" };
                 auto buf = message::create_buffer();
@@ -172,27 +191,31 @@ namespace moon
 
     void worker::send(message_ptr_t&& msg)
     {
-        if (mqueue_.push_back(std::move(msg)) == 1)
+        if (mq_.push_back(std::move(msg)) == 1)
         {
             post([this]() {
                 auto begin_time = server_->now();;
                 size_t count = 0;
-                if (mqueue_.size() != 0)
+                if (mq_.size() != 0)
                 {
                     service* ser = nullptr;
-                    swapqueue_.clear();
-                    mqueue_.swap(swapqueue_);
-                    count = swapqueue_.size();
-                    for (auto& msg : swapqueue_)
+                    swapmq_.clear();
+                    mq_.swap(swapmq_);
+                    count = swapmq_.size();
+                    for (auto& msg : swapmq_)
                     {
                         handle_one(ser, std::move(msg));
                     }
                 }
-                auto difftime = server_->now() - begin_time;
-                work_time_ += difftime;
-                if (difftime > 1000)
+
+                if (begin_time != 0)
                 {
-                    CONSOLE_WARN(router_->logger(), "worker handle cost %" PRId64 "ms queue size %zu", difftime, count);
+                    auto difftime = server_->now() - begin_time;
+                    work_time_ += difftime;
+                    if (difftime > 1000)
+                    {
+                        CONSOLE_WARN(router_->logger(), "worker handle cost %" PRId64 "ms queue size %zu", difftime, count);
+                    }
                 }
             });
         }

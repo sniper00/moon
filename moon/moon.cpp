@@ -33,7 +33,7 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
         svr->stop();
-        while (!svr->stoped())
+        while (svr->get_state()!=moon::state::exited)
         {
             std::this_thread::yield();
         }
@@ -109,7 +109,7 @@ int main(int argc, char*argv[])
 
             MOON_CHECK(directory::exists("config.json"), "can not found config file: config.json");
             moon::server_config_manger scfg;
-            MOON_CHECK(scfg.parse(moon::file::read_all("config.json",std::ios::binary|std::ios::in), sid), "failed");
+            MOON_CHECK(scfg.parse(moon::file::read_all("config.json", std::ios::binary | std::ios::in), sid), "failed");
             lua.open_libraries();
             lua.require("json", luaopen_rapidjson);
             lua.require("fs", luaopen_fs);
@@ -146,16 +146,22 @@ int main(int argc, char*argv[])
             if (!c->startup.empty())
             {
                 MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [c, &router_](const std::string& service_type, bool unique, int workerid, const std::string& config)->uint32_t {
-                    return  router_->new_service(service_type, config, unique, workerid, 0,0);
+                module.set_function("new_service", [c, &router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
+                    return  router_->new_service(service_type, config, unique, workerid, 0, 0);
                 });
                 lua.script_file(c->startup);
             }
 
+            size_t count = 0;
             for (auto&s : c->services)
             {
-                MOON_CHECK(0 != router_->new_service(s.type, s.config, s.unique, s.threadid, 0,0), "new_service failed");
+                if (s.unique) ++count;
+                MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new_service failed");
             }
+
+            //wait all configured unqiue service is created.
+            while ((server_->get_state() == moon::state::ready) && router_->unique_service_size() != count);
+
             server_->run();
         }
         catch (std::exception& e)

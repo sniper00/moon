@@ -116,7 +116,11 @@ static void register_lua_cfunction(sol::table& lua, lua_CFunction f, const char*
 
 const lua_bind & lua_bind::bind_util() const
 {
-    lua.set_function("millsecond", (&time::millsecond));
+    lua.set_function("second", time::second);
+    lua.set_function("millsecond", time::millisecond);
+    lua.set_function("microsecond", time::microsecond);
+    lua.set_function("time_offset", time::offset);
+
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
     lua.set_function("hash_string", [](const std::string& s) { return moon::hash_range(s.begin(), s.end()); });
     lua.set_function("hex_string", (&moon::hex_string));

@@ -225,7 +225,7 @@ function moon.sid()
     return sid_
 end
 
----创建一个新的服务,返回创建服务ID. 0表示服务创建失败<br>
+---创建一个新的服务<br>
 ---param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
 ---param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)<br>
 ---param unique 是否是唯一服务，唯一服务可以用moon.unique_service(name) 查询服务id<br>
@@ -237,7 +237,7 @@ end
 ---@param unique boolean
 ---@param shared boolean
 ---@param workerid int
----@return int
+---@return bool
 function moon.new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
@@ -245,16 +245,17 @@ function moon.new_service(stype, config, unique, workerid)
     return core.new_service(stype, config, unique, workerid,  0, 0)
 end
 
+---创建一个新的服务的协程封装，可以获得所创建的服务ID<br>
 function moon.co_new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
     config = json_encode(config)
     local responseid = make_response()
-    local id = core.new_service(stype, config, unique, workerid, sid_, responseid)
-    if 0 ~= id then
-        id = tonumber(co_yield())
+    local res = core.new_service(stype, config, unique, workerid, sid_, responseid)
+    if res then
+        res = tonumber(co_yield())
     end
-    return id
+    return res
 end
 
 ---异步移除指定的服务
