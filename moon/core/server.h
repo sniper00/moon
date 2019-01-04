@@ -30,7 +30,7 @@ namespace moon
 
         size_t workernum() const;
 
-        bool stoped();
+        state get_state();
 
         int64_t now();
     private:

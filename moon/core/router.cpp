@@ -28,7 +28,7 @@ namespace moon
         return workers_.size();
     }
 
-    uint32_t router::new_service(const std::string & service_type, string_view_t config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
+    bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
     {
         auto iter = regservices_.find(service_type);
         MOON_DCHECK(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
@@ -49,31 +49,23 @@ namespace moon
             if (counter >= worker::MAX_SERVICE_NUM)
             {
                 CONSOLE_ERROR(logger(), "new service failed: can not get more service id.worker[%d] servicenum[%u].", wk->id(), wk->size());
-                return 0;
+                return false;
             }
             serviceid = wk->make_serviceid();
             ++counter;
         } while (!try_add_serviceid(serviceid));
 
+        if (workerid != 0)
+        {
+            wk->shared(false);
+        }
+
         auto s = iter->second();
         s->set_id(serviceid);
         s->set_unique(unique);
         s->set_server_context(server_, this, wk);
-        if (s->init(config))
-        {
-            if (!unique || unique_services_.set(s->name(), s->id()))
-            {
-                wk->add_service(std::move(s), creatorid, responseid);
-                if (workerid != 0)
-                {
-                    wk->shared(false);
-                }
-                return serviceid;
-            }
-        }
-        on_service_remove(serviceid);
-        CONSOLE_ERROR(logger(), "init service failed with config: %s", std::string{ config.data(),config.size() }.data());
-        return 0;
+        wk->add_service(std::move(s), config, creatorid, responseid);
+        return true;
     }
 
     void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t responseid, bool crashed)
@@ -182,19 +174,23 @@ namespace moon
         {
             return 0;
         }
-
         uint32_t id = 0;
         unique_services_.try_get_value(name, id);
         return id;
     }
 
-    void router::set_unique_service(std::string name, uint32_t v)
+    bool router::set_unique_service(std::string name, uint32_t v)
     {
         if (name.empty())
         {
-            return;
+            return false;
         }
-        unique_services_.set(std::move(name), v);
+        return unique_services_.set(std::move(name), v);
+    }
+
+    size_t router::unique_service_size() const
+    {
+        return unique_services_.size();
     }
 
     log * router::logger() const

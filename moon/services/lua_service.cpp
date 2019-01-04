@@ -104,112 +104,103 @@ void lua_service::send_prepare(uint32_t receiver, uint32_t cacheid, const string
 
 bool lua_service::init(string_view_t config)
 {
-    service_config<lua_service> scfg;
-    if (!scfg.parse(this, config))
+    try
     {
-        return false;
-    }
+        service_config<lua_service> scfg;
+        MOON_CHECK(scfg.parse(this, config), "lua service init failed: parse config failed.");
+        auto luafile = scfg.get_value<std::string>("file");
+        MOON_CHECK(!luafile.empty(), "lua service init failed: config does not provide lua file.");
+        mem_limit = static_cast<size_t>(scfg.get_value<int64_t>("memlimit"));
 
-    auto luafile = scfg.get_value<std::string>("file");
-    if (luafile.empty())
-    {
-        CONSOLE_ERROR(logger(), "Lua service init failed,does not provide luafile config.");
-        return false;
-    }
+        lua_.open_libraries();
+        sol::table module = lua_.create_table();
+        lua_bind lua_bind(module);
+        lua_bind.bind_service(this)
+            .bind_log(logger())
+            .bind_util()
+            .bind_timer(this)
+            .bind_message()
+            .bind_socket()
+            .bind_http();
 
-    mem_limit = static_cast<size_t>(scfg.get_value<int64_t>("memlimit"));
+        lua_.require("fs", luaopen_fs);
+        lua_.require("seri", lua_serialize::open);
+        lua_.require("codecache", luaopen_cache);
+        lua_.require("json", luaopen_rapidjson);
 
-    {
-        try
+        lua_["package"]["loaded"]["moon_core"] = module;
+
+        auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
         {
-            lua_.open_libraries();
-            sol::table module = lua_.create_table();
-            lua_bind lua_bind(module);
-            lua_bind.bind_service(this)
-                .bind_log(logger())
-                .bind_util()
-                .bind_timer(this)
-                .bind_message()
-                .bind_socket()
-                .bind_http();
-
-            lua_.require("fs", luaopen_fs);
-            lua_.require("seri", lua_serialize::open);
-            lua_.require("codecache", luaopen_cache);
-            lua_.require("json", luaopen_rapidjson);
-
-            lua_["package"]["loaded"]["moon_core"] = module;
-
-            auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
+            cpaths.emplace_back("./clib");
+            std::string strpath;
+            strpath.append("package.cpath ='");
+            for (auto& v : cpaths)
             {
-                cpaths.emplace_back("./clib");
-                std::string strpath;
-                strpath.append("package.cpath ='");
-                for (auto& v : cpaths)
-                {
-                    strpath.append(v.data(), v.size());
-                    strpath.append(LUA_CPATH_STR);
-                }
-                strpath.append("'..package.cpath");
-                lua_.script(strpath);
+                strpath.append(v.data(), v.size());
+                strpath.append(LUA_CPATH_STR);
             }
+            strpath.append("'..package.cpath");
+            lua_.script(strpath);
+        }
 
-            auto paths = scfg.get_value<std::vector<std::string_view>>("path");
+        auto paths = scfg.get_value<std::vector<std::string_view>>("path");
+        {
+            paths.emplace_back("./lualib");
+            std::string strpath;
+            strpath.append("package.path ='");
+            for (auto& v : paths)
             {
-                paths.emplace_back("./lualib");
-                std::string strpath;
-                strpath.append("package.path ='");
-                for (auto& v : paths)
-                {
-                    strpath.append(v.data(), v.size());
-                    strpath.append(LUA_PATH_STR);
-                }
-                strpath.append("'..package.path");
-                lua_.script(strpath);
+                strpath.append(v.data(), v.size());
+                strpath.append(LUA_PATH_STR);
             }
+            strpath.append("'..package.path");
+            lua_.script(strpath);
+        }
 
-            if (!directory::exists(luafile))
+        if (!directory::exists(luafile))
+        {
+            paths.push_back("./");
+            std::string file;
+            for (auto& p : paths)
             {
-                paths.push_back("./");
-                std::string file;
-                for (auto& p : paths)
+                file = directory::find_file(fs::path(p).parent_path().string(), luafile);
+                if (!file.empty())
                 {
-                    file = directory::find_file(fs::path(p).parent_path().string(), luafile);
-                    if (!file.empty())
-                    {
-                        break;
-                    }
+                    break;
                 }
-                MOON_CHECK(directory::exists(file), moon::format("luafile %s not found", luafile.data()).data());
-                luafile = file;
             }
+            MOON_CHECK(directory::exists(file), moon::format("lua service init failed: luafile %s not found", luafile.data()).data());
+            luafile = file;
+        }
 
-            if (auto result = lua_.script_file(luafile);!result.valid())
+        lua_.script_file(luafile);
+
+        if (init_.valid())
+        {
+            if (auto result = init_(config); result.valid())
             {
+                ok((bool)result);
+                MOON_CHECK(ok(), moon::format("lua service init failed: return false.").data());
+            }
+            else
+            {
+                ok(false);
                 sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-                return false;
+                MOON_CHECK(false, moon::format("lua service init failed: %s.", err.what()).data());
             }
- 
-            if (init_.valid())
-            {
-                if (auto result = init_(config); result.valid())
-                {
-                    ok((bool)result);
-                }
-                else
-                {
-                    ok(false);
-                    sol::error err = result;
-                    CONSOLE_ERROR(logger(), "%s", err.what());
-                }
-            }
-            return ok();
         }
-        catch (std::exception& e)
+
+        if (unique())
         {
-            error(moon::format("lua_service::init\nfile:%s.\n%s\n", luafile.data(), e.what()));
+            MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
+
+        return true;
+    }
+    catch (std::exception& e)
+    {
+        error(e.what());
     }
     return false;
 }

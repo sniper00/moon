@@ -155,7 +155,7 @@ namespace moon
         size_t format_header(char* buf, LogLevel level) const
         {
             size_t offset = 0;
-            offset += time::milltimestamp(buf, 23);
+            offset += time::milltimestamp(time::now(), buf, 23);
             memcpy(buf + offset, " | ", 3);
             offset += 3;
             auto len = moon::uint64_to_str(moon::thread_id(), buf + offset);
@@ -165,8 +165,8 @@ namespace moon
                 memcpy(buf + offset, "      ", 6 - len);
                 offset += 6 - len;
             }
-            memcpy(buf + offset, to_string(level), 12);
-            offset += 12;
+            memcpy(buf + offset, to_string(level), 11);
+            offset += 11;
             return offset;
         }
 

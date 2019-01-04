@@ -24,7 +24,7 @@ namespace moon
         {
             base_connection_t::start(accepted, responseid);
             auto msg = message::create();
-            msg->write_string(remote_addr_);
+            msg->write_data(remote_addr_);
             msg->set_subtype(static_cast<uint8_t>(accepted ? socket_data_type::socket_accept : socket_data_type::socket_connect));
             handle_message(std::move(msg));
             read_header();

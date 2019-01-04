@@ -35,7 +35,7 @@ namespace moon
 
         uint32_t make_serviceid();
 
-        void add_service(service_ptr_t&& s, uint32_t creatorid, int32_t responseid);
+        void add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t responseid);
 
         void send(message_ptr_t&& msg);
 
@@ -92,8 +92,8 @@ namespace moon
         std::unordered_map<uint32_t, service_ptr_t> services_;
 
         using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock, std::vector>;
-        queue_t::container_type swapqueue_;
-        queue_t mqueue_;
+        queue_t mq_;
+        queue_t::container_type swapmq_;
 
         using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
         std::unordered_map<std::string, command_hander_t> commands_;

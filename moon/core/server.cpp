@@ -54,11 +54,11 @@ namespace moon
             w->start();
         }
 
-        int64_t previous_tick = time::steady_millsecond();
+        int64_t previous_tick = time::now();
         int64_t sleep_duration = 0;
         while (true)
         {
-            now_ = time::steady_millsecond();
+            now_ = time::now();
             auto diff = (now_ - previous_tick);
             diff = (diff < 0) ? 0 : diff;
             previous_tick = now_;
@@ -94,7 +94,8 @@ namespace moon
 
     void server::stop()
     {
-        if (state_.load() != state::ready)
+        auto state_ready = state::ready;
+        if (!state_.compare_exchange_strong(state_ready, state::stopping))
         {
             return;
         }
@@ -122,12 +123,6 @@ namespace moon
 
     void server::wait()
     {
-        auto state_ready = state::ready;
-        if (!state_.compare_exchange_strong(state_ready, state::stopping))
-        {
-            return;
-        }
-
         for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
         {
             (*iter)->wait();
@@ -137,9 +132,9 @@ namespace moon
         state_.store(state::exited);
     }
 
-    bool server::stoped()
+    state server::get_state()
     {
-        return state_.load() == state::exited;
+        return state_.load();
     }
 
     int64_t server::now()

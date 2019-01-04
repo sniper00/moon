@@ -33,7 +33,7 @@ namespace moon
 
         size_t workernum() const;
 
-        uint32_t new_service(const std::string& service_type,string_view_t config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid);
+        bool new_service(const std::string& service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid);
 
         void remove_service(uint32_t serviceid, uint32_t sender, int32_t respid, bool crashed = false);
 
@@ -53,7 +53,9 @@ namespace moon
 
         uint32_t get_unique_service(const std::string& name) const;
 
-        void set_unique_service(std::string name, uint32_t v);
+        bool set_unique_service(std::string name, uint32_t v);
+
+        size_t unique_service_size() const;
 
         log* logger() const;
 
