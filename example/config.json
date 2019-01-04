@@ -9,6 +9,7 @@
         "log": "log/#sid_#date.log",
         "services": [
             {
+                "unique": true,
                 "name": "network_example",
                 "file": "network_example.lua",
                 "network": {
@@ -24,6 +25,7 @@
                 }
             },
             {
+                "unique": true,
                 "name": "socket_example",
                 "file": "socket_example.lua",
                 "ip": "#inner_host",

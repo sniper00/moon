@@ -8,31 +8,46 @@ namespace moon
 {
     class time
     {
+        using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+        inline static time_point start_time_point_ = std::chrono::steady_clock::now();
+        inline static int64_t start_millsecond = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        inline static int64_t offset_ = 0;
     public:
         static int64_t second()
         {
             return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
 
-        static int64_t millsecond()
-        {
-            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        }
-
-        static int64_t steady_millsecond()
+        static int64_t millisecond()
         {
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
+        static int64_t microsecond()
+        {
+            return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        }
+
+        static void offset(int64_t v)
+        {
+            offset_ = v;
+        }
+
+        static int64_t now()
+        {
+            auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_point_);
+            return start_millsecond + diff.count() + offset_;
+        }
+
         //e. 2017-11-11 16:03:11.635
-        static size_t milltimestamp(char* buf, size_t len)
+        static size_t milltimestamp(int64_t t, char* buf, size_t len)
         {
             if (len < 23)
             {
                 return 0;
             }
 
-            auto mill = millsecond();
+            auto mill = t;
             time_t now = mill / 1000;
             std::tm m;
             moon::time::localtime(&now, &m);
@@ -56,12 +71,12 @@ namespace moon
 
         static time_t make_time(int year, int month, int day, int hour, int min, int sec)
         {
-            //assert(year >= 1990);
-            //assert(month>0 && month<=12);
-            //assert(day >0 && day <=31);
-            //assert(hour >=0 && hour <24);
-            //assert(min >=0 && min <60);
-            //assert(sec >= 0 && sec <60);
+            assert(year >= 1990);
+            assert(month>0 && month<=12);
+            assert(day >0 && day <=31);
+            assert(hour >=0 && hour <24);
+            assert(min >=0 && min <60);
+            assert(sec >= 0 && sec <60);
 
             tm _tm;
             _tm.tm_year = (year - 1900);
