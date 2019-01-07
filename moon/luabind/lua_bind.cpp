@@ -143,14 +143,6 @@ static void register_lua_print(sol::table& lua, moon::log* logger)
     lua_setglobal(lua.lua_state(), "print");
 }
 
-static void register_lua_cfunction(sol::table& lua, lua_CFunction f, const char* name)
-{
-    lua.push();
-    lua_pushcclosure(lua.lua_state(), f, 0);
-    lua_setfield(lua.lua_state(), -2, name);
-    lua_pop(lua.lua_state(), 1); /* pop table */
-}
-
 static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname, const char* name)
 {
     lua_getglobal(L, gname);
