@@ -1,5 +1,5 @@
 local moon = require("moon")
-local log = require("log")
+local log = require("moon.log")
 
 local test_case =
 {

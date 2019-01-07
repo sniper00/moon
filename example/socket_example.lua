@@ -1,6 +1,6 @@
 local moon = require("moon")
-local http_server = require("moon.http_server")
-local http_client = require("moon.http_client")
+local http_server = require("moon.net.http_server")
+local http_client = require("moon.net.http_client")
 
 -- http_server.header_max_len = 8192
 -- http_server.content_max_len = 8192
