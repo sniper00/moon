@@ -111,14 +111,14 @@ int main(int argc, char*argv[])
             moon::server_config_manger scfg;
             MOON_CHECK(scfg.parse(moon::file::read_all("config.json", std::ios::binary | std::ios::in), sid), "failed");
             lua.open_libraries();
-            lua.require("json", luaopen_rapidjson);
-            lua.require("fs", luaopen_fs);
 
             sol::table module = lua.create_table();
             lua_bind lua_bind(module);
             lua_bind.bind_log(server_->logger());
 
-            lua["package"]["loaded"]["moon_core"] = module;
+            lua_bind::registerlib(lua.lua_state(), "json", luaopen_rapidjson);
+            lua_bind::registerlib(lua.lua_state(), "fs", luaopen_fs);
+            lua_bind::registerlib(lua.lua_state(), "moon_core", module);
 
             router_->register_service("lua", []()->service_ptr_t {
                 return std::make_unique<lua_service>();

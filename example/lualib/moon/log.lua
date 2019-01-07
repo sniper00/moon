@@ -1,4 +1,4 @@
-local util = require("util")
+local util = require("base.util")
 local c = require("moon_core")
 local string_format     = string.format
 local string_len        = string.len

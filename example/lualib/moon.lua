@@ -1,5 +1,5 @@
 ---@class core
-local core = require("core")
+local core = require("moon.core")
 local json = require("json")
 local seri = require("seri")
 

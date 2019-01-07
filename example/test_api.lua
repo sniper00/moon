@@ -1,7 +1,7 @@
 local moon = require("moon")
-local log = require("log")
+local log = require("moon.log")
 local json = require("json")
-local util = require("util")
+local util = require("base.util")
 local seri = require("seri")
 local fs = require("fs")
 local test_assert = require("test_assert")
@@ -73,9 +73,12 @@ equal(type(timer.repeated) , "function")
 
 equal(type(moon.millsecond) , "function")
 equal(type(moon.sleep) , "function")
-equal(type(moon.hash_string) , "function")
-equal(type(moon.hex_string) , "function")
-equal(type(moon.new_table) , "function")
+equal(type(string.hash) , "function")
+equal(type(string.hex) , "function")
+equal(type(table.new) , "function")
+
+local nt = table.new(10,1)
+nt[1] = 10
 
 print("*********************api test ok**********************")
 

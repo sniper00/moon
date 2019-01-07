@@ -1,6 +1,6 @@
 local moon = require("moon")
 local seri = require("seri")
-local socket = require("moon.socket")
+local socket = require("moon.net.socket")
 
 local http_status_msg = {
 

@@ -123,12 +123,11 @@ bool lua_service::init(string_view_t config)
             .bind_socket()
             .bind_http();
 
-        lua_.require("fs", luaopen_fs);
-        lua_.require("seri", lua_serialize::open);
-        lua_.require("codecache", luaopen_cache);
-        lua_.require("json", luaopen_rapidjson);
-
-        lua_["package"]["loaded"]["moon_core"] = module;
+        lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
+        lua_bind::registerlib(lua_.lua_state(), "seri", lua_serialize::open);
+        lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
+        lua_bind::registerlib(lua_.lua_state(), "json", luaopen_rapidjson);
+        lua_bind::registerlib(lua_.lua_state(), "moon_core", module);
 
         auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
         {
