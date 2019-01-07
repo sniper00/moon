@@ -2,7 +2,7 @@
 
 do
     -------------------2 bytes len (big endian) protocol------------------------
-    local tcpserver = require("moon.tcpserver")
+    local tcpserver = require("moon.net.tcpserver")
 
     tcpserver.on("accept",function(sessionid, msg)
         print("accept ", sessionid, msg:bytes())
@@ -24,7 +24,7 @@ end
 
 do
 -------------------WEBSOCKET------------------------
-    local websocket = require("moon.websocket")
+    local websocket = require("moon.net.websocket")
 
     websocket.on("accept",function(sessionid, msg)
         print("wsaccept ", sessionid, msg:bytes())

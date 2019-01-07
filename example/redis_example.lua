@@ -1,6 +1,6 @@
 local moon = require("moon")
-local log = require("log")
-local redis_pool = require("moon.redispool")
+local log = require("moon.log")
+local redis_pool = require("moon.db.redispool")
 
 local function run_example()
     local pool = redis_pool.new()

@@ -1,6 +1,6 @@
 local moon = require("moon")
-local tcpserver = require("moon.tcpserver")
-local socket = require("moon.socket")
+local tcpserver = require("moon.net.tcpserver")
+local socket = require("moon.net.socket")
 local test_assert = require("test_assert")
 
 --------------------------SERVER-------------------------
