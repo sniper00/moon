@@ -26,6 +26,11 @@ local test_case =
         name = "test_call_sender",
         file = "test_call_sender.lua"
     }
+    ,
+    {
+        name = "test_redis",
+        file = "test_redis.lua"
+    }
 }
 
 local next_case = function ()

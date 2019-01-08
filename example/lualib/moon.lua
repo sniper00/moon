@@ -1,3 +1,10 @@
+require("base.io")
+require("base.os")
+require("base.string")
+require("base.table")
+require("base.util")
+require("base.class")
+
 ---@class core
 local core = require("moon.core")
 local json = require("json")

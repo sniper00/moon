@@ -133,6 +133,7 @@ static int my_lua_print(lua_State *L) {
         lua_pop(L, 1);  /* pop result */
     }
     logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() });
+    lua_pop(L, 1);  /* pop tostring */
     return 0;
 }
 
