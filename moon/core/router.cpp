@@ -114,7 +114,7 @@ namespace moon
         MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(msg->receiver());
-        MOON_CHECK(workerid_valid(id), "invalid message receiver serviceid.");
+        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %u",msg->receiver()).data());
         get_worker(id)->send(std::forward<message_ptr_t>(msg));
     }
 

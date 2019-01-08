@@ -337,7 +337,7 @@ namespace moon
     {
         if (0 == responseid)
             return;
-        response_msg_->set_receiver(parent_->id());
+        response_msg_->set_receiver(0);
         response_msg_->get_buffer()->clear();
         response_msg_->get_buffer()->write_back(data.data(), 0, data.size());
         response_msg_->set_header(header);

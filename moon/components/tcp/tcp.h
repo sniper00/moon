@@ -146,7 +146,7 @@ namespace moon
             msg->set_type(type_);
         }
 
-        msg->set_receiver(parent_->id());
+        msg->set_receiver(0);
 
         parent_->handle_message(std::forward<TMsg>(msg));
         if (t == PTYPE_ERROR || st == static_cast<uint8_t>(socket_data_type::socket_close))

@@ -236,7 +236,7 @@ void lua_service::dispatch(message* msg)
         if (!result.valid())
         {
             sol::error err = result;
-            if (msg->responseid() == 0)
+            if (msg->responseid() == 0 || msg->receiver() == 0)//socket mesage receiver==0
             {
                 CONSOLE_ERROR(logger(), "lua_service::dispatch:%s", err.what());
             }
