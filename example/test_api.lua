@@ -1,7 +1,6 @@
 local moon = require("moon")
 local log = require("moon.log")
 local json = require("json")
-local util = require("base.util")
 local seri = require("seri")
 local fs = require("fs")
 local test_assert = require("test_assert")
@@ -14,14 +13,13 @@ equal(log.LOG_WARN ,2)
 equal(log.LOG_INFO , 3)
 equal(log.LOG_DEBUG , 4)
 
-equal(type(util.checkbool) , "function")
-equal(type(util.checkint) , "function")
-equal(type(util.checknumber) , "function")
-equal(type(util.checktable) , "function")
+equal(type(checkbool) , "function")
+equal(type(checkint) , "function")
+equal(type(checknumber) , "function")
+equal(type(checktable) , "function")
 
-equal(type(util.class) , "function")
-equal(type(util.handler) , "function")
-equal(type(util.iskindof) , "function")
+equal(type(class) , "function")
+equal(type(iskindof) , "function")
 
 equal(type(moon.name) , "function")
 equal(type(moon.id) , "function")
@@ -87,16 +85,16 @@ moon.prepare("123")
 moon.prepare(seri.pack("1",2,3,{a=1,b=2},nil))
 
 
-local Base = util.class("Base")
+local Base = class("Base")
 function Base:ctor()
 end
 
-local Child = util.class("Child", Base)
+local Child = class("Child", Base)
 function Child:ctor()
 	Child.super.ctor(self)
 end
 
-local ChildB = util.class("ChildB", Base)
+local ChildB = class("ChildB", Base)
 function ChildB:ctor()
 	ChildB.super.ctor(self)
 end
@@ -104,10 +102,10 @@ end
 local c = Child.new()
 local cb = ChildB.new()
 
-equal(util.iskindof(c, "Child"),true)
-equal(util.iskindof(c, "Base"),true)
-equal(util.iskindof(c, "ChildB"),false)
-equal(util.iskindof(cb, "ChildB"),true)
+equal(iskindof(c, "Child"),true)
+equal(iskindof(c, "Base"),true)
+equal(iskindof(c, "ChildB"),false)
+equal(iskindof(cb, "ChildB"),true)
 
 local tmr = moon
 
