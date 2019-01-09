@@ -1,19 +1,10 @@
 local moon = require("moon")
 local redis_pool = require("moon.db.redispool")
-local log = require("moon.log")
 local test_assert = require("test_assert")
 
 local function run_test()
     local pool = redis_pool.new()
     test_assert.equal(pool:size(), 0)
-
-    local function check_error(ret,err)
-        if not ret then
-            print(err)
-            return
-        end
-        print(ret)
-    end
 
     moon.async(function()
         local redis,err = pool:spawn()

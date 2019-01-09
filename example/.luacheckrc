@@ -43,10 +43,12 @@ globals = {
     "spairs",
     "table.intersect",
     "table.difference",
+    "math.clamp",
     "iskindof",
     "class",
     "checknumber",
     "checkint",
     "checkbool",
-    "checktable"
+    "checktable",
+    "unused"
 }
