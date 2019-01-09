@@ -18,3 +18,7 @@ function checktable(value)
     if type(value) ~= "table" then value = {} end
     return value
 end
+
+function unused()
+    -- body
+end

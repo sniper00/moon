@@ -354,7 +354,7 @@ namespace moon
         {
         case PTYPE_SOCKET:
         {
-            conn = std::make_shared<moon_connection>(this, io_context());
+            conn = std::make_shared<moon_connection>(frame_flag_, this, io_context());
             break;
         }
         case PTYPE_TEXT:
@@ -371,7 +371,6 @@ namespace moon
             break;
         }
         conn->logger(this->logger());
-        conn->set_enable_frame(frame_flag_);
         return conn;
     }
 }
