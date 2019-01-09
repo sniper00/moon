@@ -31,6 +31,17 @@ local test_case =
         name = "test_redis",
         file = "test_redis.lua"
     }
+    ,
+    {
+        name = "test_large_package",
+        file = "test_large_package.lua",
+        network = {
+            type = "listen",
+            ip = "127.0.0.1",
+            port =  "30002",
+            frame_flag= "rw"
+        }
+    }
 }
 
 local next_case = function ()
