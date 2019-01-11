@@ -11,6 +11,7 @@
 function math.clamp(value, minv, maxv)
     if value < minv or value > maxv then
         value = value < minv and minv or maxv
+        return value, true
     end
-    return value
+    return value, false
 end

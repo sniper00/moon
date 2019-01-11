@@ -8,7 +8,7 @@ namespace moon
     {
     public:
         static constexpr message_size_t MASK_CONTINUED = 0x8000;
-        static constexpr message_size_t MASK_SIZE =0x7FFF;
+        static constexpr message_size_t MASK_SIZE = 0x7FFF;
         static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
 
         using base_connection_t = base_connection;
@@ -50,12 +50,9 @@ namespace moon
                 {
                     message_size_t size = static_cast<message_size_t>(data->size());
                     host2net(size);
-                    bool res = data->write_front(&size, 0, 1);
-                    MOON_DCHECK(res, "tcp::send write front failed");
-                    if (res)
-                    {
-                        data->set_flag(buffer_flag::pack_size);
-                    }
+                    [[maybe_unused]]  bool res = data->write_front(&size, 0, 1);
+                    MOON_ASSERT(res, "tcp::send write front failed");
+                    data->set_flag(buffer_flag::pack_size);
                 }
             }
             return base_connection_t::send(data);
@@ -103,7 +100,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = now()/1000;
+                last_recv_time_ = now() / 1000;
                 net2host(header_);
 
                 bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;

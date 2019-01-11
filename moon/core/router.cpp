@@ -31,7 +31,7 @@ namespace moon
     bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
     {
         auto iter = regservices_.find(service_type);
-        MOON_DCHECK(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
+        MOON_ASSERT(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
         worker* wk;
         if (workerid_valid(workerid))
         {
@@ -149,7 +149,7 @@ namespace moon
     bool router::register_service(const std::string & type, register_func f)
     {
         auto ret = regservices_.emplace(type, f);
-        MOON_DCHECK(ret.second, moon::format("already registed service type[%s].", type.data()).data());
+        MOON_ASSERT(ret.second, moon::format("already registed service type[%s].", type.data()).data());
         return ret.second;
     }
 
