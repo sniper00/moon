@@ -1,8 +1,8 @@
-local moon = require("moon")
 local seri = require("seri")
-local log = require("log")
 local json = require("json")
-local tcp = require("moon.tcpserver")
+local moon = require("moon")
+local log = require("moon.log")
+local tcp = require("moon.net.tcpserver")
 
 local clusters = {}
 

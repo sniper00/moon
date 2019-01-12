@@ -1,5 +1,5 @@
 local moon = require("moon")
-local log = require("log")
+local log = require("moon.log")
 
 local test_case =
 {
@@ -25,6 +25,22 @@ local test_case =
     {
         name = "test_call_sender",
         file = "test_call_sender.lua"
+    }
+    ,
+    {
+        name = "test_redis",
+        file = "test_redis.lua"
+    }
+    ,
+    {
+        name = "test_large_package",
+        file = "test_large_package.lua",
+        network = {
+            type = "listen",
+            ip = "127.0.0.1",
+            port =  "30002",
+            frame_flag= "rw"
+        }
     }
 }
 
