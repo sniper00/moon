@@ -39,7 +39,8 @@ Windows Platform:
 Linux Platform:
 ```shell
     ./premake5 gmake
-    #Debug
+    # ./premake5 gmake --cc=clang
+    # Debug
     make
     # Release
     # make clean config=release_linux
