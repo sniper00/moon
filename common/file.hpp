@@ -22,7 +22,7 @@ namespace moon
                 tmp.resize(length);
                 is.read(&tmp.front(), length);
                 is.close();
-                return std::move(tmp);
+                return tmp;
             }
             return std::string();
         }
