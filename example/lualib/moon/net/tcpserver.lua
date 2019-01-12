@@ -1,9 +1,9 @@
 local moon = require("moon")
 
-local handler = moon.new_table(0,6)
+local handler = table.new(0,6)
 
 moon.dispatch(
-    "websocket",
+    "socket",
     function(msg)
         local sessionid = msg:sender()
         local subtype = msg:subtype()
@@ -16,7 +16,7 @@ moon.dispatch(
 
 local M = {}
 
-local tcp = moon.get_tcp('websocket')
+local tcp = moon.get_tcp('default')
 
 local type_map = {
     connect = 1,
@@ -51,6 +51,10 @@ end
 
 function M.send_then_close(sessionid, str)
     return tcp:send_then_close(sessionid, str)
+end
+
+function M.set_enable_frame(flag)
+    tcp:set_enable_frame(flag)
 end
 
 function M.close(sessionid)

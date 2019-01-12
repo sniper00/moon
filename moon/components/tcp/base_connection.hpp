@@ -45,7 +45,6 @@ namespace moon
         template <typename... Args>
         explicit base_connection(tcp* t, Args&&... args)
             :sending_(false)
-            , frame_flag_(frame_enable_flag::none)
             , logic_error_(network_logic_error::ok)
             , id_(0)
             , tcp_(t)
@@ -175,11 +174,6 @@ namespace moon
         {
             log_ = l;
         }
-
-        void set_enable_frame(frame_enable_flag t)
-        {
-            frame_flag_ = t;
-        }
     protected:
         virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
         {
@@ -299,7 +293,6 @@ namespace moon
         }
     protected:
         bool sending_;
-        frame_enable_flag frame_flag_;
         network_logic_error logic_error_;
         uint32_t id_;
         tcp* tcp_;

@@ -8,11 +8,11 @@ local setmetatable = setmetatable
 local tonumber = tonumber
 local tostring = tostring
 
-local moon	= require("moon")
 local seri	= require("seri")
-local socket	= require("moon.socket")
+local moon	= require("moon")
+local socket = require("moon.net.socket")
 
-local new_table = moon.new_table or function() return {} end
+local new_table = table.new or function() return {} end
 
 local common_cmds = {
 	"get",

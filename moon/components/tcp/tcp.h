@@ -100,7 +100,7 @@ namespace moon
 
         int64_t now();
     private:
-        void init() override;
+        bool init(std::string_view) override;
 
         void destroy() override;
 
@@ -126,7 +126,7 @@ namespace moon
 		std::unique_ptr<asio::ip::tcp::acceptor> acceptor_;
 		std::unique_ptr<asio::steady_timer> checker_;
 		message_ptr_t  response_msg_;
-		std::unordered_map<uint32_t, connection_ptr_t> conns_;
+		std::unordered_map<uint32_t, connection_ptr_t> connections_;
     };
 
     template<typename TMsg>
@@ -146,12 +146,12 @@ namespace moon
             msg->set_type(type_);
         }
 
-        msg->set_receiver(parent_->id());
+        msg->set_receiver(0);
 
         parent_->handle_message(std::forward<TMsg>(msg));
         if (t == PTYPE_ERROR || st == static_cast<uint8_t>(socket_data_type::socket_close))
         {
-            conns_.erase(sender);
+            connections_.erase(sender);
         }
     }
 }

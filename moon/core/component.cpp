@@ -64,7 +64,7 @@ namespace moon
         return nullptr;
     }
 
-    bool component::add_component_imp(const std::string& name, component_ptr_t v)
+    bool component::add_component_imp(const std::string& name, component_ptr_t v, std::string_view config)
     {
         auto iter = component_imp_->components_.emplace(name, v);
         MOON_CHECK(iter.second, "The component is already exist!");
@@ -73,8 +73,8 @@ namespace moon
             v->set_name(name);
             v->set_parent(this);
             v->logger(logger());
-            v->init();
-            v->ok(true);
+            v->ok(v->init(config));
+            return v->ok();
         }
         return iter.second;
     }

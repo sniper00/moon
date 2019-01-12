@@ -7,15 +7,16 @@ namespace moon
     class moon_connection : public base_connection
     {
     public:
-        static constexpr message_size_t INCOMPLETE_FLAG = 0x8000;
+        static constexpr message_size_t MASK_CONTINUED = 0x8000;
+        static constexpr message_size_t MASK_SIZE = 0x7FFF;
         static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
 
         using base_connection_t = base_connection;
 
         template <typename... Args>
-        explicit moon_connection(Args&&... args)
+        explicit moon_connection(frame_enable_flag flag, Args&&... args)
             :base_connection(std::forward<Args>(args)...)
-            , continue_(false)
+            , frame_flag_(flag)
             , header_(0)
         {
         }
@@ -49,17 +50,13 @@ namespace moon
                 {
                     message_size_t size = static_cast<message_size_t>(data->size());
                     host2net(size);
-                    bool res = data->write_front(&size, 0, 1);
-                    MOON_DCHECK(res, "tcp::send write front failed");
-                    if (res)
-                    {
-                        data->set_flag(buffer_flag::pack_size);
-                    }
+                    [[maybe_unused]]  bool res = data->write_front(&size, 0, 1);
+                    MOON_ASSERT(res, "tcp::send write front failed");
+                    data->set_flag(buffer_flag::pack_size);
                 }
             }
             return base_connection_t::send(data);
         }
-
     protected:
         void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf) override
         {
@@ -71,7 +68,7 @@ namespace moon
                 if (n > MAX_NET_MSG_SIZE)
                 {
                     header = size = MAX_NET_MSG_SIZE;
-                    header |= INCOMPLETE_FLAG;
+                    header |= MASK_CONTINUED;
                 }
                 else
                 {
@@ -103,17 +100,18 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = now()/1000;
+                last_recv_time_ = now() / 1000;
                 net2host(header_);
 
                 bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
+                bool continued = false;
                 if (enable)
                 {
-                    //check is continue message
-                    continue_ = ((header_ & INCOMPLETE_FLAG) != 0);
-                    if (continue_)
+                    //check is continued message
+                    continued = ((header_ & MASK_CONTINUED) != 0);
+                    if (continued)
                     {
-                        header_ &= (~INCOMPLETE_FLAG);
+                        header_ &= MASK_SIZE;
                     }
                 }
 
@@ -123,15 +121,15 @@ namespace moon
                     base_connection_t::close();
                     return;
                 }
-                read_body(header_);
+                read_body(header_, continued);
             }));
         }
 
-        void read_body(message_size_t size)
+        void read_body(message_size_t size, bool continued)
         {
             if (nullptr == buf_)
             {
-                buf_ = message::create_buffer(continue_ ? 5 * size : size);
+                buf_ = message::create_buffer(continued ? 5 * size : size);
             }
             else
             {
@@ -140,7 +138,7 @@ namespace moon
 
             asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
                 make_custom_alloc_handler(read_allocator_,
-                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
+                    [this, self = shared_from_this(), continued](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
                 {
@@ -155,7 +153,7 @@ namespace moon
                 }
 
                 buf_->offset_writepos(static_cast<int>(bytes_transferred));
-                if (!continue_)
+                if (!continued)
                 {
                     auto msg = message::create(buf_);
                     buf_.reset();
@@ -167,7 +165,7 @@ namespace moon
         }
 
     protected:
-        bool continue_;
+        frame_enable_flag frame_flag_;
         message_size_t header_;
         buffer_ptr_t buf_;
     };

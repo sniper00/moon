@@ -41,8 +41,8 @@ namespace moon
     {
         do
         {
-            auto iter = conns_.find(connid);
-            if (iter == conns_.end())
+            auto iter = connections_.find(connid);
+            if (iter == connections_.end())
                 break;
             iter->second->set_no_delay();
         } while (0);
@@ -113,8 +113,8 @@ namespace moon
         if (!acceptor_->is_open())
             return;
 
-        auto conn = create_connection();
-        acceptor_->async_accept(conn->socket(), [this, self = shared_from_this(), conn, responseid](const asio::error_code& e)
+        auto connection = create_connection();
+        acceptor_->async_accept(connection->socket(), [this, self = shared_from_this(), connection, responseid](const asio::error_code& e)
         {
             if (!self->ok())
             {
@@ -123,13 +123,13 @@ namespace moon
 
             if (!e)
             {
-                conn->set_id(make_connid());
-                conns_.emplace(conn->id(), conn);
-                conn->start(true);
+                connection->set_id(make_connid());
+                connections_.emplace(connection->id(), connection);
+                connection->start(true);
 
                 if (responseid != 0)
                 {
-                    response(std::to_string(conn->id()), std::string_view{}, responseid, PTYPE_TEXT);
+                    response(std::to_string(connection->id()), std::string_view{}, responseid, PTYPE_TEXT);
                 }
                 else
                 {
@@ -157,9 +157,9 @@ namespace moon
             asio::ip::tcp::resolver resolver(io_context());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-            auto conn = create_connection();
-            asio::async_connect(conn->socket(), endpoint_iterator,
-                [this, self = shared_from_this(), conn, ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
+            auto connection = create_connection();
+            asio::async_connect(connection->socket(), endpoint_iterator,
+                [this, self = shared_from_this(), connection, ip, port, responseid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
                 if (!self->ok())
                 {
@@ -168,10 +168,10 @@ namespace moon
 
                 if (!e)
                 {
-                    conn->set_id(make_connid());
-                    conns_.emplace(conn->id(), conn);
-                    conn->start(false);
-                    response(std::to_string(conn->id()), std::string_view{}, responseid, PTYPE_TEXT);
+                    connection->set_id(make_connid());
+                    connections_.emplace(connection->id(), connection);
+                    connection->start(false);
+                    response(std::to_string(connection->id()), std::string_view{}, responseid, PTYPE_TEXT);
                 }
                 else
                 {
@@ -196,12 +196,12 @@ namespace moon
             asio::ip::tcp::resolver resolver(io_context());
             asio::ip::tcp::resolver::query query(ip, port);
             asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-            auto conn = create_connection();
-            asio::connect(conn->socket(), endpoint_iterator);
-            conn->set_id(make_connid());
-            conns_.emplace(conn->id(), conn);
-            conn->start(false);
-            return conn->id();
+            auto connection = create_connection();
+            asio::connect(connection->socket(), endpoint_iterator);
+            connection->set_id(make_connid());
+            connections_.emplace(connection->id(), connection);
+            connection->start(false);
+            return connection->id();
         }
         catch (asio::system_error& e)
         {
@@ -214,7 +214,7 @@ namespace moon
     {
         do
         {
-            if (auto iter = conns_.find(connid); iter != conns_.end())
+            if (auto iter = connections_.find(connid); iter != connections_.end())
             {
                 if (iter->second->read(moon::read_request{ delim, n, responseid }))
                 {
@@ -229,8 +229,8 @@ namespace moon
 
     bool tcp::send(uint32_t connid, const buffer_ptr_t & data)
     {
-        auto iter = conns_.find(connid);
-        if (iter == conns_.end())
+        auto iter = connections_.find(connid);
+        if (iter == connections_.end())
         {
             return false;
         }
@@ -239,8 +239,8 @@ namespace moon
 
     bool tcp::send_then_close(uint32_t connid, const buffer_ptr_t & data)
     {
-        auto iter = conns_.find(connid);
-        if (iter == conns_.end())
+        auto iter = connections_.find(connid);
+        if (iter == connections_.end())
         {
             return false;
         }
@@ -255,13 +255,13 @@ namespace moon
 
     bool tcp::close(uint32_t connid)
     {
-        auto iter = conns_.find(connid);
-        if (iter == conns_.end())
+        auto iter = connections_.find(connid);
+        if (iter == connections_.end())
         {
             return false;
         }
         iter->second->close();
-        conns_.erase(connid);
+        connections_.erase(connid);
         return true;
     }
 
@@ -270,22 +270,22 @@ namespace moon
         return parent_->get_server()->now();
     }
 
-    void tcp::init()
+    bool tcp::init([[maybe_unused]]  std::string_view config)
     {
-        component::init();
         parent_ = parent<service>();
-        MOON_DCHECK(parent_ != nullptr, "tcp::init service is null");
+        MOON_ASSERT(parent_ != nullptr, "tcp::init service is null");
         io_ctx_ = &(parent_->get_router()->get_io_context(parent_->id()));
         response_msg_ = message::create();
+        return true;
     }
 
     void tcp::destroy()
     {
         component::destroy();
 
-        for (auto& conn : conns_)
+        for (auto& connection : connections_)
         {
-            conn.second->close(true);
+            connection.second->close(true);
         }
 
         if (checker_ != nullptr)
@@ -309,9 +309,9 @@ namespace moon
                 return;
             }
 
-            for (auto& conn : conns_)
+            for (auto& connection : connections_)
             {
-                conn.second->timeout_check(now()/1000, timeout_);
+                connection.second->timeout_check(now()/1000, timeout_);
             }
             check();
         });
@@ -327,7 +327,7 @@ namespace moon
         if (connuid_ == 0xFFFF)
             connuid_ = 1;
         auto id = connuid_++;
-        while (conns_.find(id) != conns_.end())
+        while (connections_.find(id) != connections_.end())
         {
             id = connuid_++;
         }
@@ -337,7 +337,7 @@ namespace moon
     {
         if (0 == responseid)
             return;
-        response_msg_->set_receiver(parent_->id());
+        response_msg_->set_receiver(0);
         response_msg_->get_buffer()->clear();
         response_msg_->get_buffer()->write_back(data.data(), 0, data.size());
         response_msg_->set_header(header);
@@ -349,30 +349,29 @@ namespace moon
 
     tcp::connection_ptr_t tcp::create_connection()
     {
-        connection_ptr_t conn;
+        connection_ptr_t connection;
         switch (type_)
         {
         case PTYPE_SOCKET:
         {
-            conn = std::make_shared<moon_connection>(this, io_context());
+            connection = std::make_shared<moon_connection>(frame_flag_, this, io_context());
             break;
         }
         case PTYPE_TEXT:
         {
-            conn = std::make_shared<custom_connection>(this, io_context());
+            connection = std::make_shared<custom_connection>(this, io_context());
             break;
         }
         case PTYPE_SOCKET_WS:
         {
-            conn = std::make_shared<ws_connection>(this, io_context());
+            connection = std::make_shared<ws_connection>(this, io_context());
             break;
         }
         default:
             break;
         }
-        conn->logger(this->logger());
-        conn->set_enable_frame(frame_flag_);
-        return conn;
+        connection->logger(this->logger());
+        return connection;
     }
 }
 

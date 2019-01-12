@@ -31,7 +31,7 @@ namespace moon
     bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
     {
         auto iter = regservices_.find(service_type);
-        MOON_DCHECK(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
+        MOON_ASSERT(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
         worker* wk;
         if (workerid_valid(workerid))
         {
@@ -114,7 +114,7 @@ namespace moon
         MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(msg->receiver());
-        MOON_CHECK(workerid_valid(id), "invalid message receiver serviceid.");
+        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %u",msg->receiver()).data());
         get_worker(id)->send(std::forward<message_ptr_t>(msg));
     }
 
@@ -149,7 +149,7 @@ namespace moon
     bool router::register_service(const std::string & type, register_func f)
     {
         auto ret = regservices_.emplace(type, f);
-        MOON_DCHECK(ret.second, moon::format("already registed service type[%s].", type.data()).data());
+        MOON_ASSERT(ret.second, moon::format("already registed service type[%s].", type.data()).data());
         return ret.second;
     }
 
@@ -158,7 +158,7 @@ namespace moon
         std::string v;
         if (env_.try_get_value(name, v))
         {
-            return (std::move(v));
+            return v;
         }
         return std::string{};
     }

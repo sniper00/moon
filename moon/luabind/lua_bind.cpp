@@ -28,8 +28,8 @@ lua_bind::~lua_bind()
 
 const lua_bind & lua_bind::bind_timer(lua_service* s) const
 {
-    lua.set_function("repeated", [s](int32_t duration, int32_t times) 
-    { 
+    lua.set_function("repeated", [s](int32_t duration, int32_t times)
+    {
         auto& timer = s->get_worker()->timer();
         return timer.repeat(duration, times, s->id());
     });
@@ -41,15 +41,7 @@ const lua_bind & lua_bind::bind_timer(lua_service* s) const
     return *this;
 }
 
-static int lua_new_table(lua_State* L)
-{
-    auto arrn = luaL_checkinteger(L, -2);
-    auto hn = luaL_checkinteger(L, -1);
-    lua_createtable(L, (int)arrn, (int)hn);
-    return 1;
-}
-
-std::string make_cluster_message(string_view_t header, string_view_t data)
+static std::string make_cluster_message(string_view_t header, string_view_t data)
 {
     std::string ret;
     uint16_t len = static_cast<uint16_t>(data.size());
@@ -59,14 +51,14 @@ std::string make_cluster_message(string_view_t header, string_view_t data)
     return ret;
 }
 
-void pack_cluster_message(string_view_t header, message* msg)
+static void pack_cluster_message(string_view_t header, message* msg)
 {
     uint16_t len = static_cast<uint16_t>(msg->size());
     msg->get_buffer()->write_front(&len, 0, 1);
     msg->get_buffer()->write_back(header.data(), 0, header.size());
 }
 
-string_view_t unpack_cluster_message(message* msg)
+static string_view_t unpack_cluster_message(message* msg)
 {
     uint16_t len = 0;
     msg->get_buffer()->read(&len, 0, 1);
@@ -75,6 +67,50 @@ string_view_t unpack_cluster_message(message* msg)
     int tmp = (int)header_size;
     msg->get_buffer()->offset_writepos(-tmp);
     return string_view_t{ header,header_size };
+}
+
+static int lua_table_new(lua_State* L)
+{
+    auto arrn = luaL_checkinteger(L, -2);
+    auto hn = luaL_checkinteger(L, -1);
+    lua_createtable(L, (int)arrn, (int)hn);
+    return 1;
+}
+
+static int lua_math_clamp(lua_State* L)
+{
+    auto value = luaL_checknumber(L, -3);
+    auto min = luaL_checknumber(L, -2);
+    auto max = luaL_checknumber(L, -1);
+    int b = 0;
+    if (value < min || value > max)
+    {
+        value = (value < min)?min:max;
+        b = 1;
+    }
+    lua_pushnumber(L, value);
+    lua_pushboolean(L, b);
+    return 2;
+}
+
+static int lua_string_hash(lua_State* L)
+{
+    size_t l;
+    auto s = luaL_checklstring(L, -1, &l);
+    std::string_view sv{ s,l };
+    size_t hs = moon::hash_range(sv.begin(), sv.end());
+    lua_pushinteger(L, hs);
+    return 1;
+}
+
+static int lua_string_hex(lua_State* L)
+{
+    size_t l;
+    auto s = luaL_checklstring(L, -1, &l);
+    std::string_view sv{ s,l };
+    auto res = moon::hex_string(sv);
+    lua_pushlstring(L, res.data(), res.size());
+    return 1;
 }
 
 static int my_lua_print(lua_State *L) {
@@ -97,6 +133,7 @@ static int my_lua_print(lua_State *L) {
         lua_pop(L, 1);  /* pop result */
     }
     logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() });
+    lua_pop(L, 1);  /* pop tostring */
     return 0;
 }
 
@@ -107,11 +144,12 @@ static void register_lua_print(sol::table& lua, moon::log* logger)
     lua_setglobal(lua.lua_state(), "print");
 }
 
-static void register_lua_cfunction(sol::table& lua, lua_CFunction f, const char* name)
+static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname, const char* name)
 {
-    lua.push();
-    lua_pushcclosure(lua.lua_state(), f, 0);
-    lua_setfield(lua.lua_state(), -2, name);
+    lua_getglobal(L, gname);
+    lua_pushcfunction(L, f);
+    lua_setfield(L, -2, name); /* package.preload[name] = f */
+    lua_pop(L, 1); /* pop gname table */
 }
 
 const lua_bind & lua_bind::bind_util() const
@@ -122,14 +160,17 @@ const lua_bind & lua_bind::bind_util() const
     lua.set_function("time_offset", time::offset);
 
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
-    lua.set_function("hash_string", [](const std::string& s) { return moon::hash_range(s.begin(), s.end()); });
-    lua.set_function("hex_string", (&moon::hex_string));
 
     lua.set_function("pack_cluster", pack_cluster_message);
     lua.set_function("unpack_cluster", unpack_cluster_message);
     lua.set_function("make_cluster_message", make_cluster_message);
 
-    register_lua_cfunction(lua, lua_new_table, "new_table");
+    lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
+
+    lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");
+
+    lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
+    lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
     return *this;
 }
 
@@ -212,7 +253,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_unique_service", &router::set_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
-    lua.set_function("set_loglevel",(void(moon::log::*)(string_view_t))&log::set_level,router_->logger());
+    lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());
     lua.set_function("abort", &server::stop, server_);
     lua.set_function("now", &server::now, server_);
     return *this;
@@ -263,6 +304,23 @@ const lua_bind & lua_bind::bind_http() const
     return *this;
 }
 
+void lua_bind::registerlib(lua_State * L, const char * name, lua_CFunction f)
+{
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "preload"); /* get 'package.preload' */
+    lua_pushcfunction(L, f);
+    lua_setfield(L, -2, name); /* package.preload[name] = f */
+    lua_pop(L, 2); /* pop 'package' and 'preload' tables */
+}
+
+void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& module)
+{
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "loaded"); /* get 'package.preload' */
+    module.push();
+    lua_setfield(L, -2, name); /* package.preload[name] = f */
+    lua_pop(L, 2); /* pop 'package' and 'preload' tables */
+}
 
 static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
 {

@@ -111,14 +111,14 @@ int main(int argc, char*argv[])
             moon::server_config_manger scfg;
             MOON_CHECK(scfg.parse(moon::file::read_all("config.json", std::ios::binary | std::ios::in), sid), "failed");
             lua.open_libraries();
-            lua.require("json", luaopen_rapidjson);
-            lua.require("fs", luaopen_fs);
 
             sol::table module = lua.create_table();
             lua_bind lua_bind(module);
             lua_bind.bind_log(server_->logger());
 
-            lua["package"]["loaded"]["moon_core"] = module;
+            lua_bind::registerlib(lua.lua_state(), "json", luaopen_rapidjson);
+            lua_bind::registerlib(lua.lua_state(), "fs", luaopen_fs);
+            lua_bind::registerlib(lua.lua_state(), "moon_core", module);
 
             router_->register_service("lua", []()->service_ptr_t {
                 return std::make_unique<lua_service>();
@@ -146,7 +146,7 @@ int main(int argc, char*argv[])
             if (!c->startup.empty())
             {
                 MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [c, &router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
+                module.set_function("new_service", [&router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
                     return  router_->new_service(service_type, config, unique, workerid, 0, 0);
                 });
                 lua.script_file(c->startup);

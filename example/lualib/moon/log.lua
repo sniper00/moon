@@ -1,11 +1,10 @@
-local util = require("util")
 local c = require("moon_core")
 local string_format     = string.format
 local string_len        = string.len
 local debug_traceback   = debug.traceback
 local string_rep        = string.rep
-local string_split      = util.string_split
-local string_trim       = util.string_trim
+local string_split      = string.split
+local string_trim       = string.trim
 local M = {}
 
 ---------------------------------------------------------------------------

@@ -101,12 +101,8 @@ namespace moon
             //redirect message
             if (msg->receiver() != id() && msg->receiver() != 0)
             {
-                bool b = msg->broadcast();
-                MOON_DCHECK(!b, "can not redirect broadcast message");
-                if (!b)
-                {
-                    router_->send_message(std::forward<message_ptr_t>(msg));
-                }
+                MOON_ASSERT(!msg->broadcast() , "can not redirect broadcast message");
+                router_->send_message(std::forward<message_ptr_t>(msg));
             }
         }
         catch (std::exception& e)

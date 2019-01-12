@@ -1,5 +1,5 @@
-local redis = require("moon.redis")
 local moon = require("moon")
+local redis = require("moon.db.redis")
 
 local M = {
     VERSION = '0.1',
