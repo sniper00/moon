@@ -92,7 +92,9 @@ project "moon"
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
     filter { "system:linux" }
-        links{"dl","pthread","stdc++fs"} --"-static-libstdc++"
+        links{"dl","pthread","stdc++fs"}
+        --links{"stdc++:static"}
+        --links{"gcc:static"}
         linkoptions {"-Wl,-rpath=./"}
     filter "configurations:Debug"
         targetsuffix "-d"

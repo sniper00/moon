@@ -1,5 +1,5 @@
 local moon = require("moon")
-local cluster = require("cluster")
+local cluster = require("moon.cluster")
 
 local counter = 0
 

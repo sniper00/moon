@@ -1,4 +1,4 @@
-local log = require("log")
+local log = require("moon.log")
 
 do
     local ok = pcall(log.throw, "log throw")
