@@ -270,13 +270,13 @@ namespace moon
         return parent_->get_server()->now();
     }
 
-    void tcp::init()
+    bool tcp::init([[maybe_unused]]  std::string_view config)
     {
-        component::init();
         parent_ = parent<service>();
         MOON_ASSERT(parent_ != nullptr, "tcp::init service is null");
         io_ctx_ = &(parent_->get_router()->get_io_context(parent_->id()));
         response_msg_ = message::create();
+        return true;
     }
 
     void tcp::destroy()

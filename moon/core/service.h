@@ -40,8 +40,6 @@ namespace moon
     public:
         virtual void exit();
 
-        virtual bool init(string_view_t config) = 0;
-
         virtual void dispatch(message* msg) = 0;
 
         virtual void on_timer(uint32_t, bool) {};

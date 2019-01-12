@@ -100,7 +100,7 @@ namespace moon
 
         int64_t now();
     private:
-        void init() override;
+        bool init(std::string_view) override;
 
         void destroy() override;
 

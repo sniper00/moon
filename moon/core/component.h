@@ -42,14 +42,14 @@ namespace moon
         }
 
         template<class TComponent, typename TComponentPtr = std::shared_ptr<TComponent> >
-        TComponentPtr add_component(const std::string& name)
+        TComponentPtr add_component(const std::string& name, std::string_view config = std::string_view{})
         {
             static_assert(std::is_base_of<component, TComponent>::value, "TComponent must be child of component");
             do
             {
                 auto t = std::make_shared<TComponent>();
                 BREAK_IF(t == nullptr);
-                BREAK_IF(!add_component_imp(name,t));
+                BREAK_IF(!add_component_imp(name,t, config));
                 return t;
             } while (0);
             return nullptr;
@@ -70,7 +70,7 @@ namespace moon
 
         void set_parent(component* v);
 
-        virtual void init() {}
+        virtual bool init(std::string_view) = 0;
 
         virtual void start();
 
@@ -78,7 +78,7 @@ namespace moon
 	protected:
         component_ptr_t get_component_imp(const std::string& name) const;
 
-        bool add_component_imp(const std::string& name,component_ptr_t v);
+        bool add_component_imp(const std::string& name,component_ptr_t v, std::string_view config);
 
         component* parent_imp() const;
     private:

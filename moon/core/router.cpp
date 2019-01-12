@@ -158,7 +158,7 @@ namespace moon
         std::string v;
         if (env_.try_get_value(name, v))
         {
-            return (std::move(v));
+            return v;
         }
         return std::string{};
     }

@@ -17,7 +17,7 @@ namespace moon
             doc.Parse(config.data(), config.size());
             if (doc.HasParseError() || !doc.IsObject())
             {
-                CONSOLE_ERROR(s->logger(), "Lua service parse config %s failed,errorcode %d", std::string{ config.data(),config.size() }, doc.GetParseError());
+                CONSOLE_ERROR(s->logger(), "Lua service parse config %s failed,errorcode %d", std::string{ config.data(),config.size() }.data(), doc.GetParseError());
                 return false;
             }
 
