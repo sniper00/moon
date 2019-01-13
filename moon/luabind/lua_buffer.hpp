@@ -13,7 +13,7 @@ namespace sol
             template <typename Handler>
             static bool check(lua_State* L, int index, Handler&& handler, record& tracking) {
                 type t = type_of(L, index);
-                if (t == type::nil || t == type::userdata || t == type::lightuserdata || t == type::string)
+                if (t == type::lua_nil || t == type::userdata || t == type::lightuserdata || t == type::string)
                 {
                     tracking.use(1);
                     return true;

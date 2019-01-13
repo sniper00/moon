@@ -7,20 +7,25 @@ end
 workspace "Server"
     configurations { "Debug", "Release" }
 
-    if os.istarget("windows") then
-        platforms { "Win32", "x64"}
-        characterset ("MBCS")
-        systemversion(os.winSdkVersion() .. ".0")
-    else
-        platforms {"linux"}
-
-    end
-
     flags{"NoPCH","RelativeLinks"}
     cppdialect "C++17"
 
     location "./"
     libdirs{"./libs"}
+
+    if os.istarget("windows") then
+        platforms { "Win32", "x64"}
+        characterset ("MBCS")
+        systemversion(os.winSdkVersion() .. ".0")
+
+        filter { "platforms:Win32" }
+        architecture "x86"
+        warnings "Extra"
+
+        filter { "platforms:x64" }
+            architecture "x64"
+            warnings "Extra"
+    end
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -30,20 +35,11 @@ workspace "Server"
         defines { "NDEBUG" }
         optimize "On"
 
-    filter { "platforms:Win32" }
-        system "windows"
-        architecture "x86"
-        warnings "Extra"
-
-    filter { "platforms:x64" }
-        system "windows"
-        architecture "x64"
-        warnings "Extra"
-
-    filter { "platforms:Linux" }
-        system "linux"
+    filter { "system:linux" }
         warnings "High"
 
+    filter { "system:macosx" }
+        warnings "High"
 
 project "lua53"
     objdir "obj/lua53/%{cfg.platform}_%{cfg.buildcfg}"
@@ -61,6 +57,9 @@ project "lua53"
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
         links{"dl"}
+    filter { "system:macosx" }
+        defines {"LUA_USE_MACOSX"}
+        links{"dl"}
 
 project "rapidjson"
     objdir "obj/rapidjson/%{cfg.platform}_%{cfg.buildcfg}"
@@ -71,7 +70,7 @@ project "rapidjson"
     includedirs {"./third","./third/lua53","./third/rapidjsonlua"}
     --links{"lua53"}
     files { "./third/rapidjsonlua/**.hpp", "./third/rapidjsonlua/**.cpp"}
-    filter {"system:linux"}
+    filter {"system:linux or macosx"}
         buildoptions {"-msse4.2"}
 
 project "moon"
@@ -91,11 +90,14 @@ project "moon"
     postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
-    filter { "system:linux" }
+    filter {"system:linux or macosx"}
         links{"dl","pthread","stdc++fs"}
         --links{"stdc++:static"}
         --links{"gcc:static"}
-        linkoptions {"-Wl,-rpath=./"}
+        linkoptions {"-Wl,-rpath=,./"}
+    filter {"system:macosx"}
+        links{"dl","pthread","c++fs"}
+        linkoptions {"-Wl,-rpath=,./"}
     filter "configurations:Debug"
         targetsuffix "-d"
 
@@ -114,7 +116,7 @@ project "moon"
     注意：
     默认使用C编译器编译，可以使用 *addon 参数进行更改
 ]]
-local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon )
+local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon, macaddon )
     project(name)
     objdir ("obj/"..name.."/%{cfg.platform}_%{cfg.buildcfg}") --编译生成的中间文件目录
     location ("build/"..name) -- 生成的工程文件目录
@@ -134,9 +136,14 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon 
         if type(winddowsaddon)=="function" then
             winddowsaddon()
         end
-    filter { "system:linux" }
+    filter {"system:linux or macosx"}
         if type(linuxaddon)=="function" then
             linuxaddon()
+        end
+    filter {"system:macosx"}
+        links{"lua53"} -- windows 版需要链接 lua 库
+        if type(macaddon)=="function" then
+            macaddon()
         end
 end
 
