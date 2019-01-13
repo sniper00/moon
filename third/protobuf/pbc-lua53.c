@@ -8,11 +8,10 @@ extern "C" {
 }
 #endif
 
-#include <malloc.h>
-
 #ifndef _MSC_VER
 #include <stdbool.h>
 #else
+#include <malloc.h>
 #define alloca _alloca
 #endif
 
