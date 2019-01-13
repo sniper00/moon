@@ -90,7 +90,7 @@ project "moon"
     postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
-    filter {"system:linux or macosx"}
+    filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
         --links{"stdc++:static"}
         --links{"gcc:static"}
