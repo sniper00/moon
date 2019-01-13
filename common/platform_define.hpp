@@ -59,12 +59,6 @@ typedef __int64    ssize_t;
 typedef _W64 int   ssize_t;
 #endif
 #else
-#if __cplusplus < 201103
-#error  "your compiler does not support C++11"
-#endif
-#endif
-
-#if TARGET_PLATFORM == PLATFORM_LINUX
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
@@ -80,6 +74,8 @@ typedef _W64 int   ssize_t;
 #endif
 
 #include<cstdint>
+#include<functional>
+#include<thread>
 
 namespace moon
 {
