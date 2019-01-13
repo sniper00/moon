@@ -97,7 +97,7 @@ project "moon"
         linkoptions {"-Wl,-rpath=./"}
     filter {"system:macosx"}
         links{"dl","pthread","c++fs"}
-        linkoptions {"-Wl,-rpath=,./"}
+        linkoptions {"-Wl,-rpath,./"}
     filter "configurations:Debug"
         targetsuffix "-d"
 
