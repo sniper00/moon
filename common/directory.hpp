@@ -1,5 +1,7 @@
 #pragma once
-#ifdef _MSC_VER
+#include "platform_define.hpp"
+
+#if TARGET_PLATFORM == PLATFORM_WINDOWS || TARGET_PLATFORM == PLATFORM_MAC
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
