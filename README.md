@@ -30,6 +30,7 @@ git clone <https://github.com/sniper00/moon.git> get the Sources
 The project use of C++17 features, I tested compliers are: 
 - GCC 7.2
 - Visual Studio 2017 Community Update 5
+- clang version 7.0.1  (MacOSX)
 
 Windows Platform:
 ```shell
@@ -43,8 +44,20 @@ Linux Platform:
     # Debug
     make
     # Release
-    # make clean config=release_linux
-    # make config=release_linux
+    # make clean config=release
+    # make config=release
+    cd example
+    ./moon 1
+```
+
+MacOSX Platform:
+```shell
+    ./premake5 gmake --cc=clang
+    # Debug
+    make
+    # Release
+    # make clean config=release
+    # make config=release
     cd example
     ./moon 1
 ```
