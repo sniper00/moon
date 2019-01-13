@@ -94,7 +94,7 @@ project "moon"
         links{"dl","pthread","stdc++fs"}
         --links{"stdc++:static"}
         --links{"gcc:static"}
-        linkoptions {"-Wl,-rpath=,./"}
+        linkoptions {"-Wl,-rpath=./"}
     filter {"system:macosx"}
         links{"dl","pthread","c++fs"}
         linkoptions {"-Wl,-rpath=,./"}
