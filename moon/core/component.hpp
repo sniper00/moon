@@ -17,7 +17,7 @@ namespace moon
 
         virtual ~component() = default;
 
-        const std::string & component::name() const
+        const std::string & name() const
         {
             return name_;
         }
