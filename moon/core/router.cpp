@@ -62,6 +62,7 @@ namespace moon
 
         auto s = iter->second();
         s->set_id(serviceid);
+        s->logger(logger_);
         s->set_unique(unique);
         s->set_server_context(server_, this, wk);
         wk->add_service(std::move(s), config, creatorid, responseid);

@@ -1,11 +1,9 @@
 #pragma once
 #include "config.h"
 #include "common/utils.hpp"
-#include "component.h"
+#include "component.hpp"
+#include "asio.hpp"
 #include "service.h"
-#include "router.h"
-#include "worker.h"
-
 
 namespace moon
 {
@@ -97,8 +95,6 @@ namespace moon
         bool send_message(uint32_t connid, message* msg);
 
         bool close(uint32_t connid);
-
-        int64_t now();
     private:
         bool init(std::string_view) override;
 
