@@ -2,6 +2,7 @@
 #include "message.hpp"
 #include "server.h"
 #include "router.h"
+#include "worker.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
 #include "luabind/lua_serialize.hpp"

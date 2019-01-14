@@ -280,16 +280,9 @@ namespace moon
             }
         }
 
-        int64_t now()
+        time_t now()
         {
-            if (nullptr != tcp_)
-            {
-                return tcp_->now();
-            }
-            else
-            {
-                return -1;
-            }
+            return std::time(nullptr);
         }
     protected:
         bool sending_;

@@ -40,11 +40,6 @@ namespace moon
         removeself();
     }
 
-    log * service::logger() const
-    {
-        return router_->logger();
-    }
-
     void service::set_server_context(server * s, router * r, worker * w)
     {
         server_ = s;

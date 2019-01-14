@@ -10,6 +10,7 @@
 #include "message.hpp"
 #include "router.h"
 #include "server.h"
+#include "worker.h"
 #include "lua_buffer.hpp"
 #include "lua_serialize.hpp"
 

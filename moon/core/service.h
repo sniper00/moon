@@ -1,6 +1,6 @@
 #pragma once
 #include "config.h"
-#include "component.h"
+#include "component.hpp"
 
 namespace moon
 {
@@ -19,8 +19,6 @@ namespace moon
         virtual ~service();
 
         uint32_t id() const;
-
-        log* logger() const override;
 
         void set_server_context(server* s, router* r, worker* w);
 
