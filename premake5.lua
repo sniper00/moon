@@ -1,9 +1,3 @@
-function os.winSdkVersion()
-    local reg_arch = iif( os.is64bit(), "\\Wow6432Node\\", "\\" )
-    local sdk_version = os.getWindowsRegistry( "HKLM:SOFTWARE" .. reg_arch .."Microsoft\\Microsoft SDKs\\Windows\\v10.0\\ProductVersion" )
-    if sdk_version ~= nil then return sdk_version end
-end
-
 workspace "Server"
     configurations { "Debug", "Release" }
 
@@ -16,8 +10,7 @@ workspace "Server"
     if os.istarget("windows") then
         platforms { "Win32", "x64"}
         characterset ("MBCS")
-        systemversion(os.winSdkVersion() .. ".0")
-
+        systemversion "latest"
         filter { "platforms:Win32" }
         architecture "x86"
         warnings "Extra"
