@@ -2,6 +2,7 @@
 #undef min
 #undef max
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 namespace math
@@ -160,7 +161,7 @@ namespace math
 		// Returns the length of this vector
 		float length() const
 		{
-			return std::sqrtf(x*x + y*y);
+			return std::sqrt(x*x + y*y);
 		}
 
 		// Returns the squared length of this vector 
@@ -180,7 +181,7 @@ namespace math
 		// x angle
 		float angle() const
 		{
-			return std::atan2f(y, x);
+			return std::atan2(y, x);
 		}
 
 		// Returns the unsigned angle in degrees between from and to.

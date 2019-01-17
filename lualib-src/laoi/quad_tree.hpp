@@ -129,7 +129,7 @@ namespace math
 			if (!bounds_.contains(x,y))
 			{
 				assert(false && "feature is out of the bounds of this quadtree node");
-				return false;
+				return nullptr;
 			}
 
             auto iter = contents_.find(uid);
