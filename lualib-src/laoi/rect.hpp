@@ -72,8 +72,8 @@ namespace math
 
 		bool equals(const size& target) const
 		{
-			return (fabs(this->width - target.width) < FLT_EPSILON)
-				&& (fabs(this->height - target.height) < FLT_EPSILON);
+			return (fabs(this->width - target.width) < std::numeric_limits<float>::epsilon())
+				&& (fabs(this->height - target.height) < std::numeric_limits<float>::epsilon());
 		}
 	};
 
@@ -114,10 +114,10 @@ namespace math
 
 		bool equals(const rect& target) const
 		{
-			return (fabs(x - target.x) < FLT_EPSILON)
-				&& (fabs(y - target.y) < FLT_EPSILON)
-				&& (fabs(width - target.width) < FLT_EPSILON)
-				&& (fabs(height - target.height) < FLT_EPSILON);
+			return (fabs(x - target.x) < std::numeric_limits<float>::epsilon())
+				&& (fabs(y - target.y) < std::numeric_limits<float>::epsilon())
+				&& (fabs(width - target.width) < std::numeric_limits<float>::epsilon())
+				&& (fabs(height - target.height) < std::numeric_limits<float>::epsilon());
 		}
 
 		float left() const
