@@ -190,7 +190,7 @@ namespace math
 			vec2 a2 = normalized();
 			vec2 b2 = other.normalized();
 			float angle = atan2f(a2.cross(b2), a2.dot(b2));
-			if (fabs(angle) < FLT_EPSILON) return 0.f;
+			if (fabs(angle) < std::numeric_limits<float>::epsilon()) return 0.f;
 			return angle;
 		}
 
@@ -219,13 +219,9 @@ namespace math
 		// Returns true if the given vector is exactly equal to this vector.
 		bool equals(const vec2& target) const
 		{
-			return (fabs(this->x - target.x) < FLT_EPSILON)
-				&& (fabs(this->y - target.y) < FLT_EPSILON);
+			return (fabs(this->x - target.x) < std::numeric_limits<float>::epsilon())
+				&& (fabs(this->y - target.y) < std::numeric_limits<float>::epsilon());
 		}
-
-
-
-	
 
 		// Returns the dot product of this vector and the specified vector.
 		static float dot(const vec2& v1, const vec2& v2)
