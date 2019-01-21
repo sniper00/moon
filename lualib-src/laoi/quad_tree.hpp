@@ -7,19 +7,17 @@ namespace math
 {
     using objectid_t = int32_t;
 
-    static constexpr int32_t aoi_radius = 50;
-
     using node_rect = math::rect;
 
+    template<size_t min_radius>
     class quad_tree_node
     {
     public:
-
         struct quad_tree_object
         {
             float x;
             float y;
-            objectid_t uid;
+            quad_tree_node* p;
         };
 
         // Construct a quadtree node with the given bounds 
@@ -62,26 +60,30 @@ namespace math
             return n;
         }
 
-        void subtree_contents(std::vector<objectid_t>& ret) const
+        void subtree_contents(std::vector<objectid_t>& res) const
         {
             for (auto& node : nodes_)
             {
-                node.subtree_contents(ret);
+                node.subtree_contents(res);
             }
 
             for (auto& item : contents_)
             {
-                ret.push_back(item.first);
+                res.push_back(item.first);
             }
         }
 
-        void query(const node_rect& queryArea, std::vector<objectid_t>& ret) const
+        void query(const node_rect& queryArea, std::vector<objectid_t>& res) const
         {
+            auto hw = queryArea.width / 2.0f;
+            auto hh = queryArea.height / 2.0f;
+            auto midx = queryArea.x + hw;
+            auto midy = queryArea.y + hh;
             for (auto& item : contents_)
             {
-                if (queryArea.contains(item.second.x, item.second.y))
+                if (std::abs(item.second->x - midx) <= hw && std::abs(item.second->y - midy) <= hh)
                 {
-                    ret.push_back(item.first);
+                    res.push_back(item.first);
                 }
             }
 
@@ -97,7 +99,7 @@ namespace math
                 // and skip the remaining nodes (break this loop)
                 if (node.bounds().contains(queryArea))
                 {
-                    node.query(queryArea, ret);
+                    node.query(queryArea, res);
                     break;
                 }
 
@@ -108,7 +110,7 @@ namespace math
                 // the other quads
                 if (queryArea.contains(node.bounds()))
                 {
-                    node.subtree_contents(ret);
+                    node.subtree_contents(res);
                     continue;
                 }
 
@@ -116,28 +118,21 @@ namespace math
                 // traverse into this quad, continue the loop to search other
                 // quads
 
+
                 if (node.bounds().intersects(queryArea))
                 {
-                    node.query(queryArea, ret);
+                    node.query(queryArea, res);
                 }
             }
         }
 
-        quad_tree_node* insert(objectid_t uid, float x, float y)
+        quad_tree_node* insert(objectid_t uid, quad_tree_object* obj)
         {
             // if the item is not contained in this quad, there's a problem
-            if (!bounds_.contains(x, y))
+            if (!bounds_.contains(obj->x, obj->y))
             {
                 assert(false && "feature is out of the bounds of this quadtree node");
                 return nullptr;
-            }
-
-            auto iter = contents_.find(uid);
-            if (iter != contents_.end())
-            {
-                iter->second.x = x;
-                iter->second.y = y;
-                return this;
             }
 
             // if the subnodes are null create them. may not be sucessfull: see below
@@ -152,9 +147,9 @@ namespace math
             // this recurses into the node that is just large enough to fit this item
             for (auto& node : nodes_)
             {
-                if (node.bounds().contains(x, y))
+                if (node.bounds().contains(obj->x, obj->y))
                 {
-                    return node.insert(uid, x, y);
+                    return node.insert(uid, obj);
                 }
             }
 
@@ -162,7 +157,7 @@ namespace math
             // 1) none of the subnodes completely contained the item. or
             // 2) we're at the smallest subnode size allowed 
             // add the item to this node's contents.
-            contents_.emplace(uid, quad_tree_object{ x,y,uid });
+            contents_.emplace(uid, obj);
             return this;
         }
 
@@ -191,15 +186,6 @@ namespace math
             contents_.erase(uid);
         }
 
-        void update(objectid_t uid, float x, float y)
-        {
-            auto iter = contents_.find(uid);
-            assert(iter != contents_.end());
-            assert(bounds_.contains(x, y));
-            iter->second.x = x;
-            iter->second.y = y;
-        }
-
         quad_tree_node* parent() const
         {
             return parent_;
@@ -209,11 +195,11 @@ namespace math
         void create_sub_nodes()
         {
             // the smallest subnode has an area 
-            if ((bounds_.width*bounds_.height) <= aoi_radius * aoi_radius)
+            if ((bounds_.width*bounds_.height) <= min_radius * min_radius)
                 return;
 
-            float halfw = bounds_.width / 2;
-            float halfh = bounds_.height / 2;
+            float halfw = bounds_.width / 2.0f;
+            float halfh = bounds_.height / 2.0f;
 
             // left top node
             nodes_.emplace_back(this, node_rect(bounds_.x, bounds_.midy(), halfw, halfh));
@@ -232,12 +218,16 @@ namespace math
         // The child nodes of the QuadTree
         std::vector<quad_tree_node> nodes_;
         // The objectss of the QuadTree
-        std::unordered_map<objectid_t, quad_tree_object> contents_;
+        std::unordered_map<objectid_t, quad_tree_object*> contents_;
     };
 
+    template<size_t min_raduis>
     class quad_tree
     {
     public:
+        using quad_tree_node_t = quad_tree_node<min_raduis>;
+        using quad_tree_object_t = typename quad_tree_node<min_raduis>::quad_tree_object;
+
         explicit quad_tree(const node_rect& rc)
             :rect_(rc)
             , root_(nullptr, rc)
@@ -253,77 +243,81 @@ namespace math
             return root_.count();
         }
 
+        const math::node_rect& rect()
+        {
+            return rect_;
+        }
+
+        math::rect make_around(float x, float y, float halfw, float halfh) const
+        {
+            auto left = x - halfw;
+            auto bottom = y - halfh;
+            auto right = x + halfw;
+            auto top = y + halfh;
+            left = std::clamp(left, rect_.left(), rect_.right());
+            right = std::clamp(right, rect_.left(), rect_.right());
+            bottom = std::clamp(bottom, rect_.bottom(), rect_.top());
+            top = std::clamp(top, rect_.bottom(), rect_.top());
+            return node_rect(left, bottom, right - left, top - bottom);
+        }
+
         void insert(objectid_t uid, float x, float y)
         {
-            auto node = root_.insert(uid, x, y);
-            assert(nullptr != node);
-            items_.try_emplace(uid, node);
+            auto res = items_.try_emplace(uid, quad_tree_object_t{ x,y,nullptr });
+            if (res.second)
+            {
+                auto node = root_.insert(uid, &res.first->second);
+                assert(nullptr != node);
+                res.first->second.p = node;
+            }
         }
 
         void update(objectid_t uid, float x, float y)
         {
             auto iter = items_.find(uid);
-            if (iter != items_.end())
+            if (iter == items_.end())
             {
-                quad_tree_node* n = iter->second;
-                quad_tree_node* p = n;
-                do
+                return;
+            }
+
+            iter->second.x = x;
+            iter->second.y = y;
+
+            quad_tree_node_t* p = iter->second.p;
+            if (!p->bounds().contains(x, y))
+            {
+                p->erase(uid);
+                while (nullptr != (p = p->parent()))
                 {
-                    if (nullptr == p)
+                    if (p->bounds().contains(x, y))
                     {
                         break;
                     }
-
-                    if (!p->bounds().contains(x, y))
-                    {
-                        if (p == n)
-                        {
-                            p->erase(uid);
-                            items_.erase(uid);
-                        }
-                        p = p->parent();
-                        continue;
-                    }
-                    auto node = p->insert(uid, x, y);;
-                    assert(nullptr != node);
-                    if (node != n)
-                    {
-                        items_.try_emplace(uid, node);
-                    }
-                    return;
-                } while (true);
+                }
             }
-            insert(uid, x, y);
+            assert(nullptr != p);
+            iter->second.p = p->insert(uid, &iter->second);;
+            assert(nullptr != iter->second.p);
         }
 
         void query(objectid_t uid, float width, float height, std::vector<objectid_t>& out)
         {
             auto iter = items_.find(uid);
-            if (iter != items_.end())
+            if (iter == items_.end())
             {
-                auto o = iter->second->contents().find(uid);
-                if (o == iter->second->contents().end())
+                return;
+            }
+            node_rect rc = make_around(iter->second.x, iter->second.y, width / 2.0f, height / 2.0f);
+            quad_tree_node_t* p = iter->second.p;
+            do
+            {
+                if (p->bounds().contains(rc))
                 {
-                    return;
-                }
-                node_rect rc(o->second.x - width / 2, o->second.y - height / 2, width, height);
-                quad_tree_node* p = iter->second;
-                do
-                {
-                    if (nullptr == p)
-                    {
-                        break;
-                    }
-                    if (!p->bounds().contains(rc))
-                    {
-                        p = p->parent();
-                        continue;
-                    }
                     p->query(rc, out);
                     return;
-                } while (true);
-                root_.query(rc, out);
-            }
+                }
+            } while (nullptr != (p = p->parent()));
+            root_.query(rc, out);
         }
 
         void query(const node_rect& rc, std::vector<objectid_t>& out)
@@ -352,15 +346,14 @@ namespace math
             auto iter = items_.find(uid);
             if (iter != items_.end())
             {
-                iter->second->erase(uid);
+                iter->second.p->erase(uid);
                 items_.erase(iter);
             }
         }
-
     private:
         const node_rect rect_;
-        quad_tree_node root_;
-        std::unordered_map<int64_t, quad_tree_node*> items_;
+        quad_tree_node_t root_;
+        std::unordered_map<int64_t, quad_tree_object_t> items_;
     };
 }
 
