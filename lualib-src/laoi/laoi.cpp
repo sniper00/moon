@@ -8,7 +8,8 @@
 
 struct aoi_space_box
 {
-    math::quad_tree* q;
+    using quad_tree_t = math::quad_tree<64>;
+    quad_tree_t* q;
 };
 
 static int lrelease(lua_State *L)
@@ -61,7 +62,7 @@ static int laoi_query(lua_State *L)
     {
         version = 1;
     }
-    ++version;//new version
+    version+=2;//
     luaL_checktype(L, 6, LUA_TTABLE);
     query_cache.clear();
     ab->q->query(id, w, h, query_cache);
@@ -74,9 +75,9 @@ static int laoi_query(lua_State *L)
         int nv = version;
         lua_pushinteger(L, n);
         lua_pushvalue(L, -1);
-        if (LUA_TNIL == lua_rawget(L, 6))
+        if (LUA_TNIL != lua_rawget(L, 6))// already in view
         {
-            nv = version + 1;// enter view
+            nv = version-1;
         }
         lua_pop(L, 1);
         lua_pushinteger(L, nv);
@@ -103,7 +104,7 @@ static int laoi_create(lua_State *L)
     float w = (float)luaL_checknumber(L, 3);
     float h = (float)luaL_checknumber(L, 4);
 
-    math::quad_tree* q = new math::quad_tree(math::node_rect(x, y, w, h));
+    auto* q = new aoi_space_box::quad_tree_t(math::node_rect(x, y, w, h));
     aoi_space_box* ab = (aoi_space_box*)lua_newuserdata(L, sizeof(*ab));
     ab->q = q;
     if (luaL_newmetatable(L, METANAME))//mt
