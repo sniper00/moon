@@ -33,7 +33,7 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
         svr->stop();
-        while (svr->get_state()!=moon::state::exited)
+        while (svr->get_state() != moon::state::exited)
         {
             std::this_thread::yield();
         }
@@ -81,18 +81,55 @@ static void register_signal()
 #endif
 }
 
+void usage(void) {
+    std::cout << "Usage:\n";
+    std::cout << "        ./moon [/path/to/config.json] [options]\n";
+    std::cout << "The options are:\n";
+    std::cout << "        -c <config>           Server config file.(default: config.json).\n";
+    std::cout << "        -r <run>              Specify ID for server to run.(default: 1).\n";
+    std::cout << "        --service-file        Run server with a service use the specified lua file.\n";
+}
+
 int main(int argc, char*argv[])
 {
     using namespace moon;
 
-    int32_t sid = 0;
-    if (argc == 2)
+    std::string config = "config.json";//default config
+    int32_t sid = 1;//default start server 1
+    std::string service_file;
+
+    for (int i = 1; i < argc; ++i)
     {
-        sid = moon::string_convert<int32_t>(argv[1]);
-    }
-    else
-    {
-        sid = 1;//default start server 1
+        bool lastarg = i == (argc - 1);
+        std::string_view v{ argv[i] };
+        if ((v == "-h"sv || v == "--help"sv) && !lastarg)
+        {
+            usage();
+            return -1;
+        }
+        else if ((v == "-c"sv || v == "-config"sv) && !lastarg)
+        {
+            config = argv[++i];
+        }
+        else if ((v == "-r"sv || v == "-run"sv) && !lastarg)
+        {
+            sid = moon::string_convert<int32_t>(argv[++i]);
+        }
+        else if ((v == "--service-file") && !lastarg)
+        {
+            service_file = argv[++i];
+            if (fs::path(service_file).extension() != ".lua")
+            {
+                std::cout << "service file must be a lua script.\n";
+                usage();
+                return -1;
+            }
+        }
+        else
+        {
+            usage();
+            return -1;
+        }
     }
 
     register_signal();
@@ -107,9 +144,6 @@ int main(int argc, char*argv[])
 
             auto router_ = server_->get_router();
 
-            MOON_CHECK(directory::exists("config.json"), "can not found config file: config.json");
-            moon::server_config_manger scfg;
-            MOON_CHECK(scfg.parse(moon::file::read_all("config.json", std::ios::binary | std::ios::in), sid), "failed");
             lua.open_libraries();
 
             sol::table module = lua.create_table();
@@ -131,36 +165,47 @@ int main(int argc, char*argv[])
 #endif
             lua.script("package.path = './?.lua;./lualib/?.lua;'");
 
-            auto c = scfg.find(sid);
-            MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
-
-            router_->set_env("sid", std::to_string(c->sid));
-            router_->set_env("name", c->name);
-            router_->set_env("inner_host", c->inner_host);
-            router_->set_env("outer_host", c->outer_host);
-            router_->set_env("server_config", scfg.config());
-
-            server_->init(static_cast<uint8_t>(c->thread), c->log);
-            server_->logger()->set_level(c->loglevel);
-
-            if (!c->startup.empty())
+            if (!service_file.empty())
             {
-                MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
-                module.set_function("new_service", [&router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
-                    return  router_->new_service(service_type, config, unique, workerid, 0, 0);
-                });
-                lua.script_file(c->startup);
+                server_->init(1, "");
+                server_->logger()->set_level("DEBUG");
+                auto config_string = moon::format(R"({"name":"%s","file":"%s"})", fs::path(service_file).stem().string().data(), service_file.data());
+                MOON_CHECK(router_->new_service("lua", config_string, true, 0, 0, 0), "new_service failed");
             }
-
-            size_t count = 0;
-            for (auto&s : c->services)
+            else
             {
-                if (s.unique) ++count;
-                MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new_service failed");
-            }
+                MOON_CHECK(directory::exists(config), moon::format("can not found config file: %s", config.data()).data());
+                moon::server_config_manger scfg;
+                MOON_CHECK(scfg.parse(moon::file::read_all(config, std::ios::binary | std::ios::in), sid), "failed");
+                auto c = scfg.find(sid);
+                MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
 
-            //wait all configured unqiue service is created.
-            while ((server_->get_state() == moon::state::ready) && router_->unique_service_size() != count);
+                router_->set_env("sid", std::to_string(c->sid));
+                router_->set_env("name", c->name);
+                router_->set_env("inner_host", c->inner_host);
+                router_->set_env("outer_host", c->outer_host);
+                router_->set_env("server_config", scfg.config());
+
+                server_->init(static_cast<uint8_t>(c->thread), c->log);
+                server_->logger()->set_level(c->loglevel);
+
+                if (!c->startup.empty())
+                {
+                    MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be a lua script.");
+                    module.set_function("new_service", [&router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
+                        return  router_->new_service(service_type, config, unique, workerid, 0, 0);
+                    });
+                    lua.script_file(c->startup);
+                }
+                size_t count = 0;
+                for (auto&s : c->services)
+                {
+                    if (s.unique) ++count;
+                    MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new_service failed");
+                }
+                //wait all configured unique service is created.
+                while ((server_->get_state() == moon::state::ready) && router_->unique_service_size() != count);
+            }
 
             server_->run();
         }

@@ -1,3 +1,4 @@
+local moon = require("moon")
 local aoi = require("aoi")
 
 local function test(space)
@@ -25,6 +26,7 @@ local function test(space)
 		end
 	end
 
+	moon.abort()
 end
 
 local function run()
@@ -33,4 +35,7 @@ local function run()
 	aoi.release(space)
 end
 
-run()
+moon.start(function()
+	run()
+end)
+

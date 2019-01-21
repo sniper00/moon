@@ -160,19 +160,4 @@
             }
         ]
     }
-    ,
-    {
-        "sid": 9,
-        "name": "server_#sid",
-        "inner_host": "127.0.0.1",
-        "log_level": "DEBUG",
-        "log": "log/#sid_#date.log",
-        "services": [
-            {
-                "unique": true,
-                "name": "aoi_example",
-                "file": "aoi_example.lua"
-            }
-        ]
-    }
 ]
