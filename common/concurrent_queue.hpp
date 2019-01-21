@@ -88,17 +88,17 @@ namespace moon
             if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
             {
                 block_full::check(lck, [this] {
-                    return (queue_.size() < max_size_) || exit_;
+                    return (container_.size() < max_size_) || exit_;
                 });
             }
 
-            queue_.push_back(std::forward<TData>(x));
+            container_.push_back(std::forward<TData>(x));
 
             if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
             {
                 block_empty::notify_one();
             }
-            return queue_.size();
+            return container_.size();
         }
 
         bool try_pop(T& t)
@@ -107,15 +107,15 @@ namespace moon
             if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
             {
                 block_empty::check(lck, [this] {
-                    return (queue_.size() > 0) || exit_;
+                    return (container_.size() > 0) || exit_;
                 });
             }
-            if (queue_.empty())
+            if (container_.empty())
             {
                 return false;
             }
-            t = queue_.front();
-            queue_.pop_front();
+            t = container_.front();
+            container_.pop_front();
             if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
             {
                 block_full::notify_one();
@@ -126,7 +126,13 @@ namespace moon
         size_t size() const
         {
             std::unique_lock<lock_t> lck(mutex_);
-            return queue_.size();
+            return container_.size();
+        }
+
+        size_t capacity() const
+        {
+            std::unique_lock<lock_t> lck(mutex_);
+            return container_.capacity();
         }
 
         void  swap(container_type& other)
@@ -135,10 +141,10 @@ namespace moon
             if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
             {
                 block_empty::check(lck, [this] {
-                    return (queue_.size() > 0) || exit_;
+                    return (container_.size() > 0) || exit_;
                 });
             }
-            queue_.swap(other);
+            container_.swap(other);
             if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
             {
                 block_full::notify_one();
@@ -161,7 +167,7 @@ namespace moon
 
     private:
         mutable lock_t mutex_;
-        container_type queue_;
+        container_type container_;
         std::atomic_bool exit_;
         size_t max_size_;
     };
