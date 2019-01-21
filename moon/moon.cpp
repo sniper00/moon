@@ -8,7 +8,7 @@
 #include "luabind/lua_bind.h"
 #include "server_config.hpp"
 #include "services/lua_service.h"
-
+#include <stack>
 extern "C" {
 #include "lua53/lstring.h"
 }
