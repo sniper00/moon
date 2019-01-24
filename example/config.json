@@ -26,10 +26,12 @@
             },
             {
                 "unique": true,
-                "name": "socket_example",
-                "file": "socket_example.lua",
-                "ip": "#inner_host",
-                "port": "8001"
+                "name": "tcp_client",
+                "file": "tcp_client.lua",
+                "network": {
+                    "ip": "#inner_host",
+                    "port": "12345"
+                }
             }
         ]
     },
