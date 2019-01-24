@@ -47,8 +47,6 @@ static int laoi_update(lua_State *L)
     return 0;
 }
 
-static std::vector<math::objectid_t> query_cache;
-
 static int laoi_query(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
@@ -64,25 +62,23 @@ static int laoi_query(lua_State *L)
     }
     version+=2;//
     luaL_checktype(L, 6, LUA_TTABLE);
-    query_cache.clear();
-    ab->q->query(id, w, h, query_cache);
-    for (auto n : query_cache)
-    {
+
+    ab->q->query(id, w, h, [L,version,id](math::objectid_t n) {
         if (n == id)
         {
-            continue;
+            return;
         }
         int nv = version;
         lua_pushinteger(L, n);
         lua_pushvalue(L, -1);
         if (LUA_TNIL != lua_rawget(L, 6))// already in view
         {
-            nv = version-1;
+            nv = version - 1;
         }
         lua_pop(L, 1);
         lua_pushinteger(L, nv);
         lua_rawset(L, 6);
-    }
+    });
     lua_pushinteger(L, version);
     return 1;
 }
