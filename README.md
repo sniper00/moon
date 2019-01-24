@@ -47,7 +47,7 @@ Linux Platform:
     # make clean config=release
     # make config=release
     cd example
-    ./moon 1
+    ./moon -r 1
 ```
 
 MacOSX Platform:
@@ -59,7 +59,7 @@ MacOSX Platform:
     # make clean config=release
     # make config=release
     cd example
-    ./moon 1
+    ./moon -r 1
 ```
 
 ## [更多文档](https://github.com/sniper00/moon/wiki)

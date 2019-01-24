@@ -32,7 +32,7 @@ namespace moon
                     auto timeout = rapidjson::get_value<int32_t>(&v.value, "timeout", 0);
                     auto ip = rapidjson::get_value<std::string>(&v.value, "ip");
                     auto port = rapidjson::get_value<std::string>(&v.value, "port");
-                    auto type = rapidjson::get_value<std::string>(&v.value, "type", "listen");
+                    auto type = rapidjson::get_value<std::string>(&v.value, "type");
                     auto protocol = rapidjson::get_value<std::string>(&v.value, "protocol", "default");
                     auto frame_flag = rapidjson::get_value<std::string>(&v.value, "frame_flag", "none");
 
