@@ -60,20 +60,22 @@ namespace math
             return n;
         }
 
-        void subtree_contents(std::vector<objectid_t>& res) const
+        template<typename Handler>
+        void subtree_contents(const Handler& handler) const
         {
             for (auto& node : nodes_)
             {
-                node.subtree_contents(res);
+                node.subtree_contents(handler);
             }
 
             for (auto& item : contents_)
             {
-                res.push_back(item.first);
+                handler(item.first);
             }
         }
 
-        void query(const node_rect& queryArea, std::vector<objectid_t>& res) const
+        template<typename Handler>
+        void query(const node_rect& queryArea, const Handler& handler) const
         {
             auto hw = queryArea.width / 2.0f;
             auto hh = queryArea.height / 2.0f;
@@ -83,7 +85,7 @@ namespace math
             {
                 if (std::abs(item.second->x - midx) <= hw && std::abs(item.second->y - midy) <= hh)
                 {
-                    res.push_back(item.first);
+                    handler(item.first);
                 }
             }
 
@@ -99,7 +101,7 @@ namespace math
                 // and skip the remaining nodes (break this loop)
                 if (node.bounds().contains(queryArea))
                 {
-                    node.query(queryArea, res);
+                    node.query(queryArea, handler);
                     break;
                 }
 
@@ -110,7 +112,7 @@ namespace math
                 // the other quads
                 if (queryArea.contains(node.bounds()))
                 {
-                    node.subtree_contents(res);
+                    node.subtree_contents(handler);
                     continue;
                 }
 
@@ -121,7 +123,7 @@ namespace math
 
                 if (node.bounds().intersects(queryArea))
                 {
-                    node.query(queryArea, res);
+                    node.query(queryArea, handler);
                 }
             }
         }
@@ -300,7 +302,8 @@ namespace math
             assert(nullptr != iter->second.p);
         }
 
-        void query(objectid_t uid, float width, float height, std::vector<objectid_t>& out)
+        template<typename Handler>
+        void query(objectid_t uid, float width, float height, const Handler& handler)
         {
             auto iter = items_.find(uid);
             if (iter == items_.end())
@@ -313,16 +316,17 @@ namespace math
             {
                 if (p->bounds().contains(rc))
                 {
-                    p->query(rc, out);
+                    p->query(rc, handler);
                     return;
                 }
             } while (nullptr != (p = p->parent()));
-            root_.query(rc, out);
+            root_.query(rc, handler);
         }
 
-        void query(const node_rect& rc, std::vector<objectid_t>& out)
+        template<typename Handler>
+        void query(const node_rect& rc, const Handler& handler)
         {
-            root_.query(rc, out);
+            root_.query(rc, handler);
         }
 
         template<typename Action>
