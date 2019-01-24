@@ -42,6 +42,11 @@ local test_case =
             frame_flag= "rw"
         }
     }
+    ,
+    {
+        name = "test_http",
+        file = "test_http.lua"
+    }
 }
 
 local next_case = function ()
