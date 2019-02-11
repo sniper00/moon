@@ -23,43 +23,43 @@
 - [rapidjson](https://github.com/Tencent/rapidjson)
 ## Bulid
 
-git clone <https://github.com/sniper00/moon.git> get the Sources
-
-需要使用premake生成工程文件, [下载最新的premake5](https://premake.github.io/download.html)
-
 The project use of C++17 features, I tested compliers are: 
 - GCC 7.2
 - Visual Studio 2017 Community Update 5
 - clang version 7.0.1  (MacOSX)
 
-Windows Platform:
+[不同平台安装支持C++17的编译器](https://github.com/sniper00/moon/wiki/%E5%AE%89%E8%A3%85C--17%E7%BC%96%E8%AF%91%E5%99%A8%E6%94%AF%E6%8C%81#windows)
+
+需要使用premake生成工程文件, [下载最新的premake5](https://premake.github.io/download.html)
+
+```git clone https://github.com/sniper00/moon.git``` 获取源码
+
+把下载好的premake可执行文件复制到```premake.lua```同级目录。
+
+1. Windows Platform:
 ```shell
     premake5.exe vs2017
 ```
 
-Linux Platform:
+2. Linux Platform:
+- 生成```Makefile```,编译器可选```clang```:
 ```shell
-    ./premake5 gmake
-    # ./premake5 gmake --cc=clang
-    # Debug
-    make
-    # Release
-    # make clean config=release
-    # make config=release
+    ./premake5 gmake [--cc=clang]
+```
+- 编译，默认Debug版,可选指定Release版:
+```shell
+    make clean [config=release]
+    make [config=release]
+```
+- 运行示例:
+```shell
     cd example
     ./moon -r 1
 ```
-
-MacOSX Platform:
+3. MacOSX Platform:
+只支持使用```clang```编译
 ```shell
     ./premake5 gmake --cc=clang
-    # Debug
-    make
-    # Release
-    # make clean config=release
-    # make config=release
-    cd example
-    ./moon -r 1
 ```
 
 ## [更多文档](https://github.com/sniper00/moon/wiki)
