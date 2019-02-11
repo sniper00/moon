@@ -34,7 +34,7 @@ The project use of C++17 features, I tested compliers are:
 
 ```git clone https://github.com/sniper00/moon.git``` 获取源码
 
-把下载好的premake可执行文件复制到```premake.lua```同级目录。
+把下载好的premake可执行文件复制到```premake5.lua```同级目录。
 
 1. Windows Platform:
 ```shell
