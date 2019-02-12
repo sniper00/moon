@@ -65,6 +65,8 @@ namespace moon
         using lock_t = LockType;
         using block_empty = queue_block_empty<BlockEmpty>;
         using block_full = queue_block_full<BlockFull>;
+        static constexpr bool use_cv = std::is_same_v< typename block_empty::type, std::true_type> || std::is_same_v< typename block_full::type, std::true_type>;
+        using raii_lock_t =  std::conditional_t<use_cv,std::unique_lock<lock_t>,std::lock_guard<lock_t>>;
 
         concurrent_queue()
             :exit_(false)
@@ -83,7 +85,7 @@ namespace moon
         template<typename TData>
         size_t push_back(TData&& x)
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
 
             if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
             {
@@ -103,7 +105,7 @@ namespace moon
 
         bool try_pop(T& t)
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
             if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
             {
                 block_empty::check(lck, [this] {
@@ -125,19 +127,19 @@ namespace moon
 
         size_t size() const
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
             return container_.size();
         }
 
         size_t capacity() const
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
             return container_.capacity();
         }
 
         void  swap(container_type& other)
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
             if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
             {
                 block_empty::check(lck, [this] {
@@ -153,7 +155,7 @@ namespace moon
 
         void exit()
         {
-            std::unique_lock<lock_t> lck(mutex_);
+            raii_lock_t lck(mutex_);
             exit_ = true;
             if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
             {

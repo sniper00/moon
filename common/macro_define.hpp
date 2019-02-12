@@ -67,9 +67,6 @@ using classname##_wptr_t = std::weak_ptr<classname>;
 
 #define thread_sleep(x)  std::this_thread::sleep_for(std::chrono::milliseconds(x));
 
-#define SHARED_LOCK_GURAD(lock) std::shared_lock<decltype(lock)> lk(lock);
-#define UNIQUE_LOCK_GURAD(lock) std::unique_lock<decltype(lock)> lk(lock);
-
 namespace moon
 {
     enum  class state

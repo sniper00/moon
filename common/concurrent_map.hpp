@@ -36,7 +36,7 @@ namespace moon
         template<class TKey, class TValue>
         bool set(TKey&& key, TValue&& value)
         {
-            UNIQUE_LOCK_GURAD(lock_);
+            std::unique_lock lck(lock_);
             auto iter = data_.find(key);
             if (iter != data_.end())
             {
@@ -52,13 +52,13 @@ namespace moon
 
         bool try_get_value(const Key& key, Value& value) const
         {
-            SHARED_LOCK_GURAD(lock_)
-                return detail::try_get_value<Key, Value>::get(data_, key, value);
+            std::shared_lock lck(lock_);
+            return detail::try_get_value<Key, Value>::get(data_, key, value);
         }
 
         bool erase(const Key& key)
         {
-            UNIQUE_LOCK_GURAD(lock_);
+            std::unique_lock lck(lock_);
             auto iter = data_.find(key);
             if (iter != data_.end())
             {
@@ -70,19 +70,19 @@ namespace moon
 
         void clear()
         {
-            UNIQUE_LOCK_GURAD(lock_);
+            std::unique_lock lck(lock_);
             data_.clear();
         }
 
         size_t size() const
         {
-            SHARED_LOCK_GURAD(lock_);
+            std::shared_lock lck(lock_);
             return data_.size();
         }
 
         bool has(const Key& key) const
         {
-            SHARED_LOCK_GURAD(lock_);
+            std::shared_lock lck(lock_);
             auto iter = data_.find(key);
             if (iter != data_.end())
             {
