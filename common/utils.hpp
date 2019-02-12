@@ -6,21 +6,6 @@
 
 namespace moon
 {
-    template<bool, typename TA, typename TB>
-    struct if_then_else;
-
-    template<typename TA, typename TB>
-    struct if_then_else<true, TA, TB>
-    {
-        typedef TA type;
-    };
-
-    template<typename TA, typename TB>
-    struct if_then_else<false, TA, TB>
-    {
-        typedef TB type;
-    };
-
     using FuncBindTuple = std::tuple <decltype(std::placeholders::_1), decltype(std::placeholders::_2), decltype(std::placeholders::_3), decltype(std::placeholders::_4), decltype(std::placeholders::_5), decltype(std::placeholders::_6) >;
 
     namespace detail

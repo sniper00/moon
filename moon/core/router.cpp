@@ -19,7 +19,7 @@ namespace moon
 
     size_t router::servicenum() const
     {
-        SHARED_LOCK_GURAD(serviceids_lck_);
+        std::shared_lock lck(serviceids_lck_);
         return serviceids_.size();
     }
 
@@ -241,13 +241,13 @@ namespace moon
 
     bool router::has_serviceid(uint32_t serviceid) const
     {
-        SHARED_LOCK_GURAD(serviceids_lck_);
+        std::shared_lock lck(serviceids_lck_);
         return (serviceids_.find(serviceid) != serviceids_.end());
     }
 
     bool router::try_add_serviceid(uint32_t serviceid)
     {
-        UNIQUE_LOCK_GURAD(serviceids_lck_);
+        std::unique_lock lk(serviceids_lck_);
         if (serviceids_.find(serviceid) == serviceids_.end())
         {
             return serviceids_.emplace(serviceid).second;
@@ -257,7 +257,7 @@ namespace moon
 
     void router::on_service_remove(uint32_t serviceid)
     {
-        UNIQUE_LOCK_GURAD(serviceids_lck_);
+        std::unique_lock lk(serviceids_lck_);
         size_t count = serviceids_.erase(serviceid);
         MOON_CHECK(count == 1, "erase failed!");
     }
