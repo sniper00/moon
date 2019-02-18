@@ -45,7 +45,7 @@ namespace moon
                 delete t;
                 return;
             }
-            std::unique_lock<lock_t> lk(lock_);
+            std::lock_guard<lock_t> lk(lock_);
             objects_.push_back(t);
         }
 
@@ -59,7 +59,7 @@ namespace moon
         {
             object_pointer_t t = nullptr;
             {
-                std::unique_lock<lock_t> lk(lock_);
+                std::lock_guard<lock_t> lk(lock_);
                 if (!objects_.empty())
                 {
                     t = objects_.back();
@@ -80,7 +80,7 @@ namespace moon
 
         void free_all()
         {
-            std::unique_lock<lock_t> lk(lock_);
+            std::lock_guard<lock_t> lk(lock_);
             for (auto& obj : objects_)
             {
                 delete obj;
