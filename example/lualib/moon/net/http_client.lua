@@ -18,7 +18,7 @@ local function read_chunked(session, chunkdata)
     if not data then
         return false,err
     end
-    local length = tonumber(data)
+    local length = tonumber(data,"16")
     if not length then
         return false, "protocol error"
     end
@@ -34,6 +34,8 @@ local function read_chunked(session, chunkdata)
         end
     elseif length <0 then
         return false, "protocol error"
+    else
+        return "E"
     end
     return true
 end
@@ -61,9 +63,18 @@ local function response_handler(conn,parser)
             return data
         elseif parser:header("Transfer-Encoding") == 'chunked' then
             local chunkdata = {}
+            while true do
             local result,errmsg = read_chunked(conn,chunkdata)
             if not result then
                 return false,errmsg
+            end
+                if result == "E" then
+                    break
+                end
+            end
+            data, err = conn:co_read('\r\n')
+            if not data then
+                return false,err
             end
             return table.concat( chunkdata )
         end
@@ -126,7 +137,7 @@ function M:request( method,path,content,header)
         end
     end
 
-    if #content > 0 then
+    if content and #content > 0 then
         header = header or {}
         local v = header["Content-Length"]
         if not v then
