@@ -57,12 +57,12 @@ namespace moon
         }
     };
 
-    template<class T, typename LockType = std::mutex, template <class,class = std::allocator<T>> class Container = std::vector, bool BlockEmpty = false, bool BlockFull = false>
+    template<class T, typename Lock = std::mutex, template <typename Elem,typename = std::allocator<Elem>> class Container = std::vector, bool BlockEmpty = false, bool BlockFull = false>
     class concurrent_queue :public queue_block_empty<BlockEmpty>, public queue_block_full<BlockFull>
     {
     public:
         using container_type = Container<T>;
-        using lock_t = LockType;
+        using lock_t = Lock;
         using block_empty = queue_block_empty<BlockEmpty>;
         using block_full = queue_block_full<BlockFull>;
         static constexpr bool use_cv = std::is_same_v< typename block_empty::type, std::true_type> || std::is_same_v< typename block_full::type, std::true_type>;
