@@ -113,7 +113,16 @@ int main(int argc, char*argv[])
         }
         else if ((v == "-r"sv || v == "-run"sv) && !lastarg)
         {
-            sid = moon::string_convert<int32_t>(argv[++i]);
+            try
+            {
+                sid = moon::string_convert<int32_t>(argv[++i]);
+            }
+            catch (std::exception& e)
+            {
+                std::cout << e.what()<<std::endl;
+                usage();
+                return -1;
+            }
         }
         else if ((v == "--service-file") && !lastarg)
         {

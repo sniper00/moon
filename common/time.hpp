@@ -92,7 +92,7 @@ namespace moon
 
         static std::tm* localtime(std::time_t* t, std::tm* result)
         {
-#ifdef _WIN32
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
             localtime_s(result, t);
 #else
             localtime_r(t, result);
@@ -103,7 +103,7 @@ namespace moon
         static std::tm gmtime(const std::time_t &time_tt)
         {
 
-#ifdef _WIN32
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
             std::tm tm;
             gmtime_s(&tm, &time_tt);
 #else
@@ -130,7 +130,7 @@ namespace moon
         return !(tm1 == tm2);
     }
 
-#ifdef _WIN32
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
     inline int nanosleep(const struct timespec* request, struct timespec* remain) {
         Sleep((DWORD)((request->tv_sec * 1000) + (request->tv_nsec / 1000000)));
         if (remain != nullptr) {

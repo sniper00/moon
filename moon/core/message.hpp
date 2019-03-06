@@ -167,7 +167,7 @@ namespace moon
 
         buffer* get_buffer()
         {
-            return data_.get();
+            return data_ ? data_.get() : nullptr;
         }
 
         bool broadcast() const
