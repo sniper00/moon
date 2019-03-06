@@ -37,9 +37,14 @@ namespace moon
         
         static int pack(lua_State* L)
         {
+            int n = lua_gettop(L);
+            if(0==n)
+            {
+                return 0;
+            }
             auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
             buf->set_flag(HEAP_BUFFER);
-            int n = lua_gettop(L);
+
             for (int i = 1; i <= n; i++) {
                 pack_one(L, buf, i, 0);
             }
@@ -50,8 +55,13 @@ namespace moon
 
         static int packstring(lua_State* L)
         {
-            buffer buf;
             int n = lua_gettop(L);
+            if(0==n)
+            {
+                return 0;
+            }
+
+            buffer buf;
             for (int i = 1; i <= n; i++) {
                 pack_one(L, &buf, i, 0);
             }
@@ -75,6 +85,7 @@ namespace moon
             else
             {
                 buffer* buf = (buffer*)lua_touserdata(L, 1);
+                if (nullptr == buf) return 0;
                 pdata = buf->data();
                 len = (int)buf->size();
             }
@@ -110,9 +121,13 @@ namespace moon
 
         static int concat(lua_State* L)
         {
+            int n = lua_gettop(L);
+            if(0==n)
+            {
+                return 0;
+            }
             auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
             buf->set_flag(HEAP_BUFFER);
-            int n = lua_gettop(L);
             for (int i = 1; i <= n; i++) {
                 concat_one(L, buf, i, 0);
             }
@@ -123,8 +138,13 @@ namespace moon
 
         static int concatstring(lua_State *L)
         {
-            buffer buf;
             int n = lua_gettop(L);
+            if(0==n)
+            {
+                return 0;
+            }
+
+            buffer buf;
             for (int i = 1; i <= n; i++) {
                 concat_one(L, &buf, i, 0);
             }
