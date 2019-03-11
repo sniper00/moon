@@ -23,7 +23,7 @@ function M:spawn()
     local c = table.remove(self.pool)
     if not c then
         c = redis.new()
-        if not c:connect(M.ip, M.port) then
+        if not c:connect(self.ip, self.port) then
             return nil,"connect redis failed"
         end
         return c
