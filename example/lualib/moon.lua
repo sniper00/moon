@@ -17,6 +17,7 @@ local co_running = coroutine.running
 local _co_resume = coroutine.resume
 local co_yield = coroutine.yield
 local table_remove = table.remove
+local table_insert = table.insert
 local _send = core.send
 
 local PTYPE_SYSTEM = 1
@@ -77,8 +78,6 @@ local protocol = {}
 
 local services_exited = {}
 local response_wacther = {}
-
-local waitallco = {}
 
 local function co_resume(co, ...)
     local ok, err = _co_resume(co, ...)
@@ -164,10 +163,10 @@ local function _default_dispatch(msg, PTYPE)
             resplistener[responseid] = nil
             return
         end
-        error(string.format( "response [%u] can not find co", responseid))
+        error(string.format( "%s: response [%u] can not find co.",moon.name(), responseid))
 	else
         if not p.dispatch then
-			error(string.format( "[%s] dispatch null [%u]",moon.name(), p.PTYPE))
+			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name(), p.PTYPE))
 			return
         end
         p.dispatch(msg, p)
@@ -205,10 +204,10 @@ end
 ---param receiver:接收者服务id<br>
 ---param header:message header<br>
 ---param data 消息内容 string 类型<br>
----@param PTYPE string
----@param receiver int
----@param header string
----@param data string|userdata
+---@param PTYPE string 协议类型
+---@param receiver int 接收者服务id
+---@param header string message header
+---@param data string|userdata 消息内容
 ---@param responseid int
 ---@return boolean
 function moon.raw_send(PTYPE, receiver, header, data, responseid)
@@ -306,6 +305,8 @@ end
 -------------------------协程操作封装--------------------------
 local co_pool = setmetatable({}, {__mode = "kv"})
 
+local waitallco = setmetatable({}, {__mode = "k"})
+
 local function check_wait_all( ... )
     local co = co_running()
     local waitco = waitallco[co]
@@ -321,23 +322,28 @@ local function check_wait_all( ... )
     return co
 end
 
-local function routine(func)
+local function _invoke(f, ...)
+    return check_wait_all(f(...))
+end
+
+local function routine(f, ...)
+    local co = check_wait_all(f(...))
     while true do
-        local co = check_wait_all(func())
-        co_pool[#co_pool + 1] = co
-        func = co_yield()
+        table_insert(co_pool,co)
+        --co_pool[#co_pool + 1] = co
+        co = _invoke(co_yield())
     end
 end
 
 ---启动一个异步
 ---@param func function
 ---@return coroutine
-function moon.async(func)
+function moon.async(func, ...)
     local co = table_remove(co_pool)
     if not co then
         co = co_create(routine)
     end
-    co_resume(co, func) --func 作为 routine 的参数
+    co_resume(co, func, ...) --func 作为 routine 的参数
     return co
 end
 
@@ -357,6 +363,10 @@ function moon.wait_all( ... )
         end
     end
     return co_yield()
+end
+
+function moon.coroutine_num()
+    return #co_pool
 end
 
 --------------------------timer-------------

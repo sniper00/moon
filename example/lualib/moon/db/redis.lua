@@ -30,6 +30,7 @@ local common_cmds = {
 	"linsert", -- Lists
 	"hexists",
 	"hget",
+	"hgetall",
 	"hset",
 	"hmget",
 	--[[ "hmset", ]]
