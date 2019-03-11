@@ -34,6 +34,12 @@ local function run_test()
         res, err = redis:decr("mset_key1")
         test_assert.equal(res, 1)
 
+        res, err = redis:hmset("mset_key3","field1","value1","field2","value2")
+        test_assert.equal(res, "OK")
+
+        res, err = redis:hgetall("mset_key3")
+        test_assert.linear_table_equal(res, {"field1","value1","field2","value2"})
+
         redis:zadd("salary", 2500, "jack")
         redis:zadd("salary", 500, "tom")
         redis:zadd("salary", 12000, "peter")
