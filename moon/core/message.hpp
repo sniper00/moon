@@ -17,9 +17,10 @@ namespace moon
             return std::make_unique<message>(capacity, headreserved);
         }
 
-        static message_ptr_t create(const buffer_ptr_t & v)
+        template<typename Buffer,std::enable_if_t<std::is_same_v<std::decay_t<Buffer>,buffer_ptr_t>,int> = 0>
+        static message_ptr_t create(Buffer&& v)
         {
-            return std::make_unique<message>(v);
+            return std::make_unique<message>(std::forward<Buffer>(v));
         }
 
         message(size_t capacity = 64, uint32_t headreserved = 0)
@@ -27,8 +28,9 @@ namespace moon
             data_ = std::make_shared<buffer>(capacity, headreserved);
         }
 
-        explicit message(const buffer_ptr_t & v)
-            :data_(v)
+        template<typename Buffer, std::enable_if_t<std::is_same_v<std::decay_t<Buffer>, buffer_ptr_t>, int> = 0>
+        explicit message(Buffer&& v)
+            :data_(std::forward<Buffer>(v))
         {
             
         }

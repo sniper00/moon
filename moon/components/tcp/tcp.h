@@ -90,7 +90,7 @@ namespace moon
 
         bool send(uint32_t connid, const buffer_ptr_t& data);
 
-        bool send_then_close(uint32_t connid, const buffer_ptr_t& data);
+        bool send_with_flag(uint32_t connid, const buffer_ptr_t& data, int flag);
 
         bool send_message(uint32_t connid, message* msg);
 

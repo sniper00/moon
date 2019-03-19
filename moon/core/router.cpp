@@ -122,7 +122,7 @@ namespace moon
     void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, string_view_t header, int32_t responseid, uint8_t type) const
     {
         responseid = -responseid;
-        message_ptr_t msg = message::create(data);
+        message_ptr_t msg = message::create(std::move(data));
         msg->set_sender(sender);
         msg->set_receiver(receiver);
         if (header.size() != 0)
@@ -138,7 +138,7 @@ namespace moon
     {
         for (auto& w : workers_)
         {
-            auto m = message::create(buf);
+            auto m = message::create(std::move(buf));
             m->set_broadcast(true);
             m->set_header(header);
             m->set_sender(sender);

@@ -172,6 +172,11 @@ const lua_bind & lua_bind::bind_util() const
 
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
+
+    lua.new_enum<moon::buffer_flag>("buffer_flag", {
+        {"close",moon::buffer_flag::close},
+        {"ws_text",moon::buffer_flag::ws_text} 
+        });
     return *this;
 }
 
@@ -271,7 +276,7 @@ const lua_bind & lua_bind::bind_socket() const
         , "close", (&moon::tcp::close)
         , "read", (&moon::tcp::read)
         , "send", (&moon::tcp::send)
-        , "send_then_close", (&moon::tcp::send_then_close)
+        , "send_with_flag", (&moon::tcp::send_with_flag)
         , "send_message", (&moon::tcp::send_message)
         , "settimeout", (&moon::tcp::settimeout)
         , "setnodelay", (&moon::tcp::setnodelay)
