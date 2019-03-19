@@ -478,13 +478,13 @@ namespace moon
             }
         }
 
-    protected:
         size_t writeablesize() const
         {
             assert(capacity_ >= writepos_);
             return capacity_ - writepos_;
         }
 
+    protected:
         size_t next_pow2(size_t x)
         {
             if (!(x & (x - 1)))

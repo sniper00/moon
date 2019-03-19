@@ -35,8 +35,8 @@ do
     end)
 
     websocket.on("message",function(sessionid, msg)
-        --websocket.send(sessionid, msg:bytes())
-        websocket.send_message(sessionid, msg)
+        --websocket.send(sessionid, msg)
+        websocket.send_text(sessionid, msg:bytes())
     end)
 
     websocket.on("close",function(sessionid, msg)
