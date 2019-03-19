@@ -1,5 +1,9 @@
 local moon = require("moon")
 
+local close_flag = moon.buffer_flag.close
+
+local text_flag = moon.buffer_flag.close
+
 local handler = table.new(0,6)
 
 moon.dispatch(
@@ -41,16 +45,23 @@ function M.on(name, cb)
     end
 end
 
+--- send binary
 function M.send_message(sessionid, msg)
     return tcp:send_message(sessionid, msg)
 end
 
+--- send binary
 function M.send(sessionid, str)
     return tcp:send(sessionid, str)
 end
 
+--- send text
+function M.send_text(sessionid, str)
+    return tcp:send_with_flag(sessionid, str, text_flag)
+end
+
 function M.send_then_close(sessionid, str)
-    return tcp:send_then_close(sessionid, str)
+    return tcp:send_with_flag(sessionid, str, close_flag)
 end
 
 function M.close(sessionid)

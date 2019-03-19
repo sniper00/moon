@@ -237,14 +237,15 @@ namespace moon
         return iter->second->send(data);
     }
 
-    bool tcp::send_then_close(uint32_t connid, const buffer_ptr_t & data)
+    bool tcp::send_with_flag(uint32_t connid, const buffer_ptr_t & data, int flag)
     {
         auto iter = connections_.find(connid);
         if (iter == connections_.end())
         {
             return false;
         }
-        data->set_flag(buffer_flag::close);
+        MOON_ASSERT(flag>0&&flag< static_cast<int>(buffer_flag::buffer_flag_max),"tcp::send_with_flag flag invalid")
+        data->set_flag(static_cast<buffer_flag>(flag));
         return iter->second->send(data);
     }
 

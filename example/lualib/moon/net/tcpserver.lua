@@ -1,5 +1,7 @@
 local moon = require("moon")
 
+local close_flag = moon.buffer_flag.close
+
 local handler = table.new(0,6)
 
 moon.dispatch(
@@ -50,7 +52,7 @@ function M.send(sessionid, str)
 end
 
 function M.send_then_close(sessionid, str)
-    return tcp:send_then_close(sessionid, str)
+    return tcp:send_with_flag(sessionid, str, close_flag)
 end
 
 function M.set_enable_frame(flag)

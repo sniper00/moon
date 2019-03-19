@@ -1,7 +1,7 @@
 --协程socket封装
 
 local moon  = require("moon")
-
+local close_flag = moon.buffer_flag.close
 local co_yield      = coroutine.yield
 local make_response = moon.make_response
 
@@ -40,7 +40,7 @@ end
 function session:send(data,bclose)
     assert(self.connid,"attemp send an invalid session")
     if bclose then
-        return self.sock:send_then_close(self.connid,data)
+        return self.sock:send_with_flag(self.connid,data,close_flag)
     else
         return self.sock:send(self.connid,data)
     end
