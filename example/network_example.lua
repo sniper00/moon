@@ -12,7 +12,7 @@ do
 
     tcpserver.on("message",function(sessionid, msg)
         --tcpserver.send(sessionid, msg:bytes())
-        tcpserver.send_message(sessionid, msg)
+        tcpserver.send_text(sessionid, msg:bytes())
     end)
 
     tcpserver.on("close",function(sessionid, msg)
