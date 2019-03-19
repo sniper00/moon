@@ -12,7 +12,7 @@ do
 
     tcpserver.on("message",function(sessionid, msg)
         --tcpserver.send(sessionid, msg:bytes())
-        tcpserver.send_text(sessionid, msg:bytes())
+        tcpserver.send_message(sessionid, msg)
     end)
 
     tcpserver.on("close",function(sessionid, msg)
@@ -35,8 +35,8 @@ do
     end)
 
     websocket.on("message",function(sessionid, msg)
-        --websocket.send(sessionid, msg:bytes())
-        websocket.send_message(sessionid, msg)
+        --websocket.send(sessionid, msg)
+        websocket.send_text(sessionid, msg:bytes())
     end)
 
     websocket.on("close",function(sessionid, msg)
