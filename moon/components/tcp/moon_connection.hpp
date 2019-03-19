@@ -155,8 +155,7 @@ namespace moon
                 buf_->offset_writepos(static_cast<int>(bytes_transferred));
                 if (!continued)
                 {
-                    auto msg = message::create(buf_);
-                    buf_.reset();
+                    auto msg = message::create(std::move(buf_));
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
                     handle_message(std::move(msg));
                 }
