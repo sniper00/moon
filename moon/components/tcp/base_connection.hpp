@@ -2,8 +2,8 @@
 #include "config.h"
 #include "asio.hpp"
 #include "message.hpp"
-#include "handler_alloc.hpp"
-#include "const_buffers_holder.hpp"
+#include "components/handler_alloc.hpp"
+#include "components/const_buffers_holder.hpp"
 #include "common/string.hpp"
 
 namespace moon

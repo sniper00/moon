@@ -1,4 +1,5 @@
 local moon = require("moon")
+local http = require("http")
 local seri = require("seri")
 local socket = require("moon.net.socket")
 
@@ -176,18 +177,18 @@ local function request_handler(session, request, data )
     end
 end
 
-local function session_handler(session,parser)
+local function session_handler(session,request)
     local data, err = session:co_read("\r\n\r\n",M.header_max_len)
     if not data then
         return false, err
     else
         --print("raw data",data)
-        if parser:parse(data) == -1 then
-            return false, "header parser error"
+        if request:parse(data) == -1 then
+            return false, "header request error"
         end
 
-        if parser:has_header("Content-Length") then
-            local content_length = tonumber(parser:header("Content-Length"))
+        if request:has_header("Content-Length") then
+            local content_length = tonumber(request:header("Content-Length"))
             if not content_length then
                 return false, "Content-Length is not number"
             end
@@ -202,18 +203,18 @@ local function session_handler(session,parser)
                 return false,err
             end
             --print("Content-Length",content_length)
-            request_handler(session,parser,data)
+            request_handler(session,request,data)
             return true
-        elseif parser:header("Transfer-Encoding") == 'chunked' then
+        elseif request:header("Transfer-Encoding") == 'chunked' then
             local chunkdata = {}
             local result,errmsg = read_chunked(session,chunkdata)
             if not result then
                 return false,errmsg
             end
-            request_handler(session,parser,table.concat( chunkdata ))
+            request_handler(session,request,table.concat( chunkdata ))
             return true
         end
-        request_handler(session,parser)
+        request_handler(session,request)
         return true
     end
 end
@@ -233,9 +234,9 @@ function M.listen(ip,port,timeout)
             local session,err = server:co_accept()
             if session then
                 moon.async(function()
-                    local parser = moon.http_request_parser.new()
+                    local request = http.request.new()
                     while true do
-                        local ok, err2 = session_handler(session,parser)
+                        local ok, err2 = session_handler(session,request)
                         if not ok then
                             if M.error then
                                 M.error(session,err2)

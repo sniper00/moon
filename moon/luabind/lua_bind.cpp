@@ -285,31 +285,6 @@ const lua_bind & lua_bind::bind_socket() const
     return *this;
 }
 
-const lua_bind & lua_bind::bind_http() const
-{
-    lua.new_usertype<moon::http::request_parser>("http_request_parser"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::request_parser::parse_string)
-        , "method", sol::readonly(&moon::http::request_parser::method)
-        , "path", sol::readonly(&moon::http::request_parser::path)
-        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
-        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
-        , "header", (&moon::http::request_parser::header)
-        , "has_header", (&moon::http::request_parser::has_header)
-        );
-
-    lua.new_usertype<moon::http::response_parser>("http_response_parser"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::response_parser::parse_string)
-        , "version", sol::readonly(&moon::http::response_parser::version)
-        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
-        , "header", (&moon::http::response_parser::header)
-        , "has_header", (&moon::http::response_parser::has_header)
-        );
-
-    return *this;
-}
-
 void lua_bind::registerlib(lua_State * L, const char * name, lua_CFunction f)
 {
     lua_getglobal(L, "package");
@@ -470,6 +445,38 @@ static sol::table lua_fs(sol::this_state L)
 int luaopen_fs(lua_State* L)
 {
     return sol::stack::call_lua(L, 1, lua_fs);
+}
+
+static sol::table lua_http(sol::this_state L)
+{
+    sol::state_view lua(L);
+    sol::table module = lua.create_table();
+
+    module.new_usertype<moon::http::request_parser>("request"
+        , sol::constructors<sol::types<>>()
+        , "parse", (&moon::http::request_parser::parse_string)
+        , "method", sol::readonly(&moon::http::request_parser::method)
+        , "path", sol::readonly(&moon::http::request_parser::path)
+        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
+        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
+        , "header", (&moon::http::request_parser::header)
+        , "has_header", (&moon::http::request_parser::has_header)
+        );
+
+    module.new_usertype<moon::http::response_parser>("response"
+        , sol::constructors<sol::types<>>()
+        , "parse", (&moon::http::response_parser::parse_string)
+        , "version", sol::readonly(&moon::http::response_parser::version)
+        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
+        , "header", (&moon::http::response_parser::header)
+        , "has_header", (&moon::http::response_parser::has_header)
+        );
+    return module;
+}
+
+int luaopen_http(lua_State* L)
+{
+    return sol::stack::call_lua(L, 1, lua_http);
 }
 
 const char* lua_traceback(lua_State * L)
