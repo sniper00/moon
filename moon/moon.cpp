@@ -184,7 +184,7 @@ int main(int argc, char*argv[])
             else
             {
                 MOON_CHECK(directory::exists(config), moon::format("can not found config file: %s", config.data()).data());
-                moon::server_config_manger scfg;
+                moon::server_config_manger& scfg = moon::server_config_manger::instance();
                 MOON_CHECK(scfg.parse(moon::file::read_all(config, std::ios::binary | std::ios::in), sid), "failed");
                 auto c = scfg.find(sid);
                 MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));

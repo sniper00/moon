@@ -8,7 +8,7 @@
 namespace moon
 {
     template<typename TService>
-    class service_config
+    class service_config_parser
     {
         rapidjson::Document doc;
     public:

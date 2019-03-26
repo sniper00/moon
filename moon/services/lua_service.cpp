@@ -7,6 +7,7 @@
 #include "rapidjson/document.h"
 #include "luabind/lua_serialize.hpp"
 #include "service_config.hpp"
+#include "server_config.hpp"
 
 using namespace moon;
 
@@ -107,7 +108,7 @@ bool lua_service::init(string_view_t config)
 {
     try
     {
-        service_config<lua_service> scfg;
+        service_config_parser<lua_service> scfg;
         MOON_CHECK(scfg.parse(this, config), "lua service init failed: parse config failed.");
         auto luafile = scfg.get_value<std::string>("file");
         MOON_CHECK(!luafile.empty(), "lua service init failed: config does not provide lua file.");
@@ -121,17 +122,22 @@ bool lua_service::init(string_view_t config)
             .bind_util()
             .bind_timer(this)
             .bind_message()
-            .bind_socket()
-            .bind_http();
+            .bind_socket();
 
         lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
-        lua_bind::registerlib(lua_.lua_state(), "seri", lua_serialize::open);
+        lua_bind::registerlib(lua_.lua_state(), "http", luaopen_http);
         lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
         lua_bind::registerlib(lua_.lua_state(), "json", luaopen_rapidjson);
         lua_bind::registerlib(lua_.lua_state(), "moon_core", module);
+        lua_bind::registerlib(lua_.lua_state(), "seri", lua_serialize::open);
 
-        auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
+        moon::server_config_manger& server_config = moon::server_config_manger::instance();
         {
+            auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
+            if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
+            {
+                std::copy(server_cfg->cpath.begin(), server_cfg->cpath.end(), std::back_inserter(cpaths));
+            }
             cpaths.emplace_back("./clib");
             std::string strpath;
             strpath.append("package.cpath ='");
@@ -146,6 +152,10 @@ bool lua_service::init(string_view_t config)
 
         auto paths = scfg.get_value<std::vector<std::string_view>>("path");
         {
+            if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
+            {
+                std::copy(server_cfg->path.begin(), server_cfg->path.end(), std::back_inserter(paths));
+            }
             paths.emplace_back("./lualib");
             std::string strpath;
             strpath.append("package.path ='");
