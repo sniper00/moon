@@ -49,7 +49,8 @@ equal(type(msg.redirect) , "function")
 equal(type(msg.resend) , "function")
 
 equal(type(fs.create_directory) , "function")
-equal(type(fs.current_directory) , "function")
+equal(type(fs.working_directory) , "function")
+print(fs.working_directory())
 equal(type(fs.exists) , "function")
 equal(type(fs.traverse_folder) , "function")
 
