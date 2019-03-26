@@ -410,7 +410,9 @@ static sol::table lua_fs(sol::this_state L)
     module.set_function("traverse_folder", traverse_folder);
     module.set_function("exists", directory::exists);
     module.set_function("create_directory", directory::create_directory);
-    module.set_function("current_directory", directory::current_directory);
+    module.set_function("working_directory", []() {
+        return directory::working_directory.string();
+    });
     module.set_function("parent_path", [](const moon::string_view_t& s) {
         return fs::absolute(fs::path(s)).parent_path().string();
     });
@@ -434,9 +436,9 @@ static sol::table lua_fs(sol::this_state L)
 
     module.set_function("relative_work_path", [](const moon::string_view_t& p) {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-        return  fs::absolute(p).lexically_relative(lua_service::work_path()).string();
+        return  fs::absolute(p).lexically_relative(directory::working_directory).string();
 #else
-        return  lexically_relative(fs::absolute(p), lua_service::work_path()).string();
+        return  lexically_relative(fs::absolute(p), directory::working_directory).string();
 #endif
     });
     return module;

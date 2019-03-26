@@ -94,6 +94,8 @@ int main(int argc, char*argv[])
 {
     using namespace moon;
 
+    directory::working_directory = directory::current_directory();
+
     std::string config = "config.json";//default config
     int32_t sid = 1;//default start server 1
     std::string service_file;

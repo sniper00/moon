@@ -2,7 +2,7 @@ local moon = require("moon")
 
 local close_flag = moon.buffer_flag.close
 
-local text_flag = moon.buffer_flag.close
+local text_flag = moon.buffer_flag.ws_text
 
 local handler = table.new(0,6)
 

@@ -61,7 +61,7 @@ function core.create_directory(dir)
 end
 
 ---@return string
-function core.current_directory()
+function core.working_directory()
     -- body
 end
 

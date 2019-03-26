@@ -45,12 +45,6 @@ void * lua_service::lalloc(void * ud, void *ptr, size_t osize, size_t nsize) {
     }
 }
 
-const fs::path& lua_service::work_path()
-{
-    static auto current_path = fs::current_path();
-    return current_path;
-}
-
 lua_service::lua_service()
     :lua_(sol::default_at_panic, lalloc, this)
 {
