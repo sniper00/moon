@@ -74,33 +74,34 @@ namespace moon
             if (lua_isnoneornil(L, 1)) {
                 return 0;
             }
-
-            const char* pdata;
-            int len;
+            const char* data;
+            size_t len;
             if (lua_type(L, 1) == LUA_TSTRING) {
-                size_t sz;
-                pdata = lua_tolstring(L, 1, &sz);
-                len = (int)sz;
+                data = lua_tolstring(L, 1, &len);
             }
             else
             {
                 buffer* buf = (buffer*)lua_touserdata(L, 1);
                 if (nullptr == buf) return 0;
-                pdata = buf->data();
-                len = (int)buf->size();
+                data = buf->data();
+                len = buf->size();
             }
+            return do_unpack(L, data, len);
+        }
 
+        static int do_unpack(lua_State* L, const char* data, size_t len)
+        {
             if (len == 0) {
                 return 0;
             }
 
-            if (pdata == NULL) {
+            if (data == NULL) {
                 return luaL_error(L, "deserialize null pointer");
             }
 
             lua_settop(L, 1);
 
-            buffer_view br(pdata, len);
+            buffer_view br(data, len);
 
             for (int i = 0;; i++)
             {
@@ -115,7 +116,6 @@ namespace moon
                 }
                 push_value(L, &br, type & 0x7, type >> 3);
             }
-
             return lua_gettop(L) - 1;
         }
 
