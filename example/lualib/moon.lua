@@ -157,10 +157,10 @@ local function _default_dispatch(msg, PTYPE)
         response_wacther[responseid] = nil
         local co = resplistener[responseid]
         if co then
+            resplistener[responseid] = nil
             --print(coroutine.status(co))
             co_resume(co, p.unpack(msg))
             --print(coroutine.status(co))
-            resplistener[responseid] = nil
             return
         end
         error(string.format( "%s: response [%u] can not find co.",moon.name(), responseid))
@@ -459,6 +459,7 @@ end
 ---@param receiver int
 ---@param responseid int
 function moon.response(PTYPE, receiver, responseid, ...)
+    if responseid == 0 then return end
     local p = protocol[PTYPE]
     if not p then
         error("handle unknown message")
