@@ -41,6 +41,8 @@ namespace moon
             }
         }
     public:
+        inline static fs::path working_directory;
+
         static std::string current_directory()
         {
             std::error_code ec;
