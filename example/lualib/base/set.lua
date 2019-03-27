@@ -3,10 +3,13 @@ local M = {}
 
 M.__index = M
 
-function M.new()
+function M.new(isweak)
     local t = {}
     t._data = {}
     t._size = 0
+    if isweak then
+        setmetatable(t._data, {__mode="k"})
+    end
     setmetatable(t, M)
     return t
 end

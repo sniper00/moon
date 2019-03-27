@@ -37,8 +37,6 @@ public:
     uint32_t prepare(const moon::buffer_ptr_t & buf);
 
     void send_prepare(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
-
-    static const fs::path& work_path();
 private:
     bool init(moon::string_view_t config) override;
 

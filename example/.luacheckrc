@@ -50,5 +50,6 @@ globals = {
     "checkint",
     "checkbool",
     "checktable",
-    "unused"
+    "unused",
+    "get_script_path"
 }

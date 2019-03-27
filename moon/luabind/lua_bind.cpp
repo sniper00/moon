@@ -42,32 +42,17 @@ const lua_bind & lua_bind::bind_timer(lua_service* s) const
     return *this;
 }
 
-static std::string make_cluster_message(string_view_t header, string_view_t data)
+static int unpack_cluster_header(lua_State* L)
 {
-    std::string ret;
-    uint16_t len = static_cast<uint16_t>(data.size());
-    ret.append((const char*)&len, sizeof(len));
-    ret.append(data.data(), data.size());
-    ret.append(header.data(), header.size());
-    return ret;
-}
-
-static void pack_cluster_message(string_view_t header, message* msg)
-{
-    uint16_t len = static_cast<uint16_t>(msg->size());
-    msg->get_buffer()->write_front(&len, 0, 1);
-    msg->get_buffer()->write_back(header.data(), 0, header.size());
-}
-
-static string_view_t unpack_cluster_message(message* msg)
-{
-    uint16_t len = 0;
-    msg->get_buffer()->read(&len, 0, 1);
-    size_t header_size = msg->size() - len;
-    const char* header = msg->data() + len;
-    int tmp = (int)header_size;
-    msg->get_buffer()->offset_writepos(-tmp);
-    return string_view_t{ header,header_size };
+    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+    uint16_t dlen = 0;
+    buf->read(&dlen, 0, 1);
+    int hlen = static_cast<int>(buf->size() - dlen);
+    buf->seek(dlen);
+    auto n = lua_serialize::do_unpack(L,buf->data(),buf->size());
+    buf->seek(-dlen);
+    buf->offset_writepos(-hlen);
+    return n;
 }
 
 static int lua_table_new(lua_State* L)
@@ -149,8 +134,19 @@ static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname,
 {
     lua_getglobal(L, gname);
     lua_pushcfunction(L, f);
-    lua_setfield(L, -2, name); /* package.preload[name] = f */
+    lua_setfield(L, -2, name);
     lua_pop(L, 1); /* pop gname table */
+    assert(lua_gettop(L) == 0);
+}
+
+static void moon_extend_library(sol::table t, lua_CFunction f, const char* name)
+{
+    lua_State* L = t.lua_state();
+    t.push();
+    lua_pushcfunction(L, f);
+    lua_setfield(L, -2, name);
+    lua_pop(L, 1); /* moon table */
+    assert(lua_gettop(L) == 0);
 }
 
 const lua_bind & lua_bind::bind_util() const
@@ -162,14 +158,10 @@ const lua_bind & lua_bind::bind_util() const
 
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
 
-    lua.set_function("pack_cluster", pack_cluster_message);
-    lua.set_function("unpack_cluster", unpack_cluster_message);
-    lua.set_function("make_cluster_message", make_cluster_message);
+    moon_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
-
     lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");
-
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
 
@@ -187,7 +179,7 @@ const lua_bind & lua_bind::bind_log(moon::log* logger) const
     return *this;
 }
 
-static void redirect_message(message* m, const moon::string_view_t& header, uint32_t receiver, uint8_t mtype)
+static void redirect(message* m, const moon::string_view_t& header, uint32_t receiver, uint8_t mtype)
 {
     if (header.size() != 0)
     {
@@ -209,13 +201,36 @@ static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::s
     m->set_responseid(-responseid);
 }
 
-static void* message_get_buffer(message* m)
-{
-    return m->get_buffer();
-}
-
 const lua_bind & lua_bind::bind_message() const
 {
+    lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
+    {"begin",moon::buffer::seek_origin::Begin},
+    {"current",moon::buffer::seek_origin::Current},
+    {"current",moon::buffer::seek_origin::End}
+    });
+
+    sol::table bt = lua.create_named("buffer");
+
+    bt.set_function("write_front", [](void* p, std::string_view s)->bool {
+        auto buf = reinterpret_cast<buffer*>(p);
+        return buf->write_front(s.data(), 0, s.size());
+    });
+
+    bt.set_function("write_back", [](void* p, std::string_view s){
+        auto buf = reinterpret_cast<buffer*>(p);
+        buf->write_back(s.data(), 0, s.size());
+    });
+
+    bt.set_function("seek", [](void* p, int offset, buffer::seek_origin s){
+        auto buf = reinterpret_cast<buffer*>(p);
+        buf->seek(offset, s);
+    });
+
+    bt.set_function("offset_writepos", [](void* p, int offset){
+        auto buf = reinterpret_cast<buffer*>(p);
+        buf->offset_writepos(offset);
+    });
+
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
@@ -227,8 +242,8 @@ const lua_bind & lua_bind::bind_message() const
         , "bytes", (&message::bytes)
         , "size", (&message::size)
         , "substr", (&message::substr)
-        , "buffer", message_get_buffer
-        , "redirect", (redirect_message)
+        , "buffer", [](message* m)->void* {return m->get_buffer();}
+        , "redirect", redirect
         , "resend", resend
         );
     return *this;
@@ -282,31 +297,6 @@ const lua_bind & lua_bind::bind_socket() const
         , "setnodelay", (&moon::tcp::setnodelay)
         , "set_enable_frame", (&moon::tcp::set_enable_frame)
         );
-    return *this;
-}
-
-const lua_bind & lua_bind::bind_http() const
-{
-    lua.new_usertype<moon::http::request_parser>("http_request_parser"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::request_parser::parse_string)
-        , "method", sol::readonly(&moon::http::request_parser::method)
-        , "path", sol::readonly(&moon::http::request_parser::path)
-        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
-        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
-        , "header", (&moon::http::request_parser::header)
-        , "has_header", (&moon::http::request_parser::has_header)
-        );
-
-    lua.new_usertype<moon::http::response_parser>("http_response_parser"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::response_parser::parse_string)
-        , "version", sol::readonly(&moon::http::response_parser::version)
-        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
-        , "header", (&moon::http::response_parser::header)
-        , "has_header", (&moon::http::response_parser::has_header)
-        );
-
     return *this;
 }
 
@@ -435,7 +425,9 @@ static sol::table lua_fs(sol::this_state L)
     module.set_function("traverse_folder", traverse_folder);
     module.set_function("exists", directory::exists);
     module.set_function("create_directory", directory::create_directory);
-    module.set_function("current_directory", directory::current_directory);
+    module.set_function("working_directory", []() {
+        return directory::working_directory.string();
+    });
     module.set_function("parent_path", [](const moon::string_view_t& s) {
         return fs::absolute(fs::path(s)).parent_path().string();
     });
@@ -459,9 +451,9 @@ static sol::table lua_fs(sol::this_state L)
 
     module.set_function("relative_work_path", [](const moon::string_view_t& p) {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-        return  fs::absolute(p).lexically_relative(lua_service::work_path()).string();
+        return  fs::absolute(p).lexically_relative(directory::working_directory).string();
 #else
-        return  lexically_relative(fs::absolute(p), lua_service::work_path()).string();
+        return  lexically_relative(fs::absolute(p), directory::working_directory).string();
 #endif
     });
     return module;
@@ -470,6 +462,38 @@ static sol::table lua_fs(sol::this_state L)
 int luaopen_fs(lua_State* L)
 {
     return sol::stack::call_lua(L, 1, lua_fs);
+}
+
+static sol::table lua_http(sol::this_state L)
+{
+    sol::state_view lua(L);
+    sol::table module = lua.create_table();
+
+    module.new_usertype<moon::http::request_parser>("request"
+        , sol::constructors<sol::types<>>()
+        , "parse", (&moon::http::request_parser::parse_string)
+        , "method", sol::readonly(&moon::http::request_parser::method)
+        , "path", sol::readonly(&moon::http::request_parser::path)
+        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
+        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
+        , "header", (&moon::http::request_parser::header)
+        , "has_header", (&moon::http::request_parser::has_header)
+        );
+
+    module.new_usertype<moon::http::response_parser>("response"
+        , sol::constructors<sol::types<>>()
+        , "parse", (&moon::http::response_parser::parse_string)
+        , "version", sol::readonly(&moon::http::response_parser::version)
+        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
+        , "header", (&moon::http::response_parser::header)
+        , "has_header", (&moon::http::response_parser::has_header)
+        );
+    return module;
+}
+
+int luaopen_http(lua_State* L)
+{
+    return sol::stack::call_lua(L, 1, lua_http);
 }
 
 const char* lua_traceback(lua_State * L)
