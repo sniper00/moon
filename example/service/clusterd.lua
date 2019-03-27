@@ -6,13 +6,16 @@ local tcp = require("moon.net.tcpserver")
 
 local clusters = {}
 
-local pack_cluster = moon.pack_cluster
-local unpack_cluster = moon.unpack_cluster
-
-local seri_packstr = seri.packs
-local seri_unpack = seri.unpack
+local string_pack = string.pack
 local co_yield = coroutine.yield
+
+local packs = seri.packs
+local unpack = seri.unpack
+local concat = seri.concat
+local unpack_header = moon.unpack_cluster_header
 local unique_service = moon.unique_service
+local write_front = moon.buffer.write_front
+local write_back = moon.buffer.write_back
 
 local close_watch = {}
 local send_watch = {}
@@ -40,6 +43,10 @@ local function remove_send_watch( connid, sender, responseid )
     senders[key] = nil
 end
 
+local function make_message(header, data)
+    return concat(string_pack("<H",#data),data, header)
+end
+
 tcp.on("connect",function(sessionid, msg)
     print("connect", sessionid, msg:bytes())
 end)
@@ -49,14 +56,15 @@ tcp.on("accept",function(sessionid, msg)
 end)
 
 tcp.on("message", function(sessionid, msg)
-    local saddr, rnode, raddr, rresponseid = seri_unpack(unpack_cluster(msg))
+    local saddr, rnode, raddr, rresponseid = unpack_header(msg:buffer())
     local receiver = unique_service(raddr)
     if 0 == receiver then
         local err = string.format( "cluster : tcp message unique_service %s can not find",raddr)
         log.warn(err)
 
         if 0>rresponseid then
-            local s = moon.make_cluster_message(seri_packstr(rnode, raddr, saddr, -rresponseid),seri_packstr(false, err))
+            local rheader = packs(rnode, raddr, saddr, -rresponseid)
+            local s = make_message(rheader, packs(false, err))
             tcp.send(sessionid, s)
         end
         return
@@ -68,7 +76,8 @@ tcp.on("message", function(sessionid, msg)
             function()
                 local responseid = moon.make_response(receiver)
                 if not responseid then
-                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, saddr, -rresponseid),seri_packstr(false, "service dead"))
+                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                    local s = make_message(rheader, packs(false, "service dead"))
                     tcp.send(sessionid, s)
                     return
                 end
@@ -76,18 +85,22 @@ tcp.on("message", function(sessionid, msg)
                 msg:resend(moon.sid(),receiver,"",responseid,moon.PTYPE_LUA)
 
                 close_watch[responseid] = sessionid
-                local ret,err2 = co_yield()
+                local res,err2 = co_yield()
                 local state = close_watch[responseid]
                 close_watch[responseid] = nil
                 if state == false then
                     return
                 end
 
-                if ret then
-                    pack_cluster(seri_packstr(rnode, raddr, saddr, -rresponseid),ret)
-                    tcp.send_message(sessionid, ret)
+                if res then
+                    local buffer = res:buffer()
+                    write_front(buffer,string_pack("<H",res:size()))
+                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                    write_back(buffer,rheader)
+                    tcp.send_message(sessionid, res)
                 else
-                    local s = moon.make_cluster_message(seri_packstr(rnode, raddr, saddr, -rresponseid),seri_packstr(false, err2))
+                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                    local s = make_message(rheader, packs(false, err2))
                     tcp.send(sessionid, s)
                 end
             end
@@ -113,7 +126,7 @@ tcp.on("close", function(sessionid, msg)
             local sender = key&0xFFFFFFFF
             local responseid = -(key>>32)
             print("response", sender, responseid)
-            moon.response("lua", sender, responseid, seri_packstr(false, "connect closed"))
+            moon.response("lua", sender, responseid, packs(false, "connect closed"))
         end
     end
 
@@ -150,7 +163,9 @@ command.CALL = function(sender, responseid,rnode, raddr, msg)
     end
 
     if connid then
-        pack_cluster(seri_packstr(sender, rnode, raddr, responseid),msg)
+        local buffer = msg:buffer()
+        write_front(buffer,string_pack("<H",msg:size()))
+        write_back(buffer,packs(sender, rnode, raddr, responseid))
         add_send_watch(connid,sender,responseid)
         if tcp.send_message(connid, msg) then
             return
@@ -160,7 +175,7 @@ command.CALL = function(sender, responseid,rnode, raddr, msg)
     end
 
     if responseid ~= 0 then
-        moon.response("lua", sender, responseid, seri_packstr(false, err))
+        moon.response("lua", sender, responseid, packs(false, err))
     end
     print("clusterd call error:", err)
 end
@@ -218,7 +233,7 @@ moon.init(function(  )
         dispatch =  function(msg, _)
             local sender = msg:sender()
             local responseid = msg:responseid()
-            local rnode, raddr, CMD = seri_unpack(msg:header())
+            local rnode, raddr, CMD = unpack(msg:header())
             docmd(sender, responseid, CMD, rnode, raddr, msg)
         end
     })
