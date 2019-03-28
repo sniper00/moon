@@ -123,8 +123,9 @@ namespace moon
                 res.first->second->ok(true);
                 will_start_.push_back(serviceid);
                 CONSOLE_INFO(router_->logger(), "[WORKER %u]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
-                if (0 != responseid)
+                if (0 != responseid)//only dynamically created service has responseid
                 {
+                    check_start();//force service invoke start, ready to handle message
                     router_->response(creatorid, std::string_view{}, std::to_string(serviceid), responseid);
                 }
                 return;
@@ -378,6 +379,18 @@ namespace moon
 
     void worker::update()
     {
+        timer_.update();
+
+        check_start();
+        
+        if (!prepares_.empty())
+        {
+            prepares_.clear();
+            prepare_uuid_ = 1;
+        }
+    }
+    void worker::check_start()
+    {
         if (!will_start_.empty())
         {
             for (auto sid : will_start_)
@@ -389,14 +402,6 @@ namespace moon
                 }
             }
             will_start_.clear();
-        }
-
-        timer_.update();
-        
-        if (!prepares_.empty())
-        {
-            prepares_.clear();
-            prepare_uuid_ = 1;
         }
     }
 }

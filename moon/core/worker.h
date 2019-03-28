@@ -76,6 +76,8 @@ namespace moon
         void register_commands();
 
         void update();
+
+        void check_start();
     private:
         //To prevent post too many update event
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
