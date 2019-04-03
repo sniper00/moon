@@ -43,28 +43,6 @@ function core.hex_string(data)
     ignore_param(data)
 end
 
----@param dir string
----@param depth int
----@param callback function
-function core.traverse_folder(dir,depth,callback)
-    ignore_param(dir,depth,callback)
-end
-
----@param dir string
-function core.exists(dir)
-    ignore_param(dir)
-end
-
----@param dir string
-function core.create_directory(dir)
-    ignore_param(dir)
-end
-
----@return string
-function core.working_directory()
-    -- body
-end
-
 ---@return string
 function core.name()
     -- body
@@ -126,42 +104,6 @@ function core.abort()
     -- body
 end
 
----@type core.path
-core.path = {}
-
----@class core.path
-local path = {}
-ignore_param(path)
-
----@param fp string
----@return string
-function path.parent_path(fp)
-    ignore_param(fp)
-end
-
----@param fp string
----@return string
-function path.filename(fp)
-    ignore_param(fp)
-end
-
----@param fp string
----@return string
-function path.extension(fp)
-    ignore_param(fp)
-end
-
----@param fp string
----@return string
-function path.root_path(fp)
-    ignore_param(fp)
-end
-
----@param fp string
----@return string
-function path.stem(fp)
-    ignore_param(fp)
-end
 
 ---@type core.message
 core.message = {}
@@ -235,6 +177,61 @@ end
 ---@param mtype int
 function message:resend(sender, header, receiver, responseid, mtype)
     ignore_param(self,sender, header, receiver, responseid, mtype)
+end
+
+---@class fs
+local fs = {}
+ignore_param(fs)
+---@param dir string
+---@param depth int
+---@param callback function
+function fs.traverse_folder(dir,depth,callback)
+    ignore_param(dir,depth,callback)
+end
+
+---@param dir string
+function fs.exists(dir)
+    ignore_param(dir)
+end
+
+---@param dir string
+function fs.create_directory(dir)
+    ignore_param(dir)
+end
+
+---@return string
+function fs.working_directory()
+    -- body
+end
+
+---@param fp string
+---@return string
+function fs.parent_path(fp)
+    ignore_param(fp)
+end
+
+---@param fp string
+---@return string
+function fs.filename(fp)
+    ignore_param(fp)
+end
+
+---@param fp string
+---@return string
+function fs.extension(fp)
+    ignore_param(fp)
+end
+
+---@param fp string
+---@return string
+function fs.root_path(fp)
+    ignore_param(fp)
+end
+
+---@param fp string
+---@return string
+function fs.stem(fp)
+    ignore_param(fp)
 end
 
 return core
