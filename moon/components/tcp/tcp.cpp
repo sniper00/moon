@@ -305,7 +305,7 @@ namespace moon
                 return;
             }
 
-            auto now = std::time(nullptr);
+            auto now = base_connection::now();
             for (auto& connection : connections_)
             {
                 connection.second->timeout_check(now, timeout_);
@@ -330,6 +330,7 @@ namespace moon
         }
         return id;
     }
+
     void tcp::response(string_view_t data, string_view_t header, int32_t responseid, uint8_t mtype)
     {
         if (0 == responseid)

@@ -174,6 +174,11 @@ namespace moon
         {
             log_ = l;
         }
+
+        static time_t now()
+        {
+            return std::time(nullptr);
+        }
     protected:
         virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
         {
@@ -278,11 +283,6 @@ namespace moon
                 msg->set_sender(id_);
                 tcp_->handle_message(std::forward<TMsg>(msg));
             }
-        }
-
-        time_t now()
-        {
-            return std::time(nullptr);
         }
     protected:
         bool sending_;
