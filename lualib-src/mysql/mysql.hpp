@@ -319,9 +319,7 @@ namespace db
             // win32
 #if defined(_WIN32)
             vsnprintf_s(szBuffer, sizeof(szBuffer), fmt, ap);
-#endif
-            // linux
-#if defined(__linux__) || defined(__linux) 
+#else
             vsnprintf(szBuffer, sizeof(szBuffer), fmt, ap);
 #endif
             va_end(ap);
