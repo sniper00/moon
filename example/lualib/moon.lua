@@ -10,6 +10,7 @@ local core = require("moon.core")
 local json = require("json")
 local seri = require("seri")
 
+local pairs = pairs
 local json_encode = json.encode
 local json_decode = json.decode
 local co_create = coroutine.create
@@ -149,7 +150,7 @@ end
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
     if not p then
-        error(string.format( "handle unknown PTYPE: %s",PTYPE))
+        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, msg:sender()))
     end
 
     local responseid = msg:responseid()
@@ -556,6 +557,61 @@ reg_protocol {
     end
 }
 
+local system_command = {}
+
+local ref_services = {}
+
+--- mark a service, should not exit before this service
+moon.retain =function(name)
+    local id = moon.unique_service(name)
+    moon.send("system", id, "retain", moon.name())
+end
+
+moon.release =function(name)
+    local id = moon.unique_service(name)
+    moon.send("system", id, "release", moon.name())
+end
+
+moon.co_wait_exit = function()
+    while true do
+        local num = 0
+        for _,_ in pairs(ref_services) do
+            num=num+1
+        end
+        if num ==0 then
+            break
+        else
+            moon.co_wait(100)
+        end
+    end
+    moon.removeself()
+end
+
+system_command.exit = function(sender, msg)
+    local data = msg:bytes()
+    services_exited[sender] = true
+    for k, v in pairs(response_wacther) do
+        if v == sender then
+            local co = resplistener[k]
+            if co then
+                co_resume(co, false, data)
+                resplistener[k] = nil
+                return
+            end
+        end
+    end
+end
+
+system_command.retain = function(_, msg)
+    local data = msg:bytes()
+    ref_services[data] = true
+end
+
+system_command.release = function(_, msg)
+    local data = msg:bytes()
+    ref_services[data] = nil
+end
+
 reg_protocol {
     name = "system",
     PTYPE = PTYPE_SYSTEM,
@@ -572,21 +628,10 @@ reg_protocol {
     dispatch = function(msg, _)
         local sender = msg:sender()
         local header = msg:header()
-        if header == "exit" then
-            local data = msg:bytes()
-            services_exited[sender] = true
-            for k, v in pairs(response_wacther) do
-                if v == sender then
-                    local co = resplistener[k]
-                    if co then
-                        co_resume(co, false, data)
-                        resplistener[k] = nil
-                        return
-                    end
-                end
-            end
+        local func = system_command[header]
+        if func then
+            func(sender, msg)
         end
-        return true
     end
 }
 
