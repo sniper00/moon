@@ -34,20 +34,22 @@ namespace moon
         concurrent_map() = default;
 
         template<class TKey, class TValue>
-        bool set(TKey&& key, TValue&& value)
+        void set(TKey&& key, TValue&& value)
         {
             std::unique_lock lck(lock_);
-            auto iter = data_.find(key);
-            if (iter != data_.end())
+            auto res = data_.try_emplace(std::forward<TKey>(key), value);
+            if (!res.second)
             {
-                iter->second = std::forward<TValue>(value);
-                return true;
+                res.first->second = std::forward<TValue>(value);
             }
-            else
-            {
-                auto ret = data_.emplace(key, value);
-                return ret.second;
-            }
+        }
+
+        template<class TKey, class TValue>
+        bool try_set(TKey&& key, TValue&& value)
+        {
+            std::unique_lock lck(lock_);
+            auto res = data_.try_emplace(std::forward<TKey>(key), std::forward<TValue>(value));
+            return res.second;
         }
 
         bool try_get_value(const Key& key, Value& value) const
