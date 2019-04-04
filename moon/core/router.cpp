@@ -186,7 +186,7 @@ namespace moon
         {
             return false;
         }
-        return unique_services_.set(std::move(name), v);
+        return unique_services_.try_set(std::move(name), v);
     }
 
     size_t router::unique_service_size() const
