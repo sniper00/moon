@@ -10,8 +10,8 @@ namespace asio {
 
 namespace moon
 {
-    using env_t = concurrent_map<std::string, std::string, rwlock>;
-    using unique_service_db_t = concurrent_map<std::string, uint32_t, rwlock>;
+    using map_env_t = concurrent_map<std::string, std::string, rwlock>;
+    using map_unique_service_t = concurrent_map<std::string, uint32_t, rwlock>;
 
     class server;
     class worker;
@@ -94,8 +94,8 @@ namespace moon
         std::unordered_map<std::string, register_func > regservices_;
         mutable rwlock serviceids_lck_;
         std::unordered_set<uint32_t> serviceids_;
-        env_t env_;
-        unique_service_db_t unique_services_;
+        map_env_t env_;
+        map_unique_service_t unique_services_;
         log* logger_;
         server* server_;
     };
