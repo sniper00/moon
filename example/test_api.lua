@@ -85,6 +85,10 @@ moon.prepare(nil)
 moon.prepare("123")
 moon.prepare(seri.pack("1",2,3,{a=1,b=2},nil))
 
+moon.set_env("1","2")
+equal(moon.get_env("1"),"2")
+moon.set_env("1","3")
+equal(moon.get_env("1"),"3")
 
 local Base = class("Base")
 function Base:ctor()
