@@ -38,7 +38,6 @@ namespace moon
         {
             std::unique_lock lck(lock_);
             auto res = data_.try_emplace(std::forward<TKey>(key), value);
-            auto iter = data_.find(key);
             if (!res.second)
             {
                 res.first->second = std::forward<TValue>(value);
