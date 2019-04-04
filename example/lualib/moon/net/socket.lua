@@ -2,8 +2,13 @@
 
 local moon  = require("moon")
 local close_flag = moon.buffer_flag.close
-local co_yield      = coroutine.yield
+local co_yield = coroutine.yield
 local make_response = moon.make_response
+local type = type
+local assert = assert
+local tostring = tostring
+local setmetatable = setmetatable
+local tonumber = tonumber
 
 local read_delim = {}
 read_delim['\r\n'] = 1
@@ -23,14 +28,14 @@ function session.new(sock,connid,ip,host)
     return setmetatable(tb,session)
 end
 
-function session:co_read(n,n2)
+function session:co_read(n, maxbyte)
     local delim = 0
     if type(n) == 'string' then
         delim = read_delim[n]
         if not delim  then
             return nil,"unsupported read delim "..tostring(n)
         end
-        n = n2 or 0
+        n = maxbyte or 0
     end
     local respid = make_response()
     self.sock:read(self.connid,n,delim,respid)
