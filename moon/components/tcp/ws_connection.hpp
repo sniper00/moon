@@ -189,7 +189,6 @@ namespace moon
                 }
                 else
                 {
-                    printf("websocket handshake failed\n");
                     send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
             }));
