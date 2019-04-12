@@ -323,28 +323,23 @@ local function check_wait_all( ... )
     return co
 end
 
-local function _invoke(f, ...)
-    return check_wait_all(f(...))
-end
-
-local function routine(f, ...)
-    local co = check_wait_all(f(...))
+local function routine(f)
     while true do
-        table_insert(co_pool,co)
-        --co_pool[#co_pool + 1] = co
-        co = _invoke(co_yield())
+        local co = check_wait_all(f())
+        co_pool[#co_pool + 1] = co
+        f = co_yield()
     end
 end
 
 ---启动一个异步
 ---@param func function
 ---@return coroutine
-function moon.async(func, ...)
+function moon.async(func)
     local co = table_remove(co_pool)
     if not co then
         co = co_create(routine)
     end
-    co_resume(co, func, ...) --func 作为 routine 的参数
+    co_resume(co, func) --func 作为 routine 的参数
     return co
 end
 
