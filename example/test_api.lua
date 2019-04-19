@@ -159,24 +159,16 @@ end
 
 moon.async(function()
 
-	local co1 = moon.async(function(a,b,c,d)
+	local co1 = moon.async(function()
 		moon.co_wait(100)
-		test_assert.equal(a, 1)
-		test_assert.equal(b, 2)
-		test_assert.equal(c, 3)
-		test_assert.equal(d, 4)
-	end,1,2,3,4)
+	end)
 
 	moon.co_wait(200)
 
 	--coroutine reuse
-	local co2 = moon.async(function(a,b,c,d)
+	local co2 = moon.async(function()
 		moon.co_wait(100)
-		test_assert.equal(a, 5)
-		test_assert.equal(b, 6)
-		test_assert.equal(c, 7)
-		test_assert.equal(d, 8)
-	end, 5,6,7,8)
+	end)
 
 	-- create new coroutine
 	local co3 = moon.async(function()
