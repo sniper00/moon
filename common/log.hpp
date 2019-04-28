@@ -84,7 +84,7 @@ namespace moon
             logstring(console, level, moon::string_view_t(fmtbuf, n));
         }
 
-        void logstring(bool console, LogLevel level, moon::string_view_t s)
+        void logstring(bool console, LogLevel level, moon::string_view_t s, uint64_t serviceid = 0)
         {
             if (level_ < level)
             {
@@ -95,7 +95,7 @@ namespace moon
             auto b = std::addressof(*buf->begin());
             *(b++) = static_cast<char>(console);
             *(b++) = static_cast<char>(level);
-            size_t offset = format_header(b, level);
+            size_t offset = format_header(b, level, serviceid);
             buf->offset_writepos(2 + static_cast<int>(offset));
             buf->write_back(s.data(), 0, s.size());
             buf->write_back("\n", 0, 1);
@@ -152,18 +152,27 @@ namespace moon
             }
         }
     private:
-        size_t format_header(char* buf, LogLevel level) const
+        size_t format_header(char* buf, LogLevel level, uint64_t serviceid) const
         {
             size_t offset = 0;
             offset += time::milltimestamp(time::now(), buf, 23);
             memcpy(buf + offset, " | ", 3);
             offset += 3;
-            auto len = moon::uint64_to_str(moon::thread_id(), buf + offset);
-            offset += len;
-            if (len < 6)
+            size_t len = 0;
+            if (serviceid == 0)
             {
-                memcpy(buf + offset, "      ", 6 - len);
-                offset += 6 - len;
+                len = moon::uint64_to_str(moon::thread_id(), buf + offset);
+            }
+            else
+            {
+                buf[offset] = ':';
+                len = moon::uint64_to_hexstr(serviceid, buf + offset+1)+1;
+            }
+            offset += len;
+            if (len < 8)
+            {
+                memcpy(buf + offset, "        ", 8 - len);
+                offset += 8 - len;
             }
             memcpy(buf + offset, to_string(level), 11);
             offset += 11;

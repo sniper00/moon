@@ -35,7 +35,7 @@ local logV = c.LOGV
 local function do_log(bcle,level,fmt, ... )
     local str = string_format(fmt, ...)
     local traceback = string_split(debug_traceback("", 3), "\n")
-    logV(bcle, level, table.concat({str,"(",string_trim(traceback[2]),")"}))
+    logV(bcle, level, table.concat({str,"(",string_trim(traceback[2]),")"}),c.id())
 end
 
 function M.error(fmt, ...)

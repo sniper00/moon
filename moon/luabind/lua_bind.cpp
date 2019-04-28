@@ -101,6 +101,7 @@ static int lua_string_hex(lua_State* L)
 
 static int my_lua_print(lua_State *L) {
     moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
+    auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
     int n = lua_gettop(L);  /* number of arguments */
     int i;
     lua_getglobal(L, "tostring");
@@ -118,15 +119,16 @@ static int my_lua_print(lua_State *L) {
         buf.write_back(s, 0, l);
         lua_pop(L, 1);  /* pop result */
     }
-    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() });
+    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() }, serviceid);
     lua_pop(L, 1);  /* pop tostring */
     return 0;
 }
 
-static void register_lua_print(sol::table& lua, moon::log* logger)
+static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t serviceid)
 {
     lua_pushlightuserdata(lua.lua_state(), logger);
-    lua_pushcclosure(lua.lua_state(), my_lua_print, 1);
+    lua_pushinteger(lua.lua_state(), serviceid);
+    lua_pushcclosure(lua.lua_state(), my_lua_print, 2);
     lua_setglobal(lua.lua_state(), "print");
 }
 
@@ -172,10 +174,10 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-const lua_bind & lua_bind::bind_log(moon::log* logger) const
+const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
-    register_lua_print(lua, logger);
+    register_lua_print(lua, logger, serviceid);
     return *this;
 }
 
