@@ -95,7 +95,7 @@ namespace moon
         return length;
     }
 
-    inline size_t uint64_to_hexstr(uint64_t value, char *dst)
+    inline size_t uint64_to_hexstr(uint64_t value, char *dst, int fillzero = 0)
     {
         static const char digits[] =
             "000102030405060708090A0B0C0D0E0F"
@@ -114,7 +114,14 @@ namespace moon
             "D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF"
             "E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEF"
             "F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
-        const  size_t length = (value < 16) ? 1 : static_cast<size_t>(std::log(value) / std::log(16) + 1);
+        const size_t length = (value < 16) ? 1 : static_cast<size_t>(std::log(value) / std::log(16) + 1);
+        size_t padding = 0;
+        while (length+ padding < fillzero)
+        {
+            dst[0] = '0';
+            ++dst;
+            ++padding;
+        }
         size_t next = length - 1;
         while (value >= 256) {
             const int i = (value % 256) * 2;
@@ -132,7 +139,7 @@ namespace moon
             dst[next] = digits[i + 1];
             dst[next - 1] = digits[i];
         }
-        return length;
+        return length+ padding;
     }
 
     /*
