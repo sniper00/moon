@@ -272,8 +272,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("runcmd", &router::runcmd, router_);
     lua.set_function("broadcast", &router::broadcast, router_);
     lua.set_function("workernum", &router::workernum, router_);
-    lua.set_function("unique_service", &router::get_unique_service, router_);
-    lua.set_function("set_unique_service", &router::set_unique_service, router_);
+    lua.set_function("queryservice", &router::get_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());

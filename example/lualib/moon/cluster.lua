@@ -13,7 +13,7 @@ local send = moon.raw_send
 
 function M.call(rnode, rservice, ...)
     if not clusterd then
-        clusterd = moon.unique_service("clusterd")
+        clusterd = moon.queryservice("clusterd")
         if 0 == clusterd then
             return false, "clusterd service not start"
         end
