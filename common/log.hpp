@@ -166,13 +166,13 @@ namespace moon
             else
             {
                 buf[offset] = ':';
-                len = moon::uint64_to_hexstr(serviceid, buf + offset+1)+1;
+                len = moon::uint64_to_hexstr(serviceid, buf + offset+1,8)+1;
             }
             offset += len;
-            if (len < 8)
+            if (len < 9)
             {
-                memcpy(buf + offset, "        ", 8 - len);
-                offset += 8 - len;
+                memcpy(buf + offset, "        ", 9 - len);
+                offset += 9 - len;
             }
             memcpy(buf + offset, to_string(level), 11);
             offset += 11;
