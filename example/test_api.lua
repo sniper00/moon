@@ -27,7 +27,7 @@ equal(type(moon.send_prepare) , "function")
 equal(type(moon.prepare) , "function")
 equal(type(moon.broadcast) , "function")
 equal(type(moon.get_tcp) , "function")
-equal(type(moon.unique_service) , "function")
+equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
 equal(type(moon.set_cb) , "function")
@@ -78,6 +78,10 @@ equal(type(table.new) , "function")
 
 local nt = table.new(10,1)
 nt[1] = 10
+
+print("now server time")
+moon.time_offset(1000*1000)--forward 1000s
+print("after offset, now server time")
 
 print("*********************api test ok**********************")
 
