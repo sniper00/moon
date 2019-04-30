@@ -233,6 +233,18 @@ const lua_bind & lua_bind::bind_message() const
         buf->offset_writepos(offset);
     });
 
+    //https://sol2.readthedocs.io/en/latest/functions.html?highlight=lua_CFunction
+    //Note that stateless lambdas can be converted to a function pointer, 
+    //so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
+    //If you need to get the Lua state that is calling a function, use sol::this_state.
+    auto f_data = [](lua_State* L)->int
+    {
+        auto msg = sol::stack::get<message*>(L, -1);
+        lua_pushlightuserdata(L, (msg->get_buffer()->data()));
+        lua_pushinteger(L, msg->size());
+        return 2;
+    };
+
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
@@ -247,6 +259,7 @@ const lua_bind & lua_bind::bind_message() const
         , "buffer", [](message* m)->void* {return m->get_buffer();}
         , "redirect", redirect
         , "resend", resend
+        , "data", f_data
         );
     return *this;
 }
