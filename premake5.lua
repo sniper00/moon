@@ -65,6 +65,8 @@ project "rapidjson"
     files { "./third/rapidjsonlua/**.hpp", "./third/rapidjsonlua/**.cpp"}
     filter {"system:linux or macosx"}
         buildoptions {"-msse4.2"}
+    filter { "system:windows" }
+        defines {"WIN32"}
 
 project "moon"
     objdir "obj/moon/%{cfg.platform}_%{cfg.buildcfg}"
