@@ -28,13 +28,11 @@ namespace rapidjson
             const Ch* head_;    //!< Original head of the string.
             size_t len_;    //!< Original head of the string.
         };
-
-        template <typename Encoding>
-        struct StreamTraits<GenericStringStream<Encoding> > {
-            enum { copyOptimization = 1 };
-        };
-
         //! String stream with UTF8 encoding.
         typedef GenericStringStream<UTF8<> > StringStream;
     }
+    template <typename Encoding>
+    struct StreamTraits<extend::GenericStringStream<Encoding> > {
+        enum { copyOptimization = 1 };
+    };
 }
