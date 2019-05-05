@@ -101,6 +101,7 @@ static int lua_string_hex(lua_State* L)
 
 static int my_lua_print(lua_State *L) {
     moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
+    auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
     int n = lua_gettop(L);  /* number of arguments */
     int i;
     lua_getglobal(L, "tostring");
@@ -118,15 +119,16 @@ static int my_lua_print(lua_State *L) {
         buf.write_back(s, 0, l);
         lua_pop(L, 1);  /* pop result */
     }
-    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() });
+    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() }, serviceid);
     lua_pop(L, 1);  /* pop tostring */
     return 0;
 }
 
-static void register_lua_print(sol::table& lua, moon::log* logger)
+static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t serviceid)
 {
     lua_pushlightuserdata(lua.lua_state(), logger);
-    lua_pushcclosure(lua.lua_state(), my_lua_print, 1);
+    lua_pushinteger(lua.lua_state(), serviceid);
+    lua_pushcclosure(lua.lua_state(), my_lua_print, 2);
     lua_setglobal(lua.lua_state(), "print");
 }
 
@@ -172,10 +174,10 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-const lua_bind & lua_bind::bind_log(moon::log* logger) const
+const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
-    register_lua_print(lua, logger);
+    register_lua_print(lua, logger, serviceid);
     return *this;
 }
 
@@ -231,6 +233,18 @@ const lua_bind & lua_bind::bind_message() const
         buf->offset_writepos(offset);
     });
 
+    //https://sol2.readthedocs.io/en/latest/functions.html?highlight=lua_CFunction
+    //Note that stateless lambdas can be converted to a function pointer, 
+    //so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
+    //If you need to get the Lua state that is calling a function, use sol::this_state.
+    auto f_data = [](lua_State* L)->int
+    {
+        auto msg = sol::stack::get<message*>(L, -1);
+        lua_pushlightuserdata(L, (msg->get_buffer()->data()));
+        lua_pushinteger(L, msg->size());
+        return 2;
+    };
+
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
@@ -245,6 +259,7 @@ const lua_bind & lua_bind::bind_message() const
         , "buffer", [](message* m)->void* {return m->get_buffer();}
         , "redirect", redirect
         , "resend", resend
+        , "data", f_data
         );
     return *this;
 }
@@ -270,8 +285,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("runcmd", &router::runcmd, router_);
     lua.set_function("broadcast", &router::broadcast, router_);
     lua.set_function("workernum", &router::workernum, router_);
-    lua.set_function("unique_service", &router::get_unique_service, router_);
-    lua.set_function("set_unique_service", &router::set_unique_service, router_);
+    lua.set_function("queryservice", &router::get_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());

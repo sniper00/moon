@@ -27,7 +27,7 @@ equal(type(moon.send_prepare) , "function")
 equal(type(moon.prepare) , "function")
 equal(type(moon.broadcast) , "function")
 equal(type(moon.get_tcp) , "function")
-equal(type(moon.unique_service) , "function")
+equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
 equal(type(moon.set_cb) , "function")
@@ -78,6 +78,10 @@ equal(type(table.new) , "function")
 
 local nt = table.new(10,1)
 nt[1] = 10
+
+print("now server time")
+moon.time_offset(1000*1000)--forward 1000s
+print("after offset, now server time")
 
 print("*********************api test ok**********************")
 
@@ -159,24 +163,16 @@ end
 
 moon.async(function()
 
-	local co1 = moon.async(function(a,b,c,d)
+	local co1 = moon.async(function()
 		moon.co_wait(100)
-		test_assert.equal(a, 1)
-		test_assert.equal(b, 2)
-		test_assert.equal(c, 3)
-		test_assert.equal(d, 4)
-	end,1,2,3,4)
+	end)
 
 	moon.co_wait(200)
 
 	--coroutine reuse
-	local co2 = moon.async(function(a,b,c,d)
+	local co2 = moon.async(function()
 		moon.co_wait(100)
-		test_assert.equal(a, 5)
-		test_assert.equal(b, 6)
-		test_assert.equal(c, 7)
-		test_assert.equal(d, 8)
-	end, 5,6,7,8)
+	end)
 
 	-- create new coroutine
 	local co3 = moon.async(function()

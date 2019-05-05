@@ -235,7 +235,7 @@ end
 ---创建一个新的服务<br>
 ---param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
 ---param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)<br>
----param unique 是否是唯一服务，唯一服务可以用moon.unique_service(name) 查询服务id<br>
+---param unique 是否是唯一服务，唯一服务可以用moon.queryservice(name) 查询服务id<br>
 ---param shared 可选，是否共享工作者线程，默认true<br>
 ---workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者
 ---线程中<br>
@@ -290,17 +290,11 @@ end
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
 ---@param name string
 ---@return int
-function moon.unique_service(name)
+function moon.queryservice(name)
 	if type(name)=='string' then
-		return core.unique_service(name)
+		return core.queryservice(name)
 	end
 	return name
-end
-
----@param name string
----@param id int
-function moon.set_unique_service(name,id)
-	core.set_unique_service(name,id)
 end
 
 -------------------------协程操作封装--------------------------
@@ -323,28 +317,23 @@ local function check_wait_all( ... )
     return co
 end
 
-local function _invoke(f, ...)
-    return check_wait_all(f(...))
-end
-
-local function routine(f, ...)
-    local co = check_wait_all(f(...))
+local function routine(f)
     while true do
-        table_insert(co_pool,co)
-        --co_pool[#co_pool + 1] = co
-        co = _invoke(co_yield())
+        local co = check_wait_all(f())
+        co_pool[#co_pool + 1] = co
+        f = co_yield()
     end
 end
 
 ---启动一个异步
 ---@param func function
 ---@return coroutine
-function moon.async(func, ...)
+function moon.async(func)
     local co = table_remove(co_pool)
     if not co then
         co = co_create(routine)
     end
-    co_resume(co, func, ...) --func 作为 routine 的参数
+    co_resume(co, func) --func 作为 routine 的参数
     return co
 end
 
@@ -563,12 +552,12 @@ local ref_services = {}
 
 --- mark a service, should not exit before this service
 moon.retain =function(name)
-    local id = moon.unique_service(name)
+    local id = moon.queryservice(name)
     moon.send("system", id, "retain", moon.name())
 end
 
 moon.release =function(name)
-    local id = moon.unique_service(name)
+    local id = moon.queryservice(name)
     moon.send("system", id, "release", moon.name())
 end
 

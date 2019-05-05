@@ -13,7 +13,7 @@ local packs = seri.packs
 local unpack = seri.unpack
 local concat = seri.concat
 local unpack_header = moon.unpack_cluster_header
-local unique_service = moon.unique_service
+local queryservice = moon.queryservice
 local write_front = moon.buffer.write_front
 local write_back = moon.buffer.write_back
 
@@ -57,9 +57,9 @@ end)
 
 tcp.on("message", function(sessionid, msg)
     local saddr, rnode, raddr, rresponseid = unpack_header(msg:buffer())
-    local receiver = unique_service(raddr)
+    local receiver = queryservice(raddr)
     if 0 == receiver then
-        local err = string.format( "cluster : tcp message unique_service %s can not find",raddr)
+        local err = string.format( "cluster : tcp message queryservice %s can not find",raddr)
         log.warn(err)
 
         if 0>rresponseid then

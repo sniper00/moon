@@ -122,7 +122,6 @@ namespace moon
 
                 res.first->second->ok(true);
                 will_start_.push_back(serviceid);
-                CONSOLE_INFO(router_->logger(), "[WORKER %u]new service [%s:%u]", id(), res.first->second->name().data(), res.first->second->id());
                 if (0 != responseid)//only dynamically created service has responseid
                 {
                     check_start();//force service invoke start, ready to handle message
@@ -152,11 +151,9 @@ namespace moon
                     router_->on_service_remove(serviceid);
                 }
 
-                auto content = moon::format(R"({"name":"%s","serviceid":%u})", s->name().data(), s->id());
+                auto content = moon::format(R"({"name":"%s","serviceid":%X})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, respid);
-                CONSOLE_INFO(router_->logger(), "[WORKER %u]service [%s:%u] destroy", id(), s->name().data(), s->id());
                 services_.erase(serviceid);
-
                 if(services_.empty()) shared(true);
 
                 string_view_t header{ "exit" };
@@ -175,7 +172,7 @@ namespace moon
             }
             else
             {
-                router_->response(sender, "worker::remove_service "sv,moon::format("service [%u] not found", serviceid), respid, PTYPE_ERROR);
+                router_->response(sender, "worker::remove_service "sv,moon::format("service [%X] not found", serviceid), respid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))

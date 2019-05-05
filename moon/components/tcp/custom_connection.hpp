@@ -97,9 +97,9 @@ namespace moon
             size_t pos = strref.find(delim);
             if (pos != string_view_t::npos)
             {
-                buf->offset_writepos(-static_cast<int>(dszie - pos));
                 restore_write_offset_ = static_cast<int>(dszie - pos);
                 prew_read_offset_ = static_cast<int>(pos + delim.size());
+                buf->offset_writepos(-restore_write_offset_);
                 response(response_msg_);
             }
         }

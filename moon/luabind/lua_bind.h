@@ -21,7 +21,7 @@ public:
 
     const lua_bind& bind_util() const;
 
-    const lua_bind& bind_log(moon::log* logger) const;
+    const lua_bind& bind_log(moon::log* logger, uint32_t serviceid = 0) const;
 
     const lua_bind& bind_message() const;
 

@@ -112,7 +112,7 @@ bool lua_service::init(string_view_t config)
         sol::table module = lua_.create_table();
         lua_bind lua_bind(module);
         lua_bind.bind_service(this)
-            .bind_log(logger())
+            .bind_log(logger(),id())
             .bind_util()
             .bind_timer(this)
             .bind_message()
@@ -200,6 +200,7 @@ bool lua_service::init(string_view_t config)
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
+        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u]new service [%s:%X]", worker_->id(), name().data(), id()), id());
         return true;
     }
     catch (std::exception& e)
@@ -303,6 +304,7 @@ void lua_service::exit()
 
 void lua_service::destroy()
 {
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u]service [%s:%X] destroy", worker_->id(), name().data(),id()), id());
     if (!ok()) return;
 
     try

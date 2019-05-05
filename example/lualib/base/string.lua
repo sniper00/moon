@@ -1,26 +1,14 @@
-local string_find       = string.find
 local string_sub        = string.sub
 local string_gsub       = string.gsub
-local string_len        = string.len
 local string_upper      = string.upper
 local table_insert      = table.insert
 
 function string.split(input, delimiter)
-    input = tostring(input)
-    delimiter = tostring(delimiter)
-    if (delimiter == "") then return false end
-    local pos,arr = 1, {}
-    for st, sp in function() return string_find(input, delimiter, pos, true) end do
-        local str = string_sub(input, pos, st - 1)
-        if str ~= "" then
-            table_insert(arr, str)
-        end
-        pos = sp + 1
-    end
-    if pos <= string_len(input) then
-        table_insert(arr, string_sub(input, pos))
-    end
-    return arr
+    local resultStrList = {}
+    string_gsub(input,'[^'..delimiter..']+',function ( w )
+        table_insert(resultStrList,w)
+    end)
+    return resultStrList
 end
 
 local _TRIM_CHARS = " \t\n\r"

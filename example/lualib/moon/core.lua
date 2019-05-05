@@ -19,9 +19,26 @@ function core.remove_timer(timerid)
     ignore_param(timerid)
 end
 
----Return current millsecond.<br>
+---Return system second.<br>
+---@return int
+function core.second()
+    -- body
+end
+
+---Return system millsecond.<br>
 ---@return int
 function core.millsecond()
+    -- body
+end
+
+---Return system microsecond.<br>
+---@return int
+function core.microsecond()
+    -- body
+end
+
+---offset[+,-] server time(millsecond)<br>
+function core.time_offset()
     -- body
 end
 
@@ -29,18 +46,6 @@ end
 ---@param milliseconds int
 function core.sleep(milliseconds)
     ignore_param(milliseconds)
-end
-
----@param data string
----@return string
-function core.hash_string(data)
-    ignore_param(data)
-end
-
----@param data string
----@return string
-function core.hex_string(data)
-    ignore_param(data)
 end
 
 ---@return string
@@ -53,6 +58,14 @@ function core.id()
     -- body
 end
 
+---生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用有效。
+---@overload fun(buf:string)
+---@param buf userdata
+function core.prepare(buf)
+    ignore_param(buf)
+end
+
+---根据缓存id发送缓存消息
 ---@param receiver int
 ---@param cacheid int
 ---@param header string
@@ -62,12 +75,7 @@ function core.send_prepare(receiver,cacheid,header,responseid,type)
     ignore_param(receiver,cacheid,header,responseid,type)
 end
 
----@overload fun(buf:string)
----@param buf userdata
-function core.prepare(buf)
-    ignore_param(buf)
-end
-
+---获取当前服务指定协议的tcp网络组件
 ---@param protocol string
 function core.get_tcp(protocol)
     ignore_param(protocol)
@@ -78,17 +86,13 @@ function core.remove_component(name)
     ignore_param(name)
 end
 
----@param cmd string
----@param callback fun(params:table)
-function core.register_command(cmd,callback)
-    ignore_param(cmd,callback)
-end
-
+---获取lua虚拟机占用的内存(单位byte)
 ---@return int
 function core.memory_use()
     -- body
 end
 
+---获取worker线程数
 ---@return int
 function core.workernum()
     -- body
@@ -100,7 +104,20 @@ function core.set_env(key,value)
     ignore_param(key,value)
 end
 
+---@param key string
+---@return string
+function core.get_env(key)
+    ignore_param(key)
+end
+
+---使服务进程退出
 function core.abort()
+    -- body
+end
+
+--- get server time(milliseconds)
+---@return int
+function core.now()
     -- body
 end
 
@@ -111,46 +128,67 @@ core.message = {}
 ---@class core.message
 local message = {}
 ignore_param(message)
+
+---获取消息发送者的serviceid
 ---@return int
 function message:sender()
     ignore_param(self)
 end
 
+---获取responseid，用于send response模式
 ---@return int
 function message:responseid()
     ignore_param(self)
 end
 
+---获取消息接收者的serviceid
 ---@return int
 function message:receiver()
     ignore_param(self)
 end
 
+---获取消息类型,用来区分消息协议
+---local PTYPE_SYSTEM = 1 --框架内部消息
+---local PTYPE_TEXT = 2 --字符串消息
+---local PTYPE_LUA = 3 --lua_serialize编码的消息
+---local PTYPE_SOCKET = 4 --网络消息
+---local PTYPE_ERROR = 5 --错误消息
+---local PTYPE_SOCKET_WS = 6--web socket 网络消息
 ---@return int
 function message:type()
     ignore_param(self)
 end
 
+---获取消息的子类型，暂时只有PTYPE_SOCKET类型的消息用到
+---local socket_connect = 1
+---local socket_accept =2
+---local socket_recv = 3
+---local socket_close =4
+---local socket_error = 5
 ---@return int
 function message:subtype()
     ignore_param(self)
 end
 
+---获取消息header(string).消息头和消息数据分开存储，大多情况下只用解析header来转发消息，消息不用更改，方便用于广播数据。
 ---@return string
 function message:header()
     ignore_param(self)
 end
 
+---获取消息数据(string)
 ---@return string
 function message:bytes()
     ignore_param(self)
 end
 
+---获取消息数据长度(number)
 ---@return int
 function message:size()
     ignore_param(self)
 end
 
+---对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)。len=-1 从pos开始的所有数据。
 ---@param pos int
 ---@param count int
 ---@return string
@@ -158,11 +196,13 @@ function message:substr(pos,count)
     ignore_param(self,pos,count)
 end
 
+---返回消息数据的lightuserdata指针(moon::buffer*)
 ---@return userdata
 function message:buffer()
     ignore_param(self)
 end
 
+---更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
 ---@param header string
 ---@param receiver int
 ---@param mtype int
@@ -182,9 +222,26 @@ end
 ---@class fs
 local fs = {}
 ignore_param(fs)
----@param dir string
----@param depth int
----@param callback function
+
+---广度递归遍历一个目录
+---local fs = require("fs")
+---example 遍历D:/Test目录
+---fs.traverse_folder("D:/Test",0,function (path,isdir)
+---    --filepath 完整的路径/文件
+---    if not isdir then
+---        print("File:"..path)
+---        print(fs.parent_path(path))
+---        print(fs.filename(path))
+---        print(fs.extension(path))
+---        print(fs.root_path(path))
+---        print(fs.stem(path))
+---    else
+---        print("Path:"..path)
+---    end
+---end)
+---@param dir string 路径
+---@param depth int 遍历子目录的深度，0表示 dir 同级目录
+---@param callback function 回掉function(path,isdir) end
 function fs.traverse_folder(dir,depth,callback)
     ignore_param(dir,depth,callback)
 end

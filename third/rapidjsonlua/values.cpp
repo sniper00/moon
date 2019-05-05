@@ -17,7 +17,7 @@ namespace values {
 
 
 		Value toValue(lua_State* L, int idx, int depth, Allocator& allocator) {
-			auto t = lua_type(L, idx);
+			int t = lua_type(L, idx);
 			switch (t) {
 			case LUA_TBOOLEAN:
 				return Value(lua_toboolean(L, idx) != 0);
@@ -90,8 +90,8 @@ namespace values {
 		Value ArrayValue(lua_State* L, int idx, int depth, Allocator& allocator)
 		{
 			Value array(rapidjson::kArrayType);
-			auto MAX = static_cast<int>(luax::rawlen(L, idx)); // luax::rawlen always returns size_t (>= 0)
-			for (auto n = 1; n <= MAX; ++n)
+			int MAX = static_cast<int>(luax::rawlen(L, idx)); // luax::rawlen always returns size_t (>= 0)
+			for (int n = 1; n <= MAX; ++n)
 			{
 				lua_rawgeti(L, idx, n); // [table, element]
 				array.PushBack(toValue(L, -1, depth, allocator), allocator);
@@ -104,4 +104,3 @@ namespace values {
 	}
 
 }
-
