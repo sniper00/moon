@@ -41,7 +41,7 @@ local function run_example()
         check_error(ret,err)
         ret, err =redis:hmget("myhash", "field1", "field2", "nofield")
         check_error(ret,err)
-        log.dump(ret)
+        print_r(ret)
     end)
 
     moon.async(function()
