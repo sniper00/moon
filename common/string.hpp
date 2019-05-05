@@ -95,7 +95,7 @@ namespace moon
         return length;
     }
 
-    inline size_t uint64_to_hexstr(uint64_t value, char *dst, int fillzero = 0)
+    inline size_t uint64_to_hexstr(uint64_t value, char *dst, size_t fillzero = 0)
     {
         static const char digits[] =
             "000102030405060708090A0B0C0D0E0F"
