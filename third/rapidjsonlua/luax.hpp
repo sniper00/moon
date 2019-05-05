@@ -57,8 +57,8 @@ namespace luax {
 
 	inline bool optboolfield(lua_State* L, int idx, const char* name, bool def)
 	{
-		auto v = def;
-		auto t = lua_type(L, idx);
+		bool v = def;
+		int t = lua_type(L, idx);
 		if (t != LUA_TTABLE && t != LUA_TNONE)
 			luax::typerror(L, idx, "table");
 
@@ -74,7 +74,7 @@ namespace luax {
 
 	inline int optintfield(lua_State* L, int idx, const char* name, int def)
 	{
-		auto v = def;
+		int v = def;
 		lua_getfield(L, idx, name);  // [field]
 		if (lua_isnumber(L, -1))
 			v = static_cast<int>(lua_tointeger(L, -1));

@@ -12,7 +12,10 @@
 using namespace rapidjson;
 
 template<>
-const char* const Userdata<SchemaDocument>::metatable = "rapidjson.SchemaDocument";
+const char* const Userdata<SchemaDocument>::metatable()
+{
+	return "rapidjson.SchemaDocument";
+}
 
 template<>
 SchemaDocument* Userdata<SchemaDocument>::construct(lua_State * L)
@@ -21,24 +24,24 @@ SchemaDocument* Userdata<SchemaDocument>::construct(lua_State * L)
 	case LUA_TNONE:
 		return new SchemaDocument(Document()); // empty schema
 	case LUA_TSTRING: {
-		auto d = Document();
+		Document doc;
 		size_t len = 0;
-		auto s = lua_tolstring(L, 1, &len);
-		d.Parse(s, len);
-		return new SchemaDocument(d);
+		const char* s = lua_tolstring(L, 1, &len);
+		doc.Parse(s, len);
+		return new SchemaDocument(doc);
 	}
 	case LUA_TTABLE: {
-		auto doc = Document();
+		Document doc;
 		values::toDocument(L, 1, &doc);
 		return new SchemaDocument(doc);
 	}
 	case LUA_TUSERDATA: {
-		auto doc = Userdata<Document>::check(L, 1);
+		Document* doc = Userdata<Document>::check(L, 1);
 		return new SchemaDocument(*doc);
 	}
 	default:
 		luax::typerror(L, 1, "none, string, table or rapidjson.Document");
-		return nullptr; // Just make compiler happy
+		return NULL; // Just make compiler happy
 	}
 }
 
@@ -49,19 +52,22 @@ const luaL_Reg* Userdata<SchemaDocument>::methods() {
 	static const luaL_Reg reg[] = {
 		{ "__gc", metamethod_gc },
 
-		{ nullptr, nullptr }
+		{ NULL, NULL }
 	};
 	return reg;
 }
 
 
 template<>
-const char* const Userdata<SchemaValidator>::metatable = "rapidjson.SchemaValidator";
+const char* const Userdata<SchemaValidator>::metatable()
+{
+	return "rapidjson.SchemaValidator";
+}
 
 template<>
 SchemaValidator* Userdata<SchemaValidator>::construct(lua_State * L)
 {
-	auto sd = Userdata<SchemaDocument>::check(L, 1);
+	SchemaDocument* sd = Userdata<SchemaDocument>::check(L, 1);
 	return new SchemaValidator(*sd);
 }
 
@@ -86,9 +92,9 @@ static void pushValidator_error(lua_State* L, SchemaValidator* validator) {
 
 
 static int SchemaValidator_validate(lua_State* L) {
-	auto validator = Userdata<SchemaValidator>::check(L, 1);
-	auto doc = Userdata<Document>::check(L, 2);
-	auto ok = doc->Accept(*validator);
+	SchemaValidator* validator = Userdata<SchemaValidator>::check(L, 1);
+	Document* doc = Userdata<Document>::check(L, 2);
+	bool ok = doc->Accept(*validator);
 	lua_pushboolean(L, ok);
 	int nr;
 	if (ok)
@@ -109,7 +115,7 @@ const luaL_Reg* Userdata<SchemaValidator>::methods() {
 	static const luaL_Reg reg[] = {
 		{ "__gc", metamethod_gc },
 		{ "validate", SchemaValidator_validate },
-		{ nullptr, nullptr }
+		{ NULL, NULL }
 	};
 	return reg;
 }

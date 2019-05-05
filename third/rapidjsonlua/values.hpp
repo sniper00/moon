@@ -18,7 +18,7 @@ namespace values {
 		lua_pushvalue(L, idx); // [value]
 
 		json_null(L); // [value, json.null]
-		auto is = lua_rawequal(L, -1, -2) != 0;
+		bool is = lua_rawequal(L, -1, -2) != 0;
 		lua_pop(L, 2); // []
 
 		return is;
@@ -26,14 +26,14 @@ namespace values {
 
 	inline bool hasJsonType(lua_State* L, int idx, bool& isarray)
 	{
-		auto has = false;
+		bool has = false;
 		if (lua_getmetatable(L, idx)) {
 			// [metatable]
 			lua_getfield(L, -1, "__jsontype"); // [metatable, metatable.__jsontype]
 			if (lua_isstring(L, -1))
 			{
 				size_t len;
-				auto s = lua_tolstring(L, -1, &len);
+				const char* s = lua_tolstring(L, -1, &len);
 				isarray = strncmp(s, "array", 6) == 0;
 				has = true;
 			}
@@ -43,12 +43,22 @@ namespace values {
 		return has;
 	}
 
-	inline bool isarray(lua_State* L, int idx) {
-		auto arr = false;
+	inline bool isarray(lua_State* L, int idx, bool empty_table_as_array = false) {
+		bool arr = false;
 		if (hasJsonType(L, idx, arr)) // any table with a meta field __jsontype set to 'array' are arrays
 			return arr;
 
-		return luax::rawlen(L, idx) > 0; // any table has length > 0 are treat as array.
+		lua_pushvalue(L, idx);
+		lua_pushnil(L);
+		if (lua_next(L, -2) != 0) {
+			lua_pop(L, 3);
+
+			return luax::rawlen(L, idx) > 0; // any non empty table has length > 0 are treat as array.
+		}
+
+		lua_pop(L, 1);
+		// Now it comes empty table
+		return empty_table_as_array;
 	}
 
 
@@ -116,6 +126,9 @@ namespace values {
 			return true;
 		}
 		bool StartObject() {
+			if (!lua_checkstack(L, 2)) // make sure there's room on the stack
+				return false;
+
 			lua_createtable(L, 0, 0);							// [..., object]
 
 			// mark as object.
@@ -137,6 +150,9 @@ namespace values {
 			return true;
 		}
 		bool StartArray() {
+			if (!lua_checkstack(L, 2)) // make sure there's room on the stack
+				return false;
+
 			lua_createtable(L, 0, 0);
 
 			// mark as array.
@@ -148,7 +164,7 @@ namespace values {
 			return true;
 		}
 		bool EndArray(rapidjson::SizeType elementCount) {
-			assert(static_cast<int>(elementCount) == context_.index_);
+			assert(elementCount == context_.index_);
 			context_ = stack_.back();
 			stack_.pop_back();
 			context_.submit(L);
