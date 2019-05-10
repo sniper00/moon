@@ -174,11 +174,11 @@ namespace moon
     }
 
     //format string
-    inline std::string				format(const char* fmt, ...)
+    inline std::string format(const char* fmt, ...)
     {
         if (!fmt) return std::string("");
         va_list ap;
-        char szBuffer[MAX_FMT_LEN];
+        static thread_local char szBuffer[MAX_FMT_LEN];
         va_start(ap, fmt);
         // win32
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
