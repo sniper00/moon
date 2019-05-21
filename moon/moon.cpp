@@ -174,7 +174,7 @@ int main(int argc, char*argv[])
 #else
             lua.script("package.cpath = './clib/?.so;'");
 #endif
-            lua.script("package.path = './?.lua;./lualib/?.lua;'");
+            lua.script("package.path = './?.lua;./lualib/?.lua;./lualib/?/init.lua;'");
 
             if (!service_file.empty())
             {
