@@ -8,11 +8,6 @@ do
 end
 
 do
-    local tb = {a=1,b=100,c="dadadad"}
-    log.dump(tb)
-end
-
-do
     log.error("log error %s","balaba")
 end
 
@@ -34,6 +29,6 @@ log.debug("this line will not print")
 log.warn("this line will  print")
 log.error("this line will  print")
 
-log.LOG_LEVEL = log.LOG_TRACE
+log.LOG_LEVEL = log.LOG_DEBUG
 log.DEBUG = false
 log.debug("this line will not print or log file")

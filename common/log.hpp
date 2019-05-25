@@ -21,7 +21,7 @@ namespace moon
 
     class log
     {
-        static const int MAX_LOG_LEN = 8 * 1024;
+        static constexpr int MAX_LOG_LEN = 8 * 1024;
     public:
         log()
             :state_(state::init)
@@ -72,7 +72,7 @@ namespace moon
             if (nullptr == fmt)
                 return;
 
-            char fmtbuf[MAX_LOG_LEN];
+            static thread_local char fmtbuf[MAX_LOG_LEN];
             va_list ap;
             va_start(ap, fmt);
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
