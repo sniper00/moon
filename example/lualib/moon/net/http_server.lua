@@ -3,6 +3,18 @@ local http = require("http")
 local seri = require("seri")
 local socket = require("moon.net.socket")
 
+
+local tbinsert = table.insert
+local tbconcat = table.concat
+
+local strfmt = string.format
+
+local tostring = tostring
+local tonumber = tonumber
+local setmetatable = setmetatable
+local pairs = pairs
+local assert = assert
+
 local http_status_msg = {
 
 	[100] = "Continue",
@@ -112,19 +124,19 @@ function http_response:tb()
     assert(status_msg,"invalid http status code")
 
     local cache = {}
-    table.insert( cache, "HTTP/1.1 "..tostring(status_code).." " )
-    table.insert( cache, status_msg )
-    table.insert( cache, "\r\n" )
+    tbinsert( cache, "HTTP/1.1 "..tostring(status_code).." " )
+    tbinsert( cache, status_msg )
+    tbinsert( cache, "\r\n" )
 
     for k,v in pairs(self.header) do
-        table.insert( cache, k )
-        table.insert( cache, ": " )
-        table.insert( cache, v )
-        table.insert( cache, "\r\n" )
+        tbinsert( cache, k )
+        tbinsert( cache, ": " )
+        tbinsert( cache, v )
+        tbinsert( cache, "\r\n" )
     end
-    table.insert( cache, "\r\n" )
+    tbinsert( cache, "\r\n" )
     if self.content then
-        table.insert( cache, self.content )
+        tbinsert( cache, self.content )
     end
     self.header = {}
     self.status_code = nil
@@ -152,7 +164,7 @@ local function read_chunked(session, chunkdata)
         if not data then
             return false,err
         end
-        table.insert( chunkdata, data )
+        tbinsert( chunkdata, data )
         data, err = session:co_read('\r\n',M.chunk_max_len)--security
         if not data then
             return false,err
@@ -195,7 +207,7 @@ local function session_handler(session,request)
 
             if M.content_max_len and content_length> M.content_max_len then
                 session:close()
-                return false, string.format( "content length %d, limit %d",content_length,M.content_max_len )
+                return false, strfmt( "content length %d, limit %d",content_length,M.content_max_len )
             end
 
             data, err = session:co_read(content_length)
@@ -211,7 +223,7 @@ local function session_handler(session,request)
             if not result then
                 return false,errmsg
             end
-            request_handler(session,request,table.concat( chunkdata ))
+            request_handler(session,request,tbconcat( chunkdata ))
             return true
         end
         request_handler(session,request)

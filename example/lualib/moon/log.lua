@@ -1,8 +1,14 @@
+require("base.string")
 local c = require("moon_core")
-local string_format     = string.format
-local debug_traceback   = debug.traceback
-local string_split      = string.split
-local string_trim       = string.trim
+
+local strfmt     = string.format
+local dbgtrace   = debug.traceback
+local strsplit   = string.split
+local strtrim    = string.trim
+local tbconcat   = table.concat
+
+local error = error
+
 local M = {}
 
 ---------------------------------------------------------------------------
@@ -15,13 +21,15 @@ M.LOG_DEBUG = 4
 -- 设置当前日志等级,低于这个等级的日志不会输出
 M.LOG_LEVEL = M.LOG_DEBUG
 
+M.DEBUG = false
+
 -----------------------------------------------------------------------
 function M.throw(fmt, ...)
     local msg
     if #{...} == 0 then
         msg = fmt
     else
-        msg = string_format(fmt, ...)
+        msg = strfmt(fmt, ...)
     end
     if M.DEBUG then
         error(msg, 2)
@@ -32,10 +40,10 @@ end
 
 local logV = c.LOGV
 
-local function do_log(bcle,level,fmt, ... )
-    local str = string_format(fmt, ...)
-    local traceback = string_split(debug_traceback("", 3), "\n")
-    logV(bcle, level, table.concat({str,"(",string_trim(traceback[2]),")"}),c.id())
+local function do_log(bstdout,level,fmt, ... )
+    local str = strfmt(fmt, ...)
+    local traceback = strsplit(dbgtrace("", 3), "\n")
+    logV(bstdout, level, tbconcat({str,"(",strtrim(traceback[2]),")"}),c.id())
 end
 
 function M.error(fmt, ...)
@@ -48,7 +56,7 @@ end
 
 function M.debug(fmt, ...)
     if M.LOG_DEBUG <= M.LOG_LEVEL then
-        do_log(false, M.LOG_DEBUG,fmt,...)
+        do_log(M.DEBUG, M.LOG_DEBUG,fmt,...)
     end
 end
 

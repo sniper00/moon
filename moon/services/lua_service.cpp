@@ -378,7 +378,6 @@ void lua_service::set_callback(char c, sol_function_t f)
         {
             on_timer_ = f;
             break;
-            break;
         }
     }
 }

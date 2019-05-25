@@ -3,6 +3,14 @@
 -- Additions to Lua's built-in table functions.
 -- Copyright (c) 2002-2013 Jason Perkins and the Premake project
 --
+local tbinsert = table.insert
+local ipairs = ipairs
+local pairs = pairs
+local type = type
+local error = error
+local setmetatable = setmetatable
+local getmetatable = getmetatable
+
 
 ---
 --- Make a copy of the indexed elements of the table.
@@ -67,7 +75,7 @@ end
 function table.extract(arr, fname)
 	local result = {}
 	for _, v in ipairs(arr) do
-		table.insert(result, v[fname])
+		tbinsert(result, v[fname])
 	end
 	return result
 end
@@ -81,7 +89,7 @@ function table.filter(arr, fn)
 		arr,
 		function(val)
 			if fn(val) then
-				table.insert(result, val)
+				tbinsert(result, val)
 			end
 		end
 	)
@@ -101,7 +109,7 @@ function table.flatten(arr_)
 			if type(v) == "table" then
 				flatten(v)
 			elseif v then
-				table.insert(result, v)
+				tbinsert(result, v)
 			end
 		end
 	end
@@ -138,10 +146,10 @@ function table.fold(list1, list2)
 	for _, item1 in ipairs(list1 or {}) do
 		if list2 and #list2 > 0 then
 			for _, item2 in ipairs(list2) do
-				table.insert(result, {item1, item2})
+				tbinsert(result, {item1, item2})
 			end
 		else
-			table.insert(result, {item1})
+			tbinsert(result, {item1})
 		end
 	end
 	return result
@@ -196,9 +204,9 @@ end
 function table.insertafter(tbl, after, value)
 	local i = table.indexof(tbl, after)
 	if i then
-		table.insert(tbl, i + 1, value)
+		tbinsert(tbl, i + 1, value)
 	else
-		table.insert(tbl, value)
+		tbinsert(tbl, value)
 	end
 end
 
@@ -219,7 +227,7 @@ function table.insertflat(tbl, values)
 			table.insertflat(tbl, value)
 		end
 	else
-		table.insert(tbl, values)
+		tbinsert(tbl, values)
 	end
 	return tbl
 end
@@ -237,7 +245,7 @@ function table.insertkeyed(tbl, pos, value)
 		return false
 	end
 
-	table.insert(tbl, pos, value)
+	tbinsert(tbl, pos, value)
 	tbl[value] = value
 	return true
 end
@@ -269,7 +277,7 @@ function table.insertsorted(tbl, value, fn)
 			end
 		end
 
-		table.insert(tbl, minindex, value)
+		tbinsert(tbl, minindex, value)
 	end
 
 	return tbl
@@ -292,10 +300,10 @@ function table.join(...)
 	for _, t in ipairs(arg) do
 		if type(t) == "table" then
 			for _, v in ipairs(t) do
-				table.insert(result, v)
+				tbinsert(result, v)
 			end
 		else
-			table.insert(result, t)
+			tbinsert(result, t)
 		end
 	end
 	return result
@@ -307,7 +315,7 @@ end
 function table.keys(tbl)
 	local keys = {}
 	for k, _ in pairs(tbl) do
-		table.insert(keys, k)
+		tbinsert(keys, k)
 	end
 	return keys
 end
@@ -371,7 +379,7 @@ function table.translate(arr, translation)
 			tvalue = translation[arr[i]]
 		end
 		if (tvalue) then
-			table.insert(result, tvalue)
+			tbinsert(result, tvalue)
 		end
 	end
 	return result
@@ -456,7 +464,7 @@ function table.unique(tab)
 		tab,
 		function(elem)
 			if not elems[elem] then
-				table.insert(result, elem)
+				tbinsert(result, elem)
 				elems[elem] = true
 			end
 		end
@@ -505,7 +513,7 @@ function spairs(t)
 	-- collect the keys
 	local keys = {}
 	for k in pairs(t) do
-		table.insert(keys, k)
+		tbinsert(keys, k)
 	end
 	table.sort(keys)
 
@@ -526,7 +534,7 @@ function table.intersect(a, b)
 	local result = {}
 	for _, v in ipairs(b) do
 		if table.indexof(a, v) then
-			table.insert(result, v)
+			tbinsert(result, v)
 		end
 	end
 	return result
@@ -539,7 +547,7 @@ function table.difference(a, b)
 	local result = {}
 	for _, v in ipairs(a) do
 		if not table.indexof(b, v) then
-			table.insert(result, v)
+			tbinsert(result, v)
 		end
 	end
 	return result

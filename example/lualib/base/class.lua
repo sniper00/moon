@@ -1,5 +1,13 @@
 
-local string_format     = string.format
+local strfmt     = string.format
+
+local rawget = rawget
+local type = type
+local assert = assert
+local tostring = tostring
+local getmetatable = getmetatable
+local setmetatable = setmetatable
+local error = error
 
 local _iskindofinternal
 _iskindofinternal = function(mt, classname)
@@ -23,7 +31,7 @@ function iskindof(target, classname)
 end
 
 function class(classname, super)
-    assert(type(classname) == "string", string_format("class() - invalid class name \"%s\"", tostring(classname)))
+    assert(type(classname) == "string", strfmt("class() - invalid class name \"%s\"", tostring(classname)))
     local superType = type(super)
     local cls
     if not super or superType == "table" then
@@ -46,7 +54,7 @@ function class(classname, super)
             return instance
         end
     else
-        error(string.format("class() - create class \"%s\" with invalid super type",classname), 0)
+        error(strfmt("class() - create class \"%s\" with invalid super type",classname), 0)
     end
     return cls
 end
