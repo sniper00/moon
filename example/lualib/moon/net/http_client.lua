@@ -2,6 +2,14 @@ local http = require("http")
 local seri = require("seri")
 local socket = require("moon.net.socket")
 
+local tbinsert = table.insert
+local tbconcat = table.concat
+
+local tostring = tostring
+local tonumber = tonumber
+local setmetatable = setmetatable
+local pairs = pairs
+
 -----------------------------------------------------------------
 
 local function parse_host_port( host_port, default_port )
@@ -27,7 +35,7 @@ local function read_chunked(session, chunkdata)
         if not data then
             return false,err
         end
-        table.insert( chunkdata, data )
+        tbinsert( chunkdata, data )
         data, err = session:co_read('\r\n')
         if not data then
             return false,err
@@ -76,7 +84,7 @@ local function response_handler(conn,response)
             if not data then
                 return false,err
             end
-            return table.concat( chunkdata )
+            return tbconcat( chunkdata )
         end
         return ""
     end
@@ -116,24 +124,24 @@ function M:request( method,path,content,header)
     end
 
     local cache = {}
-    table.insert( cache, method )
-    table.insert( cache, " " )
-    table.insert( cache, path )
-    table.insert( cache, " HTTP/1.1\r\n" )
-    table.insert( cache, "Host: " )
-    table.insert( cache, self.host[1] )
+    tbinsert( cache, method )
+    tbinsert( cache, " " )
+    tbinsert( cache, path )
+    tbinsert( cache, " HTTP/1.1\r\n" )
+    tbinsert( cache, "Host: " )
+    tbinsert( cache, self.host[1] )
     if self.host[2] ~= tostring(default_port) then
-        table.insert( cache, ":" )
-        table.insert( cache, self.host[2] )
+        tbinsert( cache, ":" )
+        tbinsert( cache, self.host[2] )
     end
-    table.insert( cache, "\r\n")
+    tbinsert( cache, "\r\n")
 
     if header then
         for k,v in pairs(header) do
-            table.insert( cache, k)
-            table.insert( cache, ": ")
-            table.insert( cache, tostring(v))
-            table.insert( cache, "\r\n")
+            tbinsert( cache, k)
+            tbinsert( cache, ": ")
+            tbinsert( cache, tostring(v))
+            tbinsert( cache, "\r\n")
         end
     end
 
@@ -143,14 +151,14 @@ function M:request( method,path,content,header)
         if not v then
             v = header["Transfer-Encoding"]
             if not v or v~="chunked" then
-                table.insert( cache, "Content-Length: ")
-                table.insert( cache, tostring(#content))
-                table.insert( cache, "\r\n")
+                tbinsert( cache, "Content-Length: ")
+                tbinsert( cache, tostring(#content))
+                tbinsert( cache, "\r\n")
             end
         end
     end
-    table.insert( cache, "\r\n")
-    table.insert( cache, content)
+    tbinsert( cache, "\r\n")
+    tbinsert( cache, content)
 
     if not self.conn then
         local conn,err

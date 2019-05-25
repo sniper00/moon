@@ -1,6 +1,6 @@
-local string_byte       = string.byte
-local string_sub        = string.sub
-local string_len        = string.len
+local strbyte       = string.byte
+local strsub        = string.sub
+local strlen        = string.len
 
 --
 -- Write content to a new file.
@@ -27,10 +27,10 @@ function io.readfile(filename)
 end
 
 function io.pathinfo(path)
-    local pos = string_len(path)
+    local pos = strlen(path)
     local extpos = pos + 1
     while pos > 0 do
-        local b = string_byte(path, pos)
+        local b = strbyte(path, pos)
         if b == 46 then -- 46 = char "."
             extpos = pos
         elseif b == 47 then -- 47 = char "/"
@@ -39,12 +39,12 @@ function io.pathinfo(path)
         pos = pos - 1
     end
 
-    local dirname  = string_sub(path, 1, pos)
-    local filename = string_sub(path, pos + 1)
+    local dirname  = strsub(path, 1, pos)
+    local filename = strsub(path, pos + 1)
 
     extpos = extpos - pos
-    local basename = string_sub(filename, 1, extpos - 1)
-    local extname  = string_sub(filename, extpos)
+    local basename = strsub(filename, 1, extpos - 1)
+    local extname  = strsub(filename, extpos)
 
     return {
         dirname  = dirname,
