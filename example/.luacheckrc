@@ -14,6 +14,7 @@ globals = {
     "string.ucfirst",
     "os.gettimezone",
     "os.gettime",
+    "table.new",
     "table.arraycopy",
     "table.contains",
     "table.shallowcopy",
