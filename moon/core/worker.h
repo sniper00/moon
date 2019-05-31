@@ -43,8 +43,6 @@ namespace moon
 
         bool shared() const;
 
-        service* find_service(uint32_t serviceid) const;
-
         void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
 
         uint32_t prepare(const moon::buffer_ptr_t & buf);
@@ -78,6 +76,8 @@ namespace moon
         void update();
 
         void check_start();
+
+        service* find_service(uint32_t serviceid) const;
     private:
         //To prevent post too many update event
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;

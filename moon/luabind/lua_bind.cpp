@@ -141,13 +141,18 @@ static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname,
     assert(lua_gettop(L) == 0);
 }
 
-static void moon_extend_library(sol::table t, lua_CFunction f, const char* name)
+static void sol_extend_library(sol::table t, lua_CFunction f, const char* name, const std::function<int(lua_State* L)>& uv = nullptr)
 {
     lua_State* L = t.lua_state();
-    t.push();
-    lua_pushcfunction(L, f);
+    t.push();//sol table
+    int upvalue = 0;
+    if (uv)
+    { 
+        upvalue = uv(L);
+    }
+    lua_pushcclosure(L, f, upvalue);
     lua_setfield(L, -2, name);
-    lua_pop(L, 1); /* moon table */
+    lua_pop(L, 1); //sol table
     assert(lua_gettop(L) == 0);
 }
 
@@ -160,7 +165,7 @@ const lua_bind & lua_bind::bind_util() const
 
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
 
-    moon_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
+    sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
     lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");

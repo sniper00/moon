@@ -50,7 +50,7 @@ private:
 
     void on_timer(uint32_t timerid, bool remove) override;
 
-    void error(const std::string& msg);
+    void error(const std::string& msg, bool initialized = true);
 
     static void* lalloc(void * ud, void *ptr, size_t osize, size_t nsize);
 public:

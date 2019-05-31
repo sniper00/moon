@@ -205,7 +205,7 @@ bool lua_service::init(string_view_t config)
     }
     catch (std::exception& e)
     {
-        error(e.what());
+        error(e.what(),false);
     }
     return false;
 }
@@ -327,12 +327,17 @@ void lua_service::destroy()
     service::destroy();
 }
 
-void lua_service::error(const std::string & msg)
+void lua_service::error(const std::string & msg, bool initialized)
 {
     std::string backtrace = lua_traceback(lua_.lua_state());
     CONSOLE_ERROR(logger(), "%s %s", name().data(), (msg + backtrace).data());
-    destroy();
-    removeself(true);
+
+    if (initialized)
+    {
+        destroy();
+        removeself(true);
+    }
+
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
