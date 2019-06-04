@@ -11,7 +11,11 @@ local select = select
 local rawget = rawget
 local seri	= require("seri")
 local moon	= require("moon")
-local socket = require("moon.net.socket")
+local socket = require("moon.socket")
+
+local _read = socket.read
+local _readline = socket.readline
+local _write = socket.write
 
 local new_table = table.new or function() return {} end
 
@@ -62,58 +66,45 @@ redis.VERSION = '0.1'
 
 local mt = {__index = redis}
 
-local sock
-
 function redis.new()
-	if not sock then
-		sock = socket.new()
-	end
 	local t = {}
-	t.sock = sock
-	if not t.sock then
-		return nil, "socket initialized failed"
-	end
 	return setmetatable(t, mt)
 end
 
 function redis:connect(ip, port, timeout)
-	if not self.sock then
-		return nil, "socket not initialized"
-	end
-
-	if self.conn then
+	if self.fd then
 		return true
 	end
-
 	self.state = "connecting"
+	self.fd = socket.connect(ip, port, moon.PTYPE_TEXT)
 	if timeout then
-		self.sock:settimeout(timeout)
+		socket.settimeout(self.fd, timeout)
 	end
-	self.conn = self.sock:connect(ip, port)
-	return(self.conn ~= nil)
+	return self.fd
 end
 
-function redis:async_connect(ip, port, timeout)
-	if self.conn then
+function redis:sync_connect(ip, port, timeout)
+	if self.fd then
 		return true
 	end
+	self.fd = socket.sync_connect(ip, port, moon.PTYPE_TEXT)
 	if timeout then
-		self.sock:settimeout(timeout)
+		socket.settimeout(self.fd, timeout)
 	end
-	self.conn = self.sock:co_connect(ip, port)
-	return(self.conn ~= nil)
+	return assert(self.fd)
 end
 
 function redis:close()
-	if not self.conn then
+	if not self.fd then
 		return nil, "closed"
 	end
 	print("force close redis")
-	self.conn:close()
+	socket.close(self.fd)
+	self.fd:close()
 end
 
 function redis:_readreplay()
-	local line, err1 = self.conn:co_read('\r\n')
+	local line, err1 = _readline(self.fd,'\r\n')
 	if not line then
 		return nil, err1
 	end
@@ -126,12 +117,12 @@ function redis:_readreplay()
 			return moon.null
 		end
 
-		local data, err2 = self.conn:co_read(size)
+		local data, err2 = _read(self.fd,size)
 		if not data then
 			return nil, err2
 		end
 
-		local dummy, err3 = self.conn:co_read(2)
+		local dummy, err3 = _read(self.fd, 2)
 		-- ignore CRLF
 		if not dummy then
 			return nil, err3
@@ -206,7 +197,7 @@ end
 function redis:docmd(...)
 	local args = {...}
 
-	if not self.conn then
+	if not self.fd then
 		return nil, "closed"
 	end
 
@@ -218,25 +209,25 @@ function redis:docmd(...)
 	end
 
 	-- print("request: ", table.concat(req))
-	if not self.conn:send(seri.concat(req)) then
+	if not _write(self.fd, seri.concat(req)) then
 		return nil, "closed"
 	end
 
 	local res,err = self:_readreplay()
 	if res == nil then
-		self.conn = nil
+		self.fd = nil
 	end
 	return res,err
 end
 
 function redis:readreplay()
-	if not self.conn then
+	if not self.fd then
 		return nil, "closed"
 	end
 
 	local res, err = self:_readreplay()
 	if res == nil then
-		self.conn = nil
+		self.fd = nil
 	end
 	return res, err
 end
@@ -290,12 +281,12 @@ function redis:commit_pipeline()
 
 	self.reqs = nil
 
-	local conn = rawget(self, "conn")
-	if not conn then
-		return nil, "not initialized"
+	local fd = rawget(self, "fd")
+	if not fd then
+		return nil, "socket not initialized"
 	end
 
-	local ok = conn:send(seri.concat(reqs))
+	local ok = _write(self.fd, seri.concat(reqs))
 	if not ok then
 		return nil
 	end
@@ -309,7 +300,7 @@ function redis:commit_pipeline()
 			nvals = nvals + 1
 			vals[nvals] = res
 		elseif res == nil then
-			self.conn = nil
+			self.fd = nil
 			return nil, err
 		else
 			-- be a valid redis error value

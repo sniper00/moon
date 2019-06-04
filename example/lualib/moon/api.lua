@@ -1,5 +1,3 @@
-
-
 ---@class core
 local core = require("moon_core")
 if core then
@@ -61,7 +59,7 @@ end
 ---生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用有效。
 ---@overload fun(buf:string)
 ---@param buf userdata
-function core.prepare(buf)
+function core.make_prefab(buf)
     ignore_param(buf)
 end
 
@@ -69,16 +67,10 @@ end
 ---@param receiver int
 ---@param cacheid int
 ---@param header string
----@param responseid int
+---@param sessionid int
 ---@param type int
-function core.send_prepare(receiver,cacheid,header,responseid,type)
-    ignore_param(receiver,cacheid,header,responseid,type)
-end
-
----获取当前服务指定协议的tcp网络组件
----@param protocol string
-function core.get_tcp(protocol)
-    ignore_param(protocol)
+function core.send_prefab(receiver, prefabid, header, sessionid, type)
+    ignore_param(receiver, prefabid, header, sessionid, type)
 end
 
 ---@param name string
@@ -100,8 +92,8 @@ end
 
 ---@param key string
 ---@param value string
-function core.set_env(key,value)
-    ignore_param(key,value)
+function core.set_env(key, value)
+    ignore_param(key, value)
 end
 
 ---@param key string
@@ -121,10 +113,6 @@ function core.now()
     -- body
 end
 
-
----@type core.message
-core.message = {}
-
 ---@class core.message
 local message = {}
 ignore_param(message)
@@ -137,7 +125,7 @@ end
 
 ---获取responseid，用于send response模式
 ---@return int
-function message:responseid()
+function message:sessionid()
     ignore_param(self)
 end
 
@@ -170,7 +158,8 @@ function message:subtype()
     ignore_param(self)
 end
 
----获取消息header(string).消息头和消息数据分开存储，大多情况下只用解析header来转发消息，消息不用更改，方便用于广播数据。
+---获取消息header(string).消息头和消息数据分开存储，大多情况下只用解析header来转发消息，
+---消息不用更改，方便用于广播数据。
 ---@return string
 function message:header()
     ignore_param(self)
@@ -188,12 +177,13 @@ function message:size()
     ignore_param(self)
 end
 
----对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)。len=-1 从pos开始的所有数据。
+---对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)。len=-1
+---从pos开始的所有数据。
 ---@param pos int
 ---@param count int
 ---@return string
-function message:substr(pos,count)
-    ignore_param(self,pos,count)
+function message:substr(pos, count)
+    ignore_param(self, pos, count)
 end
 
 ---返回消息数据的lightuserdata指针(moon::buffer*)
@@ -207,16 +197,16 @@ end
 ---@param receiver int
 ---@param mtype int
 function message:redirect(header, receiver, mtype)
-    ignore_param(self,header, receiver, mtype)
+    ignore_param(self, header, receiver, mtype)
 end
 
 ---@param sender int
 ---@param header string
 ---@param receiver int
----@param responseid int
+---@param sessionid int
 ---@param mtype int
-function message:resend(sender, header, receiver, responseid, mtype)
-    ignore_param(self,sender, header, receiver, responseid, mtype)
+function message:resend(sender, header, receiver, sessionid, mtype)
+    ignore_param(self, sender, header, receiver, sessionid, mtype)
 end
 
 ---@class fs
@@ -242,8 +232,8 @@ ignore_param(fs)
 ---@param dir string 路径
 ---@param depth int 遍历子目录的深度，0表示 dir 同级目录
 ---@param callback function 回掉function(path,isdir) end
-function fs.traverse_folder(dir,depth,callback)
-    ignore_param(dir,depth,callback)
+function fs.traverse_folder(dir, depth, callback)
+    ignore_param(dir, depth, callback)
 end
 
 ---@param dir string
@@ -289,6 +279,59 @@ end
 ---@return string
 function fs.stem(fp)
     ignore_param(fp)
+end
+
+---@class socketcore
+local socketcore = {}
+ignore_param(socketcore)
+
+---param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
+---@param host string
+---@param port int
+---@param protocol int
+function socketcore.listen(host, port, protocol)
+    ignore_param(host, port, protocol)
+end
+
+---param T string 、 moon.buffer
+---@param fd int
+---@param data T
+---@return bool
+function socketcore.write(fd, sessionid, owner)
+    ignore_param(fd, sessionid, owner)
+end
+
+---@param fd int
+---@param m core.message
+---@return bool
+function socketcore.write_message(fd, m)
+    ignore_param(fd, m)
+end
+
+---param t 秒
+---@param fd int
+---@param t int
+---@return bool
+function socketcore.settimeout(fd, t)
+    ignore_param(fd, t)
+end
+
+---@param fd int
+---@return bool
+function socketcore.setnodelay(fd)
+    ignore_param(fd)
+end
+
+---@param fd int
+---@param flag string
+---@return bool
+function socketcore.set_enable_frame(fd, flag)
+    ignore_param(fd,flag)
+end
+
+---@param fd int
+function socketcore.close(fd)
+    ignore_param(fd)
 end
 
 return core

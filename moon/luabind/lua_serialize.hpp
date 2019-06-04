@@ -1,6 +1,6 @@
 #pragma once
 #include "lua.hpp"
-#include "config.h"
+#include "config.hpp"
 #include "common/buffer.hpp"
 #include "common/buffer_view.hpp"
 

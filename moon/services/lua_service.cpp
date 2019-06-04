@@ -1,7 +1,6 @@
 #include "lua_service.h"
 #include "message.hpp"
 #include "server.h"
-#include "router.h"
 #include "worker.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
@@ -54,50 +53,6 @@ lua_service::~lua_service()
 {
 }
 
-moon::tcp * lua_service::get_tcp(const std::string& protocol)
-{
-    uint8_t v = 0;
-    switch (moon::chash_string(protocol))
-    {
-    case "default"_csh:
-    {
-        v = PTYPE_SOCKET;
-        break;
-    }
-    case "websocket"_csh:
-    {
-        v = PTYPE_SOCKET_WS;
-        break;
-    }
-    default:
-        if (protocol.find("custom") != std::string::npos)
-        {
-            v = PTYPE_TEXT;
-            break;
-        }
-        CONSOLE_ERROR(logger(), "Unsupported tcp  protocol %s.Support: 'default' 'custom' 'websocket'.", protocol.data());
-        return nullptr;
-    }
-
-    auto p = get_component<moon::tcp>(protocol);
-    if (nullptr == p)
-    {
-        p = add_component<moon::tcp>(protocol);
-    }
-    p->setprotocol(v);
-    return ((p != nullptr) ? p.get() : nullptr);
-}
-
-uint32_t lua_service::prepare(const moon::buffer_ptr_t & buf)
-{
-    return worker_->prepare(buf);
-}
-
-void lua_service::send_prepare(uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t responseid, uint8_t type) const
-{
-    worker_->send_prepare(id(), receiver, cacheid, header, responseid, type);
-}
-
 bool lua_service::init(string_view_t config)
 {
     try
@@ -112,11 +67,11 @@ bool lua_service::init(string_view_t config)
         sol::table module = lua_.create_table();
         lua_bind lua_bind(module);
         lua_bind.bind_service(this)
-            .bind_log(logger(),id())
+            .bind_log(logger(), id())
             .bind_util()
             .bind_timer(this)
             .bind_message()
-            .bind_socket();
+            .bind_socket(this);
 
         lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
         lua_bind::registerlib(lua_.lua_state(), "http", luaopen_http);
@@ -200,7 +155,7 @@ bool lua_service::init(string_view_t config)
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
-        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u]new service [%s:%X]", worker_->id(), name().data(), id()), id());
+        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%X]", worker_->id(), name().data(), id()), id());
         return true;
     }
     catch (std::exception& e)
@@ -242,14 +197,14 @@ void lua_service::dispatch(message* msg)
         if (!result.valid())
         {
             sol::error err = result;
-            if (msg->responseid() >= 0 || msg->receiver() == 0)//socket mesage receiver==0
+            if (msg->sessionid() >= 0 || msg->receiver() == 0)//socket mesage receiver==0
             {
                 CONSOLE_ERROR(logger(), "%s dispatch:%s", name().data(), err.what());
             }
             else
             {
-                msg->set_responseid(-msg->responseid());
-                router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->responseid(), PTYPE_ERROR);
+                msg->set_responseid(-msg->sessionid());
+                router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->sessionid(), PTYPE_ERROR);
             }
         }
     }
@@ -304,7 +259,7 @@ void lua_service::exit()
 
 void lua_service::destroy()
 {
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u]service [%s:%X] destroy", worker_->id(), name().data(),id()), id());
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s:%X] ", worker_->id(), name().data(),id()), id());
     if (!ok()) return;
 
     try

@@ -123,9 +123,9 @@ namespace moon
         {
         }
 
-        void start(bool accepted, int32_t responseid = 0) override
+        void start(bool accepted) override
         {
-            base_connection_t::start(accepted, responseid);
+            base_connection_t::start(accepted);
             if (socket_.is_open())
             {
                 read_header();
@@ -155,7 +155,7 @@ namespace moon
         {
             auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
             asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                make_custom_alloc_handler(read_allocator_,
+                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -170,7 +170,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = now();
+                recvtime_ = now();
 
                 size_t num_additional_bytes = sbuf->size() - bytes_transferred;
                 if (handshake(sbuf))
@@ -197,7 +197,7 @@ namespace moon
         void read_some()
         {
             socket_.async_read_some(asio::buffer(recv_buf_->data() + recv_buf_->size(), recv_buf_->writeablesize()),
-                make_custom_alloc_handler(read_allocator_,
+                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -212,7 +212,7 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = now();
+                recvtime_ = now();
                 recv_buf_->offset_writepos(static_cast<int>(bytes_transferred));
  
                 if (!handle_frame())
@@ -264,7 +264,7 @@ namespace moon
             auto answer = upgrade_response(sec_ws_key_, request.header("Sec-WebSocket-Protocol"sv));
             send_response(answer);
             auto msg = message::create();
-            msg->write_string(remote_addr_);
+            msg->write_string(addr_);
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return true;
@@ -410,7 +410,7 @@ namespace moon
             if (size < need + reallen)
             {
                 //need more data
-                check_recv_buffer(need + reallen - size);
+                check_recv_buffer(static_cast<size_t>(need + reallen - size));
                 return ws::close_code::none;
             }
 

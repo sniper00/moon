@@ -1,9 +1,8 @@
 #pragma  once
-#include "service.h"
 #include "common/log.hpp"
 #include "luabind/lua_bind.h"
-#include "components/tcp/tcp.h"
 #include "common/buffer.hpp"
+#include "service.hpp"
 
 class lua_service :public moon::service
 {
@@ -31,12 +30,6 @@ public:
     size_t memory_use();
 
     void set_callback(char c, sol_function_t f);
-
-    moon::tcp* get_tcp(const std::string& protocol);
-
-    uint32_t prepare(const moon::buffer_ptr_t & buf);
-
-    void send_prepare(uint32_t receiver, uint32_t cacheid, const  moon::string_view_t& header, int32_t responseid, uint8_t type) const;
 private:
     bool init(moon::string_view_t config) override;
 

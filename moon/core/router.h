@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 #include "common/concurrent_map.hpp"
 #include "common/rwlock.hpp"
 #include "common/log.hpp"
@@ -33,15 +33,15 @@ namespace moon
 
         size_t workernum() const;
 
-        bool new_service(const std::string& service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid);
+        bool new_service(const std::string& service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t sessionid);
 
-        void remove_service(uint32_t serviceid, uint32_t sender, int32_t respid, bool crashed = false);
+        void remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid, bool crashed = false);
 
-        void runcmd(uint32_t sender, const std::string& cmd, int32_t responseid);
+        void runcmd(uint32_t sender, const std::string& cmd, int32_t sessionid);
 
         void send_message(message_ptr_t&& msg) const;
 
-        void send(uint32_t sender, uint32_t receiver, const buffer_ptr_t& buf, string_view_t header, int32_t responseid, uint8_t type) const;
+        void send(uint32_t sender, uint32_t receiver, const buffer_ptr_t& buf, string_view_t header, int32_t sessionid, uint8_t type) const;
 
         void broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type);
 
@@ -59,22 +59,15 @@ namespace moon
 
         log* logger() const;
 
-        void response(uint32_t to, string_view_t header, string_view_t content, int32_t responseid, uint8_t mtype = PTYPE_TEXT) const;
+        void response(uint32_t to, string_view_t header, string_view_t content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT) const;
 
         void on_service_remove(uint32_t serviceid);
 
         asio::io_context& get_io_context(uint32_t serviceid);
-    private:
-        void set_server(server* sv);
 
         uint32_t worker_id(uint32_t serviceid) const
         {
             return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
-        }
-
-        bool workerid_valid(uint32_t workerid) const
-        {
-            return (workerid > 0 && workerid <= static_cast<uint32_t>(workers_.size()));
         }
 
         worker* get_worker(uint32_t workerid) const
@@ -82,10 +75,15 @@ namespace moon
             --workerid;
             return workers_[workerid].get();
         }
+    private:
+        void set_server(server* sv);
+
+        bool workerid_valid(uint32_t workerid) const
+        {
+            return (workerid > 0 && workerid <= static_cast<uint32_t>(workers_.size()));
+        }
 
         worker* next_worker();
-
-        bool has_serviceid(uint32_t serviceid) const;
 
         bool try_add_serviceid(uint32_t serviceid);
     private:

@@ -14,20 +14,20 @@ namespace moon
         using base_connection_t = base_connection;
 
         template <typename... Args>
-        explicit moon_connection(frame_enable_flag flag, Args&&... args)
+        explicit moon_connection(Args&&... args)
             :base_connection(std::forward<Args>(args)...)
-            , frame_flag_(flag)
+            , flag_(frame_enable_flag::none)
             , header_(0)
         {
         }
 
-        void start(bool accepted, int32_t responseid = 0) override
+        void start(bool accepted) override
         {
-            base_connection_t::start(accepted, responseid);
-            auto msg = message::create();
-            msg->write_data(remote_addr_);
-            msg->set_subtype(static_cast<uint8_t>(accepted ? socket_data_type::socket_accept : socket_data_type::socket_connect));
-            handle_message(std::move(msg));
+            base_connection_t::start(accepted);
+            auto m = message::create();
+            m->write_data(addr_);
+            m->set_subtype(static_cast<uint8_t>(accepted ? socket_data_type::socket_accept : socket_data_type::socket_connect));
+            handle_message(std::move(m));
             read_header();
         }
 
@@ -37,7 +37,7 @@ namespace moon
             {
                 if (data->size() > MAX_MSG_FRAME_SIZE)
                 {
-                    bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::send)) != 0;
+                    bool enable = (static_cast<int>(flag_)&static_cast<int>(frame_enable_flag::send)) != 0;
                     if (!enable)
                     {
                         error(asio::error_code(), int(network_logic_error::send_message_size_max));
@@ -56,6 +56,11 @@ namespace moon
                 }
             }
             return base_connection_t::send(data);
+        }
+
+        void set_frame_flag(frame_enable_flag v)
+        {
+            flag_ = v;
         }
     protected:
         void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf) override
@@ -85,7 +90,7 @@ namespace moon
         void read_header()
         {
             asio::async_read(socket_, asio::buffer(&header_, sizeof(header_)),
-                make_custom_alloc_handler(read_allocator_,
+                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -100,10 +105,10 @@ namespace moon
                     return;
                 }
 
-                last_recv_time_ = now();
+                recvtime_ = now();
                 net2host(header_);
 
-                bool enable = (static_cast<int>(frame_flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
+                bool enable = (static_cast<int>(flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
                 bool continued = false;
                 if (enable)
                 {
@@ -137,7 +142,7 @@ namespace moon
             }
 
             asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
-                make_custom_alloc_handler(read_allocator_,
+                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this(), continued](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -155,16 +160,17 @@ namespace moon
                 buf_->offset_writepos(static_cast<int>(bytes_transferred));
                 if (!continued)
                 {
-                    auto msg = message::create(std::move(buf_));
-                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                    handle_message(std::move(msg));
+                    auto m = message::create(std::move(buf_));
+                    m->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                    handle_message(std::move(m));
                 }
+
                 read_header();
             }));
         }
 
     protected:
-        frame_enable_flag frame_flag_;
+        frame_enable_flag flag_;
         message_size_t header_;
         buffer_ptr_t buf_;
     };

@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 #include "common/string.hpp"
 #include "common/exception.hpp"
 #include "rapidjson/document.h"
@@ -22,38 +22,6 @@ namespace moon
             }
 
             s->set_name(rapidjson::get_value<std::string>(&doc, "name"));
-
-            //parse network config
-            for (auto& v : doc.GetObject())
-            {
-                auto name = rapidjson::detail::get_value<std::string_view>(&v.name);
-                if (name.find("network") != std::string_view::npos)
-                {
-                    auto timeout = rapidjson::get_value<int32_t>(&v.value, "timeout", 0);
-                    auto ip = rapidjson::get_value<std::string>(&v.value, "ip");
-                    auto port = rapidjson::get_value<std::string>(&v.value, "port");
-                    auto type = rapidjson::get_value<std::string>(&v.value, "type");
-                    auto protocol = rapidjson::get_value<std::string>(&v.value, "protocol", "default");
-                    auto frame_flag = rapidjson::get_value<std::string>(&v.value, "frame_flag", "none");
-
-                    if (ip.empty() || port.empty())
-                    {
-                        CONSOLE_ERROR(s->logger(), "service %s add network component failed. ip or port is null", s->name().data());
-                        return false;
-                    }
-
-                    auto n = s->get_tcp(protocol);
-                    n->settimeout(timeout);
-                    n->set_enable_frame(frame_flag);
-                    if (type == "listen")
-                    {
-                        if (!n->listen(ip, port))
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
             return true;
         }
 

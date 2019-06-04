@@ -2,25 +2,19 @@
 #include "common/time.hpp"
 #include "common/string.hpp"
 #include "common/hash.hpp"
-#include "service.h"
 #include "message.hpp"
 #include "common/log.hpp"
-#include "router.h"
 #include "server.h"
+#include "service.hpp"
 
 namespace moon
 {
     worker::worker(server* srv, router* r, uint32_t id)
-        : state_(state::init)
-        , shared_(true)
-        , serviceuid_(1)
-        , workerid_(id)
-        , work_time_(0)
+        : workerid_(id)
         , router_(r)
         , server_(srv)
         , io_ctx_(1)
         , work_(asio::make_work_guard(io_ctx_))
-        , prepare_uuid_(1)
     {
     }
 
@@ -46,6 +40,8 @@ namespace moon
                 timer_.remove(timerid);
             }
         });
+
+        socket_ = std::make_unique<moon::socket>(router_, this, io_ctx_);
 
         thread_ = std::thread([this]() {
             state_.store(state::ready, std::memory_order_release);
@@ -92,19 +88,18 @@ namespace moon
         return (state_.load(std::memory_order_acquire) == state::exited);
     }
 
-    uint32_t worker::make_serviceid()
+    uint32_t worker::uuid()
     {
-        auto uid = serviceuid_.fetch_add(1);
-        uid %= MAX_SERVICE_NUM;
-        uint32_t tmp = uid + 1;
-        int32_t wkid = id();
-        tmp |= static_cast<uint32_t>(wkid) << WORKER_ID_SHIFT;
-        return tmp;
+        auto res = uuid_++;
+        res %= max_uuid;
+        ++res;
+        res |= id() << WORKER_ID_SHIFT;
+        return res;
     }
 
-    void worker::add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t responseid)
+    void worker::add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t sessionid)
     {
-        post([this, s=std::move(s), config= std::move(config), creatorid, responseid]() mutable {
+        post([this, s = std::move(s), config = std::move(config), creatorid, sessionid]() mutable {
             do
             {
                 if (!s->init(config))
@@ -122,28 +117,28 @@ namespace moon
 
                 res.first->second->ok(true);
                 will_start_.push_back(serviceid);
-                if (0 != responseid)//only dynamically created service has responseid
+                if (0 != sessionid)//only dynamically created service has sessionid
                 {
                     check_start();//force service invoke start, ready to handle message
-                    router_->response(creatorid, std::string_view{}, std::to_string(serviceid), responseid);
+                    router_->response(creatorid, std::string_view{}, std::to_string(serviceid), sessionid);
                 }
                 return;
             } while (false);
 
             router_->on_service_remove(s->id());
             shared(services_.empty());
-            if (0 != responseid)
+            if (0 != sessionid)
             {
-                router_->response(creatorid, std::string_view{}, "0"sv, responseid);
+                router_->response(creatorid, std::string_view{}, "0"sv, sessionid);
             }
             CONSOLE_ERROR(router_->logger(), "init service failed with config: %s", config.data());
         });
     }
 
-    void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t respid, bool crashed)
+    void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid, bool crashed)
     {
-        post([this, serviceid, sender, respid, crashed]() {
-            if (auto s =find_service(serviceid); nullptr != s)
+        post([this, serviceid, sender, sessionid, crashed]() {
+            if (auto s = find_service(serviceid); nullptr != s)
             {
                 s->destroy();
                 if (!crashed)
@@ -152,9 +147,9 @@ namespace moon
                 }
 
                 auto content = moon::format(R"({"name":"%s","serviceid":%X})", s->name().data(), s->id());
-                router_->response(sender, "service destroy"sv, content, respid);
+                router_->response(sender, "service destroy"sv, content, sessionid);
                 services_.erase(serviceid);
-                if(services_.empty()) shared(true);
+                if (services_.empty()) shared(true);
 
                 string_view_t header{ "exit" };
                 auto buf = message::create_buffer();
@@ -172,7 +167,7 @@ namespace moon
             }
             else
             {
-                router_->response(sender, "worker::remove_service "sv,moon::format("service [%X] not found", serviceid), respid, PTYPE_ERROR);
+                router_->response(sender, "worker::remove_service "sv, moon::format("service [%X] not found", serviceid), sessionid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
@@ -209,7 +204,7 @@ namespace moon
                 if (begin_time != 0)
                 {
                     auto difftime = server_->now() - begin_time;
-                    work_time_ += difftime;
+                    cpu_time_ += difftime;
                     if (difftime > 1000)
                     {
                         CONSOLE_WARN(router_->logger(), "worker handle cost %" PRId64 "ms queue size %zu", difftime, count);
@@ -234,9 +229,9 @@ namespace moon
         return nullptr;
     }
 
-    void worker::runcmd(uint32_t sender, const std::string & cmd, int32_t responseid)
+    void worker::runcmd(uint32_t sender, const std::string & cmd, int32_t sessionid)
     {
-        post([this, sender, cmd, responseid] {
+        post([this, sender, cmd, sessionid] {
             auto params = moon::split<std::string>(cmd, ".");
 
             switch (moon::chash_string(params[0]))
@@ -245,7 +240,7 @@ namespace moon
             {
                 if (auto iter = commands_.find(params[2]); iter != commands_.end())
                 {
-                    router_->response(sender, std::string_view{}, iter->second(params), responseid);
+                    router_->response(sender, std::string_view{}, iter->second(params), sessionid);
                 }
                 break;
             }
@@ -253,9 +248,9 @@ namespace moon
         });
     }
 
-    uint32_t worker::prepare(const moon::buffer_ptr_t & buf)
+    uint32_t worker::make_prefab(const moon::buffer_ptr_t & buf)
     {
-        auto iter = prepares_.emplace(prepare_uuid_++, buf);
+        auto iter = prefabs_.emplace(uuid(), buf);
         if (iter.second)
         {
             return iter.first->first;
@@ -263,19 +258,14 @@ namespace moon
         return 0;
     }
 
-    void worker::send_prepare(uint32_t sender, uint32_t receiver, uint32_t cacheid, const moon::string_view_t & header, int32_t responseid, uint8_t type) const
+    void worker::send_prefab(uint32_t sender, uint32_t receiver, uint32_t prefabid, const moon::string_view_t & header, int32_t sessionid, uint8_t type) const
     {
-        if (auto iter = prepares_.find(cacheid); iter != prepares_.end())
+        if (auto iter = prefabs_.find(prefabid); iter != prefabs_.end())
         {
-            router_->send(sender, receiver, iter->second, header, responseid, type);
+            router_->send(sender, receiver, iter->second, header, sessionid, type);
             return;
         }
-        CONSOLE_DEBUG(server_->logger(), "send_prepare failed, can not find prepared data. id %s", cacheid);
-    }
-
-    worker_timer& worker::timer()
-    {
-        return timer_;
+        CONSOLE_DEBUG(server_->logger(), "send_prepare failed, can not find prepared data. prefabid %u", prefabid);
     }
 
     void worker::shared(bool v)
@@ -337,8 +327,8 @@ namespace moon
             ser = find_service(msg->receiver());
             if (nullptr == ser)
             {
-                msg->set_responseid(-msg->responseid());
-                router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({msg->data(),msg->size()}).data()).data(), msg->responseid(), PTYPE_ERROR);
+                msg->set_responseid(-msg->sessionid());
+                router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
                 return;
             }
         }
@@ -351,8 +341,8 @@ namespace moon
         {
             auto hander = [this](const std::vector<std::string>& params) {
                 (void)params;
-                auto response = moon::format(R"({"work_time":%lld})", work_time_);
-                work_time_ = 0;
+                auto response = moon::format(R"({"work_time":%lld})", cpu_time_);
+                cpu_time_ = 0;
                 return response;
             };
             commands_.try_emplace("worktime", hander);
@@ -379,13 +369,13 @@ namespace moon
         timer_.update();
 
         check_start();
-        
-        if (!prepares_.empty())
+
+        if (!prefabs_.empty())
         {
-            prepares_.clear();
-            prepare_uuid_ = 1;
+            prefabs_.clear();
         }
     }
+
     void worker::check_start()
     {
         if (!will_start_.empty())
@@ -393,7 +383,7 @@ namespace moon
             for (auto sid : will_start_)
             {
                 auto s = find_service(sid);
-                if (nullptr != s && !s->started())
+                if (nullptr != s && !s->is_start())
                 {
                     s->start();
                 }

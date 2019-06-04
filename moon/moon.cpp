@@ -87,7 +87,7 @@ void usage(void) {
     std::cout << "The options are:\n";
     std::cout << "        -c <config>           Server config file.(default: config.json).\n";
     std::cout << "        -r <run>              Specify ID for server to run.(default: 1).\n";
-    std::cout << "        --service-file        Run server with a service use the specified lua file.\n";
+    std::cout << "        --file        Run server with a service use the specified lua file.\n";
 }
 
 int main(int argc, char*argv[])
@@ -126,7 +126,7 @@ int main(int argc, char*argv[])
                 return -1;
             }
         }
-        else if ((v == "--service-file") && !lastarg)
+        else if ((v == "--file") && !lastarg)
         {
             service_file = argv[++i];
             if (fs::path(service_file).extension() != ".lua")
