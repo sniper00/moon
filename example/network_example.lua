@@ -11,7 +11,7 @@ do
     end)
 
     socket.on("message",function(fd, msg)
-        --socket.write(sessionid, msg:bytes())
+        --socket.write(fd, msg:bytes())
         socket.write_message(fd, msg)
     end)
 
@@ -25,21 +25,21 @@ do
 end
 
 do
-    socket.wson("accept",function(sessionid, msg)
-        print("wsaccept ", sessionid, msg:bytes())
+    socket.wson("accept",function(fd, msg)
+        print("wsaccept ", fd, msg:bytes())
     end)
 
-    socket.wson("message",function(sessionid, msg)
-        --socket.write(sessionid, msg)
-        socket.write_text(sessionid, msg:bytes())
+    socket.wson("message",function(fd, msg)
+        --socket.write(fd, msg)
+        socket.write_text(fd, msg:bytes())
     end)
 
-    socket.wson("close",function(sessionid, msg)
-        print("wsclose ", sessionid, msg:bytes())
+    socket.wson("close",function(fd, msg)
+        print("wsclose ", fd, msg:bytes())
     end)
 
-    socket.wson("error",function(sessionid, msg)
-        print("wserror ", sessionid, msg:bytes())
+    socket.wson("error",function(fd, msg)
+        print("wserror ", fd, msg:bytes())
     end)
 end
 

@@ -9,7 +9,7 @@ local function run_slave()
         end)
 
         socket.on("message",function(fd, msg)
-            --tcpserver.send(sessionid, msg:bytes())
+            --tcpserver.send(fd, msg:bytes())
             socket.write(fd, msg:bytes())
             count = count + 1
         end)

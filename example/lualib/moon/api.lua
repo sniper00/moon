@@ -308,7 +308,7 @@ function socketcore.write_message(fd, m)
     ignore_param(fd, m)
 end
 
----param t 秒
+---param t 秒。0不检测超时，默认是0。
 ---@param fd int
 ---@param t int
 ---@return bool
@@ -322,6 +322,8 @@ function socketcore.setnodelay(fd)
     ignore_param(fd)
 end
 
+--- param flag 对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。
+--- 可以单独控制read,write "r", "w", "wr"
 ---@param fd int
 ---@param flag string
 ---@return bool

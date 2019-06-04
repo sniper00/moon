@@ -46,9 +46,13 @@ function socket.start(listenfd)
 end
 
 --- async
-function socket.connect(host, port, type)
+--- param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
+---@param host string
+---@param port int
+---@param protocol int
+function socket.connect(host, port, protocol)
     local sessionid = make_response()
-    local res = connect(host, port, sessionid, id, type)
+    local res = connect(host, port, sessionid, id, protocol)
     if res ~= -1 then
         return nil
     end
