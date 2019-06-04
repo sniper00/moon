@@ -1,77 +1,77 @@
 local moon = require("moon")
-local tcpserver = require("moon.net.tcpserver")
-local socket = require("moon.net.socket")
+local socket = require("moon.socket")
 local test_assert = require("test_assert")
 
+local HOST = "127.0.0.1"
+local PORT = 30003
 --------------------------SERVER-------------------------
-tcpserver.on("accept",function(sessionid, msg)
-    --print("accept ", sessionid, msg:bytes())
+
+local listenfd = socket.listen(HOST,PORT,moon.PTYPE_SOCKET)
+
+socket.start(listenfd)
+
+socket.on("accept",function(fd, msg)
+    --print("accept ", fd, msg:bytes())
 end)
 
-tcpserver.on("message",function(sessionid, msg)
-    tcpserver.send_message(sessionid, msg)
+socket.on("message",function(fd, msg)
+    socket.write_message(fd, msg)
 end)
 
-tcpserver.on("close",function(sessionid, msg)
-    --print("close ", sessionid, msg:bytes())
+socket.on("close",function(fd, msg)
+    --print("close ", fd, msg:bytes())
 end)
 
-tcpserver.on("error",function(sessionid, msg)
-    --print("error ", sessionid, msg:bytes())
+socket.on("error",function(fd, msg)
+    --print("error ", fd, msg:bytes())
 end)
 
 ------------------------CLIENT----------------------------
 
-local function send(session,data)
-    if not session then
+local function send(fd,data)
+    if not fd then
         return false
     end
     local len = #data
-    return session:send(string.pack(">H",len)..data)
+    return socket.write(fd, string.pack(">H",len)..data)
 end
 
-local function session_read( session )
-    if not session then
+local function session_read( fd )
+    if not fd then
         return false
     end
-    local data,err = session:co_read(2)
+    local data,err = socket.read(fd, 2)
     if not data then
-        print(session.connid,"session read error",err)
+        print(fd,"fd read error",err)
         return false
     end
 
     local len = string.unpack(">H",data)
 
-    data,err = session:co_read(len)
+    data,err = socket.read(fd, len)
     if not data then
-        print(session.connid,"session read error",err)
+        print(fd,"fd read error",err)
         return false
     end
     return data
 end
 
-local config
-
-moon.init(function (cfg )
-    config = cfg.network
-    return true
-end)
-
 moon.start(function()
-    local sock = socket.new()
-    moon.async(function(  )
+    moon.async(function()
         for i=1,100 do
-            local session,err = sock:co_connect(config.ip,config.port)
-            if not session then
+            local fd,err = socket.connect(HOST,PORT,moon.PTYPE_TEXT)
+            if not fd then
                 print("connect failed", err)
                 return
             end
             moon.async(function ()
-                local send_data = tostring(session.connid)
-                send(session, send_data)
-                local rdata = session_read(session)
+                local send_data = tostring(fd)
+                send(fd, send_data)
+                local rdata = session_read(fd)
                 test_assert.equal(rdata, send_data)
+                socket.close(fd)
                 if i == 100 then
+                    socket.close(listenfd)
                     test_assert.success()
                 end
             end)
