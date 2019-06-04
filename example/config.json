@@ -14,23 +14,14 @@
                 "file": "network_example.lua",
                 "network": {
                     "type": "listen",
-                    "ip": "#inner_host",
-                    "port": "12345"
+                    "host": "#inner_host",
+                    "port": 12345
                 },
-                "network-ws": {
+                "networkws": {
                     "type": "listen",
-                    "ip": "#inner_host",
-                    "port": "12346",
+                    "host": "#inner_host",
+                    "port": 12346,
                     "protocol":"websocket"
-                }
-            },
-            {
-                "unique": true,
-                "name": "tcp_client",
-                "file": "tcp_client.lua",
-                "network": {
-                    "ip": "#inner_host",
-                    "port": "12345"
                 }
             }
         ]
@@ -100,11 +91,8 @@
                 "unique": true,
                 "name": "clusterd",
                 "file": "service/clusterd.lua",
-                "network": {
-                    "type": "listen",
-                    "ip": "#inner_host",
-                    "port": "10001"
-                }
+                "host": "#inner_host",
+                "port": 10001
             },
             {
                 "unique": true,
@@ -123,11 +111,8 @@
                 "unique": true,
                 "name": "clusterd",
                 "file": "service/clusterd.lua",
-                "network": {
-                    "type": "listen",
-                    "ip": "#inner_host",
-                    "port": "10002"
-                }
+                "host": "#inner_host",
+                "port": 10002
             },
             {
                 "unique": true,
@@ -159,6 +144,67 @@
                 "unique": true,
                 "name": "test",
                 "file": "test_moon.lua"
+            }
+        ]
+    },
+    {
+        "sid": 9,
+        "name": "server_#sid",
+        "outer_host": "127.0.0.1",
+        "inner_host": "127.0.0.1",
+        "thread": 8,
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "master",
+                "file": "network_text_benchmark.lua",
+                "host": "127.0.0.1",
+                "port": 42345,
+                "master":true,
+                "count":4
+            }
+        ]
+    }
+    ,
+    {
+        "sid": 10,
+        "name": "server_#sid",
+        "outer_host": "127.0.0.1",
+        "inner_host": "127.0.0.1",
+        "thread": 8,
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "server",
+                "file": "network_benchmark.lua",
+                "host": "127.0.0.1",
+                "port": 42346,
+                "master":true,
+                "count":4
+            },
+            {
+                "unique": true,
+                "name": "client",
+                "file": "network_benchmark_client.lua",
+                "host": "127.0.0.1",
+                "port": 42346,
+                "client_num":1000,
+                "count":100
+            }
+        ]
+    },
+    {
+        "sid": 11,
+        "name": "server_#sid",
+        "thread": 8,
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "create_service",
+                "file": "create_service.lua"
             }
         ]
     }

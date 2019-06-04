@@ -1,6 +1,6 @@
 local moon = require("moon")
 local json = require("json")
-local tcpserver = require("moon.net.tcpserver")
+local socket = require("moon.socket")
 local test_assert = require("test_assert")
 local large_data = {}
 
@@ -10,20 +10,32 @@ end
 
 local data = json.encode(large_data)
 
-tcpserver.on("message",function(_, msg)
+local listenfd = socket.listen("127.0.0.1", 30002, moon.PTYPE_SOCKET)
+
+socket.start(listenfd)
+
+socket.on("accept",function(fd)
+	test_assert.assert(socket.set_enable_frame(fd,"rw"),"set_enable_frame failed!")
+end)
+
+socket.on("message",function(_, msg)
 	test_assert.equal(msg:bytes(),data)
 	test_assert.success()
 end)
 
-tcpserver.on("error",function(_, msg)
+socket.on("error",function(_, msg)
 	test_assert.assert(false,msg:bytes())
 end)
 
 moon.start(function()
-	local connid = tcpserver.connect("127.0.0.1","30002")
-	do
-		tcpserver.send(connid,data)
-	end
+	local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET)
+	test_assert.assert(fd>0,"connect server failed")
+	socket.set_enable_frame(fd,"rw")
+	socket.write_then_close(fd,data)
+end)
+
+moon.destroy(function()
+	socket.close(listenfd)
 end)
 
 
