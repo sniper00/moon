@@ -1,9 +1,9 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 #include "asio.hpp"
 #include "message.hpp"
-#include "components/handler_alloc.hpp"
-#include "components/const_buffers_holder.hpp"
+#include "handler_alloc.hpp"
+#include "const_buffers_holder.hpp"
 #include "common/string.hpp"
 
 namespace moon
@@ -13,7 +13,7 @@ namespace moon
         read_request()
             :delim(read_delim::CRLF)
             , size(0)
-            , responseid(0)
+            , sessionid(0)
         {
 
         }
@@ -21,7 +21,7 @@ namespace moon
         read_request(read_delim d, size_t s, int32_t r)
             :delim(d)
             , size(s)
-            , responseid(r)
+            , sessionid(r)
         {
         }
 
@@ -30,10 +30,8 @@ namespace moon
 
         read_delim delim;
         size_t size;
-        int32_t responseid;
+        int32_t sessionid;
     };
-
-    class tcp;
 
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
@@ -43,14 +41,11 @@ namespace moon
         using message_handler_t = std::function<void(const message_ptr_t&)>;
 
         template <typename... Args>
-        explicit base_connection(tcp* t, Args&&... args)
-            :sending_(false)
-            , logic_error_(network_logic_error::ok)
-            , id_(0)
-            , tcp_(t)
-            , last_recv_time_(0)
+        explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket* s, Args&&... args)
+            : serviceid_(serviceid)
+            , type_(type)
+            , s_(s)
             , socket_(std::forward<Args>(args)...)
-            , log_(nullptr)
         {
         }
 
@@ -62,18 +57,17 @@ namespace moon
         {
         }
 
-        virtual void start(bool accepted, int32_t responseid = 0)
+        virtual void start(bool accepted)
         {
             (void)accepted;
-            (void)responseid;
             //save remote addr
             asio::error_code ec;
             auto ep = socket_.remote_endpoint(ec);
             auto addr = ep.address();
-            remote_addr_ = addr.to_string(ec) + ":";
-            remote_addr_ += std::to_string(ep.port());
+            addr_ = addr.to_string(ec) + ":";
+            addr_ += std::to_string(ep.port());
 
-            last_recv_time_ = now();
+            recvtime_ = now();
         }
 
         virtual bool read(const read_request& ctx)
@@ -94,12 +88,12 @@ namespace moon
                 return false;
             }
 
-            send_queue_.push_back(data);
+            queue_.push_back(data);
 
-            if (send_queue_.size() >= WARN_NET_SEND_QUEUE_SIZE)
+            if (queue_.size() >= WARN_NET_SEND_QUEUE_SIZE)
             {
-                CONSOLE_DEBUG(logger(), "network send queue too long. size:%zu", send_queue_.size());
-                if (send_queue_.size() >= MAX_NET_SEND_QUEUE_SIZE)
+                CONSOLE_DEBUG(logger(), "network send queue too long. size:%zu", queue_.size());
+                if (queue_.size() >= MAX_NET_SEND_QUEUE_SIZE)
                 {
                     logic_error_ = network_logic_error::send_message_queue_size_max;
                     close();
@@ -125,7 +119,7 @@ namespace moon
 
             if (exit)
             {
-                tcp_ = nullptr;
+                s_ = nullptr;
             }
         }
 
@@ -139,19 +133,19 @@ namespace moon
             return socket_.is_open();
         }
 
-        void set_id(uint32_t id)
+        void fd(uint32_t fd)
         {
-            id_ = id;
+            fd_ = fd;
         }
 
-        uint32_t id() const
+        uint32_t fd() const
         {
-            return id_;
+            return fd_;
         }
 
-        void timeout_check(time_t now, int timeout)
+        void timeout(time_t now)
         {
-            if ((0 != timeout) && (0 != last_recv_time_) && (now - last_recv_time_ > timeout))
+            if ((0 != timeout_) && (0 != recvtime_) && (now - recvtime_ > timeout_))
             {
                 logic_error_ = network_logic_error::timeout;
                 close();
@@ -175,6 +169,11 @@ namespace moon
             log_ = l;
         }
 
+        void settimeout(uint32_t v)
+        {
+            timeout_ = v;
+        }
+
         static time_t now()
         {
             return std::time(nullptr);
@@ -188,39 +187,39 @@ namespace moon
 
         void post_send()
         {
-            buffers_holder_.clear();
-            if (send_queue_.size() == 0)
+            holder_.clear();
+            if (queue_.size() == 0)
                 return;
 
-            while ((send_queue_.size() != 0) && (buffers_holder_.size() < 50))
+            while ((queue_.size() != 0) && (holder_.size() < 50))
             {
-                auto& msg = send_queue_.front();
+                auto& msg = queue_.front();
                 if (msg->has_flag(buffer_flag::framing))
                 {
-                    message_framing(buffers_holder_, std::move(msg));
+                    message_framing(holder_, std::move(msg));
                 }
                 else
                 {
-                    buffers_holder_.push_back(std::move(msg));
+                    holder_.push_back(std::move(msg));
                 }
-                send_queue_.pop_front();
+                queue_.pop_front();
             }
 
-            if (buffers_holder_.size() == 0)
+            if (holder_.size() == 0)
                 return;
 
             sending_ = true;
             asio::async_write(
                 socket_,
-                buffers_holder_.buffers(),
-                make_custom_alloc_handler(write_allocator_,
+                holder_.buffers(),
+                make_custom_alloc_handler(wallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
                 sending_ = false;
 
                 if (!e)
                 {
-                    if (buffers_holder_.close())
+                    if (holder_.close())
                     {
                         close();
                     }
@@ -245,7 +244,7 @@ namespace moon
                 if (lerrcode)
                 {
                     content = moon::format("{\"addr\":\"%s\",\"logic_errcode\":%d,\"errmsg\":\"%s\"}"
-                        , remote_addr_.data()
+                        , addr_.data()
                         , lerrcode
                         , (lerrmsg == nullptr ? logic_errmsg(lerrcode) : lerrmsg)
                     );
@@ -254,48 +253,56 @@ namespace moon
                 else if (e && e != asio::error::eof)
                 {
                     content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
-                        , remote_addr_.data()
+                        , addr_.data()
                         , e.value()
                         , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
                 }
 
                 msg->write_string(content);
-                msg->set_sender(id_);
+                msg->set_sender(fd_);
                 handle_message(std::move(msg));
             }
 
             //closed
             {
                 auto msg = message::create();
-                msg->write_string(remote_addr_);
-                msg->set_sender(id_);
+                msg->write_string(addr_);
+                msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
             }
+            s_ = nullptr;
         }
 
-        template<typename TMsg>
-        void handle_message(TMsg&& msg)
+        template<typename Message>
+        void handle_message(Message&& m)
         {
-            if (nullptr != tcp_)
+            if (nullptr != s_)
             {
-                msg->set_sender(id_);
-                tcp_->handle_message(std::forward<TMsg>(msg));
+                m->set_sender(fd_);
+                if (m->type() == 0)
+                {
+                    m->set_type(type_);
+                }
+                s_->handle_message(serviceid_, std::forward<Message>(m));
             }
         }
     protected:
-        bool sending_;
-        network_logic_error logic_error_;
-        uint32_t id_;
-        tcp* tcp_;
-        time_t last_recv_time_;
+        bool sending_ = false;
+        network_logic_error logic_error_ = network_logic_error::ok;
+        uint32_t fd_ = 0;
+        time_t recvtime_ = 0;
+        uint32_t timeout_ = 0;
+        moon::log* log_ = nullptr;
+        uint32_t serviceid_;
+        uint8_t type_;
+        moon::socket* s_;
         socket_t socket_;
-        handler_allocator read_allocator_;
-        handler_allocator write_allocator_;
-        const_buffers_holder  buffers_holder_;
-        std::string remote_addr_;
-        std::deque<buffer_ptr_t> send_queue_;
-        moon::log* log_;
+        std::string addr_;
+        handler_allocator rallocator_;
+        handler_allocator wallocator_;
+        const_buffers_holder  holder_;
+        std::deque<buffer_ptr_t> queue_;
     };
 }

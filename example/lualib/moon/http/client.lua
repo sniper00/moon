@@ -1,6 +1,7 @@
 local http = require("http")
 local seri = require("seri")
-local socket = require("moon.net.socket")
+local moon = require("moon")
+local socket = require("moon.socket")
 
 local tbinsert = table.insert
 local tbconcat = table.concat
@@ -21,8 +22,8 @@ local function parse_host_port( host_port, default_port )
     end
 end
 
-local function read_chunked(session, chunkdata)
-    local data, err = session:co_read('\r\n')
+local function read_chunked(fd, chunkdata)
+    local data, err = socket.readline(fd, "\r\n")
     if not data then
         return false,err
     end
@@ -31,12 +32,12 @@ local function read_chunked(session, chunkdata)
         return false, "protocol error"
     end
     if length >0 then
-        data, err = session:co_read(length)
+        data, err = socket.read(fd, length)
         if not data then
             return false,err
         end
         tbinsert( chunkdata, data )
-        data, err = session:co_read('\r\n')
+        data, err = socket.readline(fd, "\r\n")
         if not data then
             return false,err
         end
@@ -48,8 +49,8 @@ local function read_chunked(session, chunkdata)
     return true
 end
 
-local function response_handler(conn,response)
-    local data, err = conn:co_read("\r\n\r\n")
+local function response_handler(fd ,response)
+    local data, err = socket.readline(fd, "\r\n\r\n")
     if not data then
         return false, err
     else
@@ -64,7 +65,7 @@ local function response_handler(conn,response)
                 return false, "Content-Length is not number"
             end
             --print("Content-Length",content_length)
-            data, err = conn:co_read(content_length)
+            data, err = socket.read(fd, content_length)
             if not data then
                 return false,err
             end
@@ -72,7 +73,7 @@ local function response_handler(conn,response)
         elseif response:header("Transfer-Encoding") == 'chunked' then
             local chunkdata = {}
             while true do
-            local result,errmsg = read_chunked(conn,chunkdata)
+            local result,errmsg = read_chunked(fd,chunkdata)
             if not result then
                 return false,errmsg
             end
@@ -80,7 +81,7 @@ local function response_handler(conn,response)
                     break
                 end
             end
-            data, err = conn:co_read('\r\n')
+            data, err = socket.readline(fd, "\r\n")
             if not data then
                 return false,err
             end
@@ -91,8 +92,6 @@ local function response_handler(conn,response)
 end
 
 local default_port = 80
-
-local sock = socket.new()
 
 local M = {}
 
@@ -109,9 +108,9 @@ function M.new(host_port, timeout, proxy)
 end
 
 function M:close()
-    if self.conn then
-        self.conn:close()
-        self.conn = nil
+    if self.fd then
+        socket.close(self.fd)
+        self.fd = nil
     end
 end
 
@@ -160,25 +159,25 @@ function M:request( method,path,content,header)
     tbinsert( cache, "\r\n")
     tbinsert( cache, content)
 
-    if not self.conn then
-        local conn,err
+    if not self.fd then
+        local fd,err
         if self.proxy then
-            conn,err = sock:co_connect(self.proxy[1],self.proxy[2])
+            fd,err = socket.connect(self.proxy[1], tonumber(self.proxy[2]),  moon.PTYPE_TEXT)
         else
             --print(self.host[1],self.host[2])
-            conn,err = sock:co_connect(self.host[1],self.host[2])
+            fd,err = socket.connect(self.host[1], tonumber(self.host[2]),  moon.PTYPE_TEXT)
         end
-        if not conn then
+        if not fd then
             return false,err
         end
-        self.conn = conn
+        self.fd = fd
         self.response = http.response.new()
     end
 
     --print(seri.concats(cache))
-    self.conn:send(seri.concat(cache))
+    socket.write(self.fd, seri.concat(cache))
 
-    local data,err = response_handler(self.conn,self.response)
+    local data,err = response_handler(self.fd,self.response)
     if not data then
         return false, err
     end

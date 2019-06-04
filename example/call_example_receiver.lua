@@ -28,10 +28,10 @@ command.EXIT = function()
     moon.removeself()
 end
 
-local function docmd(sender,responseid, CMD,...)
+local function docmd(sender,sessionid, CMD,...)
     local f = command[CMD]
     if f then
-        moon.response('lua',sender,responseid,f(...))
+        moon.response('lua',sender,sessionid,f(...))
     else
         error(string.format("Unknown command %s", tostring(CMD)))
     end
@@ -39,7 +39,7 @@ end
 
 moon.dispatch('lua',function(msg,p)
     local sender = msg:sender()
-    local responseid = msg:responseid()
-    docmd(sender,responseid, p.unpack(msg))
+    local sessionid = msg:sessionid()
+    docmd(sender,sessionid, p.unpack(msg))
 end)
 

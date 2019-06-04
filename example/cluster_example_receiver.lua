@@ -23,11 +23,11 @@ command.ACCUM = function(...)
     return total
 end
 
-local function docmd(sender,responseid, CMD,...)
+local function docmd(sender,sessionid, CMD,...)
     local f = command[CMD]
     if f then
         if CMD ~= 'ADD' then
-            moon.response('lua',sender,responseid,f(...))
+            moon.response('lua',sender,sessionid,f(...))
         end
     else
         error(string.format("Unknown command %s", tostring(CMD)))
@@ -36,7 +36,7 @@ end
 
 moon.dispatch('lua',function(msg,p)
     local sender = msg:sender()
-    local responseid = msg:responseid()
-    docmd(sender,responseid, p.unpack(msg:bytes()))
+    local sessionid = msg:sessionid()
+    docmd(sender,sessionid, p.unpack(msg:bytes()))
 end)
 

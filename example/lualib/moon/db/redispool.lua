@@ -8,7 +8,7 @@ local setmetatable = setmetatable
 local M = {
     VERSION = "0.1",
     ip = "127.0.0.1",
-    port = "6379"
+    port = 6379
 }
 
 local mt = {__index = M}
@@ -29,7 +29,7 @@ function M:spawn(trytimes)
     local c = tbremove(self.pool)
     if not c then
         c = redis.new()
-        if not c:async_connect(self.ip, self.port) then
+        if not c:connect(self.ip, self.port) then
             return nil, "connect redis failed"
         end
         self._size = self._size + 1
@@ -37,7 +37,7 @@ function M:spawn(trytimes)
         local ok, _ = c:docmd("PING")
         if not ok then
             print("span redis not connect,reconnecting...")
-            while not c:async_connect(self.ip, self.port) do
+            while not c:connect(self.ip, self.port) do
                 print("reconnect redis server failed")
                 if trytimes then
                     trytimes = trytimes - 1

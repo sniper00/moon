@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 #include "common/buffer.hpp"
 
 namespace moon
@@ -96,7 +96,7 @@ namespace moon
             responseid_ = v;
         }
 
-        int32_t responseid() const
+        int32_t sessionid() const
         {
             return responseid_;
         }

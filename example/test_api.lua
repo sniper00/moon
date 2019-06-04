@@ -23,10 +23,9 @@ equal(type(iskindof) , "function")
 
 equal(type(moon.name) , "function")
 equal(type(moon.id) , "function")
-equal(type(moon.send_prepare) , "function")
-equal(type(moon.prepare) , "function")
+equal(type(moon.send_prefab) , "function")
+equal(type(moon.make_prefab) , "function")
 equal(type(moon.broadcast) , "function")
-equal(type(moon.get_tcp) , "function")
 equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
@@ -36,7 +35,7 @@ equal(type(moon.abort) , "function")
 
 local msg = moon.message
 equal(type(msg.sender) , "function")
-equal(type(msg.responseid) , "function")
+equal(type(msg.sessionid) , "function")
 equal(type(msg.receiver) , "function")
 equal(type(msg.type) , "function")
 equal(type(msg.subtype) , "function")
@@ -54,16 +53,19 @@ print(fs.working_directory())
 equal(type(fs.exists) , "function")
 equal(type(fs.traverse_folder) , "function")
 
-local tcp = moon.tcp
-equal(type(tcp.async_accept) , "function")
-equal(type(tcp.async_connect) , "function")
-equal(type(tcp.listen) , "function")
-equal(type(tcp.close) , "function")
-equal(type(tcp.connect) , "function")
-equal(type(tcp.read) , "function")
-equal(type(tcp.send) , "function")
-equal(type(tcp.send_message) , "function")
-equal(type(tcp.settimeout) , "function")
+local socket = require("socketcore")
+equal(type(socket.listen) , "function")
+equal(type(socket.accept) , "function")
+equal(type(socket.connect) , "function")
+equal(type(socket.read) , "function")
+equal(type(socket.write) , "function")
+equal(type(socket.write_with_flag) , "function")
+equal(type(socket.write_message) , "function")
+equal(type(socket.close) , "function")
+equal(type(socket.settimeout) , "function")
+equal(type(socket.setnodelay) , "function")
+equal(type(socket.set_enable_frame) , "function")
+
 equal(type(moon.millsecond) , "function")
 
 local timer = moon
@@ -85,9 +87,9 @@ print("after offset, now server time")
 
 print("*********************api test ok**********************")
 
-moon.prepare(nil)
-moon.prepare("123")
-moon.prepare(seri.pack("1",2,3,{a=1,b=2},nil))
+moon.make_prefab(nil)
+moon.make_prefab("123")
+moon.make_prefab(seri.pack("1",2,3,{a=1,b=2},nil))
 
 moon.set_env("1","2")
 equal(moon.get_env("1"),"2")
@@ -162,7 +164,6 @@ do
 end
 
 moon.async(function()
-
 	local co1 = moon.async(function()
 		moon.co_wait(100)
 	end)

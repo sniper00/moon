@@ -6,13 +6,15 @@ require("base.util")
 require("base.class")
 
 ---@class core
-local core = require("moon.core")
+local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
 
 local pairs = pairs
-local json_encode = json.encode
-local json_decode = json.decode
+local type = type
+local setmetatable = setmetatable
+local jencode = json.encode
+local jdecode = json.decode
 local co_create = coroutine.create
 local co_running = coroutine.running
 local _co_resume = coroutine.resume
@@ -30,7 +32,10 @@ local PTYPE_SOCKET_WS = 6
 
 ---@class moon : core
 local moon = {
-    PTYPE_LUA = PTYPE_LUA
+    PTYPE_TEXT = PTYPE_TEXT,
+    PTYPE_LUA = PTYPE_LUA,
+    PTYPE_SOCKET = PTYPE_SOCKET,
+    PTYPE_SOCKET_WS = PTYPE_SOCKET_WS
 }
 
 setmetatable(moon, {__index = core})
@@ -86,14 +91,14 @@ local function co_resume(co, ...)
     end
 end
 
----make map<coroutine,responseid>
+---make map<coroutine,sessionid>
 local function make_response(receiver)
     repeat
         response_uid = response_uid + 1
         if response_uid == 0xFFFFFFF then
             response_uid = 1
         end
-    until not resplistener[response_uid]
+    until nil == resplistener[response_uid]
 
     if receiver then
         if services_exited[receiver] then
@@ -107,6 +112,11 @@ local function make_response(receiver)
     return response_uid
 end
 
+--- 取消等待session的回应
+function moon.cancel_session(sessionid)
+    resplistener[sessionid] = false
+end
+
 moon.make_response = make_response
 
 ---
@@ -115,7 +125,7 @@ moon.make_response = make_response
 ---@param callback fun(config:table):boolean
 function moon.init(callback)
     core.set_cb('i',function ( str )
-        return callback(json_decode(str))
+        return callback(jdecode(str))
     end)
 end
 
@@ -152,18 +162,18 @@ local function _default_dispatch(msg, PTYPE)
         error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, msg:sender()))
     end
 
-    local responseid = msg:responseid()
-    if responseid > 0 and PTYPE ~= PTYPE_ERROR then
-        response_wacther[responseid] = nil
-        local co = resplistener[responseid]
+    local sessionid = msg:sessionid()
+    if sessionid > 0 and PTYPE ~= PTYPE_ERROR then
+        response_wacther[sessionid] = nil
+        local co = resplistener[sessionid]
         if co then
-            resplistener[responseid] = nil
+            resplistener[sessionid] = nil
             --print(coroutine.status(co))
             co_resume(co, p.unpack(msg))
             --print(coroutine.status(co))
             return
         end
-        error(string.format( "%s: response [%u] can not find co.",moon.name(), responseid))
+        error(string.format( "%s: response [%u] can not find co.",moon.name(), sessionid))
 	else
         if not p.dispatch then
 			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name(), p.PTYPE))
@@ -208,9 +218,9 @@ end
 ---@param receiver int 接收者服务id
 ---@param header string message header
 ---@param data string|userdata 消息内容
----@param responseid int
+---@param sessionid int
 ---@return boolean
-function moon.raw_send(PTYPE, receiver, header, data, responseid)
+function moon.raw_send(PTYPE, receiver, header, data, sessionid)
 	local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
@@ -220,8 +230,8 @@ function moon.raw_send(PTYPE, receiver, header, data, responseid)
         return false,"moon.raw_send send to dead service"
 	end
     header = header or ''
-    responseid = responseid or 0
-    _send(sid_, receiver, data, header, responseid, p.PTYPE)
+    sessionid = sessionid or 0
+    _send(sid_, receiver, data, header, sessionid, p.PTYPE)
 	return true
 end
 
@@ -247,7 +257,7 @@ end
 function moon.new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
-    config = json_encode(config)
+    config = jencode(config)
     return core.new_service(stype, config, unique, workerid,  0, 0)
 end
 
@@ -255,9 +265,9 @@ end
 function moon.co_new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
-    config = json_encode(config)
-    local responseid = make_response()
-    local res = core.new_service(stype, config, unique, workerid, sid_, responseid)
+    config = jencode(config)
+    local sessionid = make_response()
+    local res = core.new_service(stype, config, unique, workerid, sid_, sessionid)
     if res then
         res = tonumber(co_yield())
     end
@@ -442,18 +452,18 @@ end
 ---回应moon.call
 ---param PTYPE 协议类型
 ---param receiver 调用者服务id
----param responseid 调用者的responseid
+---param sessionid 调用者的responseid
 ---param ... 数据
 ---@param PTYPE string
 ---@param receiver int
----@param responseid int
-function moon.response(PTYPE, receiver, responseid, ...)
-    if responseid == 0 then return end
+---@param sessionid int
+function moon.response(PTYPE, receiver, sessionid, ...)
+    if sessionid == 0 then return end
     local p = protocol[PTYPE]
     if not p then
         error("handle unknown message")
     end
-    _send(sid_, receiver, p.pack(...), '', responseid, p.PTYPE)
+    _send(sid_, receiver, p.pack(...), '', sessionid, p.PTYPE)
 end
 
 ------------------------------------
@@ -532,14 +542,14 @@ reg_protocol {
         end
     end,
     dispatch = function(msg, p)
-        local responseid = msg:responseid()
+        local sessionid = msg:sessionid()
         local topic = msg:header()
         local data = p.unpack(msg)
         --print("PTYPE_ERROR",topic,data)
-        local co = resplistener[responseid]
+        local co = resplistener[sessionid]
         if co then
             co_resume(co, false, topic..data)
-            resplistener[responseid] = nil
+            resplistener[sessionid] = nil
             return
         end
     end

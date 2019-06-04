@@ -17,20 +17,20 @@ namespace moon
         {
         }
 
-        void start(bool accepted, int32_t responseid = 0) override
+        void start(bool accepted) override
         {
-            base_connection_t::start(accepted, responseid);
-            response_msg_ = message::create(8192);
+            base_connection_t::start(accepted);
+            response_ = message::create(8192);
             read_some();
         }
 
         bool read(const read_request& ctx) override
         {
-            if (is_open() && read_request_.responseid == 0)
+            if (is_open() && request_.sessionid == 0)
             {
-                read_request_ = ctx;
+                request_ = ctx;
                 restore_buffer_offset();
-                if (response_msg_->size() > 0)
+                if (response_->size() > 0)
                 {
                     //guarantee read is async operation
                     asio::post(socket_.get_io_context(),[this, self = shared_from_this()] {
@@ -49,7 +49,7 @@ namespace moon
         void read_some()
         {
             socket_.async_read_some(asio::buffer(buffer_),
-                make_custom_alloc_handler(read_allocator_,
+                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -66,9 +66,9 @@ namespace moon
 
                 //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, moon::to_hex_string(string_view_t{ (char*)buffer_.data(), bytes_transferred }, " ").data(), "");
 
-                last_recv_time_ = now();
+                recvtime_ = now();
                 restore_buffer_offset();
-                response_msg_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
+                response_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
                 handle_read_request();
                 read_some();
             }));
@@ -76,7 +76,7 @@ namespace moon
 
         void restore_buffer_offset()
         {
-            auto buf = response_msg_->get_buffer();
+            auto buf = response_->get_buffer();
             buf->offset_writepos(restore_write_offset_);
             buf->seek(prew_read_offset_, buffer::Current);
             restore_write_offset_ = 0;
@@ -86,7 +86,7 @@ namespace moon
         void read_with_delim(buffer* buf, const string_view_t& delim)
         {
             size_t dszie = buf->size();
-            if (read_request_.size != 0 && dszie > read_request_.size)
+            if (request_.size != 0 && dszie > request_.size)
             {
                 error(asio::error_code(), int(network_logic_error::read_message_size_max));
                 base_connection_t::close();
@@ -100,30 +100,30 @@ namespace moon
                 restore_write_offset_ = static_cast<int>(dszie - pos);
                 prew_read_offset_ = static_cast<int>(pos + delim.size());
                 buf->offset_writepos(-restore_write_offset_);
-                response(response_msg_);
+                response(response_);
             }
         }
 
         void handle_read_request()
         {
-            auto buf = response_msg_->get_buffer();
+            auto buf = response_->get_buffer();
             size_t dszie = buf->size();
 
-            if (0 == read_request_.responseid || dszie == 0)
+            if (0 == request_.sessionid || dszie == 0)
             {
                 return;
             }
 
-            switch (read_request_.delim)
+            switch (request_.delim)
             {
             case read_delim::FIXEDLEN:
             {
-                if (buf->size() >= read_request_.size)
+                if (buf->size() >= request_.size)
                 {
-                    buf->offset_writepos(-static_cast<int>(dszie - read_request_.size));
-                    restore_write_offset_ = static_cast<int>(dszie - read_request_.size);
-                    prew_read_offset_ = static_cast<int>(read_request_.size);
-                    response(response_msg_);
+                    buf->offset_writepos(-static_cast<int>(dszie - request_.size));
+                    restore_write_offset_ = static_cast<int>(dszie - request_.size);
+                    prew_read_offset_ = static_cast<int>(request_.size);
+                    response(response_);
                     break;
                 }
                 else
@@ -155,36 +155,36 @@ namespace moon
         {
             (void)lerrmsg;
 
-            response_msg_->get_buffer()->clear();
+            response_->get_buffer()->clear();
 
             if (e && e != asio::error::eof)
             {
-                response_msg_->set_header("closed");
-                response_msg_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
+                response_->set_header("closed");
+                response_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
             }
             else
             {
-                response_msg_->set_header(logic_errmsg(logicerr));
+                response_->set_header(logic_errmsg(logicerr));
             }
 
-            if (read_request_.responseid != 0)
+            if (request_.sessionid != 0)
             {
-                response(response_msg_, PTYPE_ERROR);
+                response(response_, PTYPE_ERROR);
             }
         }
 
-        void response(const message_ptr_t & msg, uint8_t mtype = PTYPE_TEXT)
+        void response(const message_ptr_t & m, uint8_t type = PTYPE_TEXT)
         {
-            msg->set_type(mtype);
-            msg->set_responseid(read_request_.responseid);
-            read_request_.responseid = 0;
-            handle_message(msg);
+            m->set_type(type);
+            m->set_responseid(request_.sessionid);
+            request_.sessionid = 0;
+            handle_message(m);
         }
     protected:
         int restore_write_offset_;
         int prew_read_offset_;
-        message_ptr_t  response_msg_;
+        message_ptr_t  response_;
         std::array<uint8_t, 8192> buffer_;
-        read_request read_request_;
+        read_request request_;
     };
 }

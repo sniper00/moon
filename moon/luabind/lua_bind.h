@@ -27,7 +27,7 @@ public:
 
     const lua_bind& bind_service(lua_service* s) const;
 
-    const lua_bind& bind_socket()const;
+    const lua_bind& bind_socket(lua_service* s)const;
 
     static void registerlib(lua_State *L, const char *name, lua_CFunction f);
 

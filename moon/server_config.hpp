@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "config.hpp"
 #include "common/string.hpp"
 #include "common/exception.hpp"
 #include "rapidjson/cursorstreamwrapper.h"

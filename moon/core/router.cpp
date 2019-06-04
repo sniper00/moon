@@ -4,8 +4,8 @@
 #include "common/time.hpp"
 #include "worker.h"
 #include "message.hpp"
-#include "service.h"
 #include "server.h"
+#include "service.hpp"
 
 namespace moon
 {
@@ -28,7 +28,7 @@ namespace moon
         return workers_.size();
     }
 
-    bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t responseid)
+    bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t sessionid)
     {
         auto iter = regservices_.find(service_type);
         MOON_ASSERT(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
@@ -46,12 +46,12 @@ namespace moon
         uint32_t serviceid = 0;
         do
         {
-            if (counter >= worker::MAX_SERVICE_NUM)
+            if (counter >= worker::max_uuid)
             {
                 CONSOLE_ERROR(logger(), "new service failed: can not get more service id.worker[%d] servicenum[%u].", wk->id(), wk->size());
                 return false;
             }
-            serviceid = wk->make_serviceid();
+            serviceid = wk->uuid();
             ++counter;
         } while (!try_add_serviceid(serviceid));
 
@@ -65,73 +65,73 @@ namespace moon
         s->logger(logger_);
         s->set_unique(unique);
         s->set_server_context(server_, this, wk);
-        wk->add_service(std::move(s), config, creatorid, responseid);
+        wk->add_service(std::move(s), config, creatorid, sessionid);
         return true;
     }
 
-    void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t responseid, bool crashed)
+    void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid, bool crashed)
     {
         auto workerid = worker_id(serviceid);
         if (workerid_valid(workerid))
         {
-            get_worker(workerid)->remove_service(serviceid, sender, responseid, crashed);
+            get_worker(workerid)->remove_service(serviceid, sender, sessionid, crashed);
         }
         else
         {
             auto content = moon::format("worker %d not found.", workerid);
-            response(sender, "router::remove_service "sv, content, responseid, PTYPE_ERROR);
+            response(sender, "router::remove_service "sv, content, sessionid, PTYPE_ERROR);
         }
     }
 
-    void  router::runcmd(uint32_t sender, const std::string& cmd, int32_t responseid)
+    void  router::runcmd(uint32_t sender, const std::string& cmd, int32_t sessionid)
     {
         auto params = moon::split<std::string>(cmd, ".");
         if (params.size() < 3)
         {
-            response(sender, "router::runcmd "sv, moon::format("param too few: %s", cmd.data()), responseid, PTYPE_ERROR);
+            response(sender, "router::runcmd "sv, moon::format("param too few: %s", cmd.data()), sessionid, PTYPE_ERROR);
             return;
         }
 
         switch (moon::chash_string(params[0]))
         {
-        case "worker"_csh:
-        {
-            int32_t workerid = moon::string_convert<int32_t>(params[1]);
-            if (workerid_valid(workerid))
+            case "worker"_csh:
             {
-                get_worker(workerid)->runcmd(sender, cmd, responseid);
-                return;
+                int32_t workerid = moon::string_convert<int32_t>(params[1]);
+                if (workerid_valid(workerid))
+                {
+                    get_worker(workerid)->runcmd(sender, cmd, sessionid);
+                    return;
+                }
+                break;
             }
-            break;
-        }
         }
 
         auto content = moon::format("invalid cmd: %s.", cmd.data());
-        response(sender, "router::runcmd "sv, content, responseid, PTYPE_ERROR);
+        response(sender, "router::runcmd "sv, content, sessionid, PTYPE_ERROR);
     }
 
-    void router::send_message(message_ptr_t&& msg) const
+    void router::send_message(message_ptr_t&& m) const
     {
-        MOON_CHECK(msg->type() != PTYPE_UNKNOWN, "invalid message type.");
-        MOON_CHECK(msg->receiver() != 0, "message receiver serviceid is 0.");
-        int32_t id = worker_id(msg->receiver());
-        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %u",msg->receiver()).data());
-        get_worker(id)->send(std::forward<message_ptr_t>(msg));
+        MOON_CHECK(m->type() != PTYPE_UNKNOWN, "invalid message type.");
+        MOON_CHECK(m->receiver() != 0, "message receiver serviceid is 0.");
+        int32_t id = worker_id(m->receiver());
+        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %u",m->receiver()).data());
+        get_worker(id)->send(std::forward<message_ptr_t>(m));
     }
 
-    void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, string_view_t header, int32_t responseid, uint8_t type) const
+    void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, string_view_t header, int32_t sessionid, uint8_t type) const
     {
-        responseid = -responseid;
-        message_ptr_t msg = message::create(std::move(data));
-        msg->set_sender(sender);
-        msg->set_receiver(receiver);
+        sessionid = -sessionid;
+        message_ptr_t m = message::create(std::move(data));
+        m->set_sender(sender);
+        m->set_receiver(receiver);
         if (header.size() != 0)
         {
-            msg->set_header(header);
+            m->set_header(header);
         }
-        msg->set_type(type);
-        msg->set_responseid(responseid);
-        send_message(std::move(msg));
+        m->set_type(type);
+        m->set_responseid(sessionid);
+        send_message(std::move(m));
     }
 
     void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type)
@@ -199,9 +199,9 @@ namespace moon
         return logger_;
     }
 
-    void router::response(uint32_t to, string_view_t header, string_view_t content, int32_t responseid, uint8_t mtype) const
+    void router::response(uint32_t to, string_view_t header, string_view_t content, int32_t sessionid, uint8_t mtype) const
     {
-        if (to == 0 || responseid == 0)
+        if (to == 0 || sessionid == 0)
         {
             if (mtype == PTYPE_ERROR && !content.empty())
             {
@@ -214,7 +214,7 @@ namespace moon
         rmsg->set_receiver(to);
         rmsg->set_header(header);
         rmsg->set_type(mtype);
-        rmsg->set_responseid(responseid);
+        rmsg->set_responseid(sessionid);
         rmsg->write_data(content);
         send_message(std::move(rmsg));
     }
@@ -239,20 +239,10 @@ namespace moon
         return workers_[n].get();
     }
 
-    bool router::has_serviceid(uint32_t serviceid) const
-    {
-        std::shared_lock lck(serviceids_lck_);
-        return (serviceids_.find(serviceid) != serviceids_.end());
-    }
-
     bool router::try_add_serviceid(uint32_t serviceid)
     {
         std::unique_lock lk(serviceids_lck_);
-        if (serviceids_.find(serviceid) == serviceids_.end())
-        {
-            return serviceids_.emplace(serviceid).second;
-        }
-        return false;
+        return serviceids_.emplace(serviceid).second;
     }
 
     void router::on_service_remove(uint32_t serviceid)

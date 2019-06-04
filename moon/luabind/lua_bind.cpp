@@ -6,14 +6,11 @@
 #include "common/hash.hpp"
 #include "common/http_util.hpp"
 #include "common/log.hpp"
-#include "components/tcp/tcp.h"
 #include "message.hpp"
-#include "router.h"
 #include "server.h"
 #include "worker.h"
 #include "lua_buffer.hpp"
 #include "lua_serialize.hpp"
-
 #include "services/lua_service.h"
 
 using namespace moon;
@@ -141,13 +138,18 @@ static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname,
     assert(lua_gettop(L) == 0);
 }
 
-static void moon_extend_library(sol::table t, lua_CFunction f, const char* name)
+static void sol_extend_library(sol::table t, lua_CFunction f, const char* name, const std::function<int(lua_State* L)>& uv = nullptr)
 {
     lua_State* L = t.lua_state();
-    t.push();
-    lua_pushcfunction(L, f);
+    t.push();//sol table
+    int upvalue = 0;
+    if (uv)
+    { 
+        upvalue = uv(L);
+    }
+    lua_pushcclosure(L, f, upvalue);
     lua_setfield(L, -2, name);
-    lua_pop(L, 1); /* moon table */
+    lua_pop(L, 1); //sol table
     assert(lua_gettop(L) == 0);
 }
 
@@ -160,7 +162,7 @@ const lua_bind & lua_bind::bind_util() const
 
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
 
-    moon_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
+    sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
     lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");
@@ -191,7 +193,7 @@ static void redirect(message* m, const moon::string_view_t& header, uint32_t rec
     m->set_type(mtype);
 }
 
-static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::string_view_t& header, int32_t responseid, uint8_t mtype)
+static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::string_view_t& header, int32_t sessionid, uint8_t mtype)
 {
     if (header.size() != 0)
     {
@@ -200,7 +202,7 @@ static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::s
     m->set_sender(sender);
     m->set_receiver(receiver);
     m->set_type(mtype);
-    m->set_responseid(-responseid);
+    m->set_responseid(-sessionid);
 }
 
 const lua_bind & lua_bind::bind_message() const
@@ -248,7 +250,7 @@ const lua_bind & lua_bind::bind_message() const
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
-        , "responseid", (&message::responseid)
+        , "sessionid", (&message::sessionid)
         , "receiver", (&message::receiver)
         , "type", (&message::type)
         , "subtype", (&message::subtype)
@@ -268,17 +270,18 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
 {
     auto router_ = s->get_router();
     auto server_ = s->get_server();
+    auto worker_ = s->get_worker();
 
     lua.set("null", (void*)(router_));
 
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
-    lua.set_function("send_prepare", &lua_service::send_prepare, s);
-    lua.set_function("prepare", &lua_service::prepare, s);
-    lua.set_function("get_tcp", &lua_service::get_tcp, s);
-    lua.set_function("remove_component", &lua_service::remove, s);
     lua.set_function("set_cb", &lua_service::set_callback, s);
     lua.set_function("memory_use", &lua_service::memory_use, s);
+    lua.set_function("make_prefab", &worker::make_prefab, worker_);
+    lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t sessionid, uint8_t type) {
+        worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
+    });
     lua.set_function("send", &router::send, router_);
     lua.set_function("new_service", &router::new_service, router_);
     lua.set_function("remove_service", &router::remove_service, router_);
@@ -294,23 +297,30 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     return *this;
 }
 
-const lua_bind & lua_bind::bind_socket() const
+const lua_bind & lua_bind::bind_socket(lua_service* s) const
 {
-    lua.new_usertype<moon::tcp>("tcp"
-        , sol::call_constructor, sol::no_constructor
-        , "async_accept", (&moon::tcp::async_accept)
-        , "connect", (&moon::tcp::connect)
-        , "async_connect", (&moon::tcp::async_connect)
-        , "listen", (&moon::tcp::listen)
-        , "close", (&moon::tcp::close)
-        , "read", (&moon::tcp::read)
-        , "send", (&moon::tcp::send)
-        , "send_with_flag", (&moon::tcp::send_with_flag)
-        , "send_message", (&moon::tcp::send_message)
-        , "settimeout", (&moon::tcp::settimeout)
-        , "setnodelay", (&moon::tcp::setnodelay)
-        , "set_enable_frame", (&moon::tcp::set_enable_frame)
-        );
+    auto w = s->get_worker();
+    auto& sock = w->socket();
+
+    sol::table tb = lua.create_named("socket");
+
+    tb.set_function("listen", [&sock,s](const std::string& host, uint16_t port, uint8_t type) {
+        return sock.listen(host, port, s->id(), type);
+    });
+
+    tb.set_function("accept", &moon::socket::accept,&sock);
+    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint32_t owner, uint8_t type) {
+        return sock.connect(host, port, s->id(), owner, type, sessionid);
+    });
+    tb.set_function("read", &moon::socket::read, &sock);
+    tb.set_function("write", &moon::socket::write, &sock);
+    tb.set_function("write_with_flag", &moon::socket::write_with_flag, &sock);
+    tb.set_function("write_message", &moon::socket::write_message, &sock);
+    tb.set_function("close", &moon::socket::close, &sock);
+    tb.set_function("settimeout", &moon::socket::settimeout, &sock);
+    tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
+    tb.set_function("set_enable_frame", &moon::socket::set_enable_frame, &sock);
+    registerlib(lua.lua_state(), "socketcore", tb);
     return *this;
 }
 
