@@ -98,7 +98,7 @@ local function make_response(receiver)
         if response_uid == 0xFFFFFFF then
             response_uid = 1
         end
-    until not resplistener[response_uid]
+    until nil == resplistener[response_uid]
 
     if receiver then
         if services_exited[receiver] then
@@ -110,6 +110,11 @@ local function make_response(receiver)
     local co = co_running()
     resplistener[response_uid] = co
     return response_uid
+end
+
+--- 取消等待session的回应
+function moon.cancel_session(sessionid)
+    resplistener[sessionid] = false
 end
 
 moon.make_response = make_response

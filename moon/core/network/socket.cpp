@@ -118,7 +118,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
         else
         {
             asio::async_connect(c->socket(), endpoint_iterator,
-                [this, c, w, host, port, serviceid, owner, sessionid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
+                [this, c, w, host, port, serviceid, sessionid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
                 if (!e)
                 {
@@ -128,23 +128,22 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
                 }
                 else
                 {
-                    response(0, serviceid, std::string_view{}, moon::format("error connect %s(%d)", e.message().data(), e.value()), sessionid, PTYPE_ERROR);
+                    response(0, serviceid, std::string_view{}, moon::format("connect %s:%d failed: %s(%d)", host.data(), port, e.message().data(), e.value()), sessionid, PTYPE_ERROR);
                 }
             });
-            return -1;
         }
     }
     catch (asio::system_error& e)
     {
         if (sessionid == 0)
         {
-            CONSOLE_WARN(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+            CONSOLE_WARN(router_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
         }
         else
         {
-            asio::post(ioc_, [this, serviceid, sessionid, e]() {
-                response(0, serviceid, std::string_view{}
-                    , moon::format("error connect  %s(%d)", e.what(), e.code().value())
+            asio::post(ioc_, [this, host, port, serviceid, sessionid, e]() {
+                response(0,serviceid, std::string_view{}
+                    , moon::format("connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value())
                     , sessionid, PTYPE_ERROR);
             });
         }

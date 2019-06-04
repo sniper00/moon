@@ -52,10 +52,7 @@ end
 ---@param protocol int
 function socket.connect(host, port, protocol)
     local sessionid = make_response()
-    local res = connect(host, port, sessionid, id, protocol)
-    if res ~= -1 then
-        return nil
-    end
+    connect(host, port, sessionid, id, protocol)
     local fd,err = yield()
     if not fd then
         return nil,err
