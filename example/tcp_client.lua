@@ -34,7 +34,7 @@ moon.init(function(conf)
     moon.async(function()
         local fd,err = socket.connect(conf.host, conf.port,moon.PTYPE_TEXT)
         if not fd then
-            print("connect failed", err)
+            print(err)
             return
         end
 
