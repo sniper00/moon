@@ -13,16 +13,19 @@
                 "name": "network_example",
                 "file": "network_example.lua",
                 "network": {
-                    "type": "listen",
                     "host": "#inner_host",
                     "port": 12345
                 },
                 "networkws": {
-                    "type": "listen",
                     "host": "#inner_host",
-                    "port": 12346,
-                    "protocol":"websocket"
+                    "port": 12346
                 }
+            },
+            {
+                "name": "tcp_client",
+                "file": "tcp_client.lua",
+                "host": "#inner_host",
+                "port": 12345
             }
         ]
     },
