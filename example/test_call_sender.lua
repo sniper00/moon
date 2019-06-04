@@ -15,6 +15,8 @@ moon.start(
                     }
                 )
 
+                print(moon.co_call("lua", receiverid, "SUB", 1000, 2000))
+
                 local res = moon.co_call("lua", receiverid, "SUB", 1000, 2000)
                 test_assert.equal(res, -1000)
 

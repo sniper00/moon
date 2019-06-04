@@ -2,11 +2,17 @@ local seri = require("seri")
 local json = require("json")
 local moon = require("moon")
 local log = require("moon.log")
-local tcp = require("moon.net.tcpserver")
+local socket = require("moon.socket")
 
 local clusters = {}
 
-local string_pack = string.pack
+local print = print
+local assert = assert
+local error = error
+local tostring = tostring
+local pairs = pairs
+local strpack = string.pack
+local strfmt = string.format
 local co_yield = coroutine.yield
 
 local packs = seri.packs
@@ -21,171 +27,172 @@ local close_watch = {}
 local send_watch = {}
 local connectors = {}
 
-local function add_send_watch( connid, sender, responseid )
-    local senders = send_watch[connid]
+local function add_send_watch( fd, sender, sessionid )
+    local senders = send_watch[fd]
     if not senders then
         senders = {}
-        send_watch[connid] = senders
+        send_watch[fd] = senders
     end
 
-    local key = ((-responseid)<<32)|sender
+    local key = ((-sessionid)<<32)|sender
     senders[key] = true
 end
 
-local function remove_send_watch( connid, sender, responseid )
-    local senders = send_watch[connid]
+local function remove_send_watch( fd, sender, sessionid )
+    local senders = send_watch[fd]
     if not senders then
         assert(false)
         return
     end
 
-    local key = ((-responseid)<<32)|sender
+    local key = ((-sessionid)<<32)|sender
     senders[key] = nil
 end
 
 local function make_message(header, data)
-    return concat(string_pack("<H",#data),data, header)
+    return concat(strpack("<H",#data),data, header)
 end
 
-tcp.on("connect",function(sessionid, msg)
-    print("connect", sessionid, msg:bytes())
+socket.on("connect",function(fd, msg)
+    print("connect", fd, msg:bytes())
 end)
 
-tcp.on("accept",function(sessionid, msg)
-    print("accept", sessionid, msg:bytes())
+socket.on("accept",function(fd, msg)
+    socket.settimeout(fd, 10)
+    print("accept", fd, msg:bytes())
 end)
 
-tcp.on("message", function(sessionid, msg)
-    local saddr, rnode, raddr, rresponseid = unpack_header(msg:buffer())
+socket.on("message", function(fd, msg)
+    local saddr, rnode, raddr, rsessionid = unpack_header(msg:buffer())
     local receiver = queryservice(raddr)
     if 0 == receiver then
-        local err = string.format( "cluster : tcp message queryservice %s can not find",raddr)
+        local err = strfmt( "cluster : tcp message queryservice %s can not find",raddr)
         log.warn(err)
 
-        if 0>rresponseid then
-            local rheader = packs(rnode, raddr, saddr, -rresponseid)
+        if 0>rsessionid then
+            local rheader = packs(rnode, raddr, saddr, -rsessionid)
             local s = make_message(rheader, packs(false, err))
-            tcp.send(sessionid, s)
+            socket.write(fd, s)
         end
         return
     end
 
     --被调用者
-    if 0 > rresponseid then
+    if 0 > rsessionid then
         moon.async(
             function()
-                local responseid = moon.make_response(receiver)
-                if not responseid then
-                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                local sessionid = moon.make_response(receiver)
+                if not sessionid then
+                    local rheader = packs(rnode, raddr, saddr, -rsessionid)
                     local s = make_message(rheader, packs(false, "service dead"))
-                    tcp.send(sessionid, s)
+                    socket.write(fd, s)
                     return
                 end
 
-                msg:resend(moon.sid(),receiver,"",responseid,moon.PTYPE_LUA)
+                msg:resend(moon.sid(),receiver,"",sessionid,moon.PTYPE_LUA)
 
-                close_watch[responseid] = sessionid
+                close_watch[sessionid] = fd
                 local res,err2 = co_yield()
-                local state = close_watch[responseid]
-                close_watch[responseid] = nil
+                local state = close_watch[sessionid]
+                close_watch[sessionid] = nil
                 if state == false then
                     return
                 end
 
                 if res then
                     local buffer = res:buffer()
-                    write_front(buffer,string_pack("<H",res:size()))
-                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                    write_front(buffer,strpack("<H",res:size()))
+                    local rheader = packs(rnode, raddr, saddr, -rsessionid)
                     write_back(buffer,rheader)
-                    tcp.send_message(sessionid, res)
+                    socket.write_message(fd, res)
                 else
-                    local rheader = packs(rnode, raddr, saddr, -rresponseid)
+                    local rheader = packs(rnode, raddr, saddr, -rsessionid)
                     local s = make_message(rheader, packs(false, err2))
-                    tcp.send(sessionid, s)
+                    socket.write(fd, s)
                 end
             end
         )
     else
         --调用者
-        remove_send_watch(sessionid,receiver,-rresponseid)
-        msg:resend(moon.sid(),receiver,"",-rresponseid,moon.PTYPE_LUA)
+        remove_send_watch(fd,receiver,-rsessionid)
+        msg:resend(moon.sid(),receiver,"",-rsessionid,moon.PTYPE_LUA)
     end
 end)
 
-tcp.on("close", function(sessionid, msg)
+socket.on("close", function(fd, msg)
     print("close", msg:bytes())
     for k, v in pairs(close_watch) do
-        if v == sessionid then
+        if v == fd then
             close_watch[k] = false
         end
     end
 
-    local senders = send_watch[sessionid]
+    local senders = send_watch[fd]
     if senders then
         for key,_ in pairs(senders) do
             local sender = key&0xFFFFFFFF
-            local responseid = -(key>>32)
-            print("response", sender, responseid)
-            moon.response("lua", sender, responseid, packs(false, "connect closed"))
+            local sessionid = -(key>>32)
+            print("response", sender, sessionid)
+            moon.response("lua", sender, sessionid, packs(false, "connect closed"))
         end
     end
 
     for k,v in pairs(connectors) do
-        if v == sessionid then
+        if v == fd then
             connectors[k] = nil
             print("connectors remove")
         end
     end
 end)
 
-tcp.on("error", function(sessionid, msg)
-    print("socket_error",sessionid, msg:bytes())
+socket.on("error", function(fd, msg)
+    print("socket_error",fd, msg:bytes())
 end)
 
 local command = {}
 
-command.CALL = function(sender, responseid,rnode, raddr, msg)
-    local connid = connectors[rnode]
+command.CALL = function(sender, sessionid,rnode, raddr, msg)
+    local fd = connectors[rnode]
     local err
-    if not connid then
+    if not fd then
         local addr = clusters[rnode]
         if not addr then
-            err = string.format("send to unknown node:%s", rnode)
+            err = strfmt("send to unknown node:%s", rnode)
         else
-            connid = tcp.connect(addr.ip, addr.port)
-            if 0~=connid then
-                connectors[rnode] = connid
+            fd = socket.sync_connect(addr.host, addr.port, moon.PTYPE_SOCKET)
+            if 0~=fd then
+                connectors[rnode] = fd
             else
-                connid = nil
-                err = string.format("connect node:%s failed", rnode)
+                fd = nil
+                err = strfmt("connect node:%s failed", rnode)
             end
         end
     end
 
-    if connid then
+    if fd then
         local buffer = msg:buffer()
-        write_front(buffer,string_pack("<H",msg:size()))
-        write_back(buffer,packs(sender, rnode, raddr, responseid))
-        add_send_watch(connid,sender,responseid)
-        if tcp.send_message(connid, msg) then
+        write_front(buffer,strpack("<H",msg:size()))
+        write_back(buffer,packs(sender, rnode, raddr, sessionid))
+        add_send_watch(fd,sender,sessionid)
+        if socket.write_message(fd, msg) then
             return
         else
-            err = string.format("send to %s failed", rnode)
+            err = strfmt("send to %s failed", rnode)
         end
     end
 
-    if responseid ~= 0 then
-        moon.response("lua", sender, responseid, packs(false, err))
+    if sessionid ~= 0 then
+        moon.response("lua", sender, sessionid, packs(false, err))
     end
     print("clusterd call error:", err)
 end
 
-local function docmd(sender, responseid, CMD, rnode, raddr, msg)
+local function docmd(sender, sessionid, CMD, rnode, raddr, msg)
     local cb = command[CMD]
     if cb then
-        cb(sender, responseid, rnode, raddr ,msg)
+        cb(sender, sessionid, rnode, raddr ,msg)
     else
-        error(string.format("Unknown command %s", tostring(CMD)))
+        error(strfmt("Unknown command %s", tostring(CMD)))
     end
 end
 
@@ -209,20 +216,24 @@ local function load_config()
         local s = find_service("clusterd",server.services)
         if s then
             local name = server.name
-            clusters[name]={sid=server.sid,ip=s.network.ip,port=s.network.port}
+            clusters[name]={sid=server.sid,host=s.host,port=s.port}
         end
     end
 end
 
-moon.init(function(  )
+moon.init(function(conf)
     load_config("config.json")
     local name = moon.get_env("name")
     if not clusters[name] then
-        print("unconfig node:".. moon.name())
+        print("unconfig cluster node:".. moon.name())
         return false
     end
 
-    tcp.settimeout(10)
+    local listenfd = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET)
+
+    socket.start(listenfd)
+
+    print(strfmt("cluster run at %s %d", conf.host, conf.port))
 
     moon.register_protocol(
     {
@@ -232,9 +243,9 @@ moon.init(function(  )
         unpack = function(...) return ... end,
         dispatch =  function(msg, _)
             local sender = msg:sender()
-            local responseid = msg:responseid()
+            local sessionid = msg:sessionid()
             local rnode, raddr, CMD = unpack(msg:header())
-            docmd(sender, responseid, CMD, rnode, raddr, msg)
+            docmd(sender, sessionid, CMD, rnode, raddr, msg)
         end
     })
     return true
