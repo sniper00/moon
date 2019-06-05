@@ -83,11 +83,16 @@ static void register_signal()
 
 void usage(void) {
     std::cout << "Usage:\n";
-    std::cout << "        ./moon [/path/to/config.json] [options]\n";
+    std::cout << "        moon [-c filename] [-r server-id] [-f lua-filename]\n";
     std::cout << "The options are:\n";
-    std::cout << "        -c <config>           Server config file.(default: config.json).\n";
-    std::cout << "        -r <run>              Specify ID for server to run.(default: 1).\n";
-    std::cout << "        --file        Run server with a service use the specified lua file.\n";
+    std::cout << "        -c          set configuration file (default: config.json)\n";
+    std::cout << "        -r          set server id to run (default: 1)\n";
+    std::cout << "        -f          run a lua file.\n";
+    std::cout << "Examples:\n";
+    std::cout << "        moon -c config.json\n";
+    std::cout << "        moon -c config.json -r 1\n";
+    std::cout << "        moon -r 1\n";
+    std::cout << "        moon -f aoi_example.lua\n";
 }
 
 int main(int argc, char*argv[])
@@ -126,7 +131,7 @@ int main(int argc, char*argv[])
                 return -1;
             }
         }
-        else if ((v == "--file") && !lastarg)
+        else if ((v == "-f"sv || v == "-file"sv) && !lastarg)
         {
             service_file = argv[++i];
             if (fs::path(service_file).extension() != ".lua")
