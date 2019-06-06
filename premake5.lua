@@ -104,6 +104,7 @@ project "moon"
     @normaladdon : 平台通用的附加项
     @winddowsaddon : windows下的附加项
     @linuxaddon : linux下的附加项
+    @macaddon : macosx下的附加项
 
     使用：
     模块编写规范：使用 LUAMOD_API 导出符号(windows)
@@ -131,12 +132,11 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         if type(winddowsaddon)=="function" then
             winddowsaddon()
         end
-    filter {"system:linux or macosx"}
+    filter {"system:linux"}
         if type(linuxaddon)=="function" then
             linuxaddon()
         end
     filter {"system:macosx"}
-        links{"lua53"} -- windows 版需要链接 lua 库
         if type(macaddon)=="function" then
             macaddon()
         end
@@ -151,7 +151,7 @@ end
 add_lua_module("./third/protobuf", "protobuf",nil,
 function()
     language "C++"
-    buildoptions {"/TP"} -- windows 下强制用C++编译，默认会根据文件后缀名选择编译
+    buildoptions {"/TP"} -- protobuf库windows下需要强制用C++编译，默认会根据文件后缀名选择编译
 end)
 
 --[[
