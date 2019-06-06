@@ -29,11 +29,19 @@ namespace db
         void add_row(Row&& rowdata)
         {
             luaL_checkstack(L, LUA_MINSTACK, NULL);
-            lua_createtable(L, static_cast<int>(cols_.size()), 0);
+            lua_createtable(L, 0, static_cast<int>(cols_.size()));
 
-            int i = 0;
+            int i = -1;
             for (auto& col : cols_)
             {
+                ++i;
+                const char* data = rowdata[i];
+                if (nullptr == data)
+                {
+                    continue;
+                }
+
+                lua_pushlstring(L, col.first.data(), col.first.size());
                 switch (col.second)
                 {
                 case MYSQL_TYPE_TINY:
@@ -55,8 +63,7 @@ namespace db
                 default:
                     break;
                 }
-                i++;
-                lua_rawseti(L, -2, i);
+                lua_rawset(L, -3);
             }
             lua_rawseti(L, lua_table_, ++nrow_);
         }

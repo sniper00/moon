@@ -253,7 +253,7 @@ static int lmysql_create(lua_State *L)
             { "execute_stmt",lmysql_execute_stmt },
             { NULL,NULL }
         };
-        luaL_newlib(L, l); {}
+        luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index");//mt[__index] = {}
         lua_pushcfunction(L, lrelease);
         lua_setfield(L, -2, "__gc");//mt[__gc] = lrelease

@@ -1,20 +1,17 @@
+local moon = require("moon")
 local mysql = require("mysql")
 
-local conn = mysql.create()
+local db = mysql.create()
 
-local ret,errmsg = conn:connect("127.0.0.1", 3306, "root", "4321", "mysql",0)
+local ret,errmsg = db:connect("127.0.0.1", 3306, "root", "4321", "mysql",0)
 print(ret,errmsg)
 
-local result = conn:query("select * from article_detail;")
-if result then
-    for _,row in pairs(result) do
-        print("[")
-        for _,v in pairs(row) do
-            print(" ",v)
-        end
-        print("]")
-    end
+local result,errmsg = db:query("select * from article_detail;")
+if not result then
+    print(errmsg)
+    return
 end
+print_r(result)
 
 local create_table = [[
     DROP TABLE IF EXISTS `article_detail`;
@@ -28,9 +25,9 @@ local create_table = [[
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ]]
 
-print(conn:execute(create_table))
+print(db:execute(create_table))
 
-print(conn:execute("INSERT INTO article_detail(id,parentid,title,content,updatetime) VALUES(1,2,'abc','abc','abc')"))
+print(db:execute("INSERT INTO article_detail(id,parentid,title,content,updatetime) VALUES(1,2,'abc','abc','abc')"))
 
-local stmtid = conn:prepare("INSERT INTO article_detail(id,parentid,title,content,updatetime) VALUES(?,?,?,?,?)")
-print(conn:execute_stmt(stmtid,2,3,'abc','abc','abc'))
+local stmtid = db:prepare("INSERT INTO article_detail(id,parentid,title,content,updatetime) VALUES(?,?,?,?,?)")
+print(db:execute_stmt(stmtid,2,3,'abc','abc','abc'))
