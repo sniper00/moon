@@ -98,7 +98,7 @@ namespace moon
 
         void accept(int fd, int32_t sessionid, uint32_t owner);
 
-        int connect(const std::string& host, uint16_t port, uint32_t serviceid, uint32_t owner, uint8_t type, int32_t sessionid);
+        int connect(const std::string& host, uint16_t port, uint32_t serviceid, uint32_t owner, uint8_t type, int32_t sessionid, int32_t timeout = 0);
 
         void read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32_t sessionid);
 

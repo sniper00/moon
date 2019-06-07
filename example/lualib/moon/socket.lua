@@ -47,12 +47,15 @@ end
 
 --- async
 --- param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
+--- timeout millseconds
 ---@param host string
 ---@param port int
 ---@param protocol int
-function socket.connect(host, port, protocol)
+---@param timeout int
+function socket.connect(host, port, protocol, timeout)
+    timeout = timeout or 0
     local sessionid = make_response()
-    connect(host, port, sessionid, id, protocol)
+    connect(host, port, sessionid, id, protocol, timeout)
     local fd,err = yield()
     if not fd then
         return nil,err
