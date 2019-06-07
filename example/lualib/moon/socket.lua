@@ -64,7 +64,7 @@ function socket.connect(host, port, protocol, timeout)
 end
 
 function socket.sync_connect(host, port, type)
-    local fd = connect(host, port, 0, id, type)
+    local fd = connect(host, port, 0, id, type, 0)
     if fd == 0 then
         return nil,"connect failed"
     end
