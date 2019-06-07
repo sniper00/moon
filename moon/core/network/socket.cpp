@@ -97,7 +97,7 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
     });
 }
 
-int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, uint32_t owner, uint8_t type, int32_t sessionid)
+int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, uint32_t owner, uint8_t type, int32_t sessionid, int32_t timeout)
 {
     try
     {
@@ -117,6 +117,24 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
         }
         else
         {
+            if (timeout > 0)
+            {
+                std::shared_ptr<asio::steady_timer> connect_timer = std::make_shared<asio::steady_timer>(ioc_);
+                connect_timer->expires_from_now(std::chrono::milliseconds(timeout));
+                connect_timer->async_wait([this, c, serviceid, sessionid, host, port, connect_timer](const asio::error_code & e) {
+                    if (e)
+                    {
+                        CONSOLE_ERROR(router_->logger(), "connect %s:%d timer error %s", host.data(), port, e.message().data());
+                        return;
+                    }
+                    if (c->fd() == 0)
+                    {
+                        c->close();
+                        response(0, serviceid, std::string_view{}, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
+                    }
+                });
+            }
+
             asio::async_connect(c->socket(), endpoint_iterator,
                 [this, c, w, host, port, serviceid, sessionid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
             {
@@ -128,7 +146,10 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
                 }
                 else
                 {
-                    response(0, serviceid, std::string_view{}, moon::format("connect %s:%d failed: %s(%d)", host.data(), port, e.message().data(), e.value()), sessionid, PTYPE_ERROR);
+                    if (c->socket().is_open())
+                    {
+                        response(0, serviceid, std::string_view{}, moon::format("connect %s:%d failed: %s(%d)", host.data(), port, e.message().data(), e.value()), sessionid, PTYPE_ERROR);
+                    }
                 }
             });
         }
