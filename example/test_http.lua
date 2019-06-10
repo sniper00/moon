@@ -5,8 +5,8 @@ local test_assert = require("test_assert")
 -- http_server.header_max_len = 8192
 -- http_server.content_max_len = 8192
 
-http_server.error = function(session, err)
-    print("http server session",session.connid," disconnected:",  err)
+http_server.error = function(fd, err)
+    print("http server fd",fd," disconnected:",  err)
 end
 
 http_server.on("/home",function(request, response, data)
