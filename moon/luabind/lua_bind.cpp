@@ -6,6 +6,7 @@
 #include "common/hash.hpp"
 #include "common/http_util.hpp"
 #include "common/log.hpp"
+#include "common/sha1.hpp"
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
@@ -162,6 +163,15 @@ const lua_bind & lua_bind::bind_util() const
 
     lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
 
+    lua.set_function("sha1", [](std::string_view s) {
+        std::string buf(sha1::sha1_context::digest_size, '\0');
+        sha1::sha1_context ctx;
+        sha1::init(ctx);
+        sha1::update(ctx, s.data(), s.size());
+        sha1::finish(ctx, buf.data());
+        return buf;
+    });
+
     sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
@@ -309,8 +319,8 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     });
 
     tb.set_function("accept", &moon::socket::accept,&sock);
-    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint32_t owner, uint8_t type) {
-        return sock.connect(host, port, s->id(), owner, type, sessionid);
+    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint32_t owner, uint8_t type, int32_t timeout) {
+        return sock.connect(host, port, s->id(), owner, type, sessionid, timeout);
     });
     tb.set_function("read", &moon::socket::read, &sock);
     tb.set_function("write", &moon::socket::write, &sock);
