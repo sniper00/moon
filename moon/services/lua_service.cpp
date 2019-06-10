@@ -191,6 +191,8 @@ void lua_service::dispatch(message* msg)
 {
     if (!ok()) return;
 
+    MOON_ASSERT(dispatch_.valid(),"should initialize callbacks first.")
+
     try
     {
         auto result = dispatch_(msg, msg->type());
