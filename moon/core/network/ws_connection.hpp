@@ -231,23 +231,30 @@ namespace moon
                 return false;
             }
 
-            http::request_parser request;
-            int consumed = request.parse(string_view_t{ asio::buffer_cast<const char*>(buf->data()), buf->size() });
+            std::string_view method;
+            std::string_view ignore;
+            http::case_insensitive_multimap_view header;
+            int consumed = http::request_parser::parse(string_view_t{ asio::buffer_cast<const char*>(buf->data()), buf->size() }
+                , method
+                , ignore
+                , ignore
+                , ignore
+                , header);
             if (-1 == consumed)
             {
                 return false;
             }
             buf->consume(consumed);
 
-            if (request.method != "GET"sv)
+            if (method != "GET"sv)
                 return false;
 
-            auto h = request.header("connection"sv);
-            if (h.empty())
+            std::string_view h;
+            if (!moon::try_get_value(header, "connection"sv, h))
                 return false;
 
-            auto u = request.header("upgrade"sv);
-            if (u.empty())
+            std::string_view u;
+            if (!moon::try_get_value(header, "upgrade"sv, u))
                 return false;
 
             if (!iequal_string(h, UPGRADE))
@@ -256,12 +263,18 @@ namespace moon
             if (!iequal_string(u, WEBSOCKET))
                 return false;
 
-            auto sec_ws_key_ = request.header("sec-websocket-key"sv);
+            std::string_view sec_ws_key_;
+            if (!moon::try_get_value(header, "sec-websocket-key"sv, sec_ws_key_))
+                return false;
+
             if (sec_ws_key_.empty() || sec_ws_key_.size() != 24)
                 return false;
 
+            std::string_view protocol;
+            moon::try_get_value(header, "Sec-WebSocket-Protocol"sv, protocol);
+
             handshaked_ = true;
-            auto answer = upgrade_response(sec_ws_key_, request.header("Sec-WebSocket-Protocol"sv));
+            auto answer = upgrade_response(sec_ws_key_, protocol);
             send_response(answer);
             auto msg = message::create();
             msg->write_string(addr_);

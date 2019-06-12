@@ -90,7 +90,10 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
             }
             else
             {
-                CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                if (e != asio::error::operation_aborted)
+                {
+                    CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                }
                 close(ctx->fd);
             }
         }
