@@ -54,6 +54,60 @@ namespace moon
             }
         };
 
+        /// Query string creation and parsing
+        class query_string {
+        public:
+            /// Returns query string created from given field names and values
+            static std::string create(const case_insensitive_multimap &fields) noexcept {
+                std::string result;
+
+                bool first = true;
+                for (auto &field : fields) {
+                    result += (!first ? "&" : "") + field.first + '=' + percent::encode(field.second);
+                    first = false;
+                }
+
+                return result;
+            }
+
+            /// Returns query keys with percent-decoded values.
+            static case_insensitive_multimap parse(const std::string &query_string) noexcept {
+                case_insensitive_multimap result;
+
+                if (query_string.empty())
+                    return result;
+
+                std::size_t name_pos = 0;
+                auto name_end_pos = std::string::npos;
+                auto value_pos = std::string::npos;
+                for (std::size_t c = 0; c < query_string.size(); ++c) {
+                    if (query_string[c] == '&') {
+                        auto name = query_string.substr(name_pos, (name_end_pos == std::string::npos ? c : name_end_pos) - name_pos);
+                        if (!name.empty()) {
+                            auto value = value_pos == std::string::npos ? std::string() : query_string.substr(value_pos, c - value_pos);
+                            result.emplace(std::move(name), percent::decode(value));
+                        }
+                        name_pos = c + 1;
+                        name_end_pos = std::string::npos;
+                        value_pos = std::string::npos;
+                    }
+                    else if (query_string[c] == '=') {
+                        name_end_pos = c;
+                        value_pos = c + 1;
+                    }
+                }
+                if (name_pos < query_string.size()) {
+                    auto name = query_string.substr(name_pos, name_end_pos - name_pos);
+                    if (!name.empty()) {
+                        auto value = value_pos >= query_string.size() ? std::string() : query_string.substr(value_pos);
+                        result.emplace(std::move(name), percent::decode(value));
+                    }
+                }
+
+                return result;
+            }
+        };
+
         class http_header {
         public:
             /// Parse header fields
@@ -79,17 +133,9 @@ namespace moon
         class request_parser
         {
         public:
-            int parse_string(const std::string& data) noexcept
-            {
-                data_ = std::move(data);
-                return parse(data_);
-            }
-
             /// Parse request line and header fields
-            int parse(string_view_t sv) noexcept
+            static int parse(string_view_t sv, string_view_t& method, string_view_t& path, string_view_t& query_string, string_view_t& http_version, case_insensitive_multimap_view& header) noexcept
             {
-                header_.clear();
-
                 buffer_view br(sv.data(), sv.size());
                 auto line = br.readline();
 
@@ -128,7 +174,7 @@ namespace moon
                         else
                             return -1;
 
-                        header_ = http_header::parse(string_view_t{ br.data(),br.size() });
+                        header = http_header::parse(string_view_t{ br.data(),br.size() });
                     }
                     else
                         return -1;
@@ -137,47 +183,13 @@ namespace moon
                     return -1;
                 return static_cast<int>(sv.size() - br.size());
             }
-
-            string_view_t header(const string_view_t& key) const
-            {
-                auto iter = header_.find(key);
-                if (iter != header_.end())
-                {
-                    return iter->second;
-                }
-                return string_view_t();
-            }
-
-            bool has_header(const string_view_t& key) const
-            {
-                auto iter = header_.find(key);
-                if (iter != header_.end())
-                {
-                    return true;
-                }
-                return false;
-            }
-
-            string_view_t method;
-            string_view_t path;
-            string_view_t query_string;
-            string_view_t http_version;
-        private:
-            std::string data_;
-            case_insensitive_multimap_view header_;
         };
 
         class response_parser
         {
         public:
-            bool parse_string(const std::string& data) noexcept
-            {
-                data_ = std::move(data);
-                return parse(data_);
-            }
-
             /// Parse status line and header fields
-            bool parse(string_view_t sv) noexcept
+            static bool parse(string_view_t sv, std::string_view& version, std::string_view&status_code, case_insensitive_multimap_view& header) noexcept
             {
                 buffer_view br(sv.data(), sv.size());
                 auto line = br.readline();
@@ -192,38 +204,12 @@ namespace moon
                     else
                         return false;
 
-                    header_ = http_header::parse(string_view_t{ br.data(),br.size() });
+                    header = http_header::parse(string_view_t{ br.data(),br.size() });
                 }
                 else
                     return false;
                 return true;
             }
-
-            string_view_t header(const string_view_t& key) const
-            {
-                auto iter = header_.find(key);
-                if (iter != header_.end())
-                {
-                    return iter->second;
-                }
-                return string_view_t();
-            }
-
-            bool has_header(const string_view_t& key) const
-            {
-                auto iter = header_.find(key);
-                if (iter != header_.end())
-                {
-                    return true;
-                }
-                return false;
-            }
-
-            string_view_t version;
-            string_view_t status_code;
-        private:
-            std::string data_;
-            case_insensitive_multimap_view header_;
         };
     }
    
