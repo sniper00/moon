@@ -77,44 +77,43 @@ end
 
 local sid_ = core.id()
 
-local response_uid = 1
-local resplistener = {} --response message handler
+local uuid = 1
+local session_id_coroutine = {}
 local protocol = {}
-
 local services_exited = {}
-local response_wacther = {}
+local session_watcher = {}
 
 local function co_resume(co, ...)
     local ok, err = _co_resume(co, ...)
     if not ok then
-        error(err)
+        error(debug.traceback(co, err))
     end
 end
 
 ---make map<coroutine,sessionid>
 local function make_response(receiver)
     repeat
-        response_uid = response_uid + 1
-        if response_uid == 0xFFFFFFF then
-            response_uid = 1
+        uuid = uuid + 1
+        if uuid == 0xFFFFFFF then
+            uuid = 1
         end
-    until nil == resplistener[response_uid]
+    until nil == session_id_coroutine[uuid]
 
     if receiver then
         if services_exited[receiver] then
             return false, string.format( "[%u] attempt send to dead service [%d]", sid_, receiver)
         end
-        response_wacther[response_uid] = receiver
+        session_watcher[uuid] = receiver
     end
 
     local co = co_running()
-    resplistener[response_uid] = co
-    return response_uid
+    session_id_coroutine[uuid] = co
+    return uuid
 end
 
 --- 取消等待session的回应
 function moon.cancel_session(sessionid)
-    resplistener[sessionid] = false
+    session_id_coroutine[sessionid] = false
 end
 
 moon.make_response = make_response
@@ -164,10 +163,10 @@ local function _default_dispatch(msg, PTYPE)
 
     local sessionid = msg:sessionid()
     if sessionid > 0 and PTYPE ~= PTYPE_ERROR then
-        response_wacther[sessionid] = nil
-        local co = resplistener[sessionid]
+        session_watcher[sessionid] = nil
+        local co = session_id_coroutine[sessionid]
         if co then
-            resplistener[sessionid] = nil
+            session_id_coroutine[sessionid] = nil
             --print(coroutine.status(co))
             co_resume(co, p.unpack(msg))
             --print(coroutine.status(co))
@@ -546,10 +545,10 @@ reg_protocol {
         local topic = msg:header()
         local data = p.unpack(msg)
         --print("PTYPE_ERROR",topic,data)
-        local co = resplistener[sessionid]
+        local co = session_id_coroutine[sessionid]
         if co then
+            session_id_coroutine[sessionid] = nil
             co_resume(co, false, topic..data)
-            resplistener[sessionid] = nil
             return
         end
     end
@@ -588,12 +587,12 @@ end
 system_command.exit = function(sender, msg)
     local data = msg:bytes()
     services_exited[sender] = true
-    for k, v in pairs(response_wacther) do
+    for k, v in pairs(session_watcher) do
         if v == sender then
-            local co = resplistener[k]
+            local co = session_id_coroutine[k]
             if co then
+                session_id_coroutine[k] = nil
                 co_resume(co, false, data)
-                resplistener[k] = nil
                 return
             end
         end

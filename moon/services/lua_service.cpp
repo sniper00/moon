@@ -201,7 +201,7 @@ void lua_service::dispatch(message* msg)
             sol::error err = result;
             if (msg->sessionid() >= 0 || msg->receiver() == 0)//socket mesage receiver==0
             {
-                CONSOLE_ERROR(logger(), "%s dispatch:%s", name().data(), err.what());
+                CONSOLE_ERROR(logger(), "%s dispatch:\n%s", name().data(), err.what());
             }
             else
             {
