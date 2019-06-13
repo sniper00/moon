@@ -182,7 +182,7 @@ const lua_bind & lua_bind::bind_util() const
     lua.new_enum<moon::buffer_flag>("buffer_flag", {
         {"close",moon::buffer_flag::close},
         {"ws_text",moon::buffer_flag::ws_text} 
-        });
+    });
     return *this;
 }
 
@@ -220,7 +220,7 @@ const lua_bind & lua_bind::bind_message() const
     lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
     {"begin",moon::buffer::seek_origin::Begin},
     {"current",moon::buffer::seek_origin::Current},
-    {"current",moon::buffer::seek_origin::End}
+    {"end",moon::buffer::seek_origin::End}
     });
 
     sol::table bt = lua.create_named("buffer");
