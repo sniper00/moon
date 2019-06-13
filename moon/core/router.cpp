@@ -130,7 +130,7 @@ namespace moon
             m->set_header(header);
         }
         m->set_type(type);
-        m->set_responseid(sessionid);
+        m->set_sessionid(sessionid);
         send_message(std::move(m));
     }
 
@@ -214,7 +214,7 @@ namespace moon
         rmsg->set_receiver(to);
         rmsg->set_header(header);
         rmsg->set_type(mtype);
-        rmsg->set_responseid(sessionid);
+        rmsg->set_sessionid(sessionid);
         rmsg->write_data(content);
         send_message(std::move(rmsg));
     }

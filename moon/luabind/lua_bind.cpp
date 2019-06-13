@@ -212,7 +212,7 @@ static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::s
     m->set_sender(sender);
     m->set_receiver(receiver);
     m->set_type(mtype);
-    m->set_responseid(-sessionid);
+    m->set_sessionid(-sessionid);
 }
 
 const lua_bind & lua_bind::bind_message() const

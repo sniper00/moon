@@ -205,7 +205,7 @@ void lua_service::dispatch(message* msg)
             }
             else
             {
-                msg->set_responseid(-msg->sessionid());
+                msg->set_sessionid(-msg->sessionid());
                 router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->sessionid(), PTYPE_ERROR);
             }
         }

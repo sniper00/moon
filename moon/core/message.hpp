@@ -91,14 +91,14 @@ namespace moon
             }
         }
 
-        void set_responseid(int32_t v)
+        void set_sessionid(int32_t v)
         {
-            responseid_ = v;
+            sessionid_ = v;
         }
 
         int32_t sessionid() const
         {
-            return responseid_;
+            return sessionid_;
         }
 
         void set_type(uint8_t v)
@@ -192,7 +192,7 @@ namespace moon
             subtype_ = 0;
             sender_ = 0;
             receiver_ = 0;
-            responseid_ = 0;
+            sessionid_ = 0;
 
             if (header_)
             {
@@ -209,7 +209,7 @@ namespace moon
         uint8_t subtype_ = 0;
         uint32_t sender_ = 0;
         uint32_t receiver_ = 0;
-        int32_t responseid_ = 0;
+        int32_t sessionid_ = 0;
         std::unique_ptr<std::string> header_;
         buffer_ptr_t data_;
     };
