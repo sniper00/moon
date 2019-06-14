@@ -206,17 +206,23 @@ local function session_handler(fd)
             method = method,
             path = path,
             query_string = query_string,
-            version = version,
-            header = header
+            version = version
         }
+
+        request.header = {}
+        for k,v in pairs(header) do
+            request.header[k:lower()]=v
+        end
+
+        header = request.header
 
         request.parse_query_string = parse_query_string
 
-        local content_length = header["Content-Length"]
+        local content_length = header["content-length"]
         if content_length then
             content_length = tonumber(content_length)
             if not content_length then
-                return false, "Content-Length is not number"
+                return false, "content-length is not number"
             end
 
             if M.content_max_len and content_length> M.content_max_len then
@@ -232,7 +238,7 @@ local function session_handler(fd)
             request.content = data
             request_handler(fd, request)
             return true
-        elseif header["Transfer-Encoding"] == 'chunked' then
+        elseif header["transfer-encoding"] == 'chunked' then
             local chunkdata = {}
             local result,errmsg = read_chunked(fd,chunkdata)
             if not result then

@@ -67,11 +67,18 @@ local function response_handler(fd)
             header = header
         }
 
-        local content_length = header["Content-Length"]
+        response.header = {}
+        for k,v in pairs(header) do
+            response.header[k:lower()]=v
+        end
+
+        header = response.header
+
+        local content_length = header["content-length"]
         if content_length then
             content_length = tonumber(content_length)
             if not content_length then
-                return false, "Content-Length is not number"
+                return false, "content-length is not number"
             end
             --print("Content-Length",content_length)
             data, err = socket.read(fd, content_length)
@@ -79,7 +86,7 @@ local function response_handler(fd)
                 return false,err
             end
             response.content = data
-        elseif header["Transfer-Encoding"] == 'chunked' then
+        elseif header["transfer-encoding"] == 'chunked' then
             local chunkdata = {}
             while true do
             local result,errmsg = read_chunked(fd,chunkdata)
