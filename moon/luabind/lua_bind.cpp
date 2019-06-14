@@ -182,7 +182,7 @@ const lua_bind & lua_bind::bind_util() const
     lua.new_enum<moon::buffer_flag>("buffer_flag", {
         {"close",moon::buffer_flag::close},
         {"ws_text",moon::buffer_flag::ws_text} 
-        });
+    });
     return *this;
 }
 
@@ -212,7 +212,7 @@ static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::s
     m->set_sender(sender);
     m->set_receiver(receiver);
     m->set_type(mtype);
-    m->set_responseid(-sessionid);
+    m->set_sessionid(-sessionid);
 }
 
 const lua_bind & lua_bind::bind_message() const
@@ -220,7 +220,7 @@ const lua_bind & lua_bind::bind_message() const
     lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
     {"begin",moon::buffer::seek_origin::Begin},
     {"current",moon::buffer::seek_origin::Current},
-    {"current",moon::buffer::seek_origin::End}
+    {"end",moon::buffer::seek_origin::End}
     });
 
     sol::table bt = lua.create_named("buffer");
@@ -503,25 +503,31 @@ static sol::table lua_http(sol::this_state L)
     sol::state_view lua(L);
     sol::table module = lua.create_table();
 
-    module.new_usertype<moon::http::request_parser>("request"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::request_parser::parse_string)
-        , "method", sol::readonly(&moon::http::request_parser::method)
-        , "path", sol::readonly(&moon::http::request_parser::path)
-        , "query_string", sol::readonly(&moon::http::request_parser::query_string)
-        , "http_version", sol::readonly(&moon::http::request_parser::http_version)
-        , "header", (&moon::http::request_parser::header)
-        , "has_header", (&moon::http::request_parser::has_header)
-        );
+    module.set_function("parse_request", [](std::string_view data) {
+        std::string_view method;
+        std::string_view path;
+        std::string_view query_string;
+        std::string_view version;
+        http::case_insensitive_multimap_view header;
+        int consumed = http::request_parser::parse(data, method, path, query_string, version, header);
+        return std::make_tuple(consumed, method, path, query_string, version,sol::as_table(header));
+    });
 
-    module.new_usertype<moon::http::response_parser>("response"
-        , sol::constructors<sol::types<>>()
-        , "parse", (&moon::http::response_parser::parse_string)
-        , "version", sol::readonly(&moon::http::response_parser::version)
-        , "status_code", sol::readonly(&moon::http::response_parser::status_code)
-        , "header", (&moon::http::response_parser::header)
-        , "has_header", (&moon::http::response_parser::has_header)
-        );
+    module.set_function("parse_response", [](std::string_view data) {
+        std::string_view version;
+        std::string_view status_code;
+        http::case_insensitive_multimap_view header;
+        bool ok = http::response_parser::parse(data, version, status_code, header);
+        return std::make_tuple(ok, version, status_code, sol::as_table(header));
+    });
+
+    module.set_function("parse_query_string", [](const std::string& data) {
+        return sol::as_table(http::query_string::parse(data));
+    });
+
+    module.set_function("create_query_string", [](sol::as_table_t<http::case_insensitive_multimap> src) {
+        return http::query_string::create(src.source);
+    });
     return module;
 }
 

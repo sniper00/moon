@@ -201,11 +201,11 @@ void lua_service::dispatch(message* msg)
             sol::error err = result;
             if (msg->sessionid() >= 0 || msg->receiver() == 0)//socket mesage receiver==0
             {
-                CONSOLE_ERROR(logger(), "%s dispatch:%s", name().data(), err.what());
+                CONSOLE_ERROR(logger(), "%s dispatch:\n%s", name().data(), err.what());
             }
             else
             {
-                msg->set_responseid(-msg->sessionid());
+                msg->set_sessionid(-msg->sessionid());
                 router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->sessionid(), PTYPE_ERROR);
             }
         }

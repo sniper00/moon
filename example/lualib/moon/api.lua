@@ -297,8 +297,8 @@ end
 ---@param fd int
 ---@param data T
 ---@return bool
-function socketcore.write(fd, sessionid, owner)
-    ignore_param(fd, sessionid, owner)
+function socketcore.write(fd, data)
+    ignore_param(fd, data)
 end
 
 ---@param fd int

@@ -11,6 +11,8 @@ local tonumber = tonumber
 local setmetatable = setmetatable
 local pairs = pairs
 
+local parse_response = http.parse_response
+
 -----------------------------------------------------------------
 
 local function parse_host_port( host_port, default_port )
@@ -49,28 +51,42 @@ local function read_chunked(fd, chunkdata)
     return true
 end
 
-local function response_handler(fd ,response)
+local function response_handler(fd)
     local data, err = socket.readline(fd, "\r\n\r\n")
     if not data then
         return false, err
     else
         --print("raw data",data)
-        if response:parse(data) == -1 then
+        local ok, version, status_code, header = parse_response(data)
+        if not ok then
             return false, "header response error"
         end
+        local response = {
+            version = version,
+            status_code = status_code,
+            header = header
+        }
 
-        if response:has_header("Content-Length") then
-            local content_length = tonumber(response:header("Content-Length"))
+        response.header = {}
+        for k,v in pairs(header) do
+            response.header[k:lower()]=v
+        end
+
+        header = response.header
+
+        local content_length = header["content-length"]
+        if content_length then
+            content_length = tonumber(content_length)
             if not content_length then
-                return false, "Content-Length is not number"
+                return false, "content-length is not number"
             end
             --print("Content-Length",content_length)
             data, err = socket.read(fd, content_length)
             if not data then
                 return false,err
             end
-            return data
-        elseif response:header("Transfer-Encoding") == 'chunked' then
+            response.content = data
+        elseif header["transfer-encoding"] == 'chunked' then
             local chunkdata = {}
             while true do
             local result,errmsg = read_chunked(fd,chunkdata)
@@ -85,9 +101,9 @@ local function response_handler(fd ,response)
             if not data then
                 return false,err
             end
-            return tbconcat( chunkdata )
+            response.content = tbconcat( chunkdata )
         end
-        return ""
+        return response
     end
 end
 
@@ -114,7 +130,7 @@ function M:close()
     end
 end
 
-function M:request( method,path,content,header)
+function M:request( method, path, content, header)
     if not path or path=="" then
         path = "/"
     end
@@ -171,17 +187,16 @@ function M:request( method,path,content,header)
             return false,err
         end
         self.fd = fd
-        self.response = http.response.new()
     end
 
     --print(seri.concats(cache))
     socket.write(self.fd, seri.concat(cache))
 
-    local data,err = response_handler(self.fd,self.response)
-    if not data then
+    local response,err = response_handler(self.fd,self.response)
+    if not response then
         return false, err
     end
-    return self.response,data
+    return response
 end
 
 return M

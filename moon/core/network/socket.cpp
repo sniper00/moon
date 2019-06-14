@@ -90,7 +90,10 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
             }
             else
             {
-                CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                if (e != asio::error::operation_aborted)
+                {
+                    CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                }
                 close(ctx->fd);
             }
         }
@@ -349,7 +352,7 @@ void socket::response(uint32_t sender, uint32_t receiver, string_view_t data, st
     response_->get_buffer()->clear();
     response_->get_buffer()->write_back(data.data(), 0, data.size());
     response_->set_header(header);
-    response_->set_responseid(sessionid);
+    response_->set_sessionid(sessionid);
     response_->set_type(type);
 
     handle_message(receiver, response_);

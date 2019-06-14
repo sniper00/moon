@@ -3,6 +3,8 @@ local http = require("http")
 local seri = require("seri")
 local socket = require("moon.socket")
 
+local parse_request = http.parse_request
+local parse_query_string = http.parse_query_string
 
 local tbinsert = table.insert
 local tbconcat = table.concat
@@ -175,12 +177,12 @@ local function read_chunked(fd, chunkdata)
     return true
 end
 
-local function request_handler(fd, request, data )
+local function request_handler(fd, request)
     local response = http_response.new()
-    local conn_type = request:header("Connection")
+    local conn_type = request.header["Connection"]
     local handler =  routers[request.path]
     if handler then
-        handler(request,response,data)
+        handler(request, response)
     end
     if conn_type == "close" then
         socket.write_then_close(fd, seri.concat(response:tb()))
@@ -189,20 +191,38 @@ local function request_handler(fd, request, data )
     end
 end
 
-local function session_handler(fd,request)
+local function session_handler(fd)
     local data, err = socket.readline(fd, "\r\n\r\n", M.header_max_len)
     if not data then
         return false, err
     else
         --print("raw data",data)
-        if request:parse(data) == -1 then
+        local consumed,method,path,query_string,version,header = parse_request(data)
+        if consumed == -1 then
             return false, "header request error"
         end
 
-        if request:has_header("Content-Length") then
-            local content_length = tonumber(request:header("Content-Length"))
+        local request = {
+            method = method,
+            path = path,
+            query_string = query_string,
+            version = version
+        }
+
+        request.header = {}
+        for k,v in pairs(header) do
+            request.header[k:lower()]=v
+        end
+
+        header = request.header
+
+        request.parse_query_string = parse_query_string
+
+        local content_length = header["content-length"]
+        if content_length then
+            content_length = tonumber(content_length)
             if not content_length then
-                return false, "Content-Length is not number"
+                return false, "content-length is not number"
             end
 
             if M.content_max_len and content_length> M.content_max_len then
@@ -215,18 +235,20 @@ local function session_handler(fd,request)
                 return false,err
             end
             --print("Content-Length",content_length)
-            request_handler(fd,request,data)
+            request.content = data
+            request_handler(fd, request)
             return true
-        elseif request:header("Transfer-Encoding") == 'chunked' then
+        elseif header["transfer-encoding"] == 'chunked' then
             local chunkdata = {}
             local result,errmsg = read_chunked(fd,chunkdata)
             if not result then
                 return false,errmsg
             end
-            request_handler(fd,request,tbconcat( chunkdata ))
+            request.content = tbconcat( chunkdata )
+            request_handler(fd, request)
             return true
         end
-        request_handler(fd,request)
+        request_handler(fd, request)
         return true
     end
 end
@@ -245,9 +267,8 @@ function M.listen(host,port,timeout)
             if fd then
                 socket.settimeout(fd, timeout)
                 moon.async(function()
-                    local request = http.request.new()
                     while true do
-                        local ok, err2 = session_handler(fd, request)
+                        local ok, err2 = session_handler(fd)
                         if not ok then
                             if M.error then
                                 M.error(fd, err2)

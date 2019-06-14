@@ -327,7 +327,7 @@ namespace moon
             ser = find_service(msg->receiver());
             if (nullptr == ser)
             {
-                msg->set_responseid(-msg->sessionid());
+                msg->set_sessionid(-msg->sessionid());
                 router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
                 return;
             }
