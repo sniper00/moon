@@ -10,11 +10,7 @@ http_server.error = function(fd, err)
 end
 
 http_server.on("/home",function(request, response)
-    -- print("SERVER: http_version",request.http_version)
-    -- print("SERVER: query_string",request.query_string)
-    -- print("SERVER: Content-Type",request:header("Content-Type"))
-    -- print("SERVER: data",data)
-    -- print(request.query_string)
+    -- print_r(request)
     -- print_r(request.parse_query_string(request.query_string))
     test_assert.equal(request.content,"HAHAHA")
     response:write_header("Content-Type","text/plain")
@@ -23,14 +19,11 @@ end)
 
 http_server.listen("127.0.0.1",8001)
 
-
 moon.start(function (  )
     moon.async(function ()
         local client = http_client.new("127.0.0.1:8001")
         local response,err = client:request("GET","/home","HAHAHA")
-        -- print("CLIENT: http_version",header.version)
-        -- print("CLIENT: status_code",header.status_code)
-        -- print("CLIENT: data",data)
+        -- print_r(response)
         test_assert.equal(response.content,"Hello World/home")
         test_assert.success()
     end)
