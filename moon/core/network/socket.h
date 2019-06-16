@@ -108,7 +108,7 @@ namespace moon
 
         bool write_message(uint32_t fd, message * msg);
 
-        bool close(uint32_t fd);
+        bool close(uint32_t fd, bool remove = false);
 
         bool settimeout(uint32_t fd, int v);
 
@@ -135,7 +135,7 @@ namespace moon
 
         void timeout();
     private:
-        std::atomic<uint32_t> uuid_;
+        std::atomic<uint32_t> uuid_ = 0;
         router* router_;
         worker* worker_;
         asio::io_context& ioc_;
@@ -166,7 +166,7 @@ namespace moon
         s->handle_message(std::forward<Message>(m));
         if ((0 != sender) && (type == PTYPE_ERROR || subtype == static_cast<uint8_t>(socket_data_type::socket_close)))
         {
-            MOON_CHECK(close(sender), "close failed");
+            MOON_CHECK(close(sender,true), "close failed");
         }
     }
 }

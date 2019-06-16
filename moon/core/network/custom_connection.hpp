@@ -176,6 +176,7 @@ namespace moon
         void response(const message_ptr_t & m, uint8_t type = PTYPE_TEXT)
         {
             m->set_type(type);
+            m->set_sender(fd());
             m->set_sessionid(request_.sessionid);
             request_.sessionid = 0;
             handle_message(m);

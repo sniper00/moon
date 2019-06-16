@@ -326,7 +326,9 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("write", &moon::socket::write, &sock);
     tb.set_function("write_with_flag", &moon::socket::write_with_flag, &sock);
     tb.set_function("write_message", &moon::socket::write_message, &sock);
-    tb.set_function("close", &moon::socket::close, &sock);
+    tb.set_function("close", [&sock](uint32_t fd) {
+        sock.close(fd);
+    });
     tb.set_function("settimeout", &moon::socket::settimeout, &sock);
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_frame", &moon::socket::set_enable_frame, &sock);

@@ -126,10 +126,7 @@ namespace moon
         void start(bool accepted) override
         {
             base_connection_t::start(accepted);
-            if (socket_.is_open())
-            {
-                read_header();
-            }
+            read_header();
         }
 
         bool send(const buffer_ptr_t & data) override

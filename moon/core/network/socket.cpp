@@ -219,11 +219,16 @@ bool socket::write_message(uint32_t fd, message * m)
     return write(fd, *m);
 }
 
-bool socket::close(uint32_t fd)
+bool socket::close(uint32_t fd,bool remove)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
         iter->second->close();
+        if (remove)
+        {
+            connections_.erase(iter);
+            unlock_fd(fd);
+        }
         return true;
     }
 
@@ -233,6 +238,11 @@ bool socket::close(uint32_t fd)
         {
             iter->second->acceptor.cancel();
             iter->second->acceptor.close();
+        }
+        if (remove)
+        {
+            acceptors_.erase(iter);
+            unlock_fd(fd);
         }
         return true;
     }
@@ -311,7 +321,7 @@ uint32_t socket::uuid()
         res = uuid_.fetch_add(1);
         res %= max_socket_num;
         ++res;
-        res |= worker_->id() << 16;
+        res |= (worker_->id() << 16);
     } while (!try_lock_fd(res));
     return res;
 }
