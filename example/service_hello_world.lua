@@ -37,7 +37,7 @@ end)
 
 moon.exit(function()
     print("recive exit signal")
-    --此处可以处理一些退出前的逻辑,可以有异步操作
+    --此处可以处理一些进程退出前的逻辑,可以有异步操作
     moon.async(function()
         -- moon.co_call("lua",db_service_id_1,"saveall")
         moon.co_wait(1000)
