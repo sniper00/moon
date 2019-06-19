@@ -292,7 +292,7 @@ void lua_service::error(const std::string & msg, bool initialized)
     if (initialized)
     {
         destroy();
-        removeself(true);
+        quit(true);
     }
 
     if (unique())
