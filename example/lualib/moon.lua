@@ -138,7 +138,7 @@ function moon.start(callback)
     core.set_cb('s', callback)
 end
 
----注册服务退出信号回掉,注册此回掉后, 除非调用moon.quit 服务不会马上退出。
+---注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 服务不会马上退出。
 ---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
 ---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
 ---@param callback fun()
