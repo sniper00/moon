@@ -3,7 +3,7 @@ local moon = require("moon")
 moon.init(function(conf)
     if conf.slave then
         moon.start(function()
-            moon.removeself()
+            moon.quit()
         end)
     else
         moon.repeated(50, 100, function()
