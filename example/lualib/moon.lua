@@ -138,14 +138,14 @@ function moon.start(callback)
     core.set_cb('s', callback)
 end
 
----注册server退出回掉,常用于带有异步流程的服务处理退出逻辑（如带协程的数据库服务，
----收到退出信号后，保存数据）。
----注意：处理完成后必须要调用moon.removeself，使服务自身退出,否则server将无法正常退出。
+---注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 服务不会马上退出。
+---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
+---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
 ---@param callback fun()
 function moon.exit(callback)
+    assert(callback)
     core.set_cb('e', callback)
 end
-
 
 ---注册服务对象销毁时的回掉函数，这个函数会在服务正常销毁时调用
 ---@param callback fun()
@@ -291,11 +291,12 @@ end
 
 
 ---使当前服务退出
-function moon.removeself()
+function moon.quit()
     moon.remove_service(sid_)
 end
 
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
+--- 0 表示服务不存在
 ---@param name string
 ---@return int
 function moon.queryservice(name)
@@ -581,7 +582,7 @@ moon.co_wait_exit = function()
             moon.co_wait(100)
         end
     end
-    moon.removeself()
+    moon.quit()
 end
 
 system_command.exit = function(sender, msg)

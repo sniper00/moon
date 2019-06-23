@@ -112,7 +112,7 @@ namespace moon
             }
         }
 
-        void removeself(bool crashed = false)
+        void quit(bool crashed = false)
         {
             router_->remove_service(id_, 0, 0, crashed);
         }
@@ -135,7 +135,7 @@ namespace moon
 
         virtual void exit()
         {
-            removeself();
+            quit();
         }
 
         virtual void destroy()
