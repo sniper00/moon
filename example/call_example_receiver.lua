@@ -25,7 +25,7 @@ command.ACCUM = function(...)
 end
 
 command.EXIT = function()
-    moon.removeself()
+    moon.quit()
 end
 
 local function docmd(sender,sessionid, CMD,...)
