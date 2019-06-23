@@ -323,6 +323,13 @@ namespace math
             root_.query(rc, handler);
         }
 
+        /*
+        example: 
+        auto rc = make_around(pos_x,pox_y, half_width, half_height)
+        query(rc,[](math::objectid_t id) {
+            //do something
+        });
+        */
         template<typename Handler>
         void query(const node_rect& rc, const Handler& handler)
         {

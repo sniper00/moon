@@ -154,6 +154,8 @@ function()
     buildoptions {"/TP"} -- protobuf库windows下需要强制用C++编译，默认会根据文件后缀名选择编译
 end)
 
+add_lua_module("./third/lcrypt", "crypt")
+
 --[[
     lua版mysql,如果需要lua mysql 客户端，取消下面注释.
     依赖： 需要连接 mysql C client库,
