@@ -1,6 +1,8 @@
 local moon = require("moon")
 local socket = require("moon.socket")
 
+local conf = ...
+
 local function run_slave()
     local count = 0
     do
@@ -32,7 +34,7 @@ local function run_slave()
 end
 
 
-local function run_master(conf)
+local function run_master()
     local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_SOCKET)
 
     print(string.format([[
@@ -63,11 +65,8 @@ local function run_master(conf)
     end)
 end
 
-moon.init(function(conf)
-    if conf.master then
-        run_master(conf)
-    else
-        run_slave()
-    end
-    return true
-end)
+if conf.master then
+    run_master(conf)
+else
+    run_slave()
+end
