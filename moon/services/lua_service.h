@@ -52,7 +52,6 @@ public:
     size_t mem_report = 8 * 1024 * 1024;
 private:
     sol::state lua_;
-    sol_function_t init_;
     sol_function_t start_;
     sol_function_t dispatch_;
     sol_function_t exit_;

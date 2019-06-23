@@ -3,6 +3,8 @@ local moon = require("moon")
 
 local socket = require("moon.socket")
 
+local conf = ...
+
 do
     -------------------2 bytes len (big endian) protocol------------------------
     socket.on("accept",function(fd, msg)
@@ -43,20 +45,16 @@ do
     end)
 end
 
-moon.init(function(conf)
-    local listenfd1 = socket.listen(conf.network.host,conf.network.port,moon.PTYPE_SOCKET)
-    socket.start(listenfd1)
-    print(string.format([[
+local listenfd1 = socket.listen(conf.network.host,conf.network.port,moon.PTYPE_SOCKET)
+socket.start(listenfd1)
+print(string.format([[
 
-        Tow bytes(big endian) len protocol server start:%s %d.
-    ]], conf.network.host,conf.network.port))
-    local wslistenfd = socket.listen(conf.networkws.host,conf.networkws.port,moon.PTYPE_SOCKET_WS)
-    print(wslistenfd)
-    socket.start(wslistenfd)
-    print(string.format([[
+    Tow bytes(big endian) len protocol server start:%s %d.
+]], conf.network.host,conf.network.port))
+local wslistenfd = socket.listen(conf.networkws.host,conf.networkws.port,moon.PTYPE_SOCKET_WS)
+print(wslistenfd)
+socket.start(wslistenfd)
+print(string.format([[
 
-        websocket protocol server start:%s %d.
-    ]], conf.networkws.host,conf.networkws.port))
-    return true
-end)
-
+    websocket protocol server start:%s %d.
+]], conf.networkws.host,conf.networkws.port))

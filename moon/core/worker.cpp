@@ -131,7 +131,6 @@ namespace moon
             {
                 router_->response(creatorid, std::string_view{}, "0"sv, sessionid);
             }
-            CONSOLE_ERROR(router_->logger(), "init service failed with config: %s", config.data());
         });
     }
 

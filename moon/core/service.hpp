@@ -154,7 +154,7 @@ namespace moon
         }
     protected:
         bool start_ = false;
-        bool ok_ = true;
+        bool ok_ = false;
         bool unique_ = false;
         uint32_t id_ = 0;
         log* log_ = nullptr;

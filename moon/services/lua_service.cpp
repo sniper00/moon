@@ -76,9 +76,9 @@ bool lua_service::init(string_view_t config)
         lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
         lua_bind::registerlib(lua_.lua_state(), "http", luaopen_http);
         lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
-        lua_bind::registerlib(lua_.lua_state(), "json", luaopen_rapidjson);
         lua_bind::registerlib(lua_.lua_state(), "moon_core", module);
         lua_bind::registerlib(lua_.lua_state(), "seri", lua_serialize::open);
+        sol::object json = lua_.require("json", luaopen_rapidjson, false);
 
         moon::server_config_manger& server_config = moon::server_config_manger::instance();
         {
@@ -133,36 +133,35 @@ bool lua_service::init(string_view_t config)
             luafile = file;
         }
 
-        lua_.script_file(luafile);
-
-        if (init_.valid())
-        {
-            if (auto result = init_(config); result.valid())
-            {
-                ok((bool)result);
-                MOON_CHECK(ok(), moon::format("lua service init failed: return false.").data());
-            }
-            else
-            {
-                ok(false);
-                sol::error err = result;
-                MOON_CHECK(false, moon::format("lua service init failed: %s.", err.what()).data());
-            }
+        //lua_.script_file(luafile);
+        sol::load_result load_result = lua_.load_file(luafile);
+        if (!load_result.valid())
+        {   
+            auto errmsg = sol::stack::get<std::string>(load_result.lua_state(), -1);
+            MOON_CHECK(false, moon::format("lua service init failed: %s.", errmsg.data()));
         }
-
+        sol::table tconfig = json.as<sol::table>().get<sol::function>("decode").call(config).get<sol::table>();
+        sol::protected_function_result call_result = load_result.call(tconfig);
+        if (!call_result.valid())
+        {
+            sol::error err = call_result;
+            MOON_CHECK(false, moon::format("lua service init failed: %s.", err.what()));
+        }
+        
         if (unique())
         {
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
         logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%X]", worker_->id(), name().data(), id()), id());
-        return true;
+        ok_ = true;
     }
     catch (std::exception& e)
     {
+        CONSOLE_ERROR(logger(), "lua service init failed with config: %s", config.data());
         error(e.what(),false);
     }
-    return false;
+    return ok_;
 }
 
 void lua_service::start()
@@ -297,7 +296,7 @@ void lua_service::error(const std::string & msg, bool initialized)
 
     if (unique())
     {
-        CONSOLE_ERROR(logger(), "unique service %s crashed, server will exit.", name().data());
+        CONSOLE_ERROR(logger(), "unique service %s crashed, server will abort.", name().data());
         server_->stop();
     }
 }
@@ -311,11 +310,6 @@ void lua_service::set_callback(char c, sol_function_t f)
 {
     switch (c)
     {
-        case 'i':
-        {
-            init_ = f;
-            break;
-        }
         case 's':
         {
             start_ = f;
