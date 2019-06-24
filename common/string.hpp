@@ -6,8 +6,6 @@
 #include <cctype>
 #include "macro_define.hpp"
 
-#define MAX_FMT_LEN 8*1024
-
 namespace moon
 {
     template<class T>
@@ -177,17 +175,19 @@ namespace moon
     inline std::string format(const char* fmt, ...)
     {
         if (!fmt) return std::string("");
+
+        static constexpr size_t MAX_FMT_LEN = 8192;
+        static thread_local char fmtbuf[MAX_FMT_LEN + 1];
         va_list ap;
-        static thread_local char szBuffer[MAX_FMT_LEN];
         va_start(ap, fmt);
         // win32
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-        vsnprintf_s(szBuffer, MAX_FMT_LEN, fmt, ap);
+        int n = vsnprintf_s(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #else
-        vsnprintf(szBuffer, MAX_FMT_LEN, fmt, ap);
+        int n = vsnprintf(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #endif
         va_end(ap);
-        return std::string(szBuffer);
+        return std::string(fmtbuf, n);
     }
 
     //return left n char

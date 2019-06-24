@@ -1,10 +1,10 @@
 local moon = require("moon")
 
-moon.init(function(conf)
+local conf = ...
+
+moon.start(function()
     if conf.slave then
-        moon.start(function()
-            moon.quit()
-        end)
+        moon.quit()
     else
         moon.repeated(50, 100, function()
             moon.new_service("lua", {
@@ -14,5 +14,6 @@ moon.init(function(conf)
             })
         end)
     end
-    return true
 end)
+
+

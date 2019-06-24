@@ -1,6 +1,8 @@
 local moon = require("moon")
 local socket = require("moon.socket")
 
+local conf = ...
+
 local total,count,client_num,send_count
 
 count = 0
@@ -79,19 +81,15 @@ socket.on("error",function(fd, msg)
     --print("error ", fd, msg:bytes())
 end)
 
-moon.init(function ( conf )
-    total = conf.client_num * conf.count
-    client_num = conf.client_num
-    send_count = conf.count
+total = conf.client_num * conf.count
+client_num = conf.client_num
+send_count = conf.count
 
-    moon.start(function()
-        for _=1,conf.client_num do
-            local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET)
-        end
-    end)
-    return true
+moon.start(function()
+    for _=1,conf.client_num do
+        local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET)
+    end
 end)
-
 
 
 

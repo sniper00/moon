@@ -72,7 +72,7 @@ namespace moon
             if (nullptr == fmt)
                 return;
 
-            static thread_local char fmtbuf[MAX_LOG_LEN];
+            static thread_local char fmtbuf[MAX_LOG_LEN+1];
             va_list ap;
             va_start(ap, fmt);
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
