@@ -322,7 +322,7 @@ namespace db
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
             vsnprintf_s(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #else
-            vsnprintf(buf.data(), MAX_FMT_LEN, fmt, ap);
+            vsnprintf(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #endif
             va_end(ap);
             throw std::logic_error(fmtbuf);
