@@ -177,18 +177,17 @@ namespace moon
         if (!fmt) return std::string("");
 
         static constexpr size_t MAX_FMT_LEN = 8192;
-
-        std::string buf(MAX_FMT_LEN + 1, 0);
+        static thread_local char fmtbuf[MAX_FMT_LEN + 1];
         va_list ap;
         va_start(ap, fmt);
         // win32
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-        vsnprintf_s(buf.data(), MAX_FMT_LEN, _TRUNCATE, fmt, ap);
+        int n = vsnprintf_s(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #else
-        vsnprintf(buf.data(), MAX_FMT_LEN, fmt, ap);
+        int n = vsnprintf(buf.data(), MAX_FMT_LEN, fmt, ap);
 #endif
         va_end(ap);
-        return buf;
+        return std::string(fmtbuf, n);
     }
 
     //return left n char
