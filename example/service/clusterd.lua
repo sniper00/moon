@@ -221,33 +221,33 @@ local function load_config()
     end
 end
 
-moon.init(function(conf)
-    load_config("config.json")
-    local name = moon.get_env("name")
-    if not clusters[name] then
-        print("unconfig cluster node:".. moon.name())
-        return false
-    end
+local conf = ...
 
+load_config("config.json")
+local name = moon.get_env("name")
+if not clusters[name] then
+    print("unconfig cluster node:".. moon.name())
+    return false
+end
+
+moon.register_protocol(
+{
+    name = "lua",
+    PTYPE = moon.PTYPE_LUA,
+    pack = function(...)return ...end,
+    unpack = function(...) return ... end,
+    dispatch =  function(msg, _)
+        local sender = msg:sender()
+        local sessionid = msg:sessionid()
+        local rnode, raddr, CMD = unpack(msg:header())
+        docmd(sender, sessionid, CMD, rnode, raddr, msg)
+    end
+})
+
+moon.start(function()
     local listenfd = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET)
 
     socket.start(listenfd)
 
     print(strfmt("cluster run at %s %d", conf.host, conf.port))
-
-    moon.register_protocol(
-    {
-        name = "lua",
-        PTYPE = moon.PTYPE_LUA,
-        pack = function(...)return ...end,
-        unpack = function(...) return ... end,
-        dispatch =  function(msg, _)
-            local sender = msg:sender()
-            local sessionid = msg:sessionid()
-            local rnode, raddr, CMD = unpack(msg:header())
-            docmd(sender, sessionid, CMD, rnode, raddr, msg)
-        end
-    })
-    return true
 end)
-
