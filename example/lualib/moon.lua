@@ -14,7 +14,6 @@ local pairs = pairs
 local type = type
 local setmetatable = setmetatable
 local jencode = json.encode
-local jdecode = json.decode
 local co_create = coroutine.create
 local co_running = coroutine.running
 local _co_resume = coroutine.resume
@@ -119,20 +118,10 @@ end
 moon.make_response = make_response
 
 ---
---- 注册服务初始化回掉函数,服务对象创建时会调用,可以在这里做服务自身的初始化操作
---- 回掉函数需要返回bool:true 初始化成功; false 服务始化失败.
----@param callback fun(config:table):boolean
-function moon.init(callback)
-    core.set_cb('i',function ( str )
-        return callback(jdecode(str))
-    end)
-end
-
----
 ---注册服务启动回掉函数,这个函数的调用时机:
 ---1.如果服务是在配置文件中配置的服务，回掉函数会在所有配置的服务
 ---被创建之后调用。所以可以在回掉函数内查询其它唯一服务的 serviceid。
----2.运行时动态创建的服务，会在init之后，第一次update之前调用
+---2.运行时动态创建的服务，第一次update之前调用
 ---@param callback fun()
 function moon.start(callback)
     core.set_cb('s', callback)
@@ -242,7 +231,7 @@ end
 
 ---创建一个新的服务<br>
 ---param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
----param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置(moon.init)<br>
+---param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置<br>
 ---param unique 是否是唯一服务，唯一服务可以用moon.queryservice(name) 查询服务id<br>
 ---param shared 可选，是否共享工作者线程，默认true<br>
 ---workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者

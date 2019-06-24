@@ -1,5 +1,6 @@
 local moon = require("moon")
 local socket = require("moon.socket")
+local conf = ...
 
 local function run_slave()
     local command = {}
@@ -73,11 +74,8 @@ local function run_master(conf)
     end)
 end
 
-moon.init(function(conf)
-    if conf.master then
-        run_master(conf)
-    else
-        run_slave()
-    end
-    return true
-end)
+if conf.master then
+    run_master(conf)
+else
+    run_slave()
+end

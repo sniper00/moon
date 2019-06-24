@@ -183,6 +183,10 @@ local function request_handler(fd, request)
     local handler =  routers[request.path]
     if handler then
         handler(request, response)
+    else
+        response.status_code = 404
+        response:write_header("Content-Type","text/plain")
+        response:write("404 Not Found")
     end
     if conn_type == "close" then
         socket.write_then_close(fd, seri.concat(response:tb()))

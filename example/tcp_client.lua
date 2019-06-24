@@ -1,6 +1,7 @@
 ------------------------TCP CLIENT----------------------------
 local moon = require("moon")
 local socket = require("moon.socket")
+local conf = ...
 
 local function send(fd,data)
     if not fd then
@@ -30,7 +31,7 @@ local function session_read( fd )
     return data
 end
 
-moon.init(function(conf)
+moon.start(function()
     moon.async(function()
         local fd,err = socket.connect(conf.host, conf.port,moon.PTYPE_TEXT)
         if not fd then
@@ -48,5 +49,5 @@ moon.init(function(conf)
         end
         until(not input)
     end)
-    return true
 end)
+

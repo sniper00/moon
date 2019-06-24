@@ -338,20 +338,17 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
 
 void lua_bind::registerlib(lua_State * L, const char * name, lua_CFunction f)
 {
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "preload"); /* get 'package.preload' */
-    lua_pushcfunction(L, f);
-    lua_setfield(L, -2, name); /* package.preload[name] = f */
-    lua_pop(L, 2); /* pop 'package' and 'preload' tables */
+    luaL_requiref(L, name, f, 0);
+    lua_pop(L, 1); /* pop result*/
 }
 
 void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& module)
 {
     lua_getglobal(L, "package");
-    lua_getfield(L, -1, "loaded"); /* get 'package.preload' */
+    lua_getfield(L, -1, "loaded"); /* get 'package.loaded' */
     module.push();
-    lua_setfield(L, -2, name); /* package.preload[name] = f */
-    lua_pop(L, 2); /* pop 'package' and 'preload' tables */
+    lua_setfield(L, -2, name); /* package.loaded[name] = f */
+    lua_pop(L, 2); /* pop 'package' and 'loaded' tables */
 }
 
 static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)

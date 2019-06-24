@@ -210,5 +210,31 @@
                 "file": "create_service.lua"
             }
         ]
+    },
+    {
+        "sid": 12,
+        "name": "server_#sid",
+        "thread": 8,
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "mysql",
+                "file": "service_mysql.lua",
+                "host":"127.0.0.1",
+                "port":3306,
+                "database":"mysql",
+                "user":"root",
+                "password":"4321",
+                "timeout": 1000,
+                "max_packet_size":102400,
+                "connection_num":4
+            },
+            {
+                "unique": true,
+                "name": "call_mysql_service",
+                "file": "call_mysql_service.lua"
+            }
+        ]
     }
 ]
