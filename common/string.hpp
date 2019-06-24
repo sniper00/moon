@@ -184,7 +184,7 @@ namespace moon
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
         int n = vsnprintf_s(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #else
-        int n = vsnprintf(buf.data(), MAX_FMT_LEN, fmt, ap);
+        int n = vsnprintf(fmtbuf, MAX_FMT_LEN, fmt, ap);
 #endif
         va_end(ap);
         return std::string(fmtbuf, n);
