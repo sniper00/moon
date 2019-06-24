@@ -313,17 +313,20 @@ namespace db
             {
                 return;
             }
+
+            static constexpr size_t MAX_FMT_LEN = 8192;
+            std::string buf(MAX_FMT_LEN + 1, 0);
+
             va_list ap;
-            char szBuffer[8192];
             va_start(ap, fmt);
             // win32
 #if defined(_WIN32)
-            vsnprintf_s(szBuffer, sizeof(szBuffer), fmt, ap);
+            vsnprintf_s(buf.data(), MAX_FMT_LEN, _TRUNCATE, fmt, ap);
 #else
-            vsnprintf(szBuffer, sizeof(szBuffer), fmt, ap);
+            vsnprintf(buf.data(), MAX_FMT_LEN, fmt, ap);
 #endif
             va_end(ap);
-            throw std::logic_error(szBuffer);
+            throw std::logic_error(buf.data());
         }
 
 
