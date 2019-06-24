@@ -14,7 +14,6 @@ local pairs = pairs
 local type = type
 local setmetatable = setmetatable
 local jencode = json.encode
-local jdecode = json.decode
 local co_create = coroutine.create
 local co_running = coroutine.running
 local _co_resume = coroutine.resume
