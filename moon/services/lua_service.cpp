@@ -57,11 +57,11 @@ bool lua_service::init(string_view_t config)
 {
     try
     {
-        service_config_parser<lua_service> scfg;
-        MOON_CHECK(scfg.parse(this, config), "lua service init failed: parse config failed.");
-        auto luafile = scfg.get_value<std::string>("file");
+        service_config_parser<lua_service> conf;
+        MOON_CHECK(conf.parse(this, config), "lua service init failed: parse config failed.");
+        auto luafile = conf.get_value<std::string>("file");
         MOON_CHECK(!luafile.empty(), "lua service init failed: config does not provide lua file.");
-        mem_limit = static_cast<size_t>(scfg.get_value<int64_t>("memlimit"));
+        mem_limit = static_cast<size_t>(conf.get_value<int64_t>("memlimit"));
 
         lua_.open_libraries();
         sol::table module = lua_.create_table();
@@ -82,7 +82,7 @@ bool lua_service::init(string_view_t config)
 
         moon::server_config_manger& server_config = moon::server_config_manger::instance();
         {
-            auto cpaths = scfg.get_value<std::vector<std::string_view>>("cpath");
+            auto cpaths = conf.get_value<std::vector<std::string_view>>("cpath");
             if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
             {
                 std::copy(server_cfg->cpath.begin(), server_cfg->cpath.end(), std::back_inserter(cpaths));
@@ -99,7 +99,7 @@ bool lua_service::init(string_view_t config)
             lua_.script(strpath);
         }
 
-        auto paths = scfg.get_value<std::vector<std::string_view>>("path");
+        auto paths = conf.get_value<std::vector<std::string_view>>("path");
         {
             if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
             {
@@ -117,23 +117,6 @@ bool lua_service::init(string_view_t config)
             lua_.script(strpath);
         }
 
-        if (!directory::exists(luafile))
-        {
-            paths.push_back("./");
-            std::string file;
-            for (auto& p : paths)
-            {
-                file = directory::find_file(fs::path(p).parent_path().string(), luafile);
-                if (!file.empty())
-                {
-                    break;
-                }
-            }
-            MOON_CHECK(directory::exists(file), moon::format("lua service init failed: luafile %s not found", luafile.data()).data());
-            luafile = file;
-        }
-
-        //lua_.script_file(luafile);
         sol::load_result load_result = lua_.load_file(luafile);
         if (!load_result.valid())
         {   
