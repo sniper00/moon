@@ -371,13 +371,13 @@ void socket::response(uint32_t sender, uint32_t receiver, string_view_t data, st
 bool socket::try_lock_fd(uint32_t fd)
 {
     std::unique_lock lck(lock_);
-    return fds_.emplace(fd).second;
+    return fd_watcher_.emplace(fd).second;
 }
 
 void socket::unlock_fd(uint32_t fd)
 {
     std::unique_lock lck(lock_);
-    size_t count = fds_.erase(fd);
+    size_t count = fd_watcher_.erase(fd);
     MOON_CHECK(count == 1, "socket fd erase failed!");
 }
 

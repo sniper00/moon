@@ -8,12 +8,30 @@ namespace moon
     public:
         using base_connection_t = base_connection;
 
+        class scope_buffer_offset
+        {
+            int offset_rpos_ = 0;
+            int offset_wpos_ = 0;
+            buffer* buf_ = nullptr;
+        public:
+            scope_buffer_offset(buffer* buf, int offset_rpos, int offset_wpos)
+                :offset_rpos_(offset_rpos)
+                , offset_wpos_(offset_wpos)
+                , buf_(buf)
+            {
+                buf->offset_writepos(offset_wpos_);
+            }
+
+            ~scope_buffer_offset()
+            {
+                buf_->offset_writepos(-offset_wpos_);
+                buf_->seek(offset_rpos_, buffer::Current);
+            }
+        };
+
         template <typename... Args>
         explicit custom_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
-            , restore_write_offset_(0)
-            , prew_read_offset_(0)
-            , buffer_()
         {
         }
 
@@ -29,7 +47,6 @@ namespace moon
             if (is_open() && request_.sessionid == 0)
             {
                 request_ = ctx;
-                restore_buffer_offset();
                 if (response_->size() > 0)
                 {
                     //guarantee read is async operation
@@ -48,7 +65,9 @@ namespace moon
     protected:
         void read_some()
         {
-            socket_.async_read_some(asio::buffer(buffer_),
+            auto buf = response_->get_buffer();
+            buf->check_space(8192);
+            socket_.async_read_some(asio::buffer((buf->data() + buf->size()), buf->writeablesize()),
                 make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
@@ -67,20 +86,10 @@ namespace moon
                 //CONSOLE_DEBUG(logger(), "connection recv:%u %s",id_, moon::to_hex_string(string_view_t{ (char*)buffer_.data(), bytes_transferred }, " ").data(), "");
 
                 recvtime_ = now();
-                restore_buffer_offset();
-                response_->get_buffer()->write_back(buffer_.data(), 0, bytes_transferred);
+                response_->get_buffer()->offset_writepos(static_cast<int>(bytes_transferred));
                 handle_read_request();
                 read_some();
             }));
-        }
-
-        void restore_buffer_offset()
-        {
-            auto buf = response_->get_buffer();
-            buf->offset_writepos(restore_write_offset_);
-            buf->seek(prew_read_offset_, buffer::Current);
-            restore_write_offset_ = 0;
-            prew_read_offset_ = 0;
         }
 
         void read_with_delim(buffer* buf, const string_view_t& delim)
@@ -97,9 +106,7 @@ namespace moon
             size_t pos = strref.find(delim);
             if (pos != string_view_t::npos)
             {
-                restore_write_offset_ = static_cast<int>(dszie - pos);
-                prew_read_offset_ = static_cast<int>(pos + delim.size());
-                buf->offset_writepos(-restore_write_offset_);
+                scope_buffer_offset sbo{ buf , static_cast<int>(pos + delim.size()) , -static_cast<int>(dszie - pos) };
                 response(response_);
             }
         }
@@ -120,16 +127,10 @@ namespace moon
             {
                 if (buf->size() >= request_.size)
                 {
-                    buf->offset_writepos(-static_cast<int>(dszie - request_.size));
-                    restore_write_offset_ = static_cast<int>(dszie - request_.size);
-                    prew_read_offset_ = static_cast<int>(request_.size);
+                    scope_buffer_offset sbo{ buf ,  static_cast<int>(request_.size) , -static_cast<int>(dszie - request_.size) };
                     response(response_);
-                    break;
                 }
-                else
-                {
-                    return;
-                }
+                break;
             }
             case read_delim::LF:
             {
@@ -182,10 +183,7 @@ namespace moon
             handle_message(m);
         }
     protected:
-        int restore_write_offset_;
-        int prew_read_offset_;
         message_ptr_t  response_;
-        std::array<uint8_t, 8192> buffer_;
         read_request request_;
     };
 }

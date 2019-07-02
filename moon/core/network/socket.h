@@ -144,7 +144,7 @@ namespace moon
         mutable rwlock lock_;
         std::unordered_map<uint32_t, acceptor_context_ptr_t> acceptors_;
         std::unordered_map<uint32_t, connection_ptr_t> connections_;
-        std::unordered_set<uint32_t> fds_;
+        std::unordered_set<uint32_t> fd_watcher_;
     };
 
     template<typename Message>
