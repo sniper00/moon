@@ -210,7 +210,7 @@ local function load_config()
         return nil
     end
 
-    local content = moon.get_env("server_config")
+    local content = moon.get_env("CONFIG")
     local js = json.decode(content)
     for _,server in pairs(js) do
         local s = find_service("clusterd",server.services)
@@ -223,8 +223,9 @@ end
 
 local conf = ...
 
-load_config("config.json")
-local name = moon.get_env("name")
+load_config()
+
+local name = moon.get_env("SERVER_NAME")
 if not clusters[name] then
     print("unconfig cluster node:".. moon.name())
     return false
