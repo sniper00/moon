@@ -99,55 +99,6 @@ int main(int argc, char*argv[])
 {
     using namespace moon;
 
-    directory::working_directory = directory::current_directory();
-
-    std::string config = "config.json";//default config
-    int32_t sid = 1;//default start server 1
-    std::string service_file;
-
-    for (int i = 1; i < argc; ++i)
-    {
-        bool lastarg = i == (argc - 1);
-        std::string_view v{ argv[i] };
-        if ((v == "-h"sv || v == "--help"sv) && !lastarg)
-        {
-            usage();
-            return -1;
-        }
-        else if ((v == "-c"sv || v == "-config"sv) && !lastarg)
-        {
-            config = argv[++i];
-        }
-        else if ((v == "-r"sv || v == "-run"sv) && !lastarg)
-        {
-            try
-            {
-                sid = moon::string_convert<int32_t>(argv[++i]);
-            }
-            catch (std::exception& e)
-            {
-                std::cout << e.what()<<std::endl;
-                usage();
-                return -1;
-            }
-        }
-        else if ((v == "-f"sv || v == "-file"sv) && !lastarg)
-        {
-            service_file = argv[++i];
-            if (fs::path(service_file).extension() != ".lua")
-            {
-                std::cout << "service file must be a lua script.\n";
-                usage();
-                return -1;
-            }
-        }
-        else
-        {
-            usage();
-            return -1;
-        }
-    }
-
     register_signal();
 
     luaS_initshr();  /* init global short string table */
@@ -155,6 +106,51 @@ int main(int argc, char*argv[])
         sol::state lua;
         try
         {
+            directory::working_directory = directory::current_directory();
+
+            std::string conf = "config.json";//default config
+            int32_t sid = 1;//default start server 1
+            std::string service_file;
+
+            for (int i = 1; i < argc; ++i)
+            {
+                bool lastarg = i == (argc - 1);
+                std::string_view v{ argv[i] };
+                if ((v == "-h"sv || v == "--help"sv) && !lastarg)
+                {
+                    usage();
+                    return -1;
+                }
+                else if ((v == "-c"sv || v == "-config"sv) && !lastarg)
+                {
+                    conf = argv[++i];
+                    if (!fs::exists(conf))
+                    {
+                        usage();
+                        return -1;
+                    }
+                }
+                else if ((v == "-r"sv || v == "-run"sv) && !lastarg)
+                {
+                    sid = moon::string_convert<int32_t>(argv[++i]);
+                }
+                else if ((v == "-f"sv || v == "-file"sv) && !lastarg)
+                {
+                    service_file = argv[++i];
+                    if (fs::path(service_file).extension() != ".lua")
+                    {
+                        std::cout << "service file must be a lua script.\n";
+                        usage();
+                        return -1;
+                    }
+                }
+                else
+                {
+                    usage();
+                    return -1;
+                }
+            }
+
             std::shared_ptr<server> server_ = std::make_shared<server>();
             wk_server = server_;
 
@@ -190,24 +186,24 @@ int main(int argc, char*argv[])
             }
             else
             {
-                MOON_CHECK(directory::exists(config), moon::format("can not found config file: %s", config.data()).data());
+                MOON_CHECK(directory::exists(conf), moon::format("can not found config file: %s", conf.data()).data());
                 moon::server_config_manger& scfg = moon::server_config_manger::instance();
-                MOON_CHECK(scfg.parse(moon::file::read_all(config, std::ios::binary | std::ios::in), sid), "failed");
+                MOON_CHECK(scfg.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
                 auto c = scfg.find(sid);
                 MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
 
-                router_->set_env("sid", std::to_string(c->sid));
-                router_->set_env("name", c->name);
-                router_->set_env("inner_host", c->inner_host);
-                router_->set_env("outer_host", c->outer_host);
-                router_->set_env("server_config", scfg.config());
+                router_->set_env("SID", std::to_string(c->sid));
+                router_->set_env("SERVER_NAME", c->name);
+                router_->set_env("INNER_HOST", c->inner_host);
+                router_->set_env("OUTER_HOST", c->outer_host);
+                router_->set_env("CONFIG", scfg.config());
 
                 server_->init(static_cast<uint8_t>(c->thread), c->log);
                 server_->logger()->set_level(c->loglevel);
 
                 if (!c->startup.empty())
                 {
-                    MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be a lua script.");
+                    MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
                     module.set_function("new_service", [&router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
                         return  router_->new_service(service_type, config, unique, workerid, 0, 0);
                     });
@@ -228,7 +224,11 @@ int main(int argc, char*argv[])
         catch (std::exception& e)
         {
             printf("ERROR:%s\n", e.what());
-            printf("LUA TRACEBACK:%s\n", lua_traceback(lua.lua_state()));
+            const char* trace = lua_traceback(lua.lua_state());
+            if (std::strlen(trace) != 0)
+            {
+                printf("LUA TRACEBACK:%s\n", trace);
+            }
         }
     }
     luaS_exitshr();
