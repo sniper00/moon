@@ -79,6 +79,7 @@ project "moon"
     links{"lua53","rapidjson"}
     defines {
         "ASIO_STANDALONE" ,
+        "ASIO_NO_DEPRECATED",
         "SOL_CHECK_ARGUMENTS",
         "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING" ,
     }
