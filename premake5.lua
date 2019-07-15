@@ -80,7 +80,7 @@ project "moon"
     defines {
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
-        "SOL_CHECK_ARGUMENTS",
+        "SOL_ALL_SAFETIES_ON",
         "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING" ,
     }
     postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
