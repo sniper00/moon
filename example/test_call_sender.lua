@@ -10,8 +10,8 @@ moon.start(
                 moon.co_new_service(
                     "lua",
                     {
-                        name = "call_example_receiver",
-                        file = "call_example_receiver.lua"
+                        name = "test_call_receiver",
+                        file = "test_call_receiver.lua"
                     }
                 )
 
