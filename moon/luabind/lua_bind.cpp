@@ -525,7 +525,7 @@ static sol::table lua_http(sol::this_state L)
     });
 
     module.set_function("create_query_string", [](sol::as_table_t<http::case_insensitive_multimap> src) {
-        return http::query_string::create(src.source);
+        return http::query_string::create(src.value());
     });
     return module;
 }

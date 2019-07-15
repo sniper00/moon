@@ -94,7 +94,7 @@ namespace moon
 
         socket& operator =(const socket&) = delete;
 
-        uint32_t listen(const std::string& ip, uint16_t port, uint32_t owner, uint8_t type);
+        uint32_t listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
 
         void accept(int fd, int32_t sessionid, uint32_t owner);
 

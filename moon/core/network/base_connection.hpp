@@ -60,13 +60,6 @@ namespace moon
         virtual void start(bool accepted)
         {
             (void)accepted;
-            //save remote addr
-            asio::error_code ec;
-            auto ep = socket_.remote_endpoint(ec);
-            auto addr = ep.address();
-            addr_ = addr.to_string(ec) + ":";
-            addr_ += std::to_string(ep.port());
-
             recvtime_ = now();
         }
 
@@ -178,6 +171,20 @@ namespace moon
         {
             return std::time(nullptr);
         }
+
+        std::string address()
+        {
+            std::string address;
+            asio::error_code ec;
+            auto endpoint = socket_.remote_endpoint(ec);
+            if (!ec)
+            {
+                address.append(endpoint.address().to_string());
+                address.append(":");
+                address.append(std::to_string(endpoint.port()));
+            }
+            return address;
+        }
     protected:
         virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
         {
@@ -244,7 +251,7 @@ namespace moon
                 if (lerrcode)
                 {
                     content = moon::format("{\"addr\":\"%s\",\"logic_errcode\":%d,\"errmsg\":\"%s\"}"
-                        , addr_.data()
+                        , address().data()
                         , lerrcode
                         , (lerrmsg == nullptr ? logic_errmsg(lerrcode) : lerrmsg)
                     );
@@ -253,7 +260,7 @@ namespace moon
                 else if (e && e != asio::error::eof)
                 {
                     content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
-                        , addr_.data()
+                        , address().data()
                         , e.value()
                         , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
@@ -267,7 +274,7 @@ namespace moon
             //closed
             {
                 auto msg = message::create();
-                msg->write_string(addr_);
+                msg->write_string(address());
                 msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
@@ -299,7 +306,6 @@ namespace moon
         uint8_t type_;
         moon::socket* s_;
         socket_t socket_;
-        std::string addr_;
         handler_allocator rallocator_;
         handler_allocator wallocator_;
         const_buffers_holder  holder_;

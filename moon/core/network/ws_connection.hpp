@@ -175,7 +175,7 @@ namespace moon
                     check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
                     if (num_additional_bytes > 0)
                     {
-                        auto data = asio::buffer_cast<const char*>(sbuf->data());
+                        auto data = reinterpret_cast<const char*>(sbuf->data().data());
                         recv_buf_->write_back(data, 0, num_additional_bytes);
                         if (!handle_frame())
                         {
@@ -231,7 +231,7 @@ namespace moon
             std::string_view method;
             std::string_view ignore;
             http::case_insensitive_multimap_view header;
-            int consumed = http::request_parser::parse(string_view_t{ asio::buffer_cast<const char*>(buf->data()), buf->size() }
+            int consumed = http::request_parser::parse(string_view_t{ reinterpret_cast<const char*>(buf->data().data()), buf->size() }
                 , method
                 , ignore
                 , ignore
@@ -274,7 +274,7 @@ namespace moon
             auto answer = upgrade_response(sec_ws_key_, protocol);
             send_response(answer);
             auto msg = message::create();
-            msg->write_string(addr_);
+            msg->write_string(address());
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return true;

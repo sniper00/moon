@@ -20,15 +20,13 @@ socket::socket(router * r, worker* w, asio::io_context & ioctx)
     timeout();
 }
 
-uint32_t socket::listen(const std::string & ip, uint16_t port, uint32_t owner, uint8_t type)
+uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
 {
     try
     {
         auto ctx = std::make_shared<socket::acceptor_context>(type, owner, ioc_);
         asio::ip::tcp::resolver resolver(ioc_);
-        asio::ip::tcp::resolver::query query(ip, std::to_string(port));
-        auto iter = resolver.resolve(query);
-        asio::ip::tcp::endpoint endpoint = *iter;
+        asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
         ctx->acceptor.open(endpoint.protocol());
 #if TARGET_PLATFORM != PLATFORM_WINDOWS
         ctx->acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
@@ -43,7 +41,7 @@ uint32_t socket::listen(const std::string & ip, uint16_t port, uint32_t owner, u
     }
     catch (asio::system_error& e)
     {
-        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", ip.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return 0;
     }
 }
@@ -105,15 +103,14 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
     try
     {
         asio::ip::tcp::resolver resolver(ioc_);
-        asio::ip::tcp::resolver::query query(host, std::to_string(port));
-        asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+        asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
 
         worker* w = router_->get_worker(router_->worker_id(owner));
         auto c = w->socket().make_connection(owner, type);
 
         if (0 == sessionid)
         {
-            asio::connect(c->socket(), endpoint_iterator);
+            asio::connect(c->socket(), endpoints);
             c->fd(w->socket().uuid());
             w->socket().add_connection(c, false);
             return c->fd();
@@ -123,7 +120,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
             if (timeout > 0)
             {
                 std::shared_ptr<asio::steady_timer> connect_timer = std::make_shared<asio::steady_timer>(ioc_);
-                connect_timer->expires_from_now(std::chrono::milliseconds(timeout));
+                connect_timer->expires_after(std::chrono::milliseconds(timeout));
                 connect_timer->async_wait([this, c, serviceid, sessionid, host, port, connect_timer](const asio::error_code & e) {
                     if (e)
                     {
@@ -138,8 +135,8 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t serviceid, 
                 });
             }
 
-            asio::async_connect(c->socket(), endpoint_iterator,
-                [this, c, w, host, port, serviceid, sessionid](const asio::error_code& e, asio::ip::tcp::resolver::iterator)
+            asio::async_connect(c->socket(), endpoints,
+                [this, c, w, host, port, serviceid, sessionid](const asio::error_code& e, const asio::ip::tcp::endpoint&)
             {
                 if (!e)
                 {
@@ -187,7 +184,7 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32
             }
         }
     } while (0);
-    ioc_.post([this, owner, sessionid]() {
+    asio::post(ioc_, [this, owner, sessionid]() {
         response(0, owner, "read an invalid socket", "closed", sessionid, PTYPE_ERROR);
     });
 }
@@ -396,7 +393,7 @@ service * socket::find_service(uint32_t serviceid)
 
 void socket::timeout()
 {
-    timer_.expires_from_now(std::chrono::seconds(10));
+    timer_.expires_after(std::chrono::seconds(10));
     timer_.async_wait([this](const asio::error_code & e) {
         if (e)
         {
