@@ -50,7 +50,7 @@ namespace moon
                 if (response_->size() > 0)
                 {
                     //guarantee read is async operation
-                    asio::post(socket_.get_io_context(),[this, self = shared_from_this()] {
+                    asio::post(socket_.get_executor(),[this, self = shared_from_this()] {
                         if (socket_.is_open())
                         {
                             handle_read_request();
