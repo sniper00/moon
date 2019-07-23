@@ -4,6 +4,9 @@
 #include "common/base64.hpp"
 #include "common/byte_convert.hpp"
 #include "common/sha1.hpp"
+#include "common/random.hpp"
+
+//https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers
 
 namespace moon
 {
@@ -92,8 +95,8 @@ namespace moon
             bool rsv1;
             bool rsv2;
             bool rsv3;
-            opcode op;//4bit
             bool mask;
+            opcode op;//4bit
             uint8_t payload_len;//7 bit
             std::uint32_t key;
         };
@@ -102,11 +105,20 @@ namespace moon
     class ws_connection : public base_connection
     {
     public:
+         enum class  role
+        {
+            none,
+            client,
+            server
+        };
+
         using base_connection_t = base_connection;
 
         static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 8192;
 
         static constexpr size_t DEFAULT_RECV_BUFFER_SIZE = buffer::STACK_CAPACITY - BUFFER_HEAD_RESERVED;
+
+        static constexpr size_t SEC_WEBSOCKET_KEY_LEN = 24;
 
         static constexpr size_t PAYLOAD_MIN_LEN = 125;
         static constexpr size_t PAYLOAD_MID_LEN = 126;
@@ -125,12 +137,21 @@ namespace moon
 
         void start(bool accepted) override
         {
+            role_ = accepted ? role::server : role::client;
             base_connection_t::start(accepted);
-            read_header();
+            if (accepted)
+            {
+                read_header();
+            }
+            else
+            {
+                request_handshake();
+            }
         }
 
         bool send(const buffer_ptr_t & data) override
         {
+            if (!handshaked_) return false;
             encode_frame(data);
             return base_connection_t::send(data);
         }
@@ -189,6 +210,77 @@ namespace moon
                     send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
             }));
+        }
+
+        void request_handshake()
+        {
+            std::string key(base64_encode((moon::randkey(16)), 16));
+
+            std::shared_ptr<std::string> str = std::make_shared<std::string>();
+            str->append("GET / HTTP/1.1\r\n");
+            str->append("Upgrade: WebSocket\r\n");
+            str->append("Connection: Upgrade\r\n");
+            str->append("Sec-WebSocket-Version: 13\r\n");
+            str->append(moon::format("Sec-WebSocket-Key: %s\r\n\r\n",key.data()));
+
+            asio::async_write(socket_, asio::buffer(str->data(), str->size()), [this, self = shared_from_this(), str, key = std::move(key)](const asio::error_code& e, std::size_t) {
+                if (!e)
+                {
+                    auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
+                    asio::async_read_until(socket_, *sbuf, STR_DCRLF,
+                        [this, self = shared_from_this(), sbuf, key = std::move(key)](const asio::error_code& e, std::size_t bytes_transferred)
+                    {
+                        if (e || bytes_transferred == 0)
+                        {
+                            error(e, int(logic_error_));
+                            return;
+                        }
+
+                        std::string_view status_code;
+                        std::string_view ignore;
+                        http::case_insensitive_multimap_view header;
+                        if (!http::response_parser::parse(string_view_t{ reinterpret_cast<const char*>(sbuf->data().data()), sbuf->size() }
+                            , ignore
+                            , status_code
+                            , header))
+                        {
+                            error(e, int(logic_error_));
+                            return;
+                        }
+
+                        if (status_code.substr(0, 3) != "101"sv)
+                        {
+                            error(e, int(logic_error_));
+                            return;
+                        }
+
+                        std::string_view accept_key;
+                        if (!moon::try_get_value(header, "sec-websocket-accept"sv, accept_key))
+                        {
+                            error(e, int(logic_error_));
+                            return;
+                        }
+
+                        if (accept_key != hash_key(key))
+                        {
+                            error(e, int(logic_error_));
+                            return;
+                        }
+
+                        handshaked_ = true;
+                        auto msg = message::create();
+                        msg->write_string(address());
+                        msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_connect));
+                        handle_message(std::move(msg));
+                        check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
+                        read_some();
+                    });
+                }
+                else
+                {
+                    error(e, int(logic_error_));
+                }
+            });
         }
 
         void read_some()
@@ -264,11 +356,11 @@ namespace moon
             if (!moon::try_get_value(header, "sec-websocket-key"sv, sec_ws_key_))
                 return false;
 
-            if (sec_ws_key_.empty() || sec_ws_key_.size() != 24)
+            if (sec_ws_key_.size() != SEC_WEBSOCKET_KEY_LEN)
                 return false;
 
             std::string_view protocol;
-            moon::try_get_value(header, "Sec-WebSocket-Protocol"sv, protocol);
+            moon::try_get_value(header, "sec-websocket-protocol"sv, protocol);
 
             handshaked_ = true;
             auto answer = upgrade_response(sec_ws_key_, protocol);
@@ -327,8 +419,8 @@ namespace moon
             }
 
             fh.mask = (tmp[1] & 0x80) != 0;
-            //server must masked.
-            if (!fh.mask)
+            //message clinet to server must masked.
+            if (!fh.mask && role_ == role::server)
             {
                 return ws::close_code::protocol_error;
             }
@@ -426,7 +518,7 @@ namespace moon
 
             if (fh.mask)
             {
-                fh.key = *((int32_t*)(tmp + (need - sizeof(fh.key))));
+                fh.key = *((uint32_t*)(tmp + (need - sizeof(fh.key))));
                 // unmask data:
                 uint8_t* d = (uint8_t*)(tmp + need);
                 for (uint64_t i = 0; i < reallen; i++)
@@ -456,39 +548,58 @@ namespace moon
 
         void encode_frame(const buffer_ptr_t& data)
         {
+            uint64_t size = data->size();
+
+            if (role_ == role::client)
+            {
+                auto d = reinterpret_cast<unsigned char*>(data->data());
+                const uint8_t* mask = randkey(4);
+                for (uint64_t i = 0; i < size; i++)
+                {
+                    d[i] = d[i] ^ mask[i % 4];
+                }
+                data->write_front(mask, 0, 4);
+            }
+
+            uint8_t payload_len = 0;
+            if (size <= PAYLOAD_MIN_LEN)
+            {
+                payload_len = static_cast<uint8_t>(size);
+            }
+            else if (size <= UINT16_MAX)
+            {
+                payload_len = static_cast<uint8_t>(PAYLOAD_MID_LEN);
+                uint16_t n = (uint16_t)size;
+                moon::host2net(n);
+                data->write_front(&n, 0, 1);
+            }
+            else
+            {
+                payload_len = static_cast<uint8_t>(PAYLOAD_MAX_LEN);
+                moon::host2net(size);
+                data->write_front(&size, 0, 1);
+            }
+
+            //messages from the client must be masked
+            if (role_ == role::client)
+            {
+                payload_len |= 0x80;
+            }
+
+            data->write_front(&payload_len, 0, 1);
+
             uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
             if (data->has_flag(buffer_flag::ws_text))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::text);
             }
 
-            uint64_t size = data->size();
-            if (size <= PAYLOAD_MIN_LEN)
-            {
-                data->write_front((uint8_t*)&size, 0, 1);
-            }
-            else if (size <= UINT16_MAX)
-            {
-                uint8_t tmp = PAYLOAD_MID_LEN;
-                uint16_t n = (uint16_t)size;
-                moon::host2net(n);
-                data->write_front(&n, 0, 1);
-                data->write_front(&tmp, 0, 1);
-            }
-            else
-            {
-                uint8_t tmp = PAYLOAD_MAX_LEN;
-                moon::host2net(size);
-                data->write_front(&size, 0, 1);
-                data->write_front(&tmp, 0, 1);
-            }
-
             data->write_front(&opcode, 0, 1);
         }
 
-        std::string upgrade_response(string_view_t seckey, string_view_t wsprotocol)
+        std::string hash_key(std::string_view seckey)
         {
-            uint8_t keybuf[60];
+            uint8_t keybuf[SEC_WEBSOCKET_KEY_LEN+ WS_MAGICKEY.size()];
             std::memcpy(keybuf, seckey.data(), seckey.size());
             std::memcpy(keybuf + seckey.size(), WS_MAGICKEY.data(), WS_MAGICKEY.size());
 
@@ -497,14 +608,17 @@ namespace moon
             sha1::init(ctx);
             sha1::update(ctx, keybuf, sizeof(keybuf));
             sha1::finish(ctx, shakey);
-            std::string sha1str = base64_encode(shakey, sizeof(shakey));
+            return base64_encode(shakey, sizeof(shakey));
+        }
 
+        std::string upgrade_response(string_view_t seckey, string_view_t wsprotocol)
+        {
             std::string response;
             response.append("HTTP/1.1 101 Switching Protocols\r\n");
             response.append("Upgrade: WebSocket\r\n");
             response.append("Connection: Upgrade\r\n");
             response.append("Sec-WebSocket-Accept: ");
-            response.append(sha1str);
+            response.append(hash_key(seckey));
             response.append(STR_DCRLF.data(), STR_DCRLF.size());
             if (!wsprotocol.empty())
             {
@@ -517,6 +631,7 @@ namespace moon
 
     protected:
         bool handshaked_ = false;
+        role role_ = role::none;
         buffer_ptr_t recv_buf_;
     };
 }

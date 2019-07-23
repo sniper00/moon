@@ -5,7 +5,7 @@ namespace moon
 {
     constexpr int32_t WORKER_ID_SHIFT = 24;
     constexpr int64_t UPDATE_INTERVAL = 10; //ms
-    constexpr int32_t BUFFER_HEAD_RESERVED = 10;//max : websocket header  max  len
+    constexpr int32_t BUFFER_HEAD_RESERVED = 14;//max : websocket header  max  len
 
     DECLARE_UNIQUE_PTR(message);
     DECLARE_SHARED_PTR(buffer);
