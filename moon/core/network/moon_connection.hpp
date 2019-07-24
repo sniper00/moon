@@ -40,8 +40,7 @@ namespace moon
                     bool enable = (static_cast<int>(flag_)&static_cast<int>(frame_enable_flag::send)) != 0;
                     if (!enable)
                     {
-                        error(asio::error_code(), int(network_logic_error::send_message_size_max));
-                        base_connection_t::close();
+                        error(make_error_code(moon::error::write_message_too_big));
                         return false;
                     }
                     data->set_flag(buffer_flag::framing);
@@ -95,7 +94,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                     return;
                 }
 
@@ -122,8 +121,7 @@ namespace moon
 
                 if (header_ > MAX_NET_MSG_SIZE)
                 {
-                    error(asio::error_code(), int(network_logic_error::read_message_size_max));
-                    base_connection_t::close();
+                    error(make_error_code(moon::error::read_message_too_big));
                     return;
                 }
                 read_body(header_, continued);
@@ -147,7 +145,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                     return;
                 }
 

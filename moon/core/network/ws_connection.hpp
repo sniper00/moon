@@ -178,7 +178,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                     return;
                 }
 
@@ -191,7 +191,8 @@ namespace moon
                 recvtime_ = now();
 
                 size_t num_additional_bytes = sbuf->size() - bytes_transferred;
-                if (handshake(sbuf))
+                auto ec = handshake(sbuf);
+                if (!ec)
                 {
                     check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
                     if (num_additional_bytes > 0)
@@ -207,7 +208,8 @@ namespace moon
                 }
                 else
                 {
-                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
+                    send_response(moon::format("HTTP/1.1 400 %s(%d)\r\n\r\n",ec.message().data(),ec.value()), true);
+                    error(ec);
                 }
             }));
         }
@@ -232,7 +234,7 @@ namespace moon
                     {
                         if (e || bytes_transferred == 0)
                         {
-                            error(e, int(logic_error_));
+                            error(e);
                             return;
                         }
 
@@ -244,26 +246,52 @@ namespace moon
                             , status_code
                             , header))
                         {
-                            error(e, int(logic_error_));
+                            error(make_error_code(moon::error::ws_bad_http_header));
                             return;
                         }
 
                         if (status_code.substr(0, 3) != "101"sv)
                         {
-                            error(e, int(logic_error_));
+                            error(make_error_code(moon::error::ws_bad_http_status_code));
+                            return;
+                        }
+
+                        std::string_view upgrade;
+                        if (!moon::try_get_value(header, "upgrade"sv, upgrade))
+                        {
+                            error(make_error_code(moon::error::ws_no_upgrade));
+                            return;
+                        }
+
+                        if (!iequal_string(upgrade, "websocket"sv))
+                        {
+                            error(make_error_code(moon::error::ws_no_upgrade_websocket));
+                            return;
+                        }
+
+                        std::string_view connection;
+                        if (!moon::try_get_value(header, "connection"sv, connection))
+                        {
+                            error(make_error_code(moon::error::ws_no_connection));
+                            return;
+                        }
+
+                        if (!iequal_string(connection, "upgrade"sv))
+                        {
+                            error(make_error_code(moon::error::ws_no_connection_upgrade));
                             return;
                         }
 
                         std::string_view accept_key;
                         if (!moon::try_get_value(header, "sec-websocket-accept"sv, accept_key))
                         {
-                            error(e, int(logic_error_));
+                            error(make_error_code(moon::error::ws_no_sec_accept));
                             return;
                         }
 
                         if (accept_key != hash_key(key))
                         {
-                            error(e, int(logic_error_));
+                            error(make_error_code(moon::error::ws_bad_sec_accept));
                             return;
                         }
 
@@ -278,7 +306,7 @@ namespace moon
                 }
                 else
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                 }
             });
         }
@@ -291,7 +319,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                     return;
                 }
 
@@ -313,13 +341,8 @@ namespace moon
             }));
         }
 
-        bool handshake(const std::shared_ptr<asio::streambuf>& buf)
+        std::error_code handshake(const std::shared_ptr<asio::streambuf>& buf)
         {
-            if (handshaked_)
-            {
-                return false;
-            }
-
             std::string_view method;
             std::string_view ignore;
             http::case_insensitive_multimap_view header;
@@ -331,45 +354,54 @@ namespace moon
                 , header);
             if (-1 == consumed)
             {
-                return false;
+                return make_error_code(moon::error::ws_bad_http_header);
             }
             buf->consume(consumed);
 
             if (method != "GET"sv)
-                return false;
+                return make_error_code(moon::error::ws_bad_method);
 
-            std::string_view h;
-            if (!moon::try_get_value(header, "connection"sv, h))
-                return false;
+            std::string_view connection;
+            if (!moon::try_get_value(header, "connection"sv, connection))
+                return make_error_code(moon::error::ws_no_connection);
 
-            std::string_view u;
-            if (!moon::try_get_value(header, "upgrade"sv, u))
-                return false;
+            std::string_view upgrade;
+            if (!moon::try_get_value(header, "upgrade"sv, upgrade))
+                return make_error_code(moon::error::ws_no_upgrade);
 
-            if (!iequal_string(h, UPGRADE))
-                return false;
+            if (!iequal_string(connection, UPGRADE))
+                return make_error_code(moon::error::ws_no_connection_upgrade);
 
-            if (!iequal_string(u, WEBSOCKET))
-                return false;
+            if (!iequal_string(upgrade, WEBSOCKET))
+                return make_error_code(moon::error::ws_no_upgrade_websocket);
 
-            std::string_view sec_ws_key_;
-            if (!moon::try_get_value(header, "sec-websocket-key"sv, sec_ws_key_))
-                return false;
+            std::string_view sec_ws_key;
+            if (!moon::try_get_value(header, "sec-websocket-key"sv, sec_ws_key))
+                return make_error_code(moon::error::ws_no_sec_key);
 
-            if (sec_ws_key_.size() != SEC_WEBSOCKET_KEY_LEN)
-                return false;
+            if (base64_decode(std::string{ sec_ws_key.data(), sec_ws_key.size() }).size() != 16)
+                return make_error_code(moon::error::ws_bad_sec_key);
+
+            std::string_view sec_ws_version;
+            if (!moon::try_get_value(header, "sec-websocket-version"sv, sec_ws_version))
+                return make_error_code(moon::error::ws_no_sec_version);
+
+            if (sec_ws_version != "13"sv)
+            {
+                return make_error_code(moon::error::ws_bad_sec_version);
+            }
 
             std::string_view protocol;
             moon::try_get_value(header, "sec-websocket-protocol"sv, protocol);
 
             handshaked_ = true;
-            auto answer = upgrade_response(sec_ws_key_, protocol);
+            auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
             auto msg = message::create();
             msg->write_string(address());
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
-            return true;
+            return std::error_code();
         }
 
         void send_response(const std::string& s, bool bclose = false)
@@ -385,17 +417,23 @@ namespace moon
 
         bool handle_frame()
         {
-            auto close_code = decode_frame();
-            if (ws::close_code::none != close_code)
+            auto ec = decode_frame();
+            if (ec)
             {
-                error(asio::error_code(), int(close_code), std::string(recv_buf_->data(), recv_buf_->size()).data());
-                base_connection::close();
+                if (ec == moon::error::ws_closed)
+                {
+                    error(ec, std::string(recv_buf_->data(), recv_buf_->size()));
+                }
+                else
+                {
+                    error(ec);
+                }
                 return false;
             }
             return true;
         }
 
-        ws::close_code decode_frame()
+        std::error_code decode_frame()
         {
             const uint8_t* tmp = (const uint8_t*)(recv_buf_->data());
             size_t size = recv_buf_->size();
@@ -403,7 +441,7 @@ namespace moon
             if (size < 3)
             {
                 check_recv_buffer(10);
-                return ws::close_code::none;
+                return std::error_code();
             }
 
             size_t need = 2;
@@ -422,7 +460,7 @@ namespace moon
             //message clinet to server must masked.
             if (!fh.mask && role_ == role::server)
             {
-                return ws::close_code::protocol_error;
+                return make_error_code(moon::error::ws_bad_unmasked_frame);
             }
 
             if (fh.mask)
@@ -434,7 +472,7 @@ namespace moon
             if (size < need)
             {
                 check_recv_buffer(need);
-                return ws::close_code::none;
+                return std::error_code();
             }
 
             fh.op = static_cast<ws::opcode>(tmp[0] & 0x0F);
@@ -450,30 +488,30 @@ namespace moon
                 if (fh.rsv1 || fh.rsv2 || fh.rsv3)
                 {
                     // reserved bits not cleared
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_reserved_bits);
                 }
                 break;
             case ws::opcode::incomplete:
                 {
                     //not support continuation frame
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_continuation);
                     break;
                 }
             default:
                 if (!fh.fin)
                 {
-                    // fragmented control message
-                    return ws::close_code::protocol_error;
+                    //not support fragmented control message
+                    return make_error_code(moon::error::ws_bad_control_fragment);
                 }
                 if (fh.payload_len > PAYLOAD_MIN_LEN)
                 {
                     // invalid length for control message
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_control_size);
                 }
                 if (fh.rsv1 || fh.rsv2 || fh.rsv3)
                 {
                     // reserved bits not cleared
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_reserved_bits);
                 }
                 break;
             }
@@ -489,7 +527,7 @@ namespace moon
                 if (reallen < PAYLOAD_MID_LEN)
                 {
                     // length not canonical
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_size);
                 }
                 break;
             }
@@ -500,7 +538,7 @@ namespace moon
                 if (reallen < 65536)
                 {
                     // length not canonical
-                    return ws::close_code::protocol_error;
+                    return make_error_code(moon::error::ws_bad_size);
                 }
                 break;
             }
@@ -513,7 +551,7 @@ namespace moon
             {
                 //need more data
                 check_recv_buffer(static_cast<size_t>(need + reallen - size));
-                return ws::close_code::none;
+                return std::error_code();
             }
 
             if (fh.mask)
@@ -539,11 +577,11 @@ namespace moon
             {
                 //may have error msg
                 recv_buf_->seek(static_cast<int>(need), buffer::Current);
-                return ws::close_code::normal;
+                return make_error_code(moon::error::ws_closed);
             }
 
             check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
-            return ws::close_code::none;
+            return std::error_code();
         }
 
         void encode_frame(const buffer_ptr_t& data)

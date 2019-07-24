@@ -5,6 +5,7 @@
 #include "handler_alloc.hpp"
 #include "const_buffers_holder.hpp"
 #include "common/string.hpp"
+#include "error.hpp"
 
 namespace moon
 {
@@ -88,8 +89,7 @@ namespace moon
                 CONSOLE_DEBUG(logger(), "network send queue too long. size:%zu", queue_.size());
                 if (queue_.size() >= MAX_NET_SEND_QUEUE_SIZE)
                 {
-                    logic_error_ = network_logic_error::send_message_queue_size_max;
-                    close();
+                    error(make_error_code(moon::error::send_queue_too_big));
                     return false;
                 }
             }
@@ -140,9 +140,12 @@ namespace moon
         {
             if ((0 != timeout_) && (0 != recvtime_) && (now - recvtime_ > timeout_))
             {
-                logic_error_ = network_logic_error::timeout;
-                close();
+                asio::post(socket_.get_executor(), [this]() {
+                    error(make_error_code(moon::error::read_timeout));
+                });
+                return;
             }
+            return;
         }
 
         void set_no_delay()
@@ -237,38 +240,29 @@ namespace moon
                 }
                 else
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                 }
             }));
         }
 
-        virtual void error(const asio::error_code& e, int lerrcode, const char* lerrmsg = nullptr)
+        void error(const asio::error_code& e,const std::string& add = "")
         {
             //error
             {
-                auto msg = message::create();
-                std::string content;
-                if (lerrcode)
+                if (e && e != asio::error::eof)
                 {
-                    content = moon::format("{\"addr\":\"%s\",\"logic_errcode\":%d,\"errmsg\":\"%s\"}"
-                        , address().data()
-                        , lerrcode
-                        , (lerrmsg == nullptr ? logic_errmsg(lerrcode) : lerrmsg)
-                    );
-                    msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
-                }
-                else if (e && e != asio::error::eof)
-                {
-                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                    auto msg = message::create();
+                    std::string content;
+                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s.(%s)\"}"
                         , address().data()
                         , e.value()
-                        , e.message().data());
+                        , e.message().data()
+                        , add.data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
+                    msg->write_string(content);
+                    msg->set_sender(fd_);
+                    handle_message(std::move(msg));
                 }
-
-                msg->write_string(content);
-                msg->set_sender(fd_);
-                handle_message(std::move(msg));
             }
 
             //closed
@@ -297,7 +291,6 @@ namespace moon
         }
     protected:
         bool sending_ = false;
-        network_logic_error logic_error_ = network_logic_error::ok;
         uint32_t fd_ = 0;
         time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
