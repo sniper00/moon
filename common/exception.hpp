@@ -5,14 +5,14 @@
 #include <cstring>
 namespace moon
 {
-    class error : public std::runtime_error {
+    class logic_error : public std::runtime_error {
     private:
         std::string w;
     public:
-        error(const std::string& str) : std::runtime_error(""), w(str) {}
-        error(std::string&& str) : std::runtime_error(""), w(std::move(str)) {}
+        logic_error(const std::string& str) : std::runtime_error(""), w(str) {}
+        logic_error(std::string&& str) : std::runtime_error(""), w(std::move(str)) {}
 
-        error(const std::string& str, const char* file, int line)
+        logic_error(const std::string& str, const char* file, int line)
             : std::runtime_error(""), w(str)
         {
             w.append("(");
@@ -22,7 +22,7 @@ namespace moon
             w.append(")");
         }
 
-        error(std::string&& str, const char* file, int line)
+        logic_error(std::string&& str, const char* file, int line)
             : std::runtime_error(""), w(std::move(str))
         {
             w.append("(");
@@ -32,10 +32,10 @@ namespace moon
             w.append(")");
         }
 
-        error(const error& e) = default;
-        error(error&& e) = default;
-        error& operator=(const error& e) = default;
-        error& operator=(error&& e) = default;
+        logic_error(const logic_error& e) = default;
+        logic_error(logic_error&& e) = default;
+        logic_error& operator=(const logic_error& e) = default;
+        logic_error& operator=(logic_error&& e) = default;
 
         virtual const char* what() const noexcept override {
             return w.c_str();
@@ -49,7 +49,7 @@ namespace moon
 #define __FILENAME__ (strrchr(__FILE__, '/') ? (strrchr(__FILE__, '/') + 1):__FILE__)
 #endif
 
-#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::error{(msg),__FILENAME__,__LINE__};}
+#define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::logic_error{(msg),__FILENAME__,__LINE__};}
 
 #ifdef DEBUG
 #define MOON_ASSERT(cnd,msg) assert(cnd && msg);
