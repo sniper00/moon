@@ -1,33 +1,63 @@
 #pragma once
 #include <random>
 #include <functional>
-#include <ctime>
 #include <map>
+#include <string>
+#include <cassert>
 
 namespace moon
 {
     ///[min.max]
-    inline int rand(int min, int max)
+    template<typename IntType>
+    inline IntType rand_range(IntType min, IntType max)
     {
-        std::default_random_engine generator(time(NULL));
-        std::uniform_int_distribution<int> dis(min, max);
-        auto dice = std::bind(dis, generator);
-        return dice();
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<IntType> dis(min, max);
+        return dis(gen);
+    }
+
+    inline unsigned int rand()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<unsigned int> dis(1, std::numeric_limits<unsigned int>::max());
+        return dis(gen);
+    }
+
+    inline const unsigned char* randkey(size_t len = 8)
+    {
+        static thread_local unsigned char tmp[256];
+        assert(len < sizeof(tmp));
+        char x = 0;
+        for (size_t i = 0; i < len; ++i)
+        {
+            tmp[i] = static_cast<unsigned char>(rand() & 0xFF);
+            x ^= tmp[i];
+        }
+
+        if (x == 0)
+        {
+            tmp[0] |= 1;// avoid 0
+        }
+        
+        return tmp;
     }
 
     ///[min,max)
-    inline double randf(double min, double max)
+    template< class RealType = double >
+    inline RealType randf_range(RealType min, RealType max)
     {
-        std::default_random_engine generator(time(NULL));
-        std::uniform_real_distribution<double> dis(min, max);
-        auto dice = std::bind(dis, generator);
-        return dice();
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<RealType> dis(min, max);
+        return dis(gen);
     }
 
-    template<typename TKey, typename TWeight>
-    inline TKey rand_weight(const std::map<TKey, TWeight>& data)
+    template<typename Key, typename Weight>
+    inline Key rand_weight(const std::map<Key, Weight>& data)
     {
-        TWeight total = 0;
+        Weight total = 0;
         for (auto& it : data)
         {
             total += it.second;
@@ -36,9 +66,9 @@ namespace moon
         {
             return 0;
         }
-        TWeight rd = rand(1, total);
+        Weight rd = rand(1, total);
 
-        TWeight tmp = 0;
+        Weight tmp = 0;
         for (auto& it : data)
         {
             tmp += it.second;
