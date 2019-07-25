@@ -73,7 +73,7 @@ namespace moon
             {
                 if (e)
                 {
-                    error(e, int(logic_error_));
+                    error(e);
                     return;
                 }
 
@@ -97,8 +97,7 @@ namespace moon
             size_t dszie = buf->size();
             if (request_.size != 0 && dszie > request_.size)
             {
-                error(asio::error_code(), int(network_logic_error::read_message_size_max));
-                base_connection_t::close();
+                error(make_error_code(moon::error::read_message_too_big));
                 return;
             }
 
@@ -152,20 +151,14 @@ namespace moon
             }
         }
 
-        void error(const asio::error_code& e, int logicerr, const char* lerrmsg = nullptr) override
+        void error(const asio::error_code& e)
         {
-            (void)lerrmsg;
-
             response_->get_buffer()->clear();
 
             if (e && e != asio::error::eof)
             {
                 response_->set_header("closed");
                 response_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
-            }
-            else
-            {
-                response_->set_header(logic_errmsg(logicerr));
             }
 
             if (request_.sessionid != 0)

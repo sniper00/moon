@@ -181,7 +181,9 @@ const lua_bind & lua_bind::bind_util() const
 
     lua.new_enum<moon::buffer_flag>("buffer_flag", {
         {"close",moon::buffer_flag::close},
-        {"ws_text",moon::buffer_flag::ws_text} 
+        {"ws_text",moon::buffer_flag::ws_text},
+        {"ws_ping",moon::buffer_flag::ws_ping},
+        {"ws_pong",moon::buffer_flag::ws_pong}
     });
     return *this;
 }
@@ -508,8 +510,8 @@ static sol::table lua_http(sol::this_state L)
         std::string_view query_string;
         std::string_view version;
         http::case_insensitive_multimap_view header;
-        int consumed = http::request_parser::parse(data, method, path, query_string, version, header);
-        return std::make_tuple(consumed, method, path, query_string, version,sol::as_table(header));
+        bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
+        return std::make_tuple(ok, method, path, query_string, version,sol::as_table(header));
     });
 
     module.set_function("parse_response", [](std::string_view data) {

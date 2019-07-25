@@ -264,7 +264,7 @@ namespace moon
             router_->send(sender, receiver, iter->second, header, sessionid, type);
             return;
         }
-        CONSOLE_DEBUG(server_->logger(), "send_prepare failed, can not find prepared data. prefabid %u", prefabid);
+        CONSOLE_DEBUG(server_->logger(), "send_prefab failed, can not find prepared data. prefabid %u", prefabid);
     }
 
     void worker::shared(bool v)

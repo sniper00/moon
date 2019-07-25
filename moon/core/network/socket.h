@@ -13,33 +13,10 @@ namespace moon
         socket_accept = 2,
         socket_recv = 3,
         socket_close = 4,
-        socket_error = 5
+        socket_error = 5,
+        socket_ping = 6,
+        socket_pong = 7,
     };
-
-    enum class network_logic_error :std::uint8_t
-    {
-        ok = 0,
-        read_message_size_max = 1, // read message size too long
-        send_message_size_max = 2, // send message size too long
-        timeout = 3, //socket read time out
-        send_message_queue_size_max = 4, // send message queue size too long
-    };
-
-    inline const char* logic_errmsg(int logic_errcode)
-    {
-        static const char* errmsg[] = {
-            "ok",
-            "read message size too long",
-            "send message size too long",
-            "timeout",
-            "send message queue size too long"
-        };
-        if (logic_errcode >= static_cast<int>(array_szie(errmsg)))
-        {
-            return "closed";
-        }
-        return errmsg[logic_errcode];
-    }
 
     enum class read_delim :std::uint8_t
     {

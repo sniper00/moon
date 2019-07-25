@@ -134,7 +134,7 @@ namespace moon
         {
         public:
             /// Parse request line and header fields
-            static int parse(string_view_t sv, string_view_t& method, string_view_t& path, string_view_t& query_string, string_view_t& http_version, case_insensitive_multimap_view& header) noexcept
+            static bool parse(string_view_t sv, string_view_t& method, string_view_t& path, string_view_t& query_string, string_view_t& http_version, case_insensitive_multimap_view& header) noexcept
             {
                 buffer_view br(sv.data(), sv.size());
                 auto line = br.readline();
@@ -168,20 +168,20 @@ namespace moon
                         size_t protocol_end;
                         if ((protocol_end = line.find('/', path_and_query_string_end + 1)) != string_view_t::npos) {
                             if (line.compare(path_and_query_string_end + 1, protocol_end - path_and_query_string_end - 1, "HTTP") != 0)
-                                return -1;
+                                return false;
                             http_version = line.substr(protocol_end + 1, line.size() - protocol_end - 1);
                         }
                         else
-                            return -1;
+                            return false;
 
                         header = http_header::parse(string_view_t{ br.data(),br.size() });
                     }
                     else
-                        return -1;
+                        return false;
                 }
                 else
-                    return -1;
-                return static_cast<int>(sv.size() - br.size());
+                    return false;
+                return true;
             }
         };
 
