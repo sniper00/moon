@@ -37,6 +37,8 @@ namespace moon
         broadcast = 1 << 3,
         ws_text = 1 << 4,
         ws_binary = 1 << 5,
+        ws_ping = 1 << 6,
+        ws_pong = 1 << 7,
         buffer_flag_max,
     };
 }

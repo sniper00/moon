@@ -252,12 +252,17 @@ namespace moon
                 if (e && e != asio::error::eof)
                 {
                     auto msg = message::create();
-                    std::string content;
-                    content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s.(%s)\"}"
+                    std::string message = e.message();
+                    if (!add.empty())
+                    {
+                        message.append("(");
+                        message.append(add);
+                        message.append(")");
+                    }
+                    std::string content= moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
                         , address().data()
                         , e.value()
-                        , e.message().data()
-                        , add.data());
+                        , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
                     msg->write_string(content);
                     msg->set_sender(fd_);

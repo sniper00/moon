@@ -13,7 +13,9 @@ namespace moon
         socket_accept = 2,
         socket_recv = 3,
         socket_close = 4,
-        socket_error = 5
+        socket_error = 5,
+        socket_ping = 6,
+        socket_pong = 7,
     };
 
     enum class read_delim :std::uint8_t

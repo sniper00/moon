@@ -208,8 +208,8 @@ namespace moon
                 }
                 else
                 {
-                    send_response(moon::format("HTTP/1.1 400 %s(%d)\r\n\r\n",ec.message().data(),ec.value()), true);
-                    error(ec);
+                    // client close, or server check read timeout.
+                    send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
             }));
         }
@@ -345,18 +345,22 @@ namespace moon
         {
             std::string_view method;
             std::string_view ignore;
+            std::string_view version;
             http::case_insensitive_multimap_view header;
-            int consumed = http::request_parser::parse(string_view_t{ reinterpret_cast<const char*>(buf->data().data()), buf->size() }
+            if(!http::request_parser::parse(string_view_t{ reinterpret_cast<const char*>(buf->data().data()), buf->size() }
                 , method
                 , ignore
                 , ignore
-                , ignore
-                , header);
-            if (-1 == consumed)
+                , version
+                , header))
             {
                 return make_error_code(moon::error::ws_bad_http_header);
             }
-            buf->consume(consumed);
+
+            if (version<"1.0" || version>"1.1")
+            {
+                return make_error_code(moon::error::ws_bad_http_version);
+            }
 
             if (method != "GET"sv)
                 return make_error_code(moon::error::ws_bad_method);
@@ -420,9 +424,18 @@ namespace moon
             auto ec = decode_frame();
             if (ec)
             {
-                if (ec == moon::error::ws_closed)
+                if (ec == moon::error::ws_closed && recv_buf_->size()>1)
                 {
-                    error(ec, std::string(recv_buf_->data(), recv_buf_->size()));
+                    uint16_t code = *(const uint16_t*)recv_buf_->data();
+                    std::string reason;
+                    reason.append(std::to_string(code));
+                    recv_buf_->seek(2);
+                    if (recv_buf_->size() != 0)
+                    {
+                        reason.append(":");
+                        reason.append(recv_buf_->data(), recv_buf_->size());
+                    }
+                    error(ec, reason);
                 }
                 else
                 {
@@ -457,7 +470,7 @@ namespace moon
             }
 
             fh.mask = (tmp[1] & 0x80) != 0;
-            //message clinet to server must masked.
+            //message client to server must masked.
             if (!fh.mask && role_ == role::server)
             {
                 return make_error_code(moon::error::ws_bad_unmasked_frame);
@@ -533,12 +546,20 @@ namespace moon
             }
             case PAYLOAD_MAX_LEN:
             {
-                reallen = *(uint64_t*)(&tmp[2]);
-                moon::net2host(reallen);
-                if (reallen < 65536)
+                if (role_ == role::server)
                 {
-                    // length not canonical
+                    //server not support PAYLOAD_MAX_LEN frame.
                     return make_error_code(moon::error::ws_bad_size);
+                }
+                else
+                {
+                    reallen = *(uint64_t*)(&tmp[2]);
+                    moon::net2host(reallen);
+                    if (reallen < 65536)
+                    {
+                        // length not canonical
+                        return make_error_code(moon::error::ws_bad_size);
+                    }
                 }
                 break;
             }
@@ -565,23 +586,46 @@ namespace moon
                 }
             }
 
-            if (fh.op != ws::opcode::close &&  fh.fin)
-            {
-                recv_buf_->seek(static_cast<int>(need), buffer::Current);
-                message_ptr_t msg = message::create(std::move(recv_buf_));
-                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
-                handle_message(std::move(msg));
-            }
-
             if (fh.op == ws::opcode::close)
             {
-                //may have error msg
                 recv_buf_->seek(static_cast<int>(need), buffer::Current);
                 return make_error_code(moon::error::ws_closed);
             }
 
+            recv_buf_->seek(static_cast<int>(need), buffer::Current);
+            message_ptr_t msg = nullptr;
+            if (recv_buf_->size()==reallen)
+            {
+                msg = message::create(std::move(recv_buf_));
+            }
+            else
+            {
+                msg = message::create(reallen);
+                msg->get_buffer()->write_back(recv_buf_->data(), 0, reallen);
+                recv_buf_->seek(static_cast<int>(reallen));
+            }
+
+            switch (fh.op)
+            {
+            case ws::opcode::ping:
+            {
+                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_ping));
+                break;
+            }
+            case ws::opcode::pong:
+            {
+                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_pong));
+                break;
+            }
+            default:
+                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                break;
+            }
+
+            handle_message(std::move(msg));
+
             check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
-            return std::error_code();
+            return decode_frame();
         }
 
         void encode_frame(const buffer_ptr_t& data)
@@ -627,9 +671,18 @@ namespace moon
             data->write_front(&payload_len, 0, 1);
 
             uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
+
             if (data->has_flag(buffer_flag::ws_text))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::text);
+            }
+            else if (data->has_flag(buffer_flag::ws_ping))
+            {
+                opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::ping);
+            }
+            else if (data->has_flag(buffer_flag::ws_pong))
+            {
+                opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::pong);
             }
 
             data->write_front(&opcode, 0, 1);
@@ -657,13 +710,14 @@ namespace moon
             response.append("Connection: Upgrade\r\n");
             response.append("Sec-WebSocket-Accept: ");
             response.append(hash_key(seckey));
-            response.append(STR_DCRLF.data(), STR_DCRLF.size());
+            response.append(STR_CRLF.data(), STR_CRLF.size());
             if (!wsprotocol.empty())
             {
                 response.append("Sec-WebSocket-Protocol: ");
                 response.append(wsprotocol.data(), wsprotocol.size());
-                response.append(STR_DCRLF.data(), STR_DCRLF.size());
+                response.append(STR_CRLF.data(), STR_CRLF.size());
             }
+            response.append(STR_CRLF.data(), STR_CRLF.size());
             return response;
         }
 

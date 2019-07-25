@@ -201,8 +201,8 @@ local function session_handler(fd)
         return false, err
     else
         --print("raw data",data)
-        local consumed,method,path,query_string,version,header = parse_request(data)
-        if consumed == -1 then
+        local ok,method,path,query_string,version,header = parse_request(data)
+        if not ok then
             return false, "header request error"
         end
 
