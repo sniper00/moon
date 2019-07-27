@@ -9,7 +9,7 @@ moon.start(function()
     moon.async(function()
 
         while true do
-            local ret ,err = cluster.call('server_5','cluster_example_receiver',"ACCUM",table.unpack(args))
+            local ret ,err = cluster.call('server_4','cluster_example_receiver',"ACCUM",table.unpack(args))
             if not ret then
                 print(err)
                 return
