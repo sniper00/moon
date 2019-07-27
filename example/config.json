@@ -10,22 +10,16 @@
         "services": [
             {
                 "unique": true,
-                "name": "network_example",
-                "file": "network_example.lua",
-                "network": {
-                    "host": "#inner_host",
-                    "port": 12345
-                },
-                "networkws": {
-                    "host": "#inner_host",
-                    "port": 12346
-                }
-            },
-            {
-                "name": "tcp_client",
-                "file": "tcp_client.lua",
+                "name": "network",
+                "file": "network.lua",
                 "host": "#inner_host",
                 "port": 12345
+            },
+            {
+                "name": "network_websocket",
+                "file": "network_websocket.lua",
+                "host": "#inner_host",
+                "port": 12346
             }
         ]
     },
@@ -48,45 +42,33 @@
         "services": [
             {
                 "unique": true,
-                "name": "send_example_sender",
-                "file": "send_example_sender.lua"       
+                "name": "send_benchmark_sender",
+                "file": "send_benchmark_sender.lua"       
             },
             {
                 "unique": true,
-                "name": "send_example_receiver1",
-                "file": "send_example_receiver.lua"
+                "name": "send_benchmark_receiver1",
+                "file": "send_benchmark_receiver.lua"
             },
             {
                 "unique": true,
-                "name": "send_example_receiver2",
-                "file": "send_example_receiver.lua"
+                "name": "send_benchmark_receiver2",
+                "file": "send_benchmark_receiver.lua"
             },
             {
                 "unique": true,
-                "name": "send_example_receiver3",
-                "file": "send_example_receiver.lua"
+                "name": "send_benchmark_receiver3",
+                "file": "send_benchmark_receiver.lua"
             },
             {
                 "unique": true,
-                "name": "send_example_receiver4",
-                "file": "send_example_receiver.lua"
-            }
-        ]
-    }
-    ,
-    {
-        "sid": 4,
-        "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "services": [
-            {
-                "name": "call_example_sender",
-                "file": "call_example_sender.lua"
+                "name": "send_benchmark_receiver4",
+                "file": "send_benchmark_receiver.lua"
             }
         ]
     },
     {
-        "sid": 5,
+        "sid": 4,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
         "services": [
@@ -105,7 +87,7 @@
         ]
     },
     {
-        "sid": 6,
+        "sid": 5,
         "name": "server_#sid",
         "outer_host": "127.0.0.1",
         "inner_host": "127.0.0.1",
@@ -125,7 +107,7 @@
         ]
     },
     {
-        "sid": 7,
+        "sid": 6,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
         "services": [
@@ -137,7 +119,7 @@
         ]
     },
     {
-        "sid": 8,
+        "sid": 7,
         "name": "server_#sid",
         "inner_host": "127.0.0.1",
         "log_level": "DEBUG",
@@ -151,7 +133,7 @@
         ]
     },
     {
-        "sid": 9,
+        "sid": 8,
         "name": "server_#sid",
         "outer_host": "127.0.0.1",
         "inner_host": "127.0.0.1",
@@ -171,7 +153,7 @@
     }
     ,
     {
-        "sid": 10,
+        "sid": 9,
         "name": "server_#sid",
         "outer_host": "127.0.0.1",
         "inner_host": "127.0.0.1",
@@ -199,20 +181,7 @@
         ]
     },
     {
-        "sid": 11,
-        "name": "server_#sid",
-        "thread": 8,
-        "log": "log/#sid_#date.log",
-        "services": [
-            {
-                "unique": true,
-                "name": "create_service",
-                "file": "create_service.lua"
-            }
-        ]
-    },
-    {
-        "sid": 12,
+        "sid": 10,
         "name": "server_#sid",
         "thread": 8,
         "log": "log/#sid_#date.log",

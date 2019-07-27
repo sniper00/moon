@@ -9,7 +9,8 @@ do
     -------------------2 bytes len (big endian) protocol------------------------
     socket.on("accept",function(fd, msg)
         print("accept ", fd, msg:bytes())
-        --socket.settimeout(fd, 10)
+        socket.settimeout(fd, 10)
+
     end)
 
     socket.on("message",function(fd, msg)
