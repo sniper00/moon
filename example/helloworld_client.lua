@@ -1,7 +1,9 @@
 ------------------------TCP CLIENT----------------------------
 local moon = require("moon")
 local socket = require("moon.socket")
-local conf = ...
+
+local HOST = "127.0.0.1"
+local PORT = 9526
 
 local function send(fd,data)
     if not fd then
@@ -33,7 +35,7 @@ end
 
 moon.start(function()
     moon.async(function()
-        local fd,err = socket.connect(conf.host, conf.port,moon.PTYPE_TEXT)
+        local fd,err = socket.connect(HOST, PORT,moon.PTYPE_TEXT)
         if not fd then
             print(err)
             return
