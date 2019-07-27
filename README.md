@@ -1,4 +1,4 @@
-﻿# Moon Game Framework
+# Moon Game Framework
 moon 是一个轻量级的游戏服务器框架，底层采用C++编写，逻辑层主要采用Lua。框架使用多线程和多LuaVM(lua service)的模式，
 把不同的游戏服务器模块(通常是一个进程)，尽量集中到一个进程中，简化开发和维护难度。一个lua service可以表示一个游戏服务器模块，它们之间通过消息队列互相通信(大部分相情况下只是传递一个数据指针)，通常比进程间IO通信高效，也不需要维护复杂的网络链接。
 Lua的协程特性，也使异步逻辑的编写更加简单。
@@ -8,6 +8,7 @@ Lua的协程特性，也使异步逻辑的编写更加简单。
 QQ交流群: 543833695
 
 # 依赖
+
 - [asio-1.12.1](https://github.com/chriskohlhoff/asio)(without boost)
 - [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
 - [sol2](https://github.com/ThePhD/sol2)(a C++ library binding to Lua)
