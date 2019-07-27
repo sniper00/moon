@@ -13,6 +13,20 @@ QQ交流群: 543833695
 - [sol2](https://github.com/ThePhD/sol2)(a C++ library binding to Lua)
 - [rapidjson](https://github.com/Tencent/rapidjson)
 
+# 主要特性
+- **async** lua协程封装异步操作，取代传统的回调模式
+  
+- **timer** 轮式定时器的实现，配合lua协程，更加方便处理定时任务
+  
+- **coroutine socket**  协程socket的封装，方便编写自定义协议的网络模块
+  
+- **websocket** 支持websocket协议
+  
+- **cluster**   提供集群间通信（暂时通过统一的配置文件作为服务发现，不支持动态增删)
+  
+- **extensible**    利用```sol2```库可以方便编写```C/C++```、```lua```交互的扩展模块
+
+
 # 编译
 1. **需要支持C++17的编译器**。[不同平台安装支持C++17的编译器](https://github.com/sniper00/moon/wiki/%E5%AE%89%E8%A3%85C--17%E7%BC%96%E8%AF%91%E5%99%A8%E6%94%AF%E6%8C%81#windows)
 
