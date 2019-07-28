@@ -7,14 +7,28 @@ Lua的协程特性，也使异步逻辑的编写更加简单。
 
 QQ交流群: 543833695
 
-# 依赖
+# 目录
+- [依赖](#依赖)
+- [主要特性](#主要特性)
+- [编译](#编译)
+- [Hello World](#Hello-World)
+- [示例](#示例)
+    - [网络-2字节表示长度的协议](#网络-2字节表示长度的协议)
+    - [网络-websocket协议](#网络-websocket协议)
+    - [动态创建服务](#动态创建服务)
+    - [服务间通信-Callback模式](#服务间通信-Callback模式)
+    - [服务间通信-协程模式](#服务间通信-协程模式)
+    - [定时器](#定时器)
+    - [使用配置文件的示例](#使用配置文件的示例)
+
+## 依赖
 
 - [asio-1.12.1](https://github.com/chriskohlhoff/asio)(without boost)
 - [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
 - [sol2](https://github.com/ThePhD/sol2)(a C++ library binding to Lua)
 - [rapidjson](https://github.com/Tencent/rapidjson)
 
-# 主要特性
+## 主要特性
 - **async** lua协程封装异步操作，取代传统的回调模式
   
 - **timer** 轮式定时器的实现，配合lua协程，更加方便处理定时任务
@@ -28,7 +42,7 @@ QQ交流群: 543833695
 - **extensible**    利用```sol2```库可以方便编写```C/C++```、```lua```交互的扩展模块
 
 
-# 编译
+## 编译
 1. **需要支持C++17的编译器**。[不同平台安装支持C++17的编译器](https://github.com/sniper00/moon/wiki/%E5%AE%89%E8%A3%85C--17%E7%BC%96%E8%AF%91%E5%99%A8%E6%94%AF%E6%8C%81#windows)
 
 2. 获取源码
@@ -70,7 +84,7 @@ QQ交流群: 543833695
     ./moon [-c config-file] -r server-id
 ```
 
-# Hello World
+## Hello World
 下面编写一个`echo server`功能的`lua service`:
 ```lua
 local moon = require("moon")
@@ -124,11 +138,13 @@ cd example
 # 输入任意字符
 ```
 
-# 示例
+## 示例
 
 示例代码可以在 **example** 目录找到
 
-## 网络：2字节(大端)表示长度的协议(network.lua)
+### 网络-2字节表示长度的协议
+
+**network.lua**
 
 ```lua
 local moon = require("moon")
@@ -190,7 +206,10 @@ end)
 
 ```
 
-## 网络：websocket协议(network_websocket.lua)
+### 网络-websocket协议
+
+**network_websocket.lua**
+
 ```lua
 --Echo Server Example
 local moon = require("moon")
@@ -248,7 +267,10 @@ end)
 # 使用浏览器运行websocket_client.html
 ```
 
-## 动态创建服务(create_service.lua)
+### 动态创建服务
+
+**create_service.lua**
+
 ```lua
 local moon = require("moon")
 
@@ -283,7 +305,10 @@ end)
  ./moon.exe -f create_service.lua
 ```
 
-## 服务间通信-Callback模式(service_callback_sender.lua)
+### 服务间通信-Callback模式
+
+**service_callback_sender.lua**
+
 - sender
 
 ```lua
@@ -359,7 +384,9 @@ end)
  ./moon.exe -f service_callback_sender.lua
 ```
 
-## 服务间通信-协程模式(service_coroutine_sender.lua)
+### 服务间通信-协程模式
+
+**service_coroutine_sender.lua**
 
 - sender
 ```lua
@@ -415,7 +442,10 @@ end)
  ./moon.exe -f service_coroutine_sender.lua
 ```
 
-## 定时器(example_timer.lua)
+### 定时器
+
+**example_timer.lua**
+
 ```lua
 local moon = require("moon")
 
@@ -452,63 +482,65 @@ end)
  ./moon.exe -f example_timer.lua
 ```
 
-# 使用配置文件启动的示例(config.json)
+### 使用配置文件的示例
 
-**配置文件说明，请参考wiki**
+**config.json**
 
-## Socket Example
+**配置文件说明，请参考[wiki](https://github.com/sniper00/moon/wiki/Config)**
+
+#### Socket Example
 启动了`2字节大端表示长度的`协议和`websocket`协议的服务端，并且带有一个采用`协程socket`编写的客户端。运行：
 ```shell
-# run server
-./moon -r 1
-# 另启动一个终端运行 client
-./moon -f helloworld_client.lua
+    # run server
+    ./moon -r 1
+    # 另启动一个终端运行 client
+    ./moon -f helloworld_client.lua
 
-# 浏览器运行websocket_client.html
+    # 浏览器运行websocket_client.html
 ```
 
-## Redis Client Example
+#### Redis Client Example
 `协程socket`编写的redis client, 默认连接 127.0.0.1 6379
 ```shell
     ./moon -r 2
 ```
 
-### Service Send Benchmark
+#### Service Send Benchmark
 服务间发送消息性能测试
 ```shell
     ./moon -r 3
 ```
 
-### Cluster Example
+#### Cluster Example
 进程间发送消息示例
 ```shell
     ./moon -r 4
     ./moon -r 5
 ```
 
-### Mysql API Example
+#### Mysql API Example
 ```shell
     ./moon -r 6
 ```
 
-### 测试用例
+#### 测试用例
 ```shell
     ./moon -r 7
 ```
 
-### 协程socket性能测试
+#### 协程socket性能测试
 `协程socket`编写的多线程服务端，采用`redis-benchmark`测试性能
 ```shell
     ./moon -r 8
 ```
 
-### Socket性能测试
+#### Socket性能测试
 `2字节大端表示长度的`协议的网络性能测试
 ```shell
     ./moon -r 9
 ```
 
-### 编写一个mysql服务
+#### 编写一个mysql服务
 ```shell
     ./moon -r 10
 ```
