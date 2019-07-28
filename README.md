@@ -486,7 +486,7 @@ end)
 
 **config.json**
 
-**配置文件说明，请参考wiki**
+**配置文件说明，请参考[wiki](https://github.com/sniper00/moon/wiki/Config)**
 
 #### Socket Example
 启动了`2字节大端表示长度的`协议和`websocket`协议的服务端，并且带有一个采用`协程socket`编写的客户端。运行：
