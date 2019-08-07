@@ -173,6 +173,7 @@ namespace moon
             m->set_sender(fd());
             m->set_sessionid(request_.sessionid);
             request_.sessionid = 0;
+            request_.size = 0;
             handle_message(m);
         }
     protected:
