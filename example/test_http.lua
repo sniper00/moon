@@ -1,6 +1,6 @@
 local moon = require("moon")
 local http_server = require("moon.http.server")
-local http_client = require("moon.http.client")
+local httpc = require("moon.http.client")
 local test_assert = require("test_assert")
 -- http_server.header_max_len = 8192
 -- http_server.content_max_len = 8192
@@ -19,10 +19,9 @@ end)
 
 http_server.listen("127.0.0.1",8001)
 
-moon.start(function (  )
-    moon.async(function ()
-        local client = http_client.new("127.0.0.1:8001")
-        local response,err = client:request("GET","/home","HAHAHA")
+moon.start(function ()
+    moon.async(function()
+        local response = httpc.get("127.0.0.1:8001","/home","HAHAHA")
         -- print_r(response)
         test_assert.equal(response.content,"Hello World/home")
         test_assert.success()
