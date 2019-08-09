@@ -149,7 +149,7 @@ bool lua_service::init(string_view_t config)
 
 void lua_service::start()
 {
-    if (!ok()) return;
+    if (is_start() || !ok()) return;
     service::start();
     try
     {
