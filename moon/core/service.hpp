@@ -122,10 +122,6 @@ namespace moon
 
         virtual void start()
         {
-            if (start_)
-            {
-                return;
-            }
             start_ = true;
         }
 

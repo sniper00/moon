@@ -152,29 +152,39 @@ local M = {}
 
 local routers = {}
 
-local function read_chunked(fd, chunkdata)
-    local data, err = socket.readline(fd, '\r\n', M.chunk_max_len)--security
+local function read_chunked(fd)
+
+    local chunkdata = {}
+
+    while true do
+        local data, err = socket.readline(fd, "\r\n")
+        assert(data,err)
+        local length = tonumber(data,"16")
+        if not length then
+            error("Invalid response body")
+        end
+
+        if length==0 then
+            break
+        end
+
+        if length >0 then
+            data, err = socket.read(fd, length)
+            assert(data,err)
+            tbinsert( chunkdata, data )
+            data, err = socket.readline(fd, "\r\n")
+            assert(data,err)
+        elseif length <0 then
+            error("Invalid response body")
+        end
+    end
+
+    local  data, err = socket.readline(fd, "\r\n")
     if not data then
         return false,err
     end
-    local length = tonumber(data)
-    if not length then
-        return false, "protocol error"
-    end
-    if length >0 then
-        data, err = socket.read(length)
-        if not data then
-            return false,err
-        end
-        tbinsert( chunkdata, data )
-        data, err = socket.readline(fd, '\r\n',M.chunk_max_len)--security
-        if not data then
-            return false,err
-        end
-    elseif length <0 then
-        return false, "protocol error"
-    end
-    return true
+
+    return chunkdata
 end
 
 local function request_handler(fd, request)
@@ -197,64 +207,56 @@ end
 
 local function session_handler(fd)
     local data, err = socket.readline(fd, "\r\n\r\n", M.header_max_len)
-    if not data then
-        return false, err
-    else
-        --print("raw data",data)
-        local ok,method,path,query_string,version,header = parse_request(data)
-        if not ok then
-            return false, "header request error"
-        end
+    assert(data,err)
 
-        local request = {
-            method = method,
-            path = path,
-            query_string = query_string,
-            version = version
-        }
+    --print("raw data",data)
+    local ok,method,path,query_string,version,header = parse_request(data)
+    assert(ok,"Invalid HTTP response header")
 
-        request.header = {}
-        for k,v in pairs(header) do
-            request.header[k:lower()]=v
-        end
+    local request = {
+        method = method,
+        path = path,
+        query_string = query_string,
+        version = version
+    }
 
-        header = request.header
-
-        request.parse_query_string = parse_query_string
-
-        local content_length = header["content-length"]
-        if content_length then
-            content_length = tonumber(content_length)
-            if not content_length then
-                return false, "content-length is not number"
-            end
-
-            if M.content_max_len and content_length> M.content_max_len then
-                socket.close(fd)
-                return false, strfmt( "content length %d, limit %d",content_length,M.content_max_len )
-            end
-
-            data, err = socket.read(fd, content_length)
-            if not data then
-                return false,err
-            end
-            --print("Content-Length",content_length)
-            request.content = data
-            request_handler(fd, request)
-            return true
-        elseif header["transfer-encoding"] == 'chunked' then
-            local chunkdata = {}
-            local result,errmsg = read_chunked(fd,chunkdata)
-            if not result then
-                return false,errmsg
-            end
-            request.content = tbconcat( chunkdata )
-            request_handler(fd, request)
-            return true
-        end
-        request_handler(fd, request)
-        return true
+    request.header = {}
+    for k,v in pairs(header) do
+        request.header[k:lower()]=v
     end
+
+    header = request.header
+
+    request.parse_query = function() return parse_query_string(request.parse_query_string) end
+
+    request.parse_form = function() return parse_query_string(request.content) end
+
+    local content_length = header["content-length"]
+    if content_length then
+        content_length = tonumber(content_length)
+        if not content_length then
+            error("content-length is not number")
+        end
+
+        if M.content_max_len and content_length> M.content_max_len then
+            socket.close(fd)
+            error(strfmt( "content length %d, limit %d",content_length,M.content_max_len ))
+        end
+
+        data, err = socket.read(fd, content_length)
+        assert(data,err)
+        --print("Content-Length",content_length)
+        request.content = data
+    elseif header["transfer-encoding"] == 'chunked' then
+        local chunkdata = read_chunked(fd)
+        if not chunkdata then
+            error("Invalid response body")
+        end
+        request.content = tbconcat( chunkdata )
+    else
+        error ("Unsupport transfer-encoding")
+    end
+    request_handler(fd, request)
 end
 
 -----------------------------------------------------------------
@@ -268,24 +270,24 @@ function M.listen(host,port,timeout)
     moon.async(function()
         while true do
             local fd,err = socket.accept(listenfd, moon.id())
-            if fd then
-                socket.settimeout(fd, timeout)
-                moon.async(function()
-                    while true do
-                        local ok, err2 = session_handler(fd)
-                        if not ok then
-                            if M.error then
-                                M.error(fd, err2)
-                            else
-                                print("httpserver session error",err2)
-                            end
-                            return
-                        end
-                    end
-                end)--async
-            else
+            if not fd then
                 print("httpserver accept",err)
-            end--if
+                return
+            end
+            socket.settimeout(fd, timeout)
+            moon.async(function()
+                while true do
+                    local ok,errmsg = pcall(session_handler,fd)
+                    if not ok then
+                        if M.error then
+                            M.error(fd, errmsg)
+                        else
+                            print("httpserver session error",errmsg)
+                        end
+                        return
+                    end
+                end
+            end)--async
         end--while
     end)
 end

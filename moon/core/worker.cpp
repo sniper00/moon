@@ -382,7 +382,7 @@ namespace moon
             for (auto sid : will_start_)
             {
                 auto s = find_service(sid);
-                if (nullptr != s && !s->is_start())
+                if (nullptr != s)
                 {
                     s->start();
                 }
