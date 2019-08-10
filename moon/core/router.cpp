@@ -203,7 +203,7 @@ namespace moon
     {
         if (to == 0 || sessionid == 0)
         {
-            if (mtype == PTYPE_ERROR && !content.empty())
+            if (server_->get_state()== state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
                 CONSOLE_DEBUG(logger(), "server::make_response %s:%s", std::string(header.data(), header.size()).data(), std::string(content.data(), content.size()).data());
             }
