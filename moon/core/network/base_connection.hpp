@@ -101,18 +101,13 @@ namespace moon
             return true;
         }
 
-        void close(bool exit = false)
+        void close()
         {
             if (socket_.is_open())
             {
                 asio::error_code ignore_ec;
                 socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ignore_ec);
                 socket_.close(ignore_ec);
-            }
-
-            if (exit)
-            {
-                s_ = nullptr;
             }
         }
 
@@ -272,6 +267,7 @@ namespace moon
 
             //closed
             {
+                s_->close(fd_, true);
                 auto msg = message::create();
                 msg->write_data(address());
                 msg->set_sender(fd_);

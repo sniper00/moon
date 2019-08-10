@@ -153,6 +153,8 @@ namespace moon
 
         void error(const asio::error_code& e)
         {
+            s_->close(fd_, true);
+
             response_->get_buffer()->clear();
 
             if (e && e != asio::error::eof)
