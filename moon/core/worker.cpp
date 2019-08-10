@@ -102,6 +102,11 @@ namespace moon
         post([this, s = std::move(s), config = std::move(config), creatorid, sessionid]() mutable {
             do
             {
+                if (state_.load(std::memory_order_acquire) != state::ready)
+                {
+                    break;
+                }
+
                 if (!s->init(config))
                 {
                     break;
