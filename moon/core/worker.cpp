@@ -345,11 +345,11 @@ namespace moon
         {
             auto hander = [this](const std::vector<std::string>& params) {
                 (void)params;
-                auto response = moon::format(R"({"work_time":%lld})", cpu_time_);
+                auto response = moon::format(R"({"work_time":%lld,"socket_num":%zu})", cpu_time_,socket_->socket_num());
                 cpu_time_ = 0;
                 return response;
             };
-            commands_.try_emplace("worktime", hander);
+            commands_.try_emplace("stat", hander);
         }
 
         {
