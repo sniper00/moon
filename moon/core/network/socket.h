@@ -132,7 +132,7 @@ namespace moon
         auto s = find_service(serviceid);
         if (nullptr == s)
         {
-            close(m->sender());
+            close(m->sender(),true);
             return;
         }
         m->set_receiver(0);

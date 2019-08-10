@@ -267,12 +267,12 @@ namespace moon
 
             //closed
             {
-                s_->close(fd_, true);
                 auto msg = message::create();
                 msg->write_data(address());
                 msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
+                s_->close(fd_, true);
             }
             s_ = nullptr;
         }
