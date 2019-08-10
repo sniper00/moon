@@ -264,7 +264,7 @@ namespace moon
                         , e.value()
                         , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
-                    msg->write_string(content);
+                    msg->write_data(content);
                     msg->set_sender(fd_);
                     handle_message(std::move(msg));
                 }
@@ -273,7 +273,7 @@ namespace moon
             //closed
             {
                 auto msg = message::create();
-                msg->write_string(address());
+                msg->write_data(address());
                 msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));

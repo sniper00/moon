@@ -146,12 +146,6 @@ namespace moon
             data_->write_back(s.data(), 0, s.size());
         }
 
-        void write_string(const std::string& s)
-        {
-            assert(data_);
-            data_->write_back(s.data(), 0, s.size() + 1);
-        }
-
         const char* data() const
         {
             return data_ ? data_->data() : nullptr;
