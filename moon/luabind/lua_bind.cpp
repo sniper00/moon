@@ -321,8 +321,8 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     });
 
     tb.set_function("accept", &moon::socket::accept,&sock);
-    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint32_t owner, uint8_t type, int32_t timeout) {
-        return sock.connect(host, port, s->id(), owner, type, sessionid, timeout);
+    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint8_t type, int32_t timeout) {
+        return sock.connect(host, port, s->id(), type, sessionid, timeout);
     });
     tb.set_function("read", &moon::socket::read, &sock);
     tb.set_function("write", &moon::socket::write, &sock);

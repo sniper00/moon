@@ -75,7 +75,7 @@ namespace moon
 
         void accept(int fd, int32_t sessionid, uint32_t owner);
 
-        int connect(const std::string& host, uint16_t port, uint32_t serviceid, uint32_t owner, uint8_t type, int32_t sessionid, int32_t timeout = 0);
+        int connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, int32_t timeout = 0);
 
         void read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32_t sessionid);
 
@@ -92,6 +92,8 @@ namespace moon
         bool setnodelay(uint32_t fd);
 
         bool set_enable_frame(uint32_t fd, std::string flag);
+
+        size_t socket_num();
     private:
         uint32_t uuid();
 
@@ -103,7 +105,7 @@ namespace moon
 
         void unlock_fd(uint32_t fd);
 
-        void add_connection(const connection_ptr_t& c, bool accepted);
+        void add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid);
 
         template<typename Message>
         void handle_message(uint32_t serviceid, Message&& m);
@@ -130,20 +132,11 @@ namespace moon
         auto s = find_service(serviceid);
         if (nullptr == s)
         {
-            close(m->sender());
+            close(m->sender(),true);
             return;
         }
-
-        auto type = m->type();
-        auto subtype = m->subtype();
-        auto sender = m->sender();
-
         m->set_receiver(0);
 
         s->handle_message(std::forward<Message>(m));
-        if ((0 != sender) && (type == PTYPE_ERROR || subtype == static_cast<uint8_t>(socket_data_type::socket_close)))
-        {
-            MOON_CHECK(close(sender,true), "close failed");
-        }
     }
 }

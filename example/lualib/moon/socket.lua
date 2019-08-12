@@ -57,7 +57,7 @@ end
 function socket.connect(host, port, protocol, timeout)
     timeout = timeout or 0
     local sessionid = make_response()
-    connect(host, port, sessionid, id, protocol, timeout)
+    connect(host, port, sessionid, protocol, timeout)
     local fd,err = yield()
     if not fd then
         return nil,err
@@ -66,7 +66,7 @@ function socket.connect(host, port, protocol, timeout)
 end
 
 function socket.sync_connect(host, port, type)
-    local fd = connect(host, port, 0, id, type, 0)
+    local fd = connect(host, port, 0, type, 0)
     if fd == 0 then
         return nil,"connect failed"
     end

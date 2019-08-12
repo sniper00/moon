@@ -297,7 +297,7 @@ namespace moon
 
                         handshaked_ = true;
                         auto msg = message::create();
-                        msg->write_string(address());
+                        msg->write_data(address());
                         msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_connect));
                         handle_message(std::move(msg));
                         check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
@@ -402,7 +402,7 @@ namespace moon
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
             auto msg = message::create();
-            msg->write_string(address());
+            msg->write_data(address());
             msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return std::error_code();

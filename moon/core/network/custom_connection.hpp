@@ -158,13 +158,14 @@ namespace moon
             if (e && e != asio::error::eof)
             {
                 response_->set_header("closed");
-                response_->write_string(moon::format("%s.(%d)", e.message().data(), e.value()));
+                response_->write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
             }
 
             if (request_.sessionid != 0)
             {
                 response(response_, PTYPE_ERROR);
             }
+            s_->close(fd_, true);
         }
 
         void response(const message_ptr_t & m, uint8_t type = PTYPE_TEXT)

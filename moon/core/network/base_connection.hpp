@@ -101,18 +101,13 @@ namespace moon
             return true;
         }
 
-        void close(bool exit = false)
+        void close()
         {
             if (socket_.is_open())
             {
                 asio::error_code ignore_ec;
                 socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ignore_ec);
                 socket_.close(ignore_ec);
-            }
-
-            if (exit)
-            {
-                s_ = nullptr;
             }
         }
 
@@ -264,7 +259,7 @@ namespace moon
                         , e.value()
                         , e.message().data());
                     msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_error));
-                    msg->write_string(content);
+                    msg->write_data(content);
                     msg->set_sender(fd_);
                     handle_message(std::move(msg));
                 }
@@ -273,10 +268,11 @@ namespace moon
             //closed
             {
                 auto msg = message::create();
-                msg->write_string(address());
+                msg->write_data(address());
                 msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
+                s_->close(fd_, true);
             }
             s_ = nullptr;
         }
