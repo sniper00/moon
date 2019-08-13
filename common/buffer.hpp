@@ -286,7 +286,7 @@ namespace moon
         }
 
         template<typename T>
-        void write_back(const T* Indata, size_t offset = 0, size_t count = 1)
+        void write_back(const T* Indata, size_t offset, size_t count)
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Indata || 0 == count)
@@ -301,7 +301,7 @@ namespace moon
         }
 
         template<typename T>
-        bool write_front(const T* Indata, size_t offset = 0, size_t count = 1) noexcept
+        bool write_front(const T* Indata, size_t offset, size_t count) noexcept
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Indata || 0 == count || offset >= count)
@@ -321,7 +321,7 @@ namespace moon
         }
 
         template<typename T>
-        bool read(T* Outdata, size_t offset = 0, size_t count = 1) noexcept
+        bool read(T* Outdata, size_t offset, size_t count) noexcept
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Outdata || 0 == count)
