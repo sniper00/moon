@@ -60,22 +60,6 @@ static int lua_table_new(lua_State* L)
     return 1;
 }
 
-static int lua_math_clamp(lua_State* L)
-{
-    auto value = luaL_checknumber(L, -3);
-    auto min = luaL_checknumber(L, -2);
-    auto max = luaL_checknumber(L, -1);
-    int b = 0;
-    if (value < min || value > max)
-    {
-        value = (value < min)?min:max;
-        b = 1;
-    }
-    lua_pushnumber(L, value);
-    lua_pushboolean(L, b);
-    return 2;
-}
-
 static int lua_string_hash(lua_State* L)
 {
     size_t l;
@@ -174,7 +158,6 @@ const lua_bind & lua_bind::bind_util() const
     sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
-    lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
 
