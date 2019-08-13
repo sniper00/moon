@@ -2,6 +2,7 @@ require("base.io")
 require("base.os")
 require("base.string")
 require("base.table")
+require("base.math")
 require("base.util")
 require("base.class")
 
