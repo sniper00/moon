@@ -157,7 +157,7 @@ namespace moon
 
                 string_view_t header{ "exit" };
                 auto buf = message::create_buffer();
-                buf->write_back(content.data(),0, content.size());
+                buf->write_back(content.data(), content.size());
                 router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
             }
             else

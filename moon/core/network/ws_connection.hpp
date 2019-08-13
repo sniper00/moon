@@ -198,7 +198,7 @@ namespace moon
                     if (num_additional_bytes > 0)
                     {
                         auto data = reinterpret_cast<const char*>(sbuf->data().data());
-                        recv_buf_->write_back(data, 0, num_additional_bytes);
+                        recv_buf_->write_back(data, num_additional_bytes);
                         if (!handle_frame())
                         {
                             return;
@@ -411,7 +411,7 @@ namespace moon
         void send_response(const std::string& s, bool bclose = false)
         {
             auto buf = message::create_buffer();
-            buf->write_back(s.data(), 0, s.size());
+            buf->write_back(s.data(), s.size());
             if (bclose)
             {
                 buf->set_flag(buffer_flag::close);
@@ -601,7 +601,7 @@ namespace moon
             else
             {
                 msg = message::create(reallen);
-                msg->get_buffer()->write_back(recv_buf_->data(), 0, reallen);
+                msg->get_buffer()->write_back(recv_buf_->data(), reallen);
                 recv_buf_->seek(static_cast<int>(reallen));
             }
 
@@ -640,7 +640,7 @@ namespace moon
                 {
                     d[i] = d[i] ^ mask[i % 4];
                 }
-                data->write_front(mask, 0, 4);
+                data->write_front(mask, 4);
             }
 
             uint8_t payload_len = 0;
@@ -653,13 +653,13 @@ namespace moon
                 payload_len = static_cast<uint8_t>(PAYLOAD_MID_LEN);
                 uint16_t n = (uint16_t)size;
                 moon::host2net(n);
-                data->write_front(&n, 0, 1);
+                data->write_front(&n, 1);
             }
             else
             {
                 payload_len = static_cast<uint8_t>(PAYLOAD_MAX_LEN);
                 moon::host2net(size);
-                data->write_front(&size, 0, 1);
+                data->write_front(&size, 1);
             }
 
             //messages from the client must be masked
@@ -668,7 +668,7 @@ namespace moon
                 payload_len |= 0x80;
             }
 
-            data->write_front(&payload_len, 0, 1);
+            data->write_front(&payload_len, 1);
 
             uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
 
@@ -685,7 +685,7 @@ namespace moon
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::pong);
             }
 
-            data->write_front(&opcode, 0, 1);
+            data->write_front(&opcode, 1);
         }
 
         std::string hash_key(std::string_view seckey)
