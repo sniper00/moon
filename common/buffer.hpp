@@ -286,7 +286,7 @@ namespace moon
         }
 
         template<typename T>
-        void write_back(const T* Indata, size_t offset, size_t count)
+        void write_back(const T* Indata, size_t count)
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Indata || 0 == count)
@@ -296,15 +296,15 @@ namespace moon
             check_space(n);
 
             auto* buff = reinterpret_cast<T*>(std::addressof(*end()));
-            memcpy(buff, Indata + offset, n);
+            memcpy(buff, Indata, n);
             writepos_ += n;
         }
 
         template<typename T>
-        bool write_front(const T* Indata, size_t offset, size_t count) noexcept
+        bool write_front(const T* Indata, size_t count) noexcept
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
-            if (nullptr == Indata || 0 == count || offset >= count)
+            if (nullptr == Indata || 0 == count)
                 return false;
 
             size_t n = sizeof(T)*count;
@@ -316,12 +316,12 @@ namespace moon
 
             readpos_ -= n;
             auto* buff = reinterpret_cast<T*>(std::addressof(*begin()));
-            memcpy(buff, Indata + offset, n);
+            memcpy(buff, Indata, n);
             return true;
         }
 
         template<typename T>
-        bool read(T* Outdata, size_t offset, size_t count) noexcept
+        bool read(T* Outdata, size_t count) noexcept
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Outdata || 0 == count)
@@ -335,7 +335,7 @@ namespace moon
             }
 
             auto* buff = std::addressof(*begin());
-            memcpy(Outdata + offset, buff, n);
+            memcpy(Outdata, buff, n);
             readpos_ += n;
             return true;
         }
