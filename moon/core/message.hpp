@@ -143,7 +143,7 @@ namespace moon
         void write_data(string_view_t s)
         {
             assert(data_);
-            data_->write_back(s.data(), 0, s.size());
+            data_->write_back(s.data(), s.size());
         }
 
         const char* data() const

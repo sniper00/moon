@@ -115,7 +115,7 @@ namespace moon
         MOON_CHECK(m->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(m->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(m->receiver());
-        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %u",m->receiver()).data());
+        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %X",m->receiver()).data());
         get_worker(id)->send(std::forward<message_ptr_t>(m));
     }
 
@@ -138,7 +138,7 @@ namespace moon
     {
         for (auto& w : workers_)
         {
-            auto m = message::create(std::move(buf));
+            auto m = message::create(buf);
             m->set_broadcast(true);
             m->set_header(header);
             m->set_sender(sender);

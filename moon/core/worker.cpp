@@ -150,23 +150,14 @@ namespace moon
                     router_->on_service_remove(serviceid);
                 }
 
-                auto content = moon::format(R"({"name":"%s","serviceid":%X})", s->name().data(), s->id());
+                auto content = moon::format(R"({"name":"%s","serviceid":%X,"errmsg":"service destroy"})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, sessionid);
                 services_.erase(serviceid);
                 if (services_.empty()) shared(true);
 
                 string_view_t header{ "exit" };
                 auto buf = message::create_buffer();
-                if (crashed)
-                {
-                    string_view_t str{ "service crashed" };
-                    buf->write_back(str.data(), str.size());
-                }
-                else
-                {
-                    string_view_t str{ "service exit" };
-                    buf->write_back(str.data(), str.size());
-                }
+                buf->write_back(content.data(), content.size());
                 router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
             }
             else
@@ -331,8 +322,11 @@ namespace moon
             ser = find_service(msg->receiver());
             if (nullptr == ser)
             {
-                msg->set_sessionid(-msg->sessionid());
-                router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%u] attempt send to dead service [%u]: %s.", msg->sender(), msg->receiver(), moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
+                if (msg->sender() != 0)
+                {
+                    msg->set_sessionid(-msg->sessionid());
+                    router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%X] attempt send to dead service [%X]: %s.", msg->sender(), msg->receiver(), moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
+                }
                 return;
             }
         }
@@ -359,7 +353,7 @@ namespace moon
                 content.append("[");
                 for (auto& it : services_)
                 {
-                    content.append(moon::format(R"({"name":%s,"serviceid":%u})", it.second->name().data(), it.second->id()));
+                    content.append(moon::format(R"({"name":%s,"serviceid":%X})", it.second->name().data(), it.second->id()));
                 }
                 content.append("]");
                 return content;

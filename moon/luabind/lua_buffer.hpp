@@ -34,7 +34,7 @@ namespace moon
             std::size_t len;
             auto str = lua_tolstring(L, index, &len);
             auto buf = moon::message::create_buffer(len);
-            buf->write_back(str, 0, len);
+            buf->write_back(str, len);
             return buf;
         }
         case sol::type::lightuserdata:

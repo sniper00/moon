@@ -97,8 +97,8 @@ namespace moon
             *(b++) = static_cast<char>(level);
             size_t offset = format_header(b, level, serviceid);
             buf->offset_writepos(2 + static_cast<int>(offset));
-            buf->write_back(s.data(), 0, s.size());
-            buf->write_back("\n", 0, 1);
+            buf->write_back(s.data(), s.size());
+            buf->write_back("\n", 1);
             log_queue_.push_back(buf);
         }
 

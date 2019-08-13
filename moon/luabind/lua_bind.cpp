@@ -2,7 +2,6 @@
 #include "common/time.hpp"
 #include "common/timer.hpp"
 #include "common/directory.hpp"
-#include "common/buffer_writer.hpp"
 #include "common/hash.hpp"
 #include "common/http_util.hpp"
 #include "common/log.hpp"
@@ -44,7 +43,7 @@ static int unpack_cluster_header(lua_State* L)
 {
     auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
     uint16_t dlen = 0;
-    buf->read(&dlen, 0, 1);
+    buf->read(&dlen, 1);
     int hlen = static_cast<int>(buf->size() - dlen);
     buf->seek(dlen);
     auto n = lua_serialize::do_unpack(L,buf->data(),buf->size());
@@ -59,22 +58,6 @@ static int lua_table_new(lua_State* L)
     auto hn = luaL_checkinteger(L, -1);
     lua_createtable(L, (int)arrn, (int)hn);
     return 1;
-}
-
-static int lua_math_clamp(lua_State* L)
-{
-    auto value = luaL_checknumber(L, -3);
-    auto min = luaL_checknumber(L, -2);
-    auto max = luaL_checknumber(L, -1);
-    int b = 0;
-    if (value < min || value > max)
-    {
-        value = (value < min)?min:max;
-        b = 1;
-    }
-    lua_pushnumber(L, value);
-    lua_pushboolean(L, b);
-    return 2;
 }
 
 static int lua_string_hash(lua_State* L)
@@ -113,8 +96,8 @@ static int my_lua_print(lua_State *L) {
         s = lua_tolstring(L, -1, &l);  /* get result */
         if (s == NULL)
             return luaL_error(L, "'tostring' must return a string to 'print'");
-        if (i > 1) buf.write_back("\t");
-        buf.write_back(s, 0, l);
+        if (i > 1) buf.write_back("\t",1);
+        buf.write_back(s, l);
         lua_pop(L, 1);  /* pop result */
     }
     logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() }, serviceid);
@@ -175,7 +158,6 @@ const lua_bind & lua_bind::bind_util() const
     sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
-    lua_extend_library(lua.lua_state(), lua_math_clamp, "math", "clamp");
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
 
@@ -229,12 +211,12 @@ const lua_bind & lua_bind::bind_message() const
 
     bt.set_function("write_front", [](void* p, std::string_view s)->bool {
         auto buf = reinterpret_cast<buffer*>(p);
-        return buf->write_front(s.data(), 0, s.size());
+        return buf->write_front(s.data(), s.size());
     });
 
     bt.set_function("write_back", [](void* p, std::string_view s){
         auto buf = reinterpret_cast<buffer*>(p);
-        buf->write_back(s.data(), 0, s.size());
+        buf->write_back(s.data(), s.size());
     });
 
     bt.set_function("seek", [](void* p, int offset, buffer::seek_origin s){
