@@ -171,69 +171,69 @@ namespace moon
         static void wb_nil(buffer* buf)
         {
             uint8_t n = TYPE_NIL;
-            buf->write_back(&n);
+            buf->write_back(&n, 0, 1);
         }
 
         static void wb_boolean(buffer* buf, int boolean)
         {
             uint8_t n = COMBINE_TYPE(TYPE_BOOLEAN, boolean ? 1 : 0);
-            buf->write_back(&n);
+            buf->write_back(&n,0,1);
         }
 
         static void wb_integer(buffer* buf, lua_Integer v) {
             int type = TYPE_NUMBER;
             if (v == 0) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_ZERO);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
             }
             else if (v != (int32_t)v) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_QWORD);
                 int64_t v64 = v;
-                buf->write_back(&n);
-                buf->write_back(&v64);
+                buf->write_back(&n, 0, 1);
+                buf->write_back(&v64, 0, 1);
             }
             else if (v < 0) {
                 int32_t v32 = (int32_t)v;
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD);
-                buf->write_back(&n);
-                buf->write_back(&v32);
+                buf->write_back(&n, 0, 1);
+                buf->write_back(&v32, 0, 1);
             }
             else if (v < 0x100) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_BYTE);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
                 uint8_t byte = (uint8_t)v;
-                buf->write_back(&byte);
+                buf->write_back(&byte, 0, 1);
             }
             else if (v < 0x10000) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_WORD);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
                 uint16_t word = (uint16_t)v;
-                buf->write_back(&word);
+                buf->write_back(&word, 0, 1);
             }
             else {
                 uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
                 uint32_t v32 = (uint32_t)v;
-                buf->write_back(&v32);
+                buf->write_back(&v32, 0, 1);
             }
         }
 
         static void wb_real(buffer* buf, double v) {
             uint8_t n = COMBINE_TYPE(TYPE_NUMBER, TYPE_NUMBER_REAL);
-            buf->write_back(&n);
-            buf->write_back(&v);
+            buf->write_back(&n, 0, 1);
+            buf->write_back(&v, 0, 1);
         }
 
         static void wb_pointer(buffer* buf, void *v) {
             uint8_t n = TYPE_USERDATA;
-            buf->write_back(&n);
-            buf->write_back(&v);
+            buf->write_back(&n, 0, 1);
+            buf->write_back(&v, 0, 1);
         }
 
         static void wb_string(buffer* buf, const char *str, int len) {
             if (len < MAX_COOKIE) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(TYPE_SHORT_STRING, len);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
                 if (len > 0) {
                     buf->write_back(str, 0, len);
                 }
@@ -242,15 +242,15 @@ namespace moon
                 uint8_t n;
                 if (len < 0x10000) {
                     n = COMBINE_TYPE(TYPE_LONG_STRING, 2);
-                    buf->write_back(&n);
+                    buf->write_back(&n, 0, 1);
                     uint16_t x = (uint16_t)len;
-                    buf->write_back(&x);
+                    buf->write_back(&x, 0, 1);
                 }
                 else {
                     n = COMBINE_TYPE(TYPE_LONG_STRING, 4);
-                    buf->write_back(&n);
+                    buf->write_back(&n, 0, 1);
                     uint32_t x = (uint32_t)len;
-                    buf->write_back(&x);
+                    buf->write_back(&x, 0, 1);
                 }
                 buf->write_back(str, 0, len);
             }
@@ -307,12 +307,12 @@ namespace moon
             int array_size = (int)lua_rawlen(L, index);
             if (array_size >= MAX_COOKIE - 1) {
                 uint8_t n = (uint8_t)COMBINE_TYPE(TYPE_TABLE, MAX_COOKIE - 1);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
                 wb_integer(buf, array_size);
             }
             else {
                 uint8_t n = (uint8_t)COMBINE_TYPE(TYPE_TABLE, array_size);
-                buf->write_back(&n);
+                buf->write_back(&n, 0, 1);
             }
 
             int i;

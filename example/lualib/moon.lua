@@ -79,7 +79,6 @@ local sid_ = core.id()
 local uuid = 1
 local session_id_coroutine = {}
 local protocol = {}
-local services_exited = {}
 local session_watcher = {}
 
 local function co_resume(co, ...)
@@ -99,9 +98,6 @@ local function make_response(receiver)
     until nil == session_id_coroutine[uuid]
 
     if receiver then
-        if services_exited[receiver] then
-            return false, string.format( "[%u] attempt send to dead service [%d]", sid_, receiver)
-        end
         session_watcher[uuid] = receiver
     end
 
@@ -188,10 +184,6 @@ function moon.send(PTYPE, receiver, header, ...)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-
-    if services_exited[receiver] then
-        return false,"send to a exited service"
-    end
     header = header or ''
     _send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
     return true
@@ -213,10 +205,6 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-
-    if services_exited[receiver] then
-        return false,"moon.raw_send send to dead service"
-	end
     header = header or ''
     sessionid = sessionid or 0
     _send(sid_, receiver, data, header, sessionid, p.PTYPE)
@@ -270,8 +258,8 @@ end
 ---@return string
 function moon.remove_service(sid, bresponse)
     if bresponse then
-        local rspid = make_response()
-        core.remove_service(sid,sid_,rspid,false)
+        local sessionid = make_response()
+        core.remove_service(sid,sid_,sessionid,false)
         return co_yield()
     else
         core.remove_service(sid,0,0,false)
@@ -409,8 +397,8 @@ end
 ---@param command string
 ---@return string
 function moon.co_runcmd(command)
-    local rspid = make_response()
-    core.runcmd(moon.sid(), command, rspid)
+    local sessionid = make_response()
+    core.runcmd(moon.sid(), command, sessionid)
     return co_yield()
 end
 
@@ -428,13 +416,8 @@ function moon.co_call(PTYPE, receiver, ...)
     if not p then
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
-
-    local rspid,err = make_response(receiver)
-    if not rspid then
-        return false, err
-    end
-
-	_send(sid_, receiver, p.pack(...), "", rspid, p.PTYPE)
+    local sessionid = make_response(receiver)
+	_send(sid_, receiver, p.pack(...), "", sessionid, p.PTYPE)
     return co_yield()
 end
 
@@ -534,7 +517,6 @@ reg_protocol {
         local sessionid = msg:sessionid()
         local topic = msg:header()
         local data = p.unpack(msg)
-        --print("PTYPE_ERROR",topic,data)
         local co = session_id_coroutine[sessionid]
         if co then
             session_id_coroutine[sessionid] = nil
@@ -576,7 +558,6 @@ end
 
 system_command.exit = function(sender, msg)
     local data = msg:bytes()
-    services_exited[sender] = true
     for k, v in pairs(session_watcher) do
         if v == sender then
             local co = session_id_coroutine[k]

@@ -19,12 +19,8 @@ function M.call(rnode, rservice, ...)
         end
     end
 
-    local responseid,err = moon.make_response(clusterd)
-    if not responseid then
-        return false, err
-    end
-
-    send('lua',clusterd,packs(rnode, rservice,"CALL"),pack(...),responseid)
+    local sessionid = moon.make_response(clusterd)
+    send('lua',clusterd,packs(rnode, rservice,"CALL"),pack(...),sessionid)
     return co_yield()
 end
 

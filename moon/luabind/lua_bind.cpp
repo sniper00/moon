@@ -113,7 +113,7 @@ static int my_lua_print(lua_State *L) {
         s = lua_tolstring(L, -1, &l);  /* get result */
         if (s == NULL)
             return luaL_error(L, "'tostring' must return a string to 'print'");
-        if (i > 1) buf.write_back("\t");
+        if (i > 1) buf.write_back("\t",0,1);
         buf.write_back(s, 0, l);
         lua_pop(L, 1);  /* pop result */
     }

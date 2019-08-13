@@ -32,6 +32,8 @@ moon.start(
 
                 --Let receiver exit:
                 moon.co_call("lua", receiverid, "EXIT")
+                res = moon.co_call("lua", receiverid, "SUB", 100, 99)
+                test_assert.equal(res, false)
                 test_assert.success()
             end
         )
