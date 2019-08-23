@@ -101,7 +101,7 @@ int main(int argc, char*argv[])
 
     register_signal();
 
-    luaS_initshr();  /* init global short string table */
+    luaL_initcodecache();
     {
         sol::state lua;
         try
@@ -231,7 +231,6 @@ int main(int argc, char*argv[])
             }
         }
     }
-    luaS_exitshr();
     return 0;
 }
 
