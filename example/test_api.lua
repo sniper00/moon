@@ -36,8 +36,6 @@ equal(type(moon.abort) , "function")
 local msg = moon.message
 equal(type(msg.sender) , "function")
 equal(type(msg.sessionid) , "function")
-equal(type(msg.receiver) , "function")
-equal(type(msg.type) , "function")
 equal(type(msg.subtype) , "function")
 equal(type(msg.header) , "function")
 equal(type(msg.bytes) , "function")
@@ -160,7 +158,8 @@ do
 		b=2,
 	}
 	setmetatable(tttt,mt)
-	equal(json.encode(tttt),'{"a":1,"b":2}')
+	local res = json.encode(tttt)
+	test_assert.assert(res=='{"a":1,"b":2}' or res == '{"b":2,"a":1}')
 end
 
 moon.async(function()
