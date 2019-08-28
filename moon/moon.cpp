@@ -103,7 +103,6 @@ int main(int argc, char*argv[])
 
     luaL_initcodecache();
     {
-        sol::state lua;
         try
         {
             directory::working_directory = directory::current_directory();
@@ -156,26 +155,9 @@ int main(int argc, char*argv[])
 
             auto router_ = server_->get_router();
 
-            lua.open_libraries();
-
-            sol::table module = lua.create_table();
-            lua_bind lua_bind(module);
-            lua_bind.bind_log(server_->logger());
-
-            lua_bind::registerlib(lua.lua_state(), "json", luaopen_rapidjson);
-            lua_bind::registerlib(lua.lua_state(), "fs", luaopen_fs);
-            lua_bind::registerlib(lua.lua_state(), "moon_core", module);
-
             router_->register_service("lua", []()->service_ptr_t {
                 return std::make_unique<lua_service>();
             });
-
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-            lua.script("package.cpath = './clib/?.dll;'");
-#else
-            lua.script("package.cpath = './clib/?.so;'");
-#endif
-            lua.script("package.path = './?.lua;./lualib/?.lua;'");
 
             if (!service_file.empty())
             {
@@ -201,14 +183,6 @@ int main(int argc, char*argv[])
                 server_->init(static_cast<uint8_t>(c->thread), c->log);
                 server_->logger()->set_level(c->loglevel);
 
-                if (!c->startup.empty())
-                {
-                    MOON_CHECK(fs::path(c->startup).extension() == ".lua", "startup file must be lua script.");
-                    module.set_function("new_service", [&router_](const std::string& service_type, const std::string& config, bool unique, int workerid)->uint32_t {
-                        return  router_->new_service(service_type, config, unique, workerid, 0, 0);
-                    });
-                    lua.script_file(c->startup);
-                }
                 size_t count = 0;
                 for (auto&s : c->services)
                 {
@@ -224,11 +198,6 @@ int main(int argc, char*argv[])
         catch (std::exception& e)
         {
             printf("ERROR:%s\n", e.what());
-            const char* trace = lua_traceback(lua.lua_state());
-            if (std::strlen(trace) != 0)
-            {
-                printf("LUA TRACEBACK:%s\n", trace);
-            }
         }
     }
     return 0;
