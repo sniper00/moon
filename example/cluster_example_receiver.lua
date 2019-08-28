@@ -37,6 +37,6 @@ end
 moon.dispatch('lua',function(msg,p)
     local sender = msg:sender()
     local sessionid = msg:sessionid()
-    docmd(sender,sessionid, p.unpack(msg:bytes()))
+    docmd(sender,sessionid, p.unpack(msg))
 end)
 
