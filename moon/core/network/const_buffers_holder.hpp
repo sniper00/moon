@@ -69,6 +69,49 @@ namespace moon
         std::vector<buffer_ptr_t> datas_;
         std::vector<message_size_t> headers_;
     };
+
+    /*
+    Don't pass heavy-weight buffer sequences to async IO operations
+    https://github.com/chriskohlhoff/asio/issues/203
+     */
+    template<class BufferSequence>
+    class buffers_ref
+    {
+        BufferSequence const& buffers_;
+
+    public:
+        using value_type = typename BufferSequence::value_type;
+
+        using const_iterator = typename BufferSequence::const_iterator;
+
+        buffers_ref(buffers_ref const&) = default;
+
+        explicit
+            buffers_ref(BufferSequence const& buffers)
+            : buffers_(buffers)
+        {
+        }
+
+        const_iterator
+            begin() const
+        {
+            return buffers_.begin();
+        }
+
+        const_iterator
+            end() const
+        {
+            return buffers_.end();
+        }
+    };
+
+    // Return a reference to a buffer sequence
+    template<class BufferSequence>
+    buffers_ref<BufferSequence>
+        make_buffers_ref(BufferSequence const& buffers)
+    {
+        return buffers_ref<BufferSequence>(buffers);
+    }
 }
 
 

@@ -216,7 +216,7 @@ namespace moon
             sending_ = true;
             asio::async_write(
                 socket_,
-                holder_.buffers(),
+                make_buffers_ref(holder_.buffers()),
                 make_custom_alloc_handler(wallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {

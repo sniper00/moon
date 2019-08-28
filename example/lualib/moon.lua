@@ -11,15 +11,20 @@ local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
 
+
+
 local pairs = pairs
 local type = type
 local setmetatable = setmetatable
+local tremove = table.remove
+
 local jencode = json.encode
+
 local co_create = coroutine.create
 local co_running = coroutine.running
-local _co_resume = coroutine.resume
 local co_yield = coroutine.yield
-local table_remove = table.remove
+local co_resume = coroutine.resume
+
 local _send = core.send
 
 local PTYPE_SYSTEM = 1
@@ -39,6 +44,8 @@ local moon = {
 }
 
 setmetatable(moon, {__index = core})
+
+moon.cache = require("codecache")
 
 --export global variable
 local _g = _G
@@ -82,8 +89,8 @@ local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
 
-local function co_resume(co, ...)
-    local ok, err = _co_resume(co, ...)
+local function coresume(co, ...)
+    local ok, err = co_resume(co, ...)
     if not ok then
         error(debug.traceback(co, err))
     end
@@ -154,7 +161,7 @@ local function _default_dispatch(msg, PTYPE)
         if co then
             session_id_coroutine[sessionid] = nil
             --print(coroutine.status(co))
-            co_resume(co, p.unpack(msg))
+            coresume(co, p.unpack(msg))
             --print(coroutine.status(co))
             return
         end
@@ -297,7 +304,7 @@ local function check_wait_all( ... )
             waitco.ctx.results[waitco.idx] = {...}
             waitco.ctx.count= waitco.ctx.count-1
             if 0==waitco.ctx.count then
-                co_resume(waitco.ctx.cur,waitco.ctx.results)
+                coresume(waitco.ctx.cur,waitco.ctx.results)
             end
         end
     end
@@ -316,11 +323,11 @@ end
 ---@param func function
 ---@return coroutine
 function moon.async(func)
-    local co = table_remove(co_pool)
+    local co = tremove(co_pool)
     if not co then
         co = co_create(routine)
     end
-    co_resume(co, func) --func 作为 routine 的参数
+    coresume(co, func) --func 作为 routine 的参数
     return co
 end
 
@@ -382,7 +389,7 @@ function moon.co_wait(mills)
         mills,
         1,
         function(tid)
-            co_resume(co, tid)
+            coresume(co, tid)
         end
     )
     return co_yield()
@@ -471,12 +478,8 @@ reg_protocol {
     name = "lua",
     PTYPE = PTYPE_LUA,
     pack = seri.pack,
-    unpack = function(arg)
-        if arg.buffer then
-            return unpack(arg:buffer())
-        else
-            return unpack(arg)
-        end
+    unpack = function(msg)
+        return unpack(msg:buffer())
     end,
     dispatch = function()
         error("PTYPE_LUA dispatch not implemented")
@@ -489,12 +492,8 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(arg)
-        if arg.bytes then
-            return arg:bytes()
-        else
-            return arg
-        end
+    unpack = function(msg)
+        return msg:bytes()
     end,
     dispatch = function()
         error("PTYPE_TEXT dispatch not implemented")
@@ -507,12 +506,8 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(arg)
-        if arg.bytes then
-            return arg:bytes()
-        else
-            return arg
-        end
+    unpack = function(msg)
+        return msg:bytes()
     end,
     dispatch = function(msg, p)
         local sessionid = msg:sessionid()
@@ -521,7 +516,7 @@ reg_protocol {
         local co = session_id_coroutine[sessionid]
         if co then
             session_id_coroutine[sessionid] = nil
-            co_resume(co, false, topic..data)
+            coresume(co, false, topic..data)
             return
         end
     end
@@ -564,7 +559,7 @@ system_command.exit = function(sender, msg)
             local co = session_id_coroutine[k]
             if co then
                 session_id_coroutine[k] = nil
-                co_resume(co, false, data)
+                coresume(co, false, data)
                 return
             end
         end
@@ -587,12 +582,8 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(arg)
-        if arg.bytes then
-            return arg:bytes()
-        else
-            return arg
-        end
+    unpack = function(msg)
+        return msg:bytes()
     end,
     dispatch = function(msg, _)
         local sender = msg:sender()

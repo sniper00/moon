@@ -41,9 +41,6 @@ const char* lua_traceback(lua_State* _state);
 extern "C"
 {
     int luaopen_rapidjson(lua_State* L);
-
     int luaopen_fs(lua_State* L);
-
-    int luaopen_http(lua_State* L);
 }
 

@@ -20,8 +20,6 @@ local unpack = seri.unpack
 local concat = seri.concat
 local unpack_header = moon.unpack_cluster_header
 local queryservice = moon.queryservice
-local write_front = moon.buffer.write_front
-local write_back = moon.buffer.write_back
 
 local close_watch = {}
 local send_watch = {}
@@ -100,10 +98,9 @@ socket.on("message", function(fd, msg)
                 end
 
                 if res then
-                    local buffer = res:buffer()
-                    write_front(buffer,strpack("<H",res:size()))
+                    res:write_front(strpack("<H",res:size()))
                     local rheader = packs(rnode, raddr, saddr, -rsessionid)
-                    write_back(buffer,rheader)
+                    res:write_back(rheader)
                     socket.write_message(fd, res)
                 else
                     local rheader = packs(rnode, raddr, saddr, -rsessionid)
@@ -170,9 +167,8 @@ command.CALL = function(sender, sessionid,rnode, raddr, msg)
     end
 
     if fd then
-        local buffer = msg:buffer()
-        write_front(buffer,strpack("<H",msg:size()))
-        write_back(buffer,packs(sender, rnode, raddr, sessionid))
+        msg:write_front(strpack("<H",msg:size()))
+        msg:write_back(packs(sender, rnode, raddr, sessionid))
         add_send_watch(fd,sender,sessionid)
         if socket.write_message(fd, msg) then
             return

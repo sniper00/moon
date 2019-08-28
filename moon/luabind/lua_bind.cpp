@@ -1,9 +1,7 @@
 #include "lua_bind.h"
 #include "common/time.hpp"
 #include "common/timer.hpp"
-#include "common/directory.hpp"
 #include "common/hash.hpp"
-#include "common/http_util.hpp"
 #include "common/log.hpp"
 #include "common/sha1.hpp"
 #include "message.hpp"
@@ -167,6 +165,12 @@ const lua_bind & lua_bind::bind_util() const
         {"ws_ping",moon::buffer_flag::ws_ping},
         {"ws_pong",moon::buffer_flag::ws_pong}
     });
+
+    lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
+        {"begin",moon::buffer::seek_origin::Begin},
+        {"current",moon::buffer::seek_origin::Current},
+        {"end",moon::buffer::seek_origin::End}
+    });
     return *this;
 }
 
@@ -177,85 +181,118 @@ const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
     return *this;
 }
 
-static void redirect(message* m, const moon::string_view_t& header, uint32_t receiver, uint8_t mtype)
-{
-    if (header.size() != 0)
-    {
-        m->set_header(header);
-    }
-    m->set_receiver(receiver);
-    m->set_type(mtype);
-}
-
-static void resend(message* m, uint32_t sender, uint32_t receiver, const moon::string_view_t& header, int32_t sessionid, uint8_t mtype)
-{
-    if (header.size() != 0)
-    {
-        m->set_header(header);
-    }
-    m->set_sender(sender);
-    m->set_receiver(receiver);
-    m->set_type(mtype);
-    m->set_sessionid(-sessionid);
-}
-
 const lua_bind & lua_bind::bind_message() const
 {
-    lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
-    {"begin",moon::buffer::seek_origin::Begin},
-    {"current",moon::buffer::seek_origin::Current},
-    {"end",moon::buffer::seek_origin::End}
-    });
-
-    sol::table bt = lua.create_named("buffer");
-
-    bt.set_function("write_front", [](void* p, std::string_view s)->bool {
-        auto buf = reinterpret_cast<buffer*>(p);
-        return buf->write_front(s.data(), s.size());
-    });
-
-    bt.set_function("write_back", [](void* p, std::string_view s){
-        auto buf = reinterpret_cast<buffer*>(p);
-        buf->write_back(s.data(), s.size());
-    });
-
-    bt.set_function("seek", [](void* p, int offset, buffer::seek_origin s){
-        auto buf = reinterpret_cast<buffer*>(p);
-        buf->seek(offset, s);
-    });
-
-    bt.set_function("offset_writepos", [](void* p, int offset){
-        auto buf = reinterpret_cast<buffer*>(p);
-        buf->offset_writepos(offset);
-    });
-
     //https://sol2.readthedocs.io/en/latest/functions.html?highlight=lua_CFunction
     //Note that stateless lambdas can be converted to a function pointer, 
     //so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
     //If you need to get the Lua state that is calling a function, use sol::this_state.
-    auto f_data = [](lua_State* L)->int
+
+    auto write_front = [](lua_State* L)->int
     {
-        auto msg = sol::stack::get<message*>(L, -1);
-        lua_pushlightuserdata(L, (msg->get_buffer()->data()));
-        lua_pushinteger(L, msg->size());
+        auto m = sol::stack::get<message*>(L, 1);
+        size_t len = 0;
+        auto data = luaL_checklstring(L, 2, &len);
+        m->get_buffer()->write_front(data, len);
+        return 0;
+    };
+
+    auto write_back = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, 1);
+        size_t len = 0;
+        auto data = luaL_checklstring(L, 2, &len);
+        m->get_buffer()->write_back(data, len);
+        return 0;
+    };
+
+    auto seek = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, 1);
+        auto pos = static_cast<int>(luaL_checkinteger(L, 2));
+        auto origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
+        m->get_buffer()->seek(pos, origin);
+        return 0;
+    };
+
+    auto offset_writepos = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, 1);
+        auto offset = static_cast<int>(luaL_checkinteger(L, 2));
+        m->get_buffer()->offset_writepos(offset);
+        return 0;
+    };
+
+    auto cstring = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, -1);
+        lua_pushlightuserdata(L, (void*)(m->data()));
+        lua_pushinteger(L, m->size());
         return 2;
+    };
+
+    auto tobuffer = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, -1);
+        lua_pushlightuserdata(L, (void*)m->get_buffer());
+        return 1;
+    };
+
+    auto redirect = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, 1);
+        size_t hlen = 0;
+        auto hdata = luaL_checklstring(L, 2, &hlen);
+        auto receiver = static_cast<uint32_t>(luaL_checkinteger(L, 3));
+        auto type = static_cast<uint8_t>(luaL_checkinteger(L, 4));
+
+        if (hlen != 0)
+        {
+            m->set_header(std::string_view{ hdata, hlen });
+        }
+        m->set_receiver(receiver);
+        m->set_type(type);
+        return 0;
+    };
+
+    auto resend = [](lua_State* L)->int
+    {
+        auto m = sol::stack::get<message*>(L, 1);
+        auto sender = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+        auto receiver = static_cast<uint32_t>(luaL_checkinteger(L, 3));
+        size_t hlen = 0;
+        auto hdata = luaL_checklstring(L, 4, &hlen);
+        auto sessionid = static_cast<int32_t>(luaL_checkinteger(L, 5));
+        auto type = static_cast<uint8_t>(luaL_checkinteger(L, 6));
+
+        if (hlen != 0)
+        {
+            m->set_header(std::string_view{ hdata, hlen });
+        }
+        m->set_sender(sender);
+        m->set_receiver(receiver);
+        m->set_type(type);
+        m->set_sessionid(-sessionid);
+        return 0;
     };
 
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
         , "sessionid", (&message::sessionid)
-        , "receiver", (&message::receiver)
-        , "type", (&message::type)
         , "subtype", (&message::subtype)
         , "header", (&message::header)
         , "bytes", (&message::bytes)
         , "size", (&message::size)
         , "substr", (&message::substr)
-        , "buffer", [](message* m)->void* {return m->get_buffer();}
+        , "buffer", tobuffer
         , "redirect", redirect
         , "resend", resend
-        , "data", f_data
+        , "cstring", cstring
+        , "write_front", write_front
+        , "write_back", write_back
+        , "seek", seek
+        , "offset_writepos", offset_writepos
         );
     return *this;
 }
@@ -271,7 +308,6 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("set_cb", &lua_service::set_callback, s);
-    lua.set_function("memory_use", &lua_service::memory_use, s);
     lua.set_function("make_prefab", &worker::make_prefab, worker_);
     lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t sessionid, uint8_t type) {
         worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
@@ -335,6 +371,17 @@ void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& m
     lua_pop(L, 2); /* pop 'package' and 'loaded' tables */
 }
 
+const char* lua_traceback(lua_State * L)
+{
+    luaL_traceback(L, L, NULL, 1);
+    auto s = lua_tostring(L, -1);
+    if (nullptr != s)
+    {
+        return "";
+    }
+    return s;
+}
+
 static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
 {
     directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
@@ -356,7 +403,8 @@ static void traverse_folder(const std::string& dir, int depth, sol::protected_fu
     });
 }
 
-inline fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
+#if TARGET_PLATFORM != PLATFORM_WINDOWS
+static fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
 {
     using namespace std::string_view_literals; // TRANSITION, VSO#571749
     constexpr std::wstring_view _Dot = L"."sv;
@@ -434,98 +482,50 @@ inline fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
     }
     return (_Result);
 }
+#endif
 
-static sol::table lua_fs(sol::this_state L)
+static sol::table bind_fs(sol::this_state L)
 {
     sol::state_view lua(L);
-    sol::table module = lua.create_table();
-    module.set_function("traverse_folder", traverse_folder);
-    module.set_function("exists", directory::exists);
-    module.set_function("create_directory", directory::create_directory);
-    module.set_function("working_directory", []() {
+    sol::table m = lua.create_table();
+    m.set_function("traverse_folder", traverse_folder);
+    m.set_function("exists", directory::exists);
+    m.set_function("create_directory", directory::create_directory);
+    m.set_function("working_directory", []() {
         return directory::working_directory.string();
     });
-    module.set_function("parent_path", [](const moon::string_view_t& s) {
+    m.set_function("parent_path", [](const std::string_view& s) {
         return fs::absolute(fs::path(s)).parent_path().string();
     });
 
-    module.set_function("filename", [](const moon::string_view_t& s) {
+    m.set_function("filename", [](const std::string_view& s) {
         return fs::path(s).filename().string();
     });
 
-    module.set_function("extension", [](const moon::string_view_t& s) {
+    m.set_function("extension", [](const std::string_view& s) {
         return fs::path(s).extension().string();
     });
 
-    module.set_function("root_path", [](const moon::string_view_t& s) {
+    m.set_function("root_path", [](const std::string_view& s) {
         return fs::path(s).root_path().string();
     });
 
     //filename_without_extension
-    module.set_function("stem", [](const moon::string_view_t& s) {
+    m.set_function("stem", [](const std::string_view& s) {
         return fs::path(s).stem().string();
     });
 
-    module.set_function("relative_work_path", [](const moon::string_view_t& p) {
+    m.set_function("relative_work_path", [](const std::string_view& p) {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
         return  fs::absolute(p).lexically_relative(directory::working_directory).string();
 #else
         return  lexically_relative(fs::absolute(p), directory::working_directory).string();
 #endif
     });
-    return module;
+    return m;
 }
 
 int luaopen_fs(lua_State* L)
 {
-    return sol::stack::call_lua(L, 1, lua_fs);
-}
-
-static sol::table lua_http(sol::this_state L)
-{
-    sol::state_view lua(L);
-    sol::table module = lua.create_table();
-
-    module.set_function("parse_request", [](std::string_view data) {
-        std::string_view method;
-        std::string_view path;
-        std::string_view query_string;
-        std::string_view version;
-        http::case_insensitive_multimap_view header;
-        bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
-        return std::make_tuple(ok, method, path, query_string, version,sol::as_table(header));
-    });
-
-    module.set_function("parse_response", [](std::string_view data) {
-        std::string_view version;
-        std::string_view status_code;
-        http::case_insensitive_multimap_view header;
-        bool ok = http::response_parser::parse(data, version, status_code, header);
-        return std::make_tuple(ok, version, status_code, sol::as_table(header));
-    });
-
-    module.set_function("parse_query_string", [](const std::string& data) {
-        return sol::as_table(http::query_string::parse(data));
-    });
-
-    module.set_function("create_query_string", [](sol::as_table_t<http::case_insensitive_multimap> src) {
-        return http::query_string::create(src.value());
-    });
-    return module;
-}
-
-int luaopen_http(lua_State* L)
-{
-    return sol::stack::call_lua(L, 1, lua_http);
-}
-
-const char* lua_traceback(lua_State * L)
-{
-    luaL_traceback(L, L, NULL, 1);
-    auto s = lua_tostring(L, -1);
-    if (nullptr != s)
-    {
-        return "";
-    }
-    return s;
+    return sol::stack::call_lua(L, 1, bind_fs);
 }

@@ -73,18 +73,7 @@ function core.send_prefab(receiver, prefabid, header, sessionid, type)
     ignore_param(receiver, prefabid, header, sessionid, type)
 end
 
----@param name string
-function core.remove_component(name)
-    ignore_param(name)
-end
-
----获取lua虚拟机占用的内存(单位byte)
----@return int
-function core.memory_use()
-    -- body
-end
-
----获取worker线程数
+---获取worker(线程)数
 ---@return int
 function core.workernum()
     -- body
