@@ -11,6 +11,8 @@ local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
 
+
+
 local pairs = pairs
 local type = type
 local setmetatable = setmetatable
@@ -42,6 +44,8 @@ local moon = {
 }
 
 setmetatable(moon, {__index = core})
+
+moon.cache = require("codecache")
 
 --export global variable
 local _g = _G

@@ -192,3 +192,6 @@ add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./lualib-src/laoi", "aoi",function()
     language "C++"
 end)
+
+-------------------------sharetable--------------------
+add_lua_module("./third/sharetable", "sharetable")
