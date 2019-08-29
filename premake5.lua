@@ -138,6 +138,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
             linuxaddon()
         end
     filter {"system:macosx"}
+        links{"lua53"}
         if type(macaddon)=="function" then
             macaddon()
         end
