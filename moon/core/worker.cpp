@@ -353,9 +353,9 @@ namespace moon
                 content.append("[");
                 for (auto& it : services_)
                 {
-                    content.append(moon::format(R"({"name":%s,"serviceid":%X})", it.second->name().data(), it.second->id()));
+                    content.append(moon::format(R"({"name":"%s","serviceid":"%X"},)", it.second->name().data(), it.second->id()));
                 }
-                content.append("]");
+                content.back() = ']';
                 return content;
             };
             commands_.try_emplace("services", hander);
