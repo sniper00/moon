@@ -429,6 +429,16 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
+function moon.co_call_with_header(PTYPE, receiver, header, ...)
+    local p = protocol[PTYPE]
+    if not p then
+        error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
+    end
+    local sessionid = make_response(receiver)
+	_send(sid_, receiver, p.pack(...), header, sessionid, p.PTYPE)
+    return co_yield()
+end
+
 ---回应moon.call
 ---param PTYPE 协议类型
 ---param receiver 调用者服务id
@@ -574,6 +584,12 @@ end
 system_command.release = function(_, msg)
     local data = msg:bytes()
     ref_services[data] = nil
+end
+
+system_command.gc = function(sender, msg)
+    local sessionid = msg:sessionid()
+    collectgarbage("collect")
+    moon.response("lua",sender,sessionid,collectgarbage("count"))
 end
 
 reg_protocol {
