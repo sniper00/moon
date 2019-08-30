@@ -11,8 +11,6 @@ local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
 
-
-
 local pairs = pairs
 local type = type
 local setmetatable = setmetatable
@@ -27,13 +25,16 @@ local co_resume = coroutine.resume
 
 local _send = core.send
 
+local unpack = seri.unpack
+local pack = seri.pack
+
 local PTYPE_SYSTEM = 1
 local PTYPE_TEXT = 2
 local PTYPE_LUA = 3
 local PTYPE_SOCKET = 4
 local PTYPE_ERROR = 5
 local PTYPE_SOCKET_WS = 6
-
+local PTYPE_DEBUG = 7
 
 ---@class moon : core
 local moon = {
@@ -46,6 +47,9 @@ local moon = {
 setmetatable(moon, {__index = core})
 
 moon.cache = require("codecache")
+
+moon.pack = pack
+moon.unpack = unpack
 
 --export global variable
 local _g = _G
@@ -429,16 +433,6 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
-function moon.co_call_with_header(PTYPE, receiver, header, ...)
-    local p = protocol[PTYPE]
-    if not p then
-        error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
-    end
-    local sessionid = make_response(receiver)
-	_send(sid_, receiver, p.pack(...), header, sessionid, p.PTYPE)
-    return co_yield()
-end
-
 ---回应moon.call
 ---param PTYPE 协议类型
 ---param receiver 调用者服务id
@@ -480,9 +474,6 @@ function moon.dispatch(PTYPE, cb)
         return p and p.dispatch
     end
 end
-
---mark
-local unpack = seri.unpack
 
 reg_protocol {
     name = "lua",
@@ -586,12 +577,6 @@ system_command.release = function(_, msg)
     ref_services[data] = nil
 end
 
-system_command.gc = function(sender, msg)
-    local sessionid = msg:sessionid()
-    collectgarbage("collect")
-    moon.response("lua",sender,sessionid,collectgarbage("count"))
-end
-
 reg_protocol {
     name = "system",
     PTYPE = PTYPE_SYSTEM,
@@ -607,6 +592,37 @@ reg_protocol {
         local func = system_command[header]
         if func then
             func(sender, msg)
+        end
+    end
+}
+
+local debug_command = {}
+
+debug_command.gc = function(sender, sessionid)
+    collectgarbage("collect")
+    moon.response("lua",sender,sessionid, collectgarbage("count"))
+end
+
+debug_command.mem = function(sender, sessionid)
+    moon.response("lua",sender,sessionid, collectgarbage("count"))
+end
+
+debug_command.ping = function(sender, sessionid)
+    moon.response("lua",sender,sessionid, "pong")
+end
+
+reg_protocol {
+    name = "debug",
+    PTYPE = PTYPE_DEBUG,
+    pack = pack,
+    unpack = unpack,
+    dispatch = function(msg,p)
+        local sender = msg:sender()
+        local sessionid = msg:sessionid()
+        local params = {p.unpack(msg:bytes())}
+        local func = debug_command[params[1]]
+        if func then
+            func(sender, sessionid, table.unpack(params,2))
         end
     end
 }
