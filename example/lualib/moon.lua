@@ -11,8 +11,6 @@ local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
 
-
-
 local pairs = pairs
 local type = type
 local setmetatable = setmetatable
@@ -27,13 +25,16 @@ local co_resume = coroutine.resume
 
 local _send = core.send
 
+local unpack = seri.unpack
+local pack = seri.pack
+
 local PTYPE_SYSTEM = 1
 local PTYPE_TEXT = 2
 local PTYPE_LUA = 3
 local PTYPE_SOCKET = 4
 local PTYPE_ERROR = 5
 local PTYPE_SOCKET_WS = 6
-
+local PTYPE_DEBUG = 7
 
 ---@class moon : core
 local moon = {
@@ -46,6 +47,9 @@ local moon = {
 setmetatable(moon, {__index = core})
 
 moon.cache = require("codecache")
+
+moon.pack = pack
+moon.unpack = unpack
 
 --export global variable
 local _g = _G
@@ -471,9 +475,6 @@ function moon.dispatch(PTYPE, cb)
     end
 end
 
---mark
-local unpack = seri.unpack
-
 reg_protocol {
     name = "lua",
     PTYPE = PTYPE_LUA,
@@ -591,6 +592,37 @@ reg_protocol {
         local func = system_command[header]
         if func then
             func(sender, msg)
+        end
+    end
+}
+
+local debug_command = {}
+
+debug_command.gc = function(sender, sessionid)
+    collectgarbage("collect")
+    moon.response("lua",sender,sessionid, collectgarbage("count"))
+end
+
+debug_command.mem = function(sender, sessionid)
+    moon.response("lua",sender,sessionid, collectgarbage("count"))
+end
+
+debug_command.ping = function(sender, sessionid)
+    moon.response("lua",sender,sessionid, "pong")
+end
+
+reg_protocol {
+    name = "debug",
+    PTYPE = PTYPE_DEBUG,
+    pack = pack,
+    unpack = unpack,
+    dispatch = function(msg,p)
+        local sender = msg:sender()
+        local sessionid = msg:sessionid()
+        local params = {p.unpack(msg:bytes())}
+        local func = debug_command[params[1]]
+        if func then
+            func(sender, sessionid, table.unpack(params,2))
         end
     end
 }

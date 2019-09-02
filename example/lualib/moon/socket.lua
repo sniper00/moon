@@ -34,6 +34,7 @@ setmetatable(socket,core)
 
 --- async
 function socket.accept(listenfd, serviceid)
+    serviceid = serviceid or moon.sid()
     local sessionid = make_response()
     accept(listenfd, sessionid, serviceid)
     local fd,err = yield()

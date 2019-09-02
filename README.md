@@ -74,6 +74,9 @@ QQ交流群: 543833695
     # 默认debug版本，中括号表示可选项: release版本
     make clean [config=release]
     make [config=release]
+
+    # 如果`-lc++fs`失败, 可以在`premake.lua` 添加Clang库路径(注意验证下路径是否存在) 
+    # `libdirs{"./libs","/usr/local/Cellar/llvm/7.0.1/lib/"}`
 ```
 
 5. 运行
