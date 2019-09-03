@@ -1,4 +1,3 @@
-#pragma once
 #include "lua.hpp"
 #include "config.hpp"
 #include "common/buffer.hpp"
