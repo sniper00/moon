@@ -155,9 +155,10 @@ namespace moon
         {
             response_->get_buffer()->clear();
 
+            response_->set_header("closed");
+
             if (e && e != asio::error::eof)
             {
-                response_->set_header("closed");
                 response_->write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
             }
 
