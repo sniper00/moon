@@ -85,7 +85,7 @@ end
 function socket.readline(fd, delim, limit)
     delim = linedelim[delim]
     if not delim  then
-        return nil,"unsupported read delim "..tostring(delim)
+        error("unsupported read delim "..tostring(delim))
     end
     limit= limit or 0
     local sessionid = make_response()
