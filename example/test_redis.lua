@@ -5,7 +5,7 @@ local test_assert = require("test_assert")
 local function run_test()
     moon.async(function()
         local db,err = redis.connect({host="127.0.0.1",port=6379})
-        test_assert.assert(redis, err)
+        test_assert.assert(db, err)
 
         local res, err = db:set("set_key", "Hello World")
         test_assert.equal(res, "OK")
