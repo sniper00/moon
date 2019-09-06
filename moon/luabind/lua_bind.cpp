@@ -4,6 +4,7 @@
 #include "common/hash.hpp"
 #include "common/log.hpp"
 #include "common/sha1.hpp"
+#include "common/md5.hpp"
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
@@ -152,6 +153,24 @@ const lua_bind & lua_bind::bind_util() const
         sha1::update(ctx, s.data(), s.size());
         sha1::finish(ctx, buf.data());
         return buf;
+    });
+
+    lua.set_function("md5", [](std::string_view s) {
+        uint8_t buf[md5::DIGEST_BYTES] = { 0 };
+        md5::md5_context ctx;
+        md5::init(ctx);
+        md5::update(ctx, s.data(), s.size());
+        md5::finish(ctx, buf);
+
+        std::string res(md5::DIGEST_BYTES*2,'\0');
+        for (size_t i = 0; i < 16; i++) {
+            int t = buf[i];
+            int a = t / 16;
+            int b = t % 16;
+            res.append(1, md5::HEX[a]);
+            res.append(1, md5::HEX[b]);
+        }
+        return res;
     });
 
     sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
