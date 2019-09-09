@@ -81,7 +81,7 @@ end
 -------------------
 
 function command:disconnect()
-	self[1]:close()
+	socket.close(self[1])
 	setmetatable(self, nil)
 end
 
