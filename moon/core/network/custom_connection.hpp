@@ -155,11 +155,17 @@ namespace moon
         {
             response_->get_buffer()->clear();
 
-            response_->set_header("closed");
-
-            if (e && e != asio::error::eof)
+            if (e)
             {
-                response_->write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
+                if (e != asio::error::eof)
+                {
+                    response_->set_header("error");
+                    response_->write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
+                }
+                else
+                {
+                    response_->set_header("eof");
+                }
             }
 
             if (request_.sessionid != 0)
