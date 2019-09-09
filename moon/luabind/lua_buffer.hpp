@@ -1,7 +1,6 @@
 #pragma once
 #include "sol.hpp"
 #include "message.hpp"
-#include "lua_serialize.hpp"
 
 namespace moon
 {
@@ -56,5 +55,4 @@ namespace moon
         }
         return sol::stack::push(L, (const char*)buf->data(), buf->size());
     }
-
 }

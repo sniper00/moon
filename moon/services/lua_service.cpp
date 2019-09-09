@@ -4,8 +4,6 @@
 #include "worker.h"
 #include "common/hash.hpp"
 #include "rapidjson/document.h"
-#include "luabind/lua_serialize.hpp"
-#include "luabind/lua_http.hpp"
 #include "service_config.hpp"
 #include "server_config.hpp"
 
@@ -75,10 +73,11 @@ bool lua_service::init(string_view_t config)
             .bind_socket(this);
 
         lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
-        lua_bind::registerlib(lua_.lua_state(), "http", lua_http::open);
+        lua_bind::registerlib(lua_.lua_state(), "http", luaopen_http);
+        lua_bind::registerlib(lua_.lua_state(), "seri", luaopen_serialize);
         lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
         lua_bind::registerlib(lua_.lua_state(), "moon_core", module);
-        lua_bind::registerlib(lua_.lua_state(), "seri", lua_serialize::open);
+
         sol::object json = lua_.require("json", luaopen_rapidjson, false);
 
         moon::server_config_manger& server_config = moon::server_config_manger::instance();

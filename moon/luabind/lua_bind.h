@@ -42,5 +42,7 @@ extern "C"
 {
     int luaopen_rapidjson(lua_State* L);
     int luaopen_fs(lua_State* L);
+    int luaopen_http(lua_State* L);
+    int luaopen_serialize(lua_State* L);
 }
 
