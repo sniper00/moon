@@ -205,5 +205,27 @@
                 "file": "call_mysql_service.lua"
             }
         ]
+    },
+    {
+        "sid": 11,
+        "name": "server_#sid",
+        "thread": 4,
+        "log": "log/#sid_#date.log",
+        "services": [
+            {
+                "unique": true,
+                "name": "redis",
+                "file": "service_redis.lua",
+                "host":"127.0.0.1",
+                "port":6379,
+                "timeout": 1000,
+                "connection_num":4
+            },
+            {
+                "unique": true,
+                "name": "call_redis_service",
+                "file": "call_redis_service.lua"
+            }
+        ]
     }
 ]
