@@ -101,6 +101,31 @@ namespace moon
             (a) += (b);
         }
 
+
+        /* Encodes input (ulong) into output (uint8_t). Assumes length is
+        a multiple of 4.
+        */
+        void encode(const uint32_t *input, uint8_t *output, size_t length) {
+
+            for (size_t i = 0, j = 0; j < length; i++, j += 4) {
+                output[j] = (uint8_t)(input[i] & 0xff);
+                output[j + 1] = (uint8_t)((input[i] >> 8) & 0xff);
+                output[j + 2] = (uint8_t)((input[i] >> 16) & 0xff);
+                output[j + 3] = (uint8_t)((input[i] >> 24) & 0xff);
+            }
+        }
+
+        /* Decodes input (uint8_t) into output (ulong). Assumes length is
+        a multiple of 4.
+        */
+        void decode(const uint8_t *input, uint32_t *output, size_t length) {
+
+            for (size_t i = 0, j = 0; j < length; i++, j += 4) {
+                output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j + 1]) << 8) |
+                    (((uint32_t)input[j + 2]) << 16) | (((uint32_t)input[j + 3]) << 24);
+            }
+        }
+
         /* MD5 basic transformation. Transforms _state based on block. */
         template<class = void>
         void transform(const uint8_t* block, uint32_t* state) {
@@ -185,31 +210,6 @@ namespace moon
             state[1] += b;
             state[2] += c;
             state[3] += d;
-        }
-
-
-        /* Encodes input (ulong) into output (uint8_t). Assumes length is
-        a multiple of 4.
-        */
-        void encode(const uint32_t *input, uint8_t *output, size_t length) {
-
-            for (size_t i = 0, j = 0; j < length; i++, j += 4) {
-                output[j] = (uint8_t)(input[i] & 0xff);
-                output[j + 1] = (uint8_t)((input[i] >> 8) & 0xff);
-                output[j + 2] = (uint8_t)((input[i] >> 16) & 0xff);
-                output[j + 3] = (uint8_t)((input[i] >> 24) & 0xff);
-            }
-        }
-
-        /* Decodes input (uint8_t) into output (ulong). Assumes length is
-        a multiple of 4.
-        */
-        void decode(const uint8_t *input, uint32_t *output, size_t length) {
-
-            for (size_t i = 0, j = 0; j < length; i++, j += 4) {
-                output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j + 1]) << 8) |
-                    (((uint32_t)input[j + 2]) << 16) | (((uint32_t)input[j + 3]) << 24);
-            }
         }
 
         static std::size_t constexpr BLOCK_BYTES = 64;
