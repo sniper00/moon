@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <unordered_map>
-#include "macro_define.hpp"
+#include "string.hpp"
 #include "buffer_view.hpp"
 #include "utils.hpp"
 
