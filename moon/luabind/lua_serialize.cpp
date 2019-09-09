@@ -503,13 +503,7 @@ static void concat_table(lua_State*L, buffer* buf, int index, int depth)
     if (index < 0) {
         index = lua_gettop(L) + index + 1;
     }
-    if (luaL_getmetafield(L, index, "__pairs") != LUA_TNIL) {
-        luaL_error(L, "Unsupport table hash type  to concat");
-    }
-    else
-    {
-        concat_table_array(L, buf, index, depth);
-    }
+    concat_table_array(L, buf, index, depth);
 }
 
 static void concat_one(lua_State *L, buffer* b, int index, int depth)
