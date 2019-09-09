@@ -1,17 +1,19 @@
 local moon = require("moon")
-local redis_pool = require("moon.db.redispool")
+local redis = require("moon.db.redis")
+
+local HOST = "127.0.0.1"
+local PORT = 6379
 
 local function run_example()
-    local pool = redis_pool.new()
-    local n = 0
 
+    local n = 0
     local timerid = moon.repeated(1000,-1,function ()
-        print("per sec ",n,pool:size())
+        print("per sec ",n)
         n = 0
     end)
 
     moon.async(function()
-        local db,err = pool:spawn()
+        local db,err = redis.connect({host = HOST,port = PORT})
         if not db then
             print("error",err)
             return
@@ -58,23 +60,23 @@ local function run_example()
             db:publish("hello.foo", i)
         end
 
-        pool:close(db)
+        db:disconnect()
     end)
 
     moon.async(function()
 
-        local redis,err = pool:spawn()
-        if not redis then
+        local db,err = redis.connect({host = HOST,port = PORT})
+        if not db then
             print(err)
             return
         end
 
-        redis:hmset("myhash","name","Ben","age",11)
+        db:hmset("myhash","name","Ben","age",11)
 
         repeat
             moon.co_wait(1000)
 
-            local res, err = redis:pipeline({
+            local res, err = db:pipeline({
                 {"set", "cat", "Marry"},
                 {"set", "horse", "Bob"},
                 {"get", "cat"},
@@ -88,18 +90,19 @@ local function run_example()
             end
 
         until(true)
-        pool:close(redis)
+        db:disconnect()
     end)
 
     moon.async(function()
-        local redis,err = pool:spawn()
-        if not redis then
-            print("error",err)
+        local db,err = redis.connect({host = HOST,port = PORT})
+        if not db then
+            print(err)
             return
         end
+
         local index = 1
         while true do
-            local ret,errmsg = redis:set("dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+            local ret,errmsg = db:set("dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
             if not ret then
                 print("set", errmsg)
                 moon.remove_timer(timerid)
@@ -109,7 +112,7 @@ local function run_example()
             n=n+1
             index = index+1
         end
-        pool:close(redis)
+        db:disconnect()
     end)
 
 end
