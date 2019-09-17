@@ -64,13 +64,15 @@ private:
 // Wrapper class template for handler objects to allow handler memory
 // allocation to be customised. Calls to operator() are forwarded to the
 // encapsulated handler.
-template <typename Handler>
+template <typename Allocator, typename Handler>
 class custom_alloc_handler
 {
 public:
-    custom_alloc_handler(handler_allocator& a, Handler h)
+    using this_type = custom_alloc_handler<Allocator, Handler>;
+
+    custom_alloc_handler(Allocator& a, Handler&& h)
         : allocator_(a),
-        handler_(h)
+        handler_(std::forward<Handler>(h))
     {
     }
 
@@ -81,26 +83,27 @@ public:
     }
 
     friend void* asio_handler_allocate(std::size_t size,
-        custom_alloc_handler<Handler>* this_handler)
+        this_type* this_handler)
     {
         return this_handler->allocator_.allocate(size);
     }
 
     friend void asio_handler_deallocate(void* pointer, std::size_t /*size*/,
-        custom_alloc_handler<Handler>* this_handler)
+        this_type* this_handler)
     {
         this_handler->allocator_.deallocate(pointer);
     }
 
 private:
-    handler_allocator& allocator_;
+    Allocator& allocator_;
     Handler handler_;
 };
 
 // Helper function to wrap a handler object to add custom allocation.
-template <typename Handler>
-inline custom_alloc_handler<Handler> make_custom_alloc_handler(
-    handler_allocator& a, Handler h)
+template <typename Allocator, typename Handler>
+inline custom_alloc_handler<Allocator, std::decay_t<Handler>> make_custom_alloc_handler(
+    Allocator& a, Handler&& handler)
 {
-    return custom_alloc_handler<Handler>(a, h);
+    using handler_type = std::decay_t<Handler>;
+    return custom_alloc_handler<Allocator, handler_type>(a, std::forward<Handler>(handler));
 }

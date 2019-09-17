@@ -253,8 +253,8 @@ local function session_handler(fd)
             error("Invalid response body")
         end
         request.content = tbconcat( chunkdata )
-    else
-        error ("Unsupport transfer-encoding")
+    elseif method:upper()~="GET" then
+        error("Unsupport transfer-encoding: "..tostring(header["transfer-encoding"]))
     end
     request_handler(fd, request)
 end

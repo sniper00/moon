@@ -45,7 +45,7 @@ namespace moon
         explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket* s, Args&&... args)
             : serviceid_(serviceid)
             , type_(type)
-            , s_(s)
+            , parent_(s)
             , socket_(std::forward<Args>(args)...)
         {
         }
@@ -272,22 +272,22 @@ namespace moon
                 msg->set_sender(fd_);
                 msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
-                s_->close(fd_, true);
+                parent_->close(fd_, true);
             }
-            s_ = nullptr;
+            parent_ = nullptr;
         }
 
         template<typename Message>
         void handle_message(Message&& m)
         {
-            if (nullptr != s_)
+            if (nullptr != parent_)
             {
                 m->set_sender(fd_);
                 if (m->type() == 0)
                 {
                     m->set_type(type_);
                 }
-                s_->handle_message(serviceid_, std::forward<Message>(m));
+                parent_->handle_message(serviceid_, std::forward<Message>(m));
             }
         }
     protected:
@@ -298,7 +298,7 @@ namespace moon
         moon::log* log_ = nullptr;
         uint32_t serviceid_;
         uint8_t type_;
-        moon::socket* s_;
+        moon::socket* parent_;
         socket_t socket_;
         handler_allocator rallocator_;
         handler_allocator wallocator_;
