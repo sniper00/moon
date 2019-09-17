@@ -204,8 +204,8 @@ bool socket::write_with_flag(uint32_t fd, const buffer_ptr_t & data, int flag)
     {
         return false;
     }
-    MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid")
-        data->set_flag(static_cast<buffer_flag>(flag));
+    MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid");
+    data->set_flag(static_cast<buffer_flag>(flag));
     return iter->second->send(data);
 }
 
@@ -347,6 +347,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
         break;
     }
     default:
+        MOON_ASSERT(false, "Unknown socket protocol");
         break;
     }
     connection->logger(router_->logger());
