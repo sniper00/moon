@@ -214,7 +214,7 @@ bool socket::write_message(uint32_t fd, message * m)
     return write(fd, *m);
 }
 
-bool socket::close(uint32_t fd,bool remove)
+bool socket::close(uint32_t fd, bool remove)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -304,6 +304,16 @@ bool socket::set_enable_frame(uint32_t fd, std::string flag)
             c->set_frame_flag(v);
             return true;
         }
+    }
+    return false;
+}
+
+bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
+{
+    if (auto iter = connections_.find(fd); iter != connections_.end())
+    {
+        iter->second->set_send_queue_limit(warnsize, errorsize);
+        return true;
     }
     return false;
 }

@@ -372,6 +372,7 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("settimeout", &moon::socket::settimeout, &sock);
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_frame", &moon::socket::set_enable_frame, &sock);
+    tb.set_function("set_send_queue_limit", &moon::socket::set_send_queue_limit, &sock);
     registerlib(lua.lua_state(), "socketcore", tb);
     return *this;
 }

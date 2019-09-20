@@ -151,8 +151,15 @@ namespace moon
             }
         }
 
-        void error(const asio::error_code& e)
+        void error(const asio::error_code& e, const std::string& additional ="") override
         {
+            (void)additional;
+
+            if (nullptr == parent_)
+            {
+                return;
+            }
+
             response_->get_buffer()->clear();
 
             if (e)

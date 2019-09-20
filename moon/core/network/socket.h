@@ -93,6 +93,8 @@ namespace moon
 
         bool set_enable_frame(uint32_t fd, std::string flag);
 
+        bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
+
         size_t socket_num();
     private:
         uint32_t uuid();
@@ -132,7 +134,7 @@ namespace moon
         auto s = find_service(serviceid);
         if (nullptr == s)
         {
-            close(m->sender(),true);
+            close(m->sender(), true);
             return;
         }
         m->set_receiver(0);

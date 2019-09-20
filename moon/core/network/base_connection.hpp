@@ -84,10 +84,10 @@ namespace moon
 
             queue_.push_back(data);
 
-            if (queue_.size() >= WARN_NET_SEND_QUEUE_SIZE)
+            if (wq_warn_size_ != 0 && queue_.size() >= wq_warn_size_)
             {
                 CONSOLE_DEBUG(logger(), "network send queue too long. size:%zu", queue_.size());
-                if (queue_.size() >= MAX_NET_SEND_QUEUE_SIZE)
+                if (wq_error_size_ != 0 && queue_.size() >= wq_error_size_)
                 {
                     error(make_error_code(moon::error::send_queue_too_big));
                     return false;
@@ -165,6 +165,12 @@ namespace moon
             timeout_ = v;
         }
 
+        void set_send_queue_limit(uint32_t warnsize, uint32_t errorsize)
+        {
+            wq_warn_size_ = warnsize;
+            wq_error_size_ = errorsize;
+        }
+
         static time_t now()
         {
             return std::time(nullptr);
@@ -240,21 +246,26 @@ namespace moon
             }));
         }
 
-        void error(const asio::error_code& e,const std::string& add = "")
+        virtual void error(const asio::error_code& e, const std::string& additional = "")
         {
+            if (nullptr == parent_)
+            {
+                return;
+            }
+
             //error
             {
                 if (e && e != asio::error::eof)
                 {
                     auto msg = message::create();
                     std::string message = e.message();
-                    if (!add.empty())
+                    if (!additional.empty())
                     {
                         message.append("(");
-                        message.append(add);
+                        message.append(additional);
                         message.append(")");
                     }
-                    std::string content= moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
+                    std::string content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
                         , address().data()
                         , e.value()
                         , e.message().data());
@@ -296,6 +307,8 @@ namespace moon
         time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
         moon::log* log_ = nullptr;
+        uint32_t wq_warn_size_ = 0;
+        uint32_t wq_error_size_ = 0;
         uint32_t serviceid_;
         uint8_t type_;
         moon::socket* parent_;

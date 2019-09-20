@@ -23,8 +23,6 @@ namespace moon
     //network
     using message_size_t = uint16_t;
     constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
-    constexpr size_t WARN_NET_SEND_QUEUE_SIZE = 200;
-    constexpr size_t MAX_NET_SEND_QUEUE_SIZE = 300;
 
     constexpr  string_view_t STR_LF = "\n"sv;
     constexpr  string_view_t STR_CRLF = "\r\n"sv;
