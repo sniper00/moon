@@ -204,8 +204,8 @@ bool socket::write_with_flag(uint32_t fd, const buffer_ptr_t & data, int flag)
     {
         return false;
     }
-    MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid")
-        data->set_flag(static_cast<buffer_flag>(flag));
+    MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid");
+    data->set_flag(static_cast<buffer_flag>(flag));
     return iter->second->send(data);
 }
 
@@ -214,7 +214,7 @@ bool socket::write_message(uint32_t fd, message * m)
     return write(fd, *m);
 }
 
-bool socket::close(uint32_t fd,bool remove)
+bool socket::close(uint32_t fd, bool remove)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -308,6 +308,16 @@ bool socket::set_enable_frame(uint32_t fd, std::string flag)
     return false;
 }
 
+bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
+{
+    if (auto iter = connections_.find(fd); iter != connections_.end())
+    {
+        iter->second->set_send_queue_limit(warnsize, errorsize);
+        return true;
+    }
+    return false;
+}
+
 size_t moon::socket::socket_num()
 {
     return connections_.size();
@@ -347,6 +357,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
         break;
     }
     default:
+        MOON_ASSERT(false, "Unknown socket protocol");
         break;
     }
     connection->logger(router_->logger());
