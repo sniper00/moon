@@ -137,6 +137,7 @@ namespace moon
             {
                 asio::post(socket_.get_executor(), [this]() {
                     error(make_error_code(moon::error::read_timeout));
+                    close();
                 });
                 return;
             }
