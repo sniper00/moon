@@ -295,6 +295,14 @@ function moon.queryservice(name)
 	return name
 end
 
+function moon.set_env_pack(name, ...)
+    return core.set_env(name, seri.packs(...))
+end
+
+function moon.get_env_unpack(name)
+    return seri.unpack(core.get_env(name))
+end
+
 -------------------------协程操作封装--------------------------
 local co_pool = setmetatable({}, {__mode = "kv"})
 
