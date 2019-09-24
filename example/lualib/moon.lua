@@ -525,7 +525,7 @@ reg_protocol {
         local co = session_id_coroutine[sessionid]
         if co then
             session_id_coroutine[sessionid] = nil
-            coresume(co, false, topic..data)
+            coresume(co, false, topic..":"..data)
             return
         end
     end
