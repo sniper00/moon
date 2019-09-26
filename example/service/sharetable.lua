@@ -1,4 +1,5 @@
 local moon = require "moon"
+local seri = require "seri"
 local core = require "sharetable.core"
 local fs = require("fs")
 
@@ -107,14 +108,15 @@ if conf and conf.name then
 	end)
 
 	if conf.dir then
+		local conf_files = {}
 		fs.traverse_folder(conf.dir, 0, function(filepath, isdir)
 			if not isdir and fs.extension(filepath) == ".lua" then
-				local prefix = fs.parent_path(filepath)
-				prefix = fs.relative_work_path(prefix)
-				sharetable.loadfile(0,0,prefix.."/"..fs.filename(filepath))
+				sharetable.loadfile(0,0,filepath)
+				table.insert(conf_files, filepath)
 			end
 			return true
 		end)
+		moon.set_env_pack("LOGIC_CONF", seri.pack(conf_files))
 	end
 else
 	local function report_close()
