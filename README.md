@@ -5,6 +5,7 @@ Lua的协程特性，也使异步逻辑的编写更加简单。
 
 框架本身没有提供太多的游戏业务层逻辑，主要目标是提供基础功能。
 
+如果有疑问或者建议欢迎提交issue,或者加入QQ群
 QQ交流群: 543833695
 
 # 目录
@@ -485,7 +486,7 @@ end)
  ./moon.exe -f example_timer.lua
 ```
 
-### 使用配置文件的示例
+### 使用配置文件的示例(example 目录)
 
 **config.json**
 
@@ -543,9 +544,14 @@ end)
     ./moon -r 9
 ```
 
-#### 编写一个mysql服务
+#### 编写一个Mysql服务,为其他服务提供访问Mysql DB的功能
 ```shell
     ./moon -r 10
+```
+
+#### 编写一个Redis服务,为其他服务提供访问Redis DB的功能
+```shell
+    ./moon -r 11
 ```
 
 # Friend Open Source
