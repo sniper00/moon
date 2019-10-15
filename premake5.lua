@@ -35,16 +35,16 @@ workspace "Server"
         warnings "High"
 
 project "lua53"
-    objdir "obj/lua53/%{cfg.platform}_%{cfg.buildcfg}"
-    location "build/lua53"
+    location "projects/build/lua53"
+    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
+    targetdir "projects/bin/%{cfg.buildcfg}"
+    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
     kind "SharedLib"
     language "C"
-    targetdir "bin/%{cfg.buildcfg}"
     includedirs {"./third/lua53"}
     files { "./third/lua53/**.h", "./third/lua53/**.c"}
     removefiles("./third/lua53/luac.c")
     removefiles("./third/lua53/lua.c")
-    postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
     filter { "system:windows" }
         defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
@@ -55,13 +55,13 @@ project "lua53"
         links{"dl"}
 
 project "rapidjson"
-    objdir "obj/rapidjson/%{cfg.platform}_%{cfg.buildcfg}"
-    location "build/rapidjson"
+    location "projects/build/rapidjson"
+    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
+    targetdir "projects/bin/%{cfg.buildcfg}"
+
     kind "StaticLib"
     language "C++"
-    targetdir "bin/%{cfg.buildcfg}"
     includedirs {"./third","./third/lua53","./third/rapidjsonlua"}
-    --links{"lua53"}
     files { "./third/rapidjsonlua/**.hpp", "./third/rapidjsonlua/**.cpp"}
     filter {"system:linux or macosx"}
         buildoptions {"-msse4.2"}
@@ -69,11 +69,13 @@ project "rapidjson"
         defines {"WIN32"}
 
 project "moon"
-    objdir "obj/moon/%{cfg.platform}_%{cfg.buildcfg}"
-    location "build/moon"
+    location "projects/build/lua53"
+    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
+    targetdir "projects/bin/%{cfg.buildcfg}"
+    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
+
     kind "ConsoleApp"
     language "C++"
-    targetdir "bin/%{cfg.buildcfg}"
     includedirs {"./","./moon","./moon/core","./third","./third/lua53"}
     files {"./moon/**.h", "./moon/**.hpp","./moon/**.cpp" }
     links{"lua53","rapidjson"}
@@ -83,7 +85,6 @@ project "moon"
         "SOL_ALL_SAFETIES_ON",
         "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING" ,
     }
-    postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/"}
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
     filter {"system:linux"}
@@ -115,33 +116,35 @@ project "moon"
 ]]
 local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon, macaddon )
     project(name)
-    objdir ("obj/"..name.."/%{cfg.platform}_%{cfg.buildcfg}") --编译生成的中间文件目录
-    location ("build/"..name) -- 生成的工程文件目录
-    kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
-    targetdir "bin/%{cfg.buildcfg}" --目标文件目录
-    includedirs {"./third","./third/lua53"} --头文件搜索目录
-    files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
-    targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
-    language "C"
-    postbuildcommands{"{COPY} %{wks.location}/bin/%{cfg.buildcfg}/%{cfg.buildtarget.name} %{wks.location}/example/clib/"} -- 编译完后拷贝到example目录
-    if type(normaladdon)=="function" then
-        normaladdon()
-    end
-    filter { "system:windows" }
-        links{"lua53"} -- windows 版需要链接 lua 库
-        defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
-        if type(winddowsaddon)=="function" then
-            winddowsaddon()
+        location("projects/build/"..name)
+        objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"--编译生成的中间文件目录
+        targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib/"}
+
+        kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
+        includedirs {"./third","./third/lua53"} --头文件搜索目录
+        files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
+        targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
+        language "C"
+
+        if type(normaladdon)=="function" then
+            normaladdon()
         end
-    filter {"system:linux"}
-        if type(linuxaddon)=="function" then
-            linuxaddon()
-        end
-    filter {"system:macosx"}
-        links{"lua53"}
-        if type(macaddon)=="function" then
-            macaddon()
-        end
+        filter { "system:windows" }
+            links{"lua53"} -- windows 版需要链接 lua 库
+            defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
+            if type(winddowsaddon)=="function" then
+                winddowsaddon()
+            end
+        filter {"system:linux"}
+            if type(linuxaddon)=="function" then
+                linuxaddon()
+            end
+        filter {"system:macosx"}
+            links{"lua53"}
+            if type(macaddon)=="function" then
+                macaddon()
+            end
 end
 
 -----------------------------------------------------------------------------------
