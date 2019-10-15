@@ -76,8 +76,8 @@ project "moon"
 
     kind "ConsoleApp"
     language "C++"
-    includedirs {"./","./moon","./moon/core","./third","./third/lua53"}
-    files {"./moon/**.h", "./moon/**.hpp","./moon/**.cpp" }
+    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua53"}
+    files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{"lua53","rapidjson"}
     defines {
         "ASIO_STANDALONE" ,
