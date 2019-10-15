@@ -43,6 +43,8 @@ namespace moon
     public:
         inline static fs::path working_directory;
 
+        inline static fs::path root_directory;
+
         static std::string current_directory()
         {
             std::error_code ec;

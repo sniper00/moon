@@ -85,9 +85,9 @@ void usage(void) {
     std::cout << "Usage:\n";
     std::cout << "        moon [-c filename] [-r server-id] [-f lua-filename]\n";
     std::cout << "The options are:\n";
-    std::cout << "        -c          set configuration file (default: config.json)\n";
-    std::cout << "        -r          set server id to run (default: 1)\n";
-    std::cout << "        -f          run a lua file.\n";
+    std::cout << "        -c          set configuration file (default: config.json). will change current working directory to configuration file's path.\n";
+    std::cout << "        -r          set server id to run (default: 1).\n";
+    std::cout << "        -f          run a lua file. will change current working directory to lua file's path.\n";
     std::cout << "Examples:\n";
     std::cout << "        moon -c config.json\n";
     std::cout << "        moon -c config.json -r 1\n";
@@ -105,7 +105,7 @@ int main(int argc, char*argv[])
     {
         try
         {
-            directory::working_directory = directory::current_directory();
+            directory::root_directory = directory::working_directory = directory::current_directory();
 
             std::string conf = "config.json";//default config
             int32_t sid = 1;//default start server 1
@@ -120,7 +120,7 @@ int main(int argc, char*argv[])
                     usage();
                     return -1;
                 }
-                else if ((v == "-c"sv || v == "-config"sv) && !lastarg)
+                else if ((v == "-c"sv || v == "--config"sv) && !lastarg)
                 {
                     conf = argv[++i];
                     if (!fs::exists(conf))
@@ -129,11 +129,11 @@ int main(int argc, char*argv[])
                         return -1;
                     }
                 }
-                else if ((v == "-r"sv || v == "-run"sv) && !lastarg)
+                else if ((v == "-r"sv || v == "--run"sv) && !lastarg)
                 {
                     sid = moon::string_convert<int32_t>(argv[++i]);
                 }
-                else if ((v == "-f"sv || v == "-file"sv) && !lastarg)
+                else if ((v == "-f"sv || v == "--file"sv) && !lastarg)
                 {
                     service_file = argv[++i];
                     if (fs::path(service_file).extension() != ".lua")
@@ -161,9 +161,11 @@ int main(int argc, char*argv[])
 
             if (!service_file.empty())
             {
+                fs::current_path(fs::absolute(fs::path(service_file)).parent_path());
+                directory::working_directory = fs::current_path();
                 server_->init(1, "");
                 server_->logger()->set_level("DEBUG");
-                auto config_string = moon::format(R"({"name":"%s","file":"%s"})", fs::path(service_file).stem().string().data(), service_file.data());
+                auto config_string = moon::format(R"({"name":"%s","file":"%s"})", fs::path(service_file).stem().string().data(), fs::path(service_file).filename().string().data());
                 MOON_CHECK(router_->new_service("lua", config_string, true, 0, 0, 0), "new_service failed");
             }
             else
@@ -173,6 +175,9 @@ int main(int argc, char*argv[])
                 MOON_CHECK(scfg.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
                 auto c = scfg.find(sid);
                 MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
+
+                fs::current_path(fs::absolute(fs::path(conf)).parent_path());
+                directory::working_directory = fs::current_path();
 
                 router_->set_env("SID", std::to_string(c->sid));
                 router_->set_env("SERVER_NAME", c->name);

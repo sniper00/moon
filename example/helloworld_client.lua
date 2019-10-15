@@ -3,7 +3,7 @@ local moon = require("moon")
 local socket = require("moon.socket")
 
 local HOST = "127.0.0.1"
-local PORT = 9526
+local PORT = 12345
 
 local function send(fd,data)
     if not fd then
