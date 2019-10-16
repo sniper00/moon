@@ -105,7 +105,7 @@ int main(int argc, char*argv[])
     {
         try
         {
-            directory::root_directory = directory::working_directory = directory::current_directory();
+            directory::root_directory = directory::working_directory = directory::module_path();
 
             std::string conf = "config.json";//default config
             int32_t sid = 1;//default start server 1
@@ -192,7 +192,7 @@ int main(int argc, char*argv[])
                 for (auto&s : c->services)
                 {
                     if (s.unique) ++count;
-                    MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new_service failed");
+                    MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new service failed");
                 }
                 //wait all configured unique service is created.
                 while ((server_->get_state() == moon::state::ready) && router_->unique_service_size() != count);
