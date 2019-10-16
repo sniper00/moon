@@ -55,13 +55,13 @@ namespace moon
         static fs::path module_path()
         {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-            char buffer[MAX_PATH];
-            auto len = GetModuleFileName(NULL, buffer, MAX_PATH);
+            char temp[MAX_PATH];
+            auto len = GetModuleFileName(NULL, temp, MAX_PATH);
 #else
-            char buffer[PATH_MAX];
-            auto len = readlink("/proc/self/exe", buffer, PATH_MAX);
+            char temp[1024];
+            auto len = readlink("/proc/self/exe", temp, 1024);
 #endif
-            std::string res(buffer, len);
+            std::string res(temp, len);
             return fs::path(res).parent_path();
         }
 
