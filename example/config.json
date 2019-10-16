@@ -75,7 +75,7 @@
             {
                 "unique": true,
                 "name": "clusterd",
-                "file": "service/clusterd.lua",
+                "file": "../service/clusterd.lua",
                 "host": "#inner_host",
                 "port": 10001
             },
@@ -95,7 +95,7 @@
             {
                 "unique": true,
                 "name": "clusterd",
-                "file": "service/clusterd.lua",
+                "file": "../service/clusterd.lua",
                 "host": "#inner_host",
                 "port": 10002
             },
