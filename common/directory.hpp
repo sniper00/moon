@@ -52,6 +52,19 @@ namespace moon
             return p.string();
         }
 
+        static fs::path module_path()
+        {
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+            char buffer[MAX_PATH];
+            auto len = GetModuleFileName(NULL, buffer, MAX_PATH);
+#else
+            char buffer[PATH_MAX];
+            auto len = readlink("/proc/self/exe", buffer, PATH_MAX);
+#endif
+            std::string res(buffer, len);
+            return fs::path(res).parent_path();
+        }
+
         static bool exists(const std::string &path)
         {
             std::error_code ec;
