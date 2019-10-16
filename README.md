@@ -134,11 +134,10 @@ end)
 ```
 
 ```shell
-cd example
 # 运行 echo server
-./moon -f helloworld.lua
+./moon -f example/helloworld.lua
 # 另启动一个终端运行 client(协程socket编写的客户端)
-./moon -f helloworld_client.lua
+./moon -f example/helloworld_client.lua
 # 输入任意字符
 ```
 
@@ -203,9 +202,9 @@ end)
 
 ```shell
 # 运行 server
-./moon -f network.lua
+./moon -f example/network.lua
 # 另启动一个终端运行 client
-./moon -f helloworld_client.lua
+./moon -f example/helloworld_client.lua
 # 输入任意字符
 
 ```
@@ -267,7 +266,7 @@ end)
 ```
 
 ```shell
-./moon -f network_websocket.lua
+./moon -f example/network_websocket.lua
 # 使用浏览器运行websocket_client.html
 ```
 
@@ -306,7 +305,7 @@ end)
 ```
 
 ```shell
- ./moon.exe -f create_service.lua
+ ./moon.exe -f example/create_service.lua
 ```
 
 ### 服务间通信-Callback模式
@@ -385,7 +384,7 @@ end)
 ```
 
 ```shell
- ./moon.exe -f service_callback_sender.lua
+ ./moon.exe -f example/service_callback_sender.lua
 ```
 
 ### 服务间通信-协程模式
@@ -443,7 +442,7 @@ end)
 ```
 
 ```shell
- ./moon.exe -f service_coroutine_sender.lua
+ ./moon.exe -f example/service_coroutine_sender.lua
 ```
 
 ### 定时器
@@ -483,7 +482,7 @@ end)
 ```
 
 ```shell
- ./moon.exe -f example_timer.lua
+ ./moon.exe -f example/example_timer.lua
 ```
 
 ### 使用配置文件的示例(example 目录)
@@ -496,9 +495,9 @@ end)
 启动了`2字节大端表示长度的`协议和`websocket`协议的服务端，并且带有一个采用`协程socket`编写的客户端。运行：
 ```shell
     # run server
-    ./moon -r 1
+    ./moon  -c example/config.json -r 1
     # 另启动一个终端运行 client
-    ./moon -f helloworld_client.lua
+    ./moon -f example/helloworld_client.lua
 
     # 浏览器运行websocket_client.html
 ```
@@ -506,52 +505,52 @@ end)
 #### Redis Client Example
 `协程socket`编写的redis client, 默认连接 127.0.0.1 6379
 ```shell
-    ./moon -r 2
+    ./moon -c example/config.json -r 2
 ```
 
 #### Service Send Benchmark
 服务间发送消息性能测试
 ```shell
-    ./moon -r 3
+    ./moon -c example/config.json -r 3
 ```
 
 #### Cluster Example
 进程间发送消息示例
 ```shell
-    ./moon -r 4
-    ./moon -r 5
+    ./moon -c example/config.json -r 4
+    ./moon -c example/config.json -r 5
 ```
 
 #### Mysql API Example
 ```shell
-    ./moon -r 6
+    ./moon -c example/config.json -r 6
 ```
 
 #### 测试用例
 ```shell
-    ./moon -r 7
+    ./moon -c example/config.json -r 7
 ```
 
 #### 协程socket性能测试
 `协程socket`编写的多线程服务端，采用`redis-benchmark`测试性能
 ```shell
-    ./moon -r 8
+    ./moon -c example/config.json -r 8
 ```
 
 #### Socket性能测试
 `2字节大端表示长度的`协议的网络性能测试
 ```shell
-    ./moon -r 9
+    ./moon -c example/config.json -r 9
 ```
 
 #### 编写一个Mysql服务,为其他服务提供访问Mysql DB的功能
 ```shell
-    ./moon -r 10
+    ./moon -c example/config.json -r 10
 ```
 
 #### 编写一个Redis服务,为其他服务提供访问Redis DB的功能
 ```shell
-    ./moon -r 11
+    ./moon -c example/config.json -r 11
 ```
 
 # Friend Open Source
