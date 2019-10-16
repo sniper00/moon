@@ -87,7 +87,10 @@ bool lua_service::init(string_view_t config)
             {
                 std::copy(server_cfg->cpath.begin(), server_cfg->cpath.end(), std::back_inserter(cpaths));
             }
-            cpaths.emplace_back("./clib");
+            auto root_dir = directory::root_directory;
+            auto clib_path = root_dir.append("clib").string();
+            moon::replace(clib_path, "\\", "/");
+            cpaths.emplace_back(clib_path);
             std::string strpath;
             strpath.append("package.cpath ='");
             for (auto& v : cpaths)
@@ -105,7 +108,10 @@ bool lua_service::init(string_view_t config)
             {
                 std::copy(server_cfg->path.begin(), server_cfg->path.end(), std::back_inserter(paths));
             }
-            paths.emplace_back("./lualib");
+            auto root_dir = directory::root_directory;
+            auto lualib_path = root_dir.append("lualib").string();
+            moon::replace(lualib_path, "\\", "/");
+            paths.emplace_back(lualib_path);
             std::string strpath;
             strpath.append("package.path ='");
             for (auto& v : paths)
