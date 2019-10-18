@@ -69,7 +69,7 @@ project "rapidjson"
         defines {"WIN32"}
 
 project "moon"
-    location "projects/build/lua53"
+    location "projects/build/moon"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
