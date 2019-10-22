@@ -37,7 +37,7 @@ project "lua53"
     location "projects/build/lua53"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
-    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
+    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
     kind "SharedLib"
     language "C"
     includedirs {"./third/lua53"}
@@ -71,7 +71,7 @@ project "moon"
     location "projects/build/moon"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
-    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
+    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
     kind "ConsoleApp"
     language "C++"
@@ -126,7 +126,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         location("projects/build/"..name)
         objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"--编译生成的中间文件目录
         targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
-        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib/"}
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
 
         kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
         includedirs {"./third","./third/lua53"} --头文件搜索目录
