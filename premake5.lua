@@ -5,7 +5,6 @@ workspace "Server"
     cppdialect "C++17"
 
     location "./"
-    libdirs{"./libs"}
 
     if os.istarget("windows") then
         platforms { "Win32", "x64"}
@@ -93,7 +92,15 @@ project "moon"
         --links{"gcc:static"}
         linkoptions {"-Wl,-rpath=./"}
     filter {"system:macosx"}
-        links{"dl","pthread","c++fs"}
+        if os.istarget("macosx") then
+            local tb = os.matchfiles("/usr/local/Cellar/llvm/**/c++fs.a")
+            if #tb > 0 then
+                print("use c++fs.a: ", tb[1])
+                libdirs({path.getdirectory(tb[1])})
+                links{"c++fs"}
+            end
+        end
+        links{"dl","pthread"}
         linkoptions {"-Wl,-rpath,./"}
     filter "configurations:Debug"
         targetsuffix "-d"
