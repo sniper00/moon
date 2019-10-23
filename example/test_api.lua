@@ -178,12 +178,17 @@ moon.async(function()
 	local co3 = moon.async(function()
 		moon.co_wait(100)
 	end)
+	local running,free = moon.coroutine_num()
+	test_assert.equal(free, 0)
+	test_assert.equal(running, 3)
 
 	moon.co_wait(200)
 
 	test_assert.equal(co1, co2)
 	test_assert.assert(co1~=co3 and co2~=co3)
-	test_assert.equal(moon.coroutine_num(), 2)
+	running,free = moon.coroutine_num()
+	test_assert.equal(free, 2)
+	test_assert.equal(running, 1)
 
 
 	for _= 1, 1000 do
@@ -203,7 +208,8 @@ moon.async(function()
 
 	moon.co_wait(100)
 
-	test_assert.equal(moon.coroutine_num(), 1000)
+	running,free = moon.coroutine_num()
+	test_assert.equal(free, 1000)
 
 	test_assert.success()
 end)
