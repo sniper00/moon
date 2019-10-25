@@ -98,6 +98,7 @@ local function coresume(co, ...)
     if not ok then
         error(debug.traceback(co, err))
     end
+    return ok, err
 end
 
 ---make map<coroutine,sessionid>
@@ -304,30 +305,37 @@ function moon.get_env_unpack(name)
 end
 
 -------------------------协程操作封装--------------------------
+
+local co_num = 0
+
 local co_pool = setmetatable({}, {__mode = "kv"})
 
-local waitallco = setmetatable({}, {__mode = "k"})
+local wait_all_co = setmetatable({}, {__mode = "k"})
 
-local function check_wait_all( ... )
-    local co = co_running()
-    local waitco = waitallco[co]
+local function check_wait_all(co, res )
+    local waitco = wait_all_co[co]
     if waitco then
         if 0 ~= waitco.ctx.count then
-            waitco.ctx.results[waitco.idx] = {...}
+            waitco.ctx.res[waitco.idx] = res
             waitco.ctx.count= waitco.ctx.count-1
             if 0==waitco.ctx.count then
-                coresume(waitco.ctx.cur,waitco.ctx.results)
+                wait_all_co[co] = nil
+                coresume(waitco.ctx.waiter,waitco.ctx.res)
             end
         end
+    else
+        return res
     end
-    return co
 end
 
 local function routine(f)
+    local co = co_running()
     while true do
-        local co = check_wait_all(f())
+        co_num = co_num + 1
+        local res = check_wait_all(co,f())
+        co_num = co_num - 1
         co_pool[#co_pool + 1] = co
-        f = co_yield()
+        f = co_yield(res)
     end
 end
 
@@ -339,30 +347,36 @@ function moon.async(func)
     if not co then
         co = co_create(routine)
     end
-    coresume(co, func) --func 作为 routine 的参数
+    local _, res = coresume(co, func) --func 作为 routine 的参数
+    if res then
+        return res
+    end
     return co
 end
 
 function moon.wait_all( ... )
-    ---@type coroutine
-    local currentco = co_running()
-    local ctx = {count = select("#",...),results={},cur=currentco}
+    local waiter = co_running()
+    local ctx = {count = select("#",...),res={},waiter=waiter}
     for k=1,ctx.count do
         local co = select(k,...)
-        assert(not waitallco[co])
         if type(co) == "thread" then
-            ctx.results[k]=""
-            waitallco[co]={ctx=ctx,idx=k}
+            assert(not wait_all_co[co])
+            ctx.res[k]=""
+            wait_all_co[co]={ctx=ctx,idx=k}
         else
-            ctx.results[k]=co
+            ctx.res[k]=co
             ctx.count = ctx.count -1
         end
+    end
+    if ctx.count == 0 then
+        return ctx.res
     end
     return co_yield()
 end
 
+---返回运行中的协程个数,和协程池空闲的协程个数
 function moon.coroutine_num()
-    return #co_pool
+    return co_num,#co_pool
 end
 
 --------------------------timer-------------

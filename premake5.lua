@@ -1,23 +1,9 @@
 workspace "Server"
     configurations { "Debug", "Release" }
-
     flags{"NoPCH","RelativeLinks"}
     cppdialect "C++17"
-
     location "./"
-
-    if os.istarget("windows") then
-        platforms { "Win32", "x64"}
-        characterset ("MBCS")
-        systemversion "latest"
-        filter { "platforms:Win32" }
-        architecture "x86"
-        warnings "Extra"
-
-        filter { "platforms:x64" }
-            architecture "x64"
-            warnings "Extra"
-    end
+    architecture "x64"
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -26,6 +12,11 @@ workspace "Server"
     filter "configurations:Release"
         defines { "NDEBUG" }
         optimize "On"
+
+    filter {"system:windows"}
+        characterset "MBCS"
+        systemversion "latest"
+        warnings "Extra"
 
     filter { "system:linux" }
         warnings "High"
@@ -37,7 +28,6 @@ project "lua53"
     location "projects/build/lua53"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
-    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
     kind "SharedLib"
     language "C"
     includedirs {"./third/lua53"}
@@ -52,6 +42,8 @@ project "lua53"
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
         links{"dl"}
+    filter{"configurations:*"}
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
 project "rapidjson"
     location "projects/build/rapidjson"
@@ -71,7 +63,6 @@ project "moon"
     location "projects/build/moon"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
-    postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/"}
 
     kind "ConsoleApp"
     language "C++"
@@ -88,9 +79,9 @@ project "moon"
         defines {"_WIN32_WINNT=0x0601"}
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
-        --links{"stdc++:static"}
-        --links{"gcc:static"}
-        linkoptions {"-Wl,-rpath=./"}
+        -- links{"stdc++:static"}
+        -- links{"gcc:static"}
+        linkoptions {"-Wl,-rpath=./","-Wl,--as-needed"}
     filter {"system:macosx"}
         if os.istarget("macosx") then
             local tb = os.matchfiles("/usr/local/Cellar/llvm/**/c++fs.a")
@@ -104,6 +95,8 @@ project "moon"
         linkoptions {"-Wl,-rpath,./"}
     filter "configurations:Debug"
         targetsuffix "-d"
+    filter{"configurations:*"}
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
 
 --[[
@@ -126,7 +119,6 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         location("projects/build/"..name)
         objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"--编译生成的中间文件目录
         targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
-        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib/"}
 
         kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
         includedirs {"./third","./third/lua53"} --头文件搜索目录
@@ -152,6 +144,8 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
             if type(macaddon)=="function" then
                 macaddon()
             end
+        filter{"configurations:*"}
+            postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
 end
 
 -----------------------------------------------------------------------------------
