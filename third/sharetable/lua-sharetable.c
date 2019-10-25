@@ -240,7 +240,7 @@ matrix_from_file(lua_State *L) {
 }
 
 LUAMOD_API int
-luaopen_skynet_sharetable_core(lua_State *L) {
+luaopen_sharetable_core(lua_State *L) {
 	luaL_checkversion(L);
 	luaL_Reg l[] = {
 		{ "clone", clone_table },
@@ -256,7 +256,7 @@ luaopen_skynet_sharetable_core(lua_State *L) {
 #else
 
 LUAMOD_API int
-luaopen_skynet_sharetable_core(lua_State *L) {
+luaopen_sharetable_core(lua_State *L) {
 	return luaL_error(L, "No share string table support");
 }
 
