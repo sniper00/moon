@@ -6,7 +6,8 @@ moon.start(function()
     moon.new_service("lua", {
         name = "create_service2",
         file = "create_service2.lua",
-        message = "Hello create_service"
+        message = "Hello create_service",
+        auto_quit = true
     })
 
     moon.async(function()
@@ -14,15 +15,15 @@ moon.start(function()
         local serviceid =  moon.co_new_service("lua", {
             name = "create_service2",
             file = "create_service2.lua",
-            message = "Hello create_service coroutine"
+            message = "Hello create_service_coroutine"
         })
 
-        --moon.send("lua", serviceid, "ADD", 1, 2)
+        print("new service",string.format("%X",serviceid))
 
-        print("co_new_service service:", serviceid)
+        moon.send("lua", serviceid, "QUIT")
+
+        moon.abort()
     end)
-
-    print("enter 'CTRL-C' stop server.")
 end)
 
 
