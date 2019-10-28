@@ -100,7 +100,7 @@ static int my_lua_print(lua_State *L) {
         buf.write_back(s, l);
         lua_pop(L, 1);  /* pop result */
     }
-    logger->logstring(true, moon::LogLevel::Info, moon::string_view_t{ buf.data(), buf.size() }, serviceid);
+    logger->logstring(true, moon::LogLevel::Info, string_view_t{ buf.data(), buf.size() }, serviceid);
     lua_pop(L, 1);  /* pop tostring */
     return 0;
 }
