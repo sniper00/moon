@@ -13,7 +13,7 @@ namespace moon
     class service
     {
     public:
-        friend class router;
+        friend class worker;
 
         service() = default;
 
@@ -112,9 +112,9 @@ namespace moon
             }
         }
 
-        void quit(bool crashed = false)
+        void quit()
         {
-            router_->remove_service(id_, 0, 0, crashed);
+            router_->remove_service(id_, 0, 0);
         }
 
     public:
