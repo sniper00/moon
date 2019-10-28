@@ -97,9 +97,13 @@ namespace moon
         return res;
     }
 
-    void worker::add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t sessionid)
+    void worker::add_service(std::string service_type
+        , std::string config
+        , bool unique
+        , uint32_t creatorid
+        , int32_t sessionid)
     {
-        post([this, s = std::move(s), config = std::move(config), creatorid, sessionid]() mutable {
+        post([this, service_type = std::move(service_type), config = std::move(config), unique, creatorid, sessionid](){
             do
             {
                 if (state_.load(std::memory_order_acquire) != state::ready)
@@ -107,20 +111,40 @@ namespace moon
                     break;
                 }
 
+                size_t counter = 0;
+                uint32_t serviceid = 0;
+                do
+                {
+                    if (counter >= worker::max_uuid)
+                    {
+                        CONSOLE_ERROR(router_->logger()
+                            , "new service failed: can not get more service id. worker[%d] service num[%u].", id(), size());
+                        break;
+                    }
+                    serviceid = uuid();
+                    ++counter;
+                } while (services_.find(serviceid)!= services_.end());
+
+                auto s = router_->make_service(service_type);
+                MOON_ASSERT(s,
+                    moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
+                s->set_id(serviceid);
+                s->logger(router_->logger());
+                s->set_unique(unique);
+                s->set_server_context(server_, router_, this);
+
                 if (!s->init(config))
                 {
                     break;
                 }
 
-                auto serviceid = s->id();
-                auto res = services_.try_emplace(serviceid, std::move(s));
-                if (!res.second)
+                s->ok(true);
+
+                if (!services_.emplace(serviceid, std::move(s)).second)
                 {
-                    CONSOLE_ERROR(router_->logger(), "new service[%s] failed: serviceid repeated.", s->name().data());
                     break;
                 }
 
-                res.first->second->ok(true);
                 will_start_.push_back(serviceid);
                 if (0 != sessionid)//only dynamically created service has sessionid
                 {
@@ -130,8 +154,8 @@ namespace moon
                 return;
             } while (false);
 
-            router_->on_service_remove(s->id());
             shared(services_.empty());
+
             if (0 != sessionid)
             {
                 router_->response(creatorid, std::string_view{}, "0"sv, sessionid);
@@ -139,17 +163,12 @@ namespace moon
         });
     }
 
-    void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid, bool crashed)
+    void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid)
     {
-        post([this, serviceid, sender, sessionid, crashed]() {
+        post([this, serviceid, sender, sessionid]() {
             if (auto s = find_service(serviceid); nullptr != s)
             {
                 s->destroy();
-                if (!crashed)
-                {
-                    router_->on_service_remove(serviceid);
-                }
-
                 auto content = moon::format(R"({"name":"%s","serviceid":%X,"errmsg":"service destroy"})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, sessionid);
                 services_.erase(serviceid);
@@ -253,11 +272,16 @@ namespace moon
         return 0;
     }
 
-    void worker::send_prefab(uint32_t sender, uint32_t receiver, uint32_t prefabid, const moon::string_view_t & header, int32_t sessionid, uint8_t type) const
+    void worker::send_prefab(uint32_t sender
+        , uint32_t receiver
+        , uint32_t prefabid
+        , string_view_t header
+        , int32_t sessionid
+        , uint8_t type) const
     {
         if (auto iter = prefabs_.find(prefabid); iter != prefabs_.end())
         {
-            router_->send(sender, receiver, iter->second, header, sessionid, type);
+            router_->send(sender, receiver, std::move(iter->second), header, sessionid, type);
             return;
         }
         CONSOLE_DEBUG(server_->logger(), "send_prefab failed, can not find prepared data. prefabid %u", prefabid);

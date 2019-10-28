@@ -32,7 +32,7 @@ namespace moon
 
         worker& operator=(const worker&) = delete;
 
-        void remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid, bool crashed = false);
+        void remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid);
 
         asio::io_context& io_context();
 
@@ -42,7 +42,11 @@ namespace moon
 
         uint32_t uuid();
 
-        void add_service(service_ptr_t&& s, const std::string& config, uint32_t creatorid, int32_t sessionid);
+        void add_service(std::string service_type
+            , std::string config
+            , bool unique
+            , uint32_t creatorid
+            , int32_t sessionid);
 
         void send(message_ptr_t&& msg);
 
@@ -54,11 +58,22 @@ namespace moon
 
         uint32_t make_prefab(const moon::buffer_ptr_t & buf);
 
-        void send_prefab(uint32_t sender, uint32_t receiver, uint32_t prefabid, const  moon::string_view_t& header, int32_t sessionid, uint8_t type) const;
+        void send_prefab(uint32_t sender
+            , uint32_t receiver
+            , uint32_t prefabid
+            , string_view_t header
+            , int32_t sessionid
+            , uint8_t type) const;
     
         worker_timer& timer() { return timer_; }
 
         moon::socket& socket() { return *socket_; }
+
+        template<typename THandler>
+        void post(THandler&& h)
+        {
+            asio::post(io_ctx_, std::forward<THandler>(h));
+        }
     private:
         void run();
 
@@ -67,12 +82,6 @@ namespace moon
         void wait();
 
         bool stoped();
-
-        template<typename THandler>
-        void post(THandler&& h)
-        {
-            asio::post(io_ctx_, std::forward<THandler>(h));
-        }
     private:
         void start();
 
