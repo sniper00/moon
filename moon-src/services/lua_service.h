@@ -31,7 +31,7 @@ public:
 
     void set_callback(char c, sol_function_t f);
 private:
-    bool init(moon::string_view_t config) override;
+    bool init(std::string_view config) override;
 
     void start()  override;
 

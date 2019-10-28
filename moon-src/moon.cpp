@@ -105,7 +105,7 @@ int main(int argc, char*argv[])
     {
         try
         {
-            directory::root_directory = directory::working_directory = directory::module_path();
+            directory::working_directory = directory::current_directory();
 
             std::string conf = "config.json";//default config
             int32_t sid = 1;//default start server 1
@@ -159,44 +159,65 @@ int main(int argc, char*argv[])
                 return std::make_unique<lua_service>();
             });
 
+            moon::server_config_manger& scfg = moon::server_config_manger::instance();
             if (!service_file.empty())
             {
+                std::string clibdir;
+                {
+                    auto dir = directory::working_directory;
+                    clibdir = dir.append("clib").string();
+                    moon::replace(clibdir, "\\", "/");
+                }
+
+                std::string lualibdir;
+                {
+                    auto dir = directory::working_directory;
+                    lualibdir = dir.append("lualib").string();
+                    moon::replace(lualibdir, "\\", "/");
+                }
+
+                scfg.parse(moon::format(R"([{"sid":1,"name":"test_#sid","thread":1,"cpath":["../clib"],"path":["../lualib"],"services":[{"name":"%s","file":"%s","cpath":["%s"],"path":["%s"]}]}]
+                )", fs::path(service_file).stem().string().data()
+                    , fs::path(service_file).filename().string().data()
+                    , clibdir.data()
+                    , lualibdir.data()), sid);
+
+                printf("use clib search path: %s\n", clibdir.data());
+                printf("use lualib search path: %s\n", clibdir.data());
+
                 fs::current_path(fs::absolute(fs::path(service_file)).parent_path());
                 directory::working_directory = fs::current_path();
-                server_->init(1, "");
-                server_->logger()->set_level("DEBUG");
-                auto config_string = moon::format(R"({"name":"%s","file":"%s"})", fs::path(service_file).stem().string().data(), fs::path(service_file).filename().string().data());
-                MOON_CHECK(router_->new_service("lua", config_string, true, 0, 0, 0), "new_service failed");
             }
             else
             {
-                MOON_CHECK(directory::exists(conf), moon::format("can not found config file: %s", conf.data()).data());
-                moon::server_config_manger& scfg = moon::server_config_manger::instance();
+                MOON_CHECK(directory::exists(conf)
+                    , moon::format("can not found default config file: '%s'.", conf.data()).data());
                 MOON_CHECK(scfg.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
-                auto c = scfg.find(sid);
-                MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
-
                 fs::current_path(fs::absolute(fs::path(conf)).parent_path());
                 directory::working_directory = fs::current_path();
-
-                router_->set_env("SID", std::to_string(c->sid));
-                router_->set_env("SERVER_NAME", c->name);
-                router_->set_env("INNER_HOST", c->inner_host);
-                router_->set_env("OUTER_HOST", c->outer_host);
-                router_->set_env("CONFIG", scfg.config());
-
-                server_->init(static_cast<uint8_t>(c->thread), c->log);
-                server_->logger()->set_level(c->loglevel);
-
-                size_t count = 0;
-                for (auto&s : c->services)
-                {
-                    if (s.unique) ++count;
-                    MOON_CHECK(router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0), "new service failed");
-                }
-                //wait all configured unique service is created.
-                while ((server_->get_state() == moon::state::ready) && router_->unique_service_size() != count);
             }
+
+            auto c = scfg.find(sid);
+            MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
+
+            router_->set_env("SID", std::to_string(c->sid));
+            router_->set_env("SERVER_NAME", c->name);
+            router_->set_env("INNER_HOST", c->inner_host);
+            router_->set_env("OUTER_HOST", c->outer_host);
+            router_->set_env("CONFIG", scfg.config());
+
+            server_->init(static_cast<uint8_t>(c->thread), c->log);
+            server_->logger()->set_level(c->loglevel);
+
+            size_t count = 0;
+            for (auto&s : c->services)
+            {
+                if (s.unique) ++count;
+                router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0);
+            }
+            //wait all configured unique service is created.
+            while ((server_->get_state() == moon::state::ready)
+                && router_->unique_service_size() != count);
 
             server_->run();
         }

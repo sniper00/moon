@@ -9,7 +9,7 @@ namespace math
 
     using node_rect = math::rect;
 
-    template<size_t min_radius>
+    template<size_t minimum_area>
     class quad_tree_node
     {
     public:
@@ -197,7 +197,7 @@ namespace math
         void create_sub_nodes()
         {
             // the smallest subnode has an area 
-            if ((bounds_.width*bounds_.height) <= min_radius * min_radius)
+            if ((bounds_.width*bounds_.height) <= minimum_area)
                 return;
 
             float halfw = bounds_.width / 2.0f;
@@ -223,12 +223,12 @@ namespace math
         std::unordered_map<objectid_t, quad_tree_object*> contents_;
     };
 
-    template<size_t min_raduis>
+    template<size_t minimum_area>
     class quad_tree
     {
     public:
-        using quad_tree_node_t = quad_tree_node<min_raduis>;
-        using quad_tree_object_t = typename quad_tree_node<min_raduis>::quad_tree_object;
+        using quad_tree_node_t = quad_tree_node<minimum_area>;
+        using quad_tree_object_t = typename quad_tree_node<minimum_area>::quad_tree_object;
 
         explicit quad_tree(const node_rect& rc)
             :rect_(rc)
