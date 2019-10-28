@@ -247,7 +247,7 @@ function moon.new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
     config = jencode(config)
-    return core.new_service(stype, config, unique, workerid,  0, 0)
+    core.new_service(stype, config, unique, workerid,  0, 0)
 end
 
 ---创建一个新的服务的协程封装，可以获得所创建的服务ID<br>
@@ -256,11 +256,8 @@ function moon.co_new_service(stype, config, unique, workerid)
     workerid = workerid or 0
     config = jencode(config)
     local sessionid = make_response()
-    local res = core.new_service(stype, config, unique, workerid, sid_, sessionid)
-    if res then
-        res = tonumber(co_yield())
-    end
-    return res
+    core.new_service(stype, config, unique, workerid, sid_, sessionid)
+    return tonumber(co_yield())
 end
 
 ---异步移除指定的服务
@@ -272,10 +269,10 @@ end
 function moon.remove_service(sid, bresponse)
     if bresponse then
         local sessionid = make_response()
-        core.remove_service(sid,sid_,sessionid,false)
+        core.remove_service(sid,sid_,sessionid)
         return co_yield()
     else
-        core.remove_service(sid,0,0,false)
+        core.remove_service(sid,0,0)
     end
 end
 
