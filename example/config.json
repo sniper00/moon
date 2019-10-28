@@ -7,6 +7,8 @@
         "thread": 4,
         "startup": "main.lua",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -27,6 +29,8 @@
         "sid": 2,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "name": "redis_example",
@@ -39,6 +43,8 @@
         "loglevel":"INFO",
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -71,6 +77,8 @@
         "sid": 4,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -91,6 +99,8 @@
         "name": "server_#sid",
         "outer_host": "127.0.0.1",
         "inner_host": "127.0.0.1",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -110,6 +120,8 @@
         "sid": 6,
         "name": "server_#sid",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -124,6 +136,8 @@
         "inner_host": "127.0.0.1",
         "log_level": "DEBUG",
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -139,6 +153,8 @@
         "inner_host": "127.0.0.1",
         "thread": 8,
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -159,6 +175,8 @@
         "inner_host": "127.0.0.1",
         "thread": 8,
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -185,6 +203,8 @@
         "name": "server_#sid",
         "thread": 8,
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,
@@ -211,6 +231,8 @@
         "name": "server_#sid",
         "thread": 4,
         "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib"],
         "services": [
             {
                 "unique": true,

@@ -17,64 +17,37 @@ namespace moon
     {
     }
 
-    size_t router::servicenum() const
-    {
-        std::shared_lock lck(serviceids_lck_);
-        return serviceids_.size();
-    }
-
     size_t router::workernum() const
     {
         return workers_.size();
     }
 
-    bool router::new_service(const std::string & service_type,const std::string& config, bool unique, int32_t workerid, uint32_t creatorid, int32_t sessionid)
+    void router::new_service(std::string service_type
+        ,std::string config
+        , bool unique
+        , int32_t workerid
+        , uint32_t creatorid
+        , int32_t sessionid)
     {
-        auto iter = regservices_.find(service_type);
-        MOON_ASSERT(iter != regservices_.end(), moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
-        worker* wk;
+        worker* w;
         if (workerid_valid(workerid))
         {
-            wk = get_worker(workerid);
+            w = get_worker(workerid);
+            w->shared(false);
         }
         else
         {
-            wk = next_worker();
+            w = next_worker();
         }
-
-        size_t counter = 0;
-        uint32_t serviceid = 0;
-        do
-        {
-            if (counter >= worker::max_uuid)
-            {
-                CONSOLE_ERROR(logger(), "new service failed: can not get more service id.worker[%d] servicenum[%u].", wk->id(), wk->size());
-                return false;
-            }
-            serviceid = wk->uuid();
-            ++counter;
-        } while (!try_add_serviceid(serviceid));
-
-        if (workerid != 0)
-        {
-            wk->shared(false);
-        }
-
-        auto s = iter->second();
-        s->set_id(serviceid);
-        s->logger(logger_);
-        s->set_unique(unique);
-        s->set_server_context(server_, this, wk);
-        wk->add_service(std::move(s), config, creatorid, sessionid);
-        return true;
+        w->add_service(std::move(service_type), std::move(config), unique, creatorid, sessionid);
     }
 
-    void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid, bool crashed)
+    void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid)
     {
         auto workerid = worker_id(serviceid);
         if (workerid_valid(workerid))
         {
-            get_worker(workerid)->remove_service(serviceid, sender, sessionid, crashed);
+            get_worker(workerid)->remove_service(serviceid, sender, sessionid);
         }
         else
         {
@@ -88,7 +61,8 @@ namespace moon
         auto params = moon::split<std::string>(cmd, ".");
         if (params.size() < 3)
         {
-            response(sender, "router::runcmd "sv, moon::format("param too few: %s", cmd.data()), sessionid, PTYPE_ERROR);
+            response(sender, "router::runcmd "sv
+                , moon::format("param too few: %s", cmd.data()), sessionid, PTYPE_ERROR);
             return;
         }
 
@@ -115,11 +89,17 @@ namespace moon
         MOON_CHECK(m->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(m->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(m->receiver());
-        MOON_CHECK(workerid_valid(id),moon::format("invalid message receiver serviceid %X",m->receiver()).data());
+        MOON_CHECK(workerid_valid(id)
+            ,moon::format("invalid message receiver serviceid %X",m->receiver()).data());
         get_worker(id)->send(std::forward<message_ptr_t>(m));
     }
 
-    void router::send(uint32_t sender, uint32_t receiver, const buffer_ptr_t & data, string_view_t header, int32_t sessionid, uint8_t type) const
+    void router::send(uint32_t sender
+        , uint32_t receiver
+        , buffer_ptr_t data
+        , string_view_t header
+        , int32_t sessionid
+        , uint8_t type) const
     {
         sessionid = -sessionid;
         message_ptr_t m = message::create(std::move(data));
@@ -150,8 +130,19 @@ namespace moon
     bool router::register_service(const std::string & type, register_func f)
     {
         auto ret = regservices_.emplace(type, f);
-        MOON_ASSERT(ret.second, moon::format("already registed service type[%s].", type.data()).data());
+        MOON_ASSERT(ret.second
+            , moon::format("already registed service type[%s].", type.data()).data());
         return ret.second;
+    }
+
+    service_ptr_t router::make_service(const std::string & type)
+    {
+        auto iter = regservices_.find(type);
+        if (iter != regservices_.end())
+        {
+            return iter->second();
+        }
+        return nullptr;
     }
 
     std::string router::get_env(const std::string & name) const
@@ -199,13 +190,22 @@ namespace moon
         return logger_;
     }
 
-    void router::response(uint32_t to, string_view_t header, string_view_t content, int32_t sessionid, uint8_t mtype) const
+    void router::response(uint32_t to
+        , string_view_t header
+        , string_view_t content
+        , int32_t sessionid
+        , uint8_t mtype) const
     {
         if (to == 0 || sessionid == 0)
         {
             if (server_->get_state()== state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
-                CONSOLE_DEBUG(logger(), "server::make_response %s:%s", std::string(header.data(), header.size()).data(), std::string(content.data(), content.size()).data());
+                CONSOLE_DEBUG(logger()
+                    , "server::make_response %s:%s"
+                    , std::string(header.data()
+                    , header.size()).data()
+                    , std::string(content.data()
+                    , content.size()).data());
             }
             return;
         }
@@ -237,19 +237,6 @@ namespace moon
         }
         n %= workers_.size();
         return workers_[n].get();
-    }
-
-    bool router::try_add_serviceid(uint32_t serviceid)
-    {
-        std::unique_lock lk(serviceids_lck_);
-        return serviceids_.emplace(serviceid).second;
-    }
-
-    void router::on_service_remove(uint32_t serviceid)
-    {
-        std::unique_lock lk(serviceids_lck_);
-        size_t count = serviceids_.erase(serviceid);
-        MOON_CHECK(count == 1, "erase failed!");
     }
 
     asio::io_context & router::get_io_context(uint32_t serviceid)

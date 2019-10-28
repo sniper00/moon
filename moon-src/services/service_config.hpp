@@ -26,7 +26,7 @@ namespace moon
         }
 
         template<typename T>
-        T get_value(moon::string_view_t name)
+        T get_value(string_view_t name)
         {
             return rapidjson::get_value<T>(&doc, name);
         }
