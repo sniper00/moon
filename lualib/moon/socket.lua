@@ -5,7 +5,7 @@ local core = require("socketcore")
 
 local setmetatable = setmetatable
 local tostring = tostring
-local tonumber = tonumber
+local tointeger = math.tointeger
 local yield = coroutine.yield
 local make_response = moon.make_response
 local id = moon.id()
@@ -41,7 +41,7 @@ function socket.accept(listenfd, serviceid)
     if not fd then
         return nil,err
     end
-    return tonumber(fd)
+    return tointeger(fd)
 end
 
 function socket.start(listenfd)
@@ -63,7 +63,7 @@ function socket.connect(host, port, protocol, timeout)
     if not fd then
         return nil,err
     end
-    return tonumber(fd)
+    return tointeger(fd)
 end
 
 function socket.sync_connect(host, port, type)

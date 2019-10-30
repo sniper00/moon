@@ -19,15 +19,15 @@ namespace moon
             for (;;)
             {
                 int count = 0;
-                while (write_)
+                while (write_.load(std::memory_order_acquire))
                 {
                     if (++count > 1000)
                         std::this_thread::yield();
                 }
-                read_.fetch_add(1);
-                if (write_)
+                read_.fetch_add(1, std::memory_order_release);
+                if (write_.load(std::memory_order_acquire))
                 {
-                    read_.fetch_sub(1);
+                    read_.fetch_sub(1, std::memory_order_release);
                 }
                 else
                 {

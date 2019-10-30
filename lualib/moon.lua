@@ -15,6 +15,7 @@ local pairs = pairs
 local type = type
 local setmetatable = setmetatable
 local tremove = table.remove
+local tointeger = math.tointeger
 
 local jencode = json.encode
 
@@ -257,7 +258,7 @@ function moon.co_new_service(stype, config, unique, workerid)
     config = jencode(config)
     local sessionid = make_response()
     core.new_service(stype, config, unique, workerid, sid_, sessionid)
-    return tonumber(co_yield())
+    return tointeger(co_yield())
 end
 
 ---异步移除指定的服务
@@ -531,12 +532,15 @@ reg_protocol {
     end,
     dispatch = function(msg, p)
         local sessionid = msg:sessionid()
-        local topic = msg:header()
+        local content = msg:header()
         local data = p.unpack(msg)
+        if data and #data >0 then
+            content = content..":"..data
+        end
         local co = session_id_coroutine[sessionid]
         if co then
             session_id_coroutine[sessionid] = nil
-            coresume(co, false, topic..":"..data)
+            coresume(co, false, content)
             return
         end
     end
