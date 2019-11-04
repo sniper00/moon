@@ -18,7 +18,6 @@ struct aoi_space_box
 {
     using aoi_type = aoi<aoi_object>;
     aoi_type* space;
-    std::vector<aoi_type::object_handle_type> query;
 };
 
 static int lrelease(lua_State *L)
