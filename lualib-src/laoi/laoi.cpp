@@ -1,24 +1,32 @@
 
 #include "lua.hpp"
-#include <stdlib.h>
-#include <string.h>
-#include "quad_tree.hpp"
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+#include "aoi.hpp"
 
 #define METANAME "laoi"
 
+struct aoi_object
+{
+    float x;
+    float y;
+    int32_t handle;
+};
+
 struct aoi_space_box
 {
-    using quad_tree_t = math::quad_tree<64>;
-    quad_tree_t* q;
+    using aoi_type = aoi<aoi_object>;
+    aoi_type* space;
 };
 
 static int lrelease(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
-    if (ab&&ab->q)
+    if (ab&&ab->space)
     {
-        delete ab->q;
-        ab->q = NULL;
+        delete ab->space;
+        ab->space = NULL;
     }
     return 0;
 }
@@ -26,31 +34,31 @@ static int lrelease(lua_State *L)
 static int laoi_insert(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
-    if (ab == NULL || ab->q == NULL)
+    if (ab == NULL || ab->space == NULL)
         return luaL_error(L, "Invalid aoi_space pointer");
     int32_t id = (int32_t)luaL_checkinteger(L, 2);
     float x = (float)luaL_checknumber(L, 3);
     float y = (float)luaL_checknumber(L, 4);
-    ab->q->insert(id, x, y);
+    ab->space->insert(id, x, y);
     return 0;
 }
 
 static int laoi_update(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
-    if (ab == NULL || ab->q == NULL)
+    if (ab == NULL || ab->space == NULL)
         return luaL_error(L, "Invalid aoi_space pointer");
     int32_t id = (int32_t)luaL_checkinteger(L, 2);
     float x = (float)luaL_checknumber(L, 3);
     float y = (float)luaL_checknumber(L, 4);
-    ab->q->update(id, x, y);
+    ab->space->update(id, x, y);
     return 0;
 }
 
 static int laoi_query(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
-    if (ab == NULL || ab->q == NULL)
+    if (ab == NULL || ab->space == NULL)
         return luaL_error(L, "Invalid aoi_space pointer");
     int32_t id = (int32_t)luaL_checkinteger(L, 2);
     float w = (float)luaL_checknumber(L, 3);
@@ -60,10 +68,10 @@ static int laoi_query(lua_State *L)
     {
         version = 1;
     }
-    version+=2;//
+    version += 2;//
     luaL_checktype(L, 6, LUA_TTABLE);
 
-    ab->q->query(id, w, h, [L,version,id](math::objectid_t n) {
+    ab->space->query(id, w, h, [L, version, id](int32_t n) {
         if (n == id)
         {
             return;
@@ -86,23 +94,27 @@ static int laoi_query(lua_State *L)
 static int laoi_erase(lua_State *L)
 {
     aoi_space_box* ab = (aoi_space_box*)lua_touserdata(L, 1);
-    if (ab == NULL || ab->q == NULL)
+    if (ab == NULL || ab->space == NULL)
         return luaL_error(L, "Invalid aoi_space pointer");
     int32_t id = (int32_t)luaL_checkinteger(L, 2);
-    ab->q->erase(id);
+    ab->space->erase(id);
     return 0;
 }
 
 static int laoi_create(lua_State *L)
 {
-    float x = (float)luaL_checknumber(L, 1);
-    float y = (float)luaL_checknumber(L, 2);
-    float w = (float)luaL_checknumber(L, 3);
-    float h = (float)luaL_checknumber(L, 4);
+    int x = (int)luaL_checkinteger(L, 1);
+    int y = (int)luaL_checkinteger(L, 2);
+    int loa = (int)luaL_checkinteger(L, 3);
+    int lon = (int)luaL_checkinteger(L, 4);
+    if (loa%lon != 0)
+    {
+        return luaL_error(L, "Need length_of_area %% length_of_node == 0.");
+    }
 
-    auto* q = new aoi_space_box::quad_tree_t(math::node_rect(x, y, w, h));
+    auto* q = new aoi_space_box::aoi_type(x, y, loa, lon);
     aoi_space_box* ab = (aoi_space_box*)lua_newuserdata(L, sizeof(*ab));
-    ab->q = q;
+    ab->space = q;
     if (luaL_newmetatable(L, METANAME))//mt
     {
         luaL_Reg l[] = {
