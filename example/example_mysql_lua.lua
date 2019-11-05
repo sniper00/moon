@@ -5,9 +5,9 @@ moon.start(function()
     local mysql = require("moon.db.mysql")
     moon.async(function()
             local db, err = mysql.connect({
-            host="192.168.81.129",
+            host="127.0.0.1",
             port=3306,
-            database="game",
+            database="mysql",
             user="root",
             password="4321",
             timeout= 1000,--连接超时ms
@@ -15,10 +15,46 @@ moon.start(function()
         })
 
         if not db then
-            error(err)
+            print(err)
+            return
         end
 
-        local res = db:query("select * from t_users;")
+        local res = db:query("drop table if exists cats")
+        res = db:query("create table cats "
+                        .."(id serial primary key, ".. "name varchar(5))")
         print_r(res)
+
+        res = db:query("insert into cats (name) "
+                                .. "values (\'Bob\'),(\'\'),(null)")
+        print_r(res)
+        res = db:query("select * from cats order by id asc")
+        print_r(res)
+
+        -- multiresultset test
+        res = db:query("select * from cats order by id asc ; select * from cats")
+        print_r(res, "multiresultset test result=")
+
+        print ("escape string test result=", mysql.quote_sql_str([[\mysql escape %string test'test"]]) )
+
+        -- bad sql statement
+        local res =  db:query("select * from notexisttable" )
+        print_r(res, "bad query test result=")
+
+        local i=1
+        while true do
+            local    res = db:query("select * from cats order by id asc")
+            print ( "test1 loop times=" ,i,"\n","query result=")
+            print_r( res )
+
+            res = db:query("select * from cats order by id asc")
+            print ( "test1 loop times=" ,i,"\n","query result=")
+            print_r( res )
+
+            moon.co_wait(1000)
+            i=i+1
+        end
+
+        -- db:disconnect()
+        -- moon.abort()
     end)
 end)
