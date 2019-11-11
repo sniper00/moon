@@ -31,7 +31,7 @@ namespace moon
             read_header();
         }
 
-        bool send(const buffer_ptr_t & data) override
+        bool send(buffer_ptr_t data) override
         {
             if (!data->has_flag(buffer_flag::pack_size))
             {
@@ -43,7 +43,7 @@ namespace moon
                         error(make_error_code(moon::error::write_message_too_big));
                         return false;
                     }
-                    data->set_flag(buffer_flag::framing);
+                    data->set_flag(buffer_flag::slice);
                 }
                 else
                 {
@@ -54,7 +54,7 @@ namespace moon
                     data->set_flag(buffer_flag::pack_size);
                 }
             }
-            return base_connection_t::send(data);
+            return base_connection_t::send(std::move(data));
         }
 
         void set_frame_flag(frame_enable_flag v)
@@ -62,10 +62,10 @@ namespace moon
             flag_ = v;
         }
     protected:
-        void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf) override
+        void message_slice(const_buffers_holder& holder, const buffer_ptr_t& buf) override
         {
             size_t n = buf->size();
-            holder.framing_begin(n / MAX_NET_MSG_SIZE + 1);
+            holder.begin_slice(n / MAX_NET_MSG_SIZE + 1);
             do
             {
                 message_size_t  size = 0, header = 0;
@@ -81,9 +81,8 @@ namespace moon
                 const char* data = buf->data() + (buf->size() - n);
                 n -= size;
                 host2net(header);
-                holder.push_framing(header, data, size);
+                holder.push_slice(header, data, size);
             } while (n != 0);
-            holder.framing_end(std::forward<buffer_ptr_t>(buf));
         }
 
         void read_header()

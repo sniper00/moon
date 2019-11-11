@@ -187,17 +187,17 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32
     });
 }
 
-bool socket::write(uint32_t fd, const buffer_ptr_t & data)
+bool socket::write(uint32_t fd, buffer_ptr_t data)
 {
     auto iter = connections_.find(fd);
     if (iter == connections_.end())
     {
         return false;
     }
-    return iter->second->send(data);
+    return iter->second->send(std::move(data));
 }
 
-bool socket::write_with_flag(uint32_t fd, const buffer_ptr_t & data, int flag)
+bool socket::write_with_flag(uint32_t fd, buffer_ptr_t data, int flag)
 {
     auto iter = connections_.find(fd);
     if (iter == connections_.end())
@@ -206,7 +206,7 @@ bool socket::write_with_flag(uint32_t fd, const buffer_ptr_t & data, int flag)
     }
     MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid");
     data->set_flag(static_cast<buffer_flag>(flag));
-    return iter->second->send(data);
+    return iter->second->send(std::move(data));
 }
 
 bool socket::write_message(uint32_t fd, message * m)
