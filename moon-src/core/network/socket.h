@@ -79,9 +79,9 @@ namespace moon
 
         void read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32_t sessionid);
 
-        bool write(uint32_t fd, const buffer_ptr_t & data);
+        bool write(uint32_t fd, buffer_ptr_t data);
 
-        bool write_with_flag(uint32_t fd, const buffer_ptr_t & data, int flag);
+        bool write_with_flag(uint32_t fd, buffer_ptr_t data, int flag);
 
         bool write_message(uint32_t fd, message * msg);
 
