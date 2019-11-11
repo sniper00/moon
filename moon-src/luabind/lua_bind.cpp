@@ -144,8 +144,6 @@ const lua_bind & lua_bind::bind_util() const
     lua.set_function("microsecond", time::microsecond);
     lua.set_function("time_offset", time::offset);
 
-    lua.set_function("sleep", [](int64_t ms) { thread_sleep(ms); });
-
     lua.set_function("sha1", [](std::string_view s) {
         std::string buf(sha1::sha1_context::digest_size, '\0');
         sha1::sha1_context ctx;
@@ -337,7 +335,6 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("remove_service", &router::remove_service, router_);
     lua.set_function("runcmd", &router::runcmd, router_);
     lua.set_function("broadcast", &router::broadcast, router_);
-    lua.set_function("workernum", &router::workernum, router_);
     lua.set_function("queryservice", &router::get_unique_service, router_);
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
@@ -359,16 +356,12 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     });
 
     tb.set_function("accept", &moon::socket::accept,&sock);
-    tb.set_function("connect", [&sock, s](const std::string& host, uint16_t port, int32_t sessionid, uint8_t type, int32_t timeout) {
-        return sock.connect(host, port, s->id(), type, sessionid, timeout);
-    });
+    tb.set_function("connect", &moon::socket::connect, &sock);
     tb.set_function("read", &moon::socket::read, &sock);
     tb.set_function("write", &moon::socket::write, &sock);
     tb.set_function("write_with_flag", &moon::socket::write_with_flag, &sock);
     tb.set_function("write_message", &moon::socket::write_message, &sock);
-    tb.set_function("close", [&sock](uint32_t fd) {
-        sock.close(fd);
-    });
+    tb.set_function("close", [&sock](uint32_t fd) {sock.close(fd);});
     tb.set_function("settimeout", &moon::socket::settimeout, &sock);
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_frame", &moon::socket::set_enable_frame, &sock);
