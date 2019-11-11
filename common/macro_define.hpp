@@ -71,6 +71,7 @@ namespace moon
 {
     enum  class state
     {
+        unknown,
         init,
         ready,
         stopping,

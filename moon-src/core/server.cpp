@@ -4,7 +4,7 @@
 namespace moon
 {
     server::server()
-        :state_(state::init)
+        :state_(state::unknown)
         , now_(0)
         , workers_()
         , default_log_()
@@ -30,7 +30,7 @@ namespace moon
 
         for (int i = 0; i != worker_num; i++)
         {
-            workers_.emplace_back(std::make_unique<worker>(this, &router_,i+1));
+            workers_.emplace_back(std::make_unique<worker>(this, &router_, i + 1));
         }
 
         for (auto& w : workers_)
@@ -38,7 +38,7 @@ namespace moon
             w->run();
         }
 
-        state_.store(state::ready);
+        state_.store(state::init, std::memory_order_release);
     }
 
     void server::run()
@@ -48,6 +48,8 @@ namespace moon
             printf("should run server::init first!\r\n");
             return;
         }
+
+        state_.store(state::ready, std::memory_order_release);
 
         for (auto& w : workers_)
         {
@@ -65,7 +67,7 @@ namespace moon
 
             size_t stoped_worker_num = 0;
 
-            for (auto& w : workers_)
+            for (const auto& w : workers_)
             {
                 if (w->stoped())
                 {
@@ -94,8 +96,7 @@ namespace moon
 
     void server::stop()
     {
-        auto state_ready = state::ready;
-        if (!state_.compare_exchange_strong(state_ready, state::stopping))
+        if (state_.exchange(state::stopping, std::memory_order_acquire) > state::ready)
         {
             return;
         }
@@ -116,11 +117,6 @@ namespace moon
         return &router_;
     }
 
-    size_t server::workernum() const
-    {
-        return workers_.size();
-    }
-
     void server::wait()
     {
         for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
@@ -129,7 +125,7 @@ namespace moon
         }
         CONSOLE_INFO(logger(), "STOP");
         default_log_.wait();
-        state_.store(state::exited);
+        state_.store(state::exited, std::memory_order_release);
     }
 
     state server::get_state()
@@ -140,6 +136,16 @@ namespace moon
     int64_t server::now()
     {
         return now_;
+    }
+
+    uint32_t server::service_count()
+    {
+        uint32_t res = 0;
+        for (const auto& w : workers_)
+        {
+            res += w->count_.load(std::memory_order_acquire);
+        }
+        return res;
     }
 }
 

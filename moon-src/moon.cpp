@@ -204,21 +204,25 @@ int main(int argc, char*argv[])
             router_->set_env("SERVER_NAME", c->name);
             router_->set_env("INNER_HOST", c->inner_host);
             router_->set_env("OUTER_HOST", c->outer_host);
+            router_->set_env("THREAD_NUM", std::to_string(c->thread));
             router_->set_env("CONFIG", scfg.config());
 
             server_->init(static_cast<uint8_t>(c->thread), c->log);
             server_->logger()->set_level(c->loglevel);
 
-            size_t count = 0;
             for (auto&s : c->services)
             {
-                if (s.unique) ++count;
                 router_->new_service(s.type, s.config, s.unique, s.threadid, 0, 0);
             }
-            //wait all configured unique service is created.
-            while ((server_->get_state() == moon::state::ready)
-                && router_->unique_service_size() != count);
 
+            //wait all configured service is created
+            while ((server_->get_state() == moon::state::init)
+                && server_->service_count() < c->services.size())
+            {
+                std::this_thread::yield();
+            }
+
+            // then call services's start
             server_->run();
         }
         catch (std::exception& e)
