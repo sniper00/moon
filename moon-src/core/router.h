@@ -10,9 +10,6 @@ namespace asio {
 
 namespace moon
 {
-    using map_env_t = concurrent_map<std::string, std::string, rwlock>;
-    using map_unique_service_t = concurrent_map<std::string, uint32_t, rwlock>;
-
     class server;
     class worker;
 
@@ -28,8 +25,6 @@ namespace moon
         router(const router&) = delete;
 
         router& operator=(const router&) = delete;
-
-        size_t workernum() const;
 
         void new_service(std::string service_type
             , std::string config
@@ -75,8 +70,6 @@ namespace moon
             , int32_t sessionid
             , uint8_t mtype = PTYPE_TEXT) const;
 
-        asio::io_context& get_io_context(uint32_t serviceid);
-
         uint32_t worker_id(uint32_t serviceid) const
         {
             return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
@@ -100,8 +93,8 @@ namespace moon
         std::atomic<uint32_t> next_workerid_;
         std::vector<std::unique_ptr<worker>>& workers_;
         std::unordered_map<std::string, register_func > regservices_;
-        map_env_t env_;
-        map_unique_service_t unique_services_;
+        concurrent_map<std::string, std::string, rwlock> env_;
+        concurrent_map<std::string, uint32_t, rwlock> unique_services_;
         log* logger_;
         server* server_;
     };
