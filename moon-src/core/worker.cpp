@@ -49,12 +49,15 @@ namespace moon
             io_ctx_.run();
             CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
-        while (state_.load(std::memory_order_acquire) != state::ready);
+        while (state_.load(std::memory_order_acquire) != state::ready)
+        {
+            std::this_thread::yield();
+        }
     }
 
     void worker::stop()
     {
-        post([this] {
+        asio::post(io_ctx_,[this] {
             if (auto s = state_.load(std::memory_order_acquire); s == state::stopping || s == state::exited)
             {
                 return;
@@ -83,7 +86,7 @@ namespace moon
         }
     }
 
-    bool worker::stoped()
+    bool worker::stoped() const
     {
         return (state_.load(std::memory_order_acquire) == state::exited);
     }
@@ -103,7 +106,7 @@ namespace moon
         , uint32_t creatorid
         , int32_t sessionid)
     {
-        post([this, service_type = std::move(service_type), config = std::move(config), unique, creatorid, sessionid](){
+        asio::post(io_ctx_, [this, service_type = std::move(service_type), config = std::move(config), unique, creatorid, sessionid](){
             do
             {
                 if (state_.load(std::memory_order_acquire) != state::ready)
@@ -140,15 +143,21 @@ namespace moon
 
                 s->ok(true);
 
-                if (!services_.emplace(serviceid, std::move(s)).second)
+                auto res = services_.emplace(serviceid, std::move(s));
+                if (!res.second)
                 {
                     break;
                 }
 
-                will_start_.push_back(serviceid);
-                if (0 != sessionid)//only dynamically created service has sessionid
+                count_.fetch_add(1, std::memory_order_release);
+
+                if (server_->get_state() != state::init)
                 {
-                    check_start();//force service invoke start, ready to handle message
+                    res.first->second->start();
+                }
+
+                if (0 != sessionid)
+                {
                     router_->response(creatorid, std::string_view{}, std::to_string(serviceid), sessionid);
                 }
                 return;
@@ -165,9 +174,11 @@ namespace moon
 
     void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid)
     {
-        post([this, serviceid, sender, sessionid]() {
+        asio::post(io_ctx_, [this, serviceid, sender, sessionid]() {
             if (auto s = find_service(serviceid); nullptr != s)
             {
+                count_.fetch_sub(1, std::memory_order_release);
+
                 s->destroy();
                 auto content = moon::format(R"({"name":"%s","serviceid":%X,"errmsg":"service destroy"})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, sessionid);
@@ -200,7 +211,7 @@ namespace moon
     {
         if (mq_.push_back(std::move(msg)) == 1)
         {
-            post([this]() {
+            asio::post(io_ctx_, [this]() {
                 auto begin_time = server_->now();;
                 size_t count = 0;
                 if (mq_.size() != 0)
@@ -245,7 +256,7 @@ namespace moon
 
     void worker::runcmd(uint32_t sender, const std::string & cmd, int32_t sessionid)
     {
-        post([this, sender, cmd, sessionid] {
+        asio::post(io_ctx_, [this, sender, cmd, sessionid] {
             auto params = moon::split<std::string>(cmd, ".");
 
             switch (moon::chash_string(params[0]))
@@ -304,7 +315,7 @@ namespace moon
 
     void worker::start()
     {
-        post([this] {
+        asio::post(io_ctx_, [this] {
             for (auto& it : services_)
             {
                 it.second->start();
@@ -320,7 +331,7 @@ namespace moon
             return;
         }
 
-        post([this] {
+        asio::post(io_ctx_, [this] {
             update();
             update_state_.clear(std::memory_order_release);
         });
@@ -390,27 +401,9 @@ namespace moon
     {
         timer_.update();
 
-        check_start();
-
         if (!prefabs_.empty())
         {
             prefabs_.clear();
-        }
-    }
-
-    void worker::check_start()
-    {
-        if (!will_start_.empty())
-        {
-            for (auto sid : will_start_)
-            {
-                auto s = find_service(sid);
-                if (nullptr != s)
-                {
-                    s->start();
-                }
-            }
-            will_start_.clear();
         }
     }
 }
