@@ -73,12 +73,6 @@ function core.send_prefab(receiver, prefabid, header, sessionid, type)
     ignore_param(receiver, prefabid, header, sessionid, type)
 end
 
----获取worker(线程)数
----@return int
-function core.workernum()
-    -- body
-end
-
 ---@param key string
 ---@param value string
 function core.set_env(key, value)
