@@ -68,12 +68,6 @@ namespace moon
         worker_timer& timer() { return timer_; }
 
         moon::socket& socket() { return *socket_; }
-
-        template<typename THandler>
-        void post(THandler&& h)
-        {
-            asio::post(io_ctx_, std::forward<THandler>(h));
-        }
     private:
         void run();
 
@@ -81,7 +75,7 @@ namespace moon
 
         void wait();
 
-        bool stoped();
+        bool stoped() const;
     private:
         void start();
 
@@ -101,6 +95,7 @@ namespace moon
         std::atomic_bool shared_ = true;
         //to prevent post too many update event
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
+        std::atomic_uint32_t count_ = 0;
         uint32_t uuid_ = 0;
         int64_t cpu_time_ = 0;
         uint32_t workerid_;
@@ -113,10 +108,9 @@ namespace moon
         queue_t::container_type swapmq_;
         worker_timer timer_;
         std::unique_ptr<moon::socket> socket_;
-        std::vector<uint32_t> will_start_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
-        std::unordered_map<std::string, command_hander_t> commands_;
         std::unordered_map<uint32_t, moon::buffer_ptr_t> prefabs_;
+        std::unordered_map<std::string, command_hander_t> commands_;
     };
 };
 

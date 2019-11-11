@@ -17,11 +17,6 @@ namespace moon
     {
     }
 
-    size_t router::workernum() const
-    {
-        return workers_.size();
-    }
-
     void router::new_service(std::string service_type
         ,std::string config
         , bool unique
@@ -210,13 +205,13 @@ namespace moon
             return;
         }
 
-        auto rmsg = message::create(content.size());
-        rmsg->set_receiver(to);
-        rmsg->set_header(header);
-        rmsg->set_type(mtype);
-        rmsg->set_sessionid(sessionid);
-        rmsg->write_data(content);
-        send_message(std::move(rmsg));
+        auto m = message::create(content.size());
+        m->set_receiver(to);
+        m->set_header(header);
+        m->set_type(mtype);
+        m->set_sessionid(sessionid);
+        m->write_data(content);
+        send_message(std::move(m));
     }
 
     worker* router::next_worker()
@@ -237,12 +232,6 @@ namespace moon
         }
         n %= workers_.size();
         return workers_[n].get();
-    }
-
-    asio::io_context & router::get_io_context(uint32_t serviceid)
-    {
-        int32_t workerid = worker_id(serviceid);
-        return get_worker(workerid)->io_context();
     }
 
     void router::set_server(server * sv)
