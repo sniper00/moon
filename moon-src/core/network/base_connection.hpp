@@ -70,7 +70,7 @@ namespace moon
             return false;
         };
 
-        virtual bool send(const buffer_ptr_t & data)
+        virtual bool send(buffer_ptr_t data)
         {
             if (data == nullptr || data->size() == 0)
             {
@@ -82,7 +82,7 @@ namespace moon
                 return false;
             }
 
-            queue_.push_back(data);
+            queue_.emplace_back(std::move(data));
 
             if (wq_warn_size_ != 0 && queue_.size() >= wq_warn_size_)
             {
@@ -191,7 +191,7 @@ namespace moon
             return address;
         }
     protected:
-        virtual void message_framing(const_buffers_holder& holder, buffer_ptr_t&& buf)
+        virtual void message_slice(const_buffers_holder& holder, const buffer_ptr_t& buf)
         {
             (void)holder;
             (void)buf;
@@ -199,26 +199,21 @@ namespace moon
 
         void post_send()
         {
-            holder_.clear();
             if (queue_.size() == 0)
                 return;
 
-            while ((queue_.size() != 0) && (holder_.size() < 50))
+            for(auto iter = queue_.begin(); iter!= queue_.end() && (holder_.size() < 50); ++iter)
             {
-                auto& msg = queue_.front();
-                if (msg->has_flag(buffer_flag::framing))
+                auto& v = *iter;
+                if (v->has_flag(buffer_flag::slice))
                 {
-                    message_framing(holder_, std::move(msg));
+                    message_slice(holder_, v);
                 }
                 else
                 {
-                    holder_.push_back(std::move(msg));
+                    holder_.push_back(v->data(), v->size(), v->has_flag(buffer_flag::close));
                 }
-                queue_.pop_front();
             }
-
-            if (holder_.size() == 0)
-                return;
 
             sending_ = true;
             asio::async_write(
@@ -237,6 +232,13 @@ namespace moon
                     }
                     else
                     {
+                        for (size_t i = 0; i < holder_.count(); ++i)
+                        {
+                            queue_.pop_front();
+                        }
+
+                        holder_.clear();
+
                         post_send();
                     }
                 }
