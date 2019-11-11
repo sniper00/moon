@@ -10,24 +10,20 @@ namespace moon
     public:
         const_buffers_holder() = default;
 
-        template<typename BufType>
-        void push_back(BufType&& buf)
+        void push_back(const char* data, size_t len, bool close)
         {
-            if (buf->has_flag(buffer_flag::close))
-            {
-                close_ = true;
-            }
-            buffers_.emplace_back(buf->data(), buf->size());
-            datas_.push_back(std::forward<BufType>(buf));
+            close_ = close ? true : close_;
+            buffers_.emplace_back(data, len);
+            ++count_;
         }
 
-
-        void framing_begin(size_t framing_size)
+        void begin_slice(size_t n)
         {
-            headers_.reserve(framing_size);
+            headers_.reserve(n);
+            ++count_;
         }
 
-        void push_framing(message_size_t header, const char* data, size_t len)
+        void push_slice(message_size_t header, const char* data, size_t len)
         {
             headers_.push_back(header);
             message_size_t& back = headers_.back();
@@ -36,7 +32,7 @@ namespace moon
         }
 
         template<typename BufType>
-        void framing_end(BufType&& buf)
+        void end_slice(BufType&& buf)
         {
             datas_.push_back(std::forward<BufType>(buf));
         }
@@ -51,11 +47,17 @@ namespace moon
             return buffers_.size();
         }
 
+        //hold buffer's count
+        size_t count() const
+        {
+            return count_;
+        }
+
         void clear()
         {
             close_ = false;
+            count_ = 0;
             buffers_.clear();
-            datas_.clear();
             headers_.clear();
         }
 
@@ -65,8 +67,8 @@ namespace moon
         }
     private:
         bool close_ = false;
+        size_t count_ = 0;
         std::vector<asio::const_buffer> buffers_;
-        std::vector<buffer_ptr_t> datas_;
         std::vector<message_size_t> headers_;
     };
 

@@ -149,11 +149,11 @@ namespace moon
             }
         }
 
-        bool send(const buffer_ptr_t & data) override
+        bool send(buffer_ptr_t data) override
         {
             if (!handshaked_) return false;
             encode_frame(data);
-            return base_connection_t::send(data);
+            return base_connection_t::send(std::move(data));
         }
 
     protected:
