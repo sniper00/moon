@@ -28,11 +28,11 @@ namespace moon
 
         router* get_router();
 
-        size_t workernum() const;
-
         state get_state();
 
         int64_t now();
+
+        uint32_t service_count();
     private:
         void wait();
     private:

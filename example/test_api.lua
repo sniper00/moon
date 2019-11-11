@@ -30,7 +30,6 @@ equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
 equal(type(moon.set_cb) , "function")
-equal(type(moon.workernum) , "function")
 equal(type(moon.abort) , "function")
 
 local msg = moon.message
@@ -71,7 +70,6 @@ equal(type(timer.remove_timer) , "function")
 equal(type(timer.repeated) , "function")
 
 equal(type(moon.millsecond) , "function")
-equal(type(moon.sleep) , "function")
 equal(type(string.hash) , "function")
 equal(type(string.hex) , "function")
 equal(type(table.new) , "function")
