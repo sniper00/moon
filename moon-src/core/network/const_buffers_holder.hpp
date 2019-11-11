@@ -31,12 +31,6 @@ namespace moon
             buffers_.emplace_back(data, len);
         }
 
-        template<typename BufType>
-        void end_slice(BufType&& buf)
-        {
-            datas_.push_back(std::forward<BufType>(buf));
-        }
-
         const auto& buffers() const
         {
             return buffers_;
