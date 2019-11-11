@@ -32,7 +32,7 @@ namespace moon
     {
         pack_size = 1 << 0,
         close = 1 << 1,
-        framing = 1 << 2,
+        slice = 1 << 2,
         broadcast = 1 << 3,
         ws_text = 1 << 4,
         ws_binary = 1 << 5,
