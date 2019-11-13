@@ -126,7 +126,7 @@
             {
                 "unique": true,
                 "name": "example_mysql",
-                "file": "example_mysql.lua"
+                "file": "example_mysql_lua.lua"
             }
         ]
     },
