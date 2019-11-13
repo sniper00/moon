@@ -79,9 +79,7 @@ project "moon"
         defines {"_WIN32_WINNT=0x0601"}
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
-        -- links{"stdc++:static"}
-        -- links{"gcc:static"}
-        linkoptions {"-Wl,-rpath=./","-Wl,--as-needed"}
+        linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-rpath=./","-Wl,--as-needed"}
     filter {"system:macosx"}
         if os.istarget("macosx") then
             local tb = os.matchfiles("/usr/local/Cellar/llvm/**/c++fs.a")
