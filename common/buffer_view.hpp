@@ -74,7 +74,7 @@ namespace moon
                     break;
                 tmp += c;
             }
-            return std::move(tmp);
+            return tmp;
         }
 
         std::string bytes()
@@ -94,9 +94,8 @@ namespace moon
                 (*this) >> tmp;
                 vec.push_back(tmp);
             }
-            return std::move(vec);
+            return vec;
         }
-
 
         template<class T>
         buffer_view& operator >> (T& value)
