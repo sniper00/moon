@@ -98,7 +98,7 @@ namespace rapidjson
                 {
                     vec.emplace_back(get_value<value_type>(&v, value_type{}));
                 }
-                return std::move(vec);
+                return vec;
             }
             return dv;
         }

@@ -24,7 +24,25 @@ namespace moon
 
     void worker::run()
     {
-        register_commands();
+        //register commands
+        commands_.try_emplace("stat", [this](const std::vector<std::string>& params) {
+            (void)params;
+            auto response = moon::format(R"({"work_time":%lld,"socket_num":%zu})", cpu_time_, socket_->socket_num());
+            cpu_time_ = 0;
+            return response;
+        });
+
+        commands_.try_emplace("services", [this](const std::vector<std::string>& params) {
+            (void)params;
+            std::string content;
+            content.append("[");
+            for (auto& it : services_)
+            {
+                content.append(moon::format(R"({"name":"%s","serviceid":"%X"},)", it.second->name().data(), it.second->id()));
+            }
+            content.back() = ']';
+            return content;
+        });
 
         timer_.set_now_func([this]() {
             return server_->now();
@@ -121,7 +139,7 @@ namespace moon
                     if (counter >= worker::max_uuid)
                     {
                         CONSOLE_ERROR(router_->logger()
-                            , "new service failed: can not get more service id. worker[%d] service num[%u].", id(), size());
+                            , "new service failed: can not get more service id. worker[%d] service num[%u].", id(), services_.size());
                         break;
                     }
                     serviceid = uuid();
@@ -308,11 +326,6 @@ namespace moon
         return shared_.load();
     }
 
-    size_t worker::size() const
-    {
-        return services_.size();
-    }
-
     void worker::start()
     {
         asio::post(io_ctx_, [this] {
@@ -323,7 +336,7 @@ namespace moon
         });
     }
 
-    void worker::post_update()
+    void worker::update()
     {
         //update_state is true
         if (update_state_.test_and_set(std::memory_order_acquire))
@@ -332,7 +345,14 @@ namespace moon
         }
 
         asio::post(io_ctx_, [this] {
-            update();
+
+            timer_.update();
+
+            if (!prefabs_.empty())
+            {
+                prefabs_.clear();
+            }
+
             update_state_.clear(std::memory_order_release);
         });
     }
@@ -367,43 +387,5 @@ namespace moon
         }
         ser->handle_message(std::forward<message_ptr_t>(msg));
         timer_.update();
-    }
-
-    void worker::register_commands()
-    {
-        {
-            auto hander = [this](const std::vector<std::string>& params) {
-                (void)params;
-                auto response = moon::format(R"({"work_time":%lld,"socket_num":%zu})", cpu_time_,socket_->socket_num());
-                cpu_time_ = 0;
-                return response;
-            };
-            commands_.try_emplace("stat", hander);
-        }
-
-        {
-            auto hander = [this](const std::vector<std::string>& params) {
-                (void)params;
-                std::string content;
-                content.append("[");
-                for (auto& it : services_)
-                {
-                    content.append(moon::format(R"({"name":"%s","serviceid":"%X"},)", it.second->name().data(), it.second->id()));
-                }
-                content.back() = ']';
-                return content;
-            };
-            commands_.try_emplace("services", hander);
-        }
-    }
-
-    void worker::update()
-    {
-        timer_.update();
-
-        if (!prefabs_.empty())
-        {
-            prefabs_.clear();
-        }
     }
 }
