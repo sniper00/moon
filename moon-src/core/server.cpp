@@ -73,7 +73,7 @@ namespace moon
                 {
                     stoped_worker_num++;
                 }
-                w->post_update();
+                w->update();
             }
 
             if (stoped_worker_num == workers_.size())
