@@ -3,7 +3,7 @@
 #include "common/string.hpp"
 #include "common/exception.hpp"
 #include "rapidjson/document.h"
-#include "rapidjson/rapidjson_helper.hpp"
+#include "common/rapidjson_helper.hpp"
 
 namespace moon
 {
