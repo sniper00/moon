@@ -168,7 +168,7 @@ namespace moon
             }
         }
         if (b != e) r.push_back(string_convert<T>(string_view_t(std::addressof(*b), size_t(e - b))));
-        return std::move(r);
+        return r;
     }
 
     //format string

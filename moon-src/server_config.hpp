@@ -7,7 +7,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/error/en.h"
-#include "rapidjson/rapidjson_helper.hpp"
+#include "common/rapidjson_helper.hpp"
 
 namespace moon
 {
