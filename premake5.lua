@@ -79,9 +79,7 @@ project "moon"
         defines {"_WIN32_WINNT=0x0601"}
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
-        -- links{"stdc++:static"}
-        -- links{"gcc:static"}
-        linkoptions {"-Wl,-rpath=./","-Wl,--as-needed"}
+        linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-rpath=./","-Wl,--as-needed"}
     filter {"system:macosx"}
         if os.istarget("macosx") then
             local tb = os.matchfiles("/usr/local/Cellar/llvm/**/c++fs.a")
@@ -162,37 +160,6 @@ end)
 
 add_lua_module("./third/lcrypt", "crypt")
 
---[[
-    lua版mysql,如果需要lua mysql 客户端，取消下面注释.
-    依赖： 需要连接 mysql C client库,
-    1. windows 下需要设置MYSQL_HOME.
-    2. Linux 下需要确保mysql C client头文件目录和库文件目录正确
-]]
-
--- ---------------------mysql-----------------------
--- add_lua_module("./lualib-src/mysql","mysql",
--- function()
---     language "C++"
--- end,
--- function ()
---     if os.istarget("windows") then
---         assert(os.getenv("MYSQL_HOME"),"please set mysql environment 'MYSQL_HOME'")
---         includedirs {os.getenv("MYSQL_HOME").. "/include"}
---         libdirs{os.getenv("MYSQL_HOME").. "/lib"} -- mysql C client库搜索目录
---         links{"libmysql"}
---     end
--- end,
--- function ()
---     if os.istarget("linux") then
---         assert(os.isdir("/usr/include/mysql"),"please make sure you have install mysql, or modify the default include path,'/usr/include/mysql'")
---         assert(os.isdir("/usr/lib64/mysql"),"please make sure you have install mysql, or modify the default lib path,'/usr/lib64/mysql'")
---         includedirs {"/usr/include/mysql"}
---         libdirs{"/usr/lib64/mysql"} -- mysql C client库搜索目录
---         links{"mysqlclient"}
---     end
--- end
--- )
-
 -------------------------laoi--------------------
 add_lua_module("./lualib-src/laoi", "aoi",function()
     language "C++"
@@ -200,3 +167,5 @@ end)
 
 -------------------------sharetable--------------------
 add_lua_module("./third/sharetable", "sharetable")
+
+--include("./lualib-src/mysql/premake5.lua")
