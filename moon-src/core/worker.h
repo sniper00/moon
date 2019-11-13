@@ -38,8 +38,6 @@ namespace moon
 
         uint32_t id() const;
 
-        size_t size() const;
-
         uint32_t uuid();
 
         void add_service(std::string service_type
@@ -79,15 +77,9 @@ namespace moon
     private:
         void start();
 
-        void post_update();
-
-        void handle_one(service*& ser, message_ptr_t&& msg);
-
-        void register_commands();
-
         void update();
 
-        void check_start();
+        void handle_one(service*& ser, message_ptr_t&& msg);
 
         service* find_service(uint32_t serviceid) const;
     private:
