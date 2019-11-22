@@ -72,6 +72,7 @@ namespace moon
             :exit_(false)
             , max_size_(std::numeric_limits<size_t>::max())
         {
+
         }
 
         concurrent_queue(const concurrent_queue& t) = delete;
@@ -87,7 +88,7 @@ namespace moon
         {
             raii_lock_t lck(mutex_);
 
-            if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+            if constexpr (block_full::value)
             {
                 block_full::check(lck, [this] {
                     return (container_.size() < max_size_) || exit_;
@@ -96,7 +97,7 @@ namespace moon
 
             container_.push_back(std::forward<TData>(x));
 
-            if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+            if constexpr (block_empty::value)
             {
                 block_empty::notify_one();
             }
@@ -106,19 +107,13 @@ namespace moon
         bool try_pop(T& t)
         {
             raii_lock_t lck(mutex_);
-            if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
-            {
-                block_empty::check(lck, [this] {
-                    return (container_.size() > 0) || exit_;
-                });
-            }
             if (container_.empty())
             {
                 return false;
             }
-            t = container_.front();
+            t = std::move(container_.front());
             container_.pop_front();
-            if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+            if constexpr (block_full::value)
             {
                 block_full::notify_one();
             }
@@ -140,14 +135,14 @@ namespace moon
         void  swap(container_type& other)
         {
             raii_lock_t lck(mutex_);
-            if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+            if constexpr (block_empty::value)
             {
                 block_empty::check(lck, [this] {
                     return (container_.size() > 0) || exit_;
                 });
             }
             container_.swap(other);
-            if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+            if constexpr (block_full::value)
             {
                 block_full::notify_one();
             }
@@ -157,11 +152,11 @@ namespace moon
         {
             raii_lock_t lck(mutex_);
             exit_ = true;
-            if constexpr (std::is_same_v< typename block_full::type, std::true_type>)
+            if constexpr (block_full::value)
             {
                 block_full::notify_all();
             }
-            if constexpr (std::is_same_v< typename block_empty::type, std::true_type>)
+            if constexpr (block_empty::value)
             {
                 block_empty::notify_all();
             }
@@ -170,7 +165,7 @@ namespace moon
     private:
         mutable lock_t mutex_;
         container_type container_;
-        std::atomic_bool exit_;
+        bool exit_;
         size_t max_size_;
     };
 
