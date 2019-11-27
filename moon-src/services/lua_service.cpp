@@ -282,11 +282,6 @@ void lua_service::error(const std::string & msg, bool initialized)
     }
 }
 
-size_t lua_service::memory_use()
-{
-    return  mem;
-}
-
 void lua_service::set_callback(char c, sol_function_t f)
 {
     switch (c)
