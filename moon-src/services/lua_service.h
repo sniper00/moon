@@ -15,7 +15,6 @@ public:
     static constexpr std::string_view LUA_CPATH_STR = "/?.so;"sv;
 #endif
 
-    using lua_state_ptr_t = std::unique_ptr<lua_State, void(*)(lua_State*)>;
     /*
     http://sol2.readthedocs.io/en/latest/safety.html
     http://sol2.readthedocs.io/en/latest/api/protected_function.html
@@ -26,8 +25,6 @@ public:
     lua_service();
 
     ~lua_service();
-
-    size_t memory_use();
 
     void set_callback(char c, sol_function_t f);
 private:
