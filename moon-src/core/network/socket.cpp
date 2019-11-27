@@ -5,7 +5,7 @@
 #include "worker.h"
 
 #include "network/moon_connection.hpp"
-#include "network/custom_connection.hpp"
+#include "network/stream_connection.hpp"
 #include "network/ws_connection.hpp"
 
 using namespace moon;
@@ -348,7 +348,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     }
     case PTYPE_TEXT:
     {
-        connection = std::make_shared<custom_connection>(serviceid, type, this, ioc_);
+        connection = std::make_shared<stream_connection>(serviceid, type, this, ioc_);
         break;
     }
     case PTYPE_SOCKET_WS:
