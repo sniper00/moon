@@ -710,14 +710,14 @@ namespace moon
             response.append("Connection: Upgrade\r\n");
             response.append("Sec-WebSocket-Accept: ");
             response.append(hash_key(seckey));
-            response.append(STR_CRLF.data(), STR_CRLF.size());
+            response.append(STR_CRLF);
             if (!wsprotocol.empty())
             {
                 response.append("Sec-WebSocket-Protocol: ");
-                response.append(wsprotocol.data(), wsprotocol.size());
-                response.append(STR_CRLF.data(), STR_CRLF.size());
+                response.append(wsprotocol);
+                response.append(STR_CRLF);
             }
-            response.append(STR_CRLF.data(), STR_CRLF.size());
+            response.append(STR_CRLF);
             return response;
         }
 
