@@ -3,7 +3,7 @@
 
 namespace moon
 {
-    class custom_connection : public base_connection
+    class stream_connection : public base_connection
     {
     public:
         using base_connection_t = base_connection;
@@ -30,7 +30,7 @@ namespace moon
         };
 
         template <typename... Args>
-        explicit custom_connection(Args&&... args)
+        explicit stream_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
         {
         }
@@ -180,6 +180,7 @@ namespace moon
                 response(response_, PTYPE_ERROR);
             }
             parent_->close(fd_, true);
+            parent_ = nullptr;
         }
 
         void response(const message_ptr_t & m, uint8_t type = PTYPE_TEXT)
