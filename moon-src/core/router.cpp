@@ -197,10 +197,8 @@ namespace moon
             {
                 CONSOLE_DEBUG(logger()
                     , "server::make_response %s:%s"
-                    , std::string(header.data()
-                    , header.size()).data()
-                    , std::string(content.data()
-                    , content.size()).data());
+                    , std::string(header).data()
+                    , std::string(content).data());
             }
             return;
         }

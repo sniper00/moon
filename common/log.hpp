@@ -187,7 +187,6 @@ namespace moon
             queue_t::container_type swaps;
             while (state_.load() == state::ready || log_queue_.size() != 0)
             {
-                swaps.clear();
                 log_queue_.swap(swaps);
                 for (auto& it : swaps)
                 {
@@ -227,6 +226,7 @@ namespace moon
                 {
                     ofs_->flush();
                 }
+                swaps.clear();
             }
         }
 

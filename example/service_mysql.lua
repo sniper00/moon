@@ -21,7 +21,7 @@ local function connect(conf_, auto)
         end
 
         if not db and auto then
-            moon.co_wait(100)
+            moon.sleep(100)
         end
     until(not auto or db)
     return db, err
