@@ -18,7 +18,7 @@ local function connect(db_conf, auto)
         end
 
         if not db and auto then
-            moon.co_wait(100)
+            moon.sleep(100)
         end
     until(not auto or db)
     return db, err
@@ -41,7 +41,7 @@ local function exec_one(db, sender, sessionid, args , auto)
             db = nil
             print("redis socket error",res, err)
             if auto then
-                moon.co_wait(100)
+                moon.sleep(100)
             end
         else
             moon.response("lua", sender, sessionid, res)

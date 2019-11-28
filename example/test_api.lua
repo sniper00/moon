@@ -162,25 +162,25 @@ end
 
 moon.async(function()
 	local co1 = moon.async(function()
-		moon.co_wait(100)
+		moon.sleep(100)
 	end)
 
-	moon.co_wait(200)
+	moon.sleep(200)
 
 	--coroutine reuse
 	local co2 = moon.async(function()
-		moon.co_wait(100)
+		moon.sleep(100)
 	end)
 
 	-- create new coroutine
 	local co3 = moon.async(function()
-		moon.co_wait(100)
+		moon.sleep(100)
 	end)
 	local running,free = moon.coroutine_num()
 	test_assert.equal(free, 0)
 	test_assert.equal(running, 3)
 
-	moon.co_wait(200)
+	moon.sleep(200)
 
 	test_assert.equal(co1, co2)
 	test_assert.assert(co1~=co3 and co2~=co3)
@@ -191,20 +191,20 @@ moon.async(function()
 
 	for _= 1, 1000 do
 		moon.async(function()
-			moon.co_wait(10)
+			moon.sleep(10)
 		end)
 	end
 
-	moon.co_wait(100)
+	moon.sleep(100)
 
 	--coroutine reuse
 	for _= 1, 1000 do
 		moon.async(function()
-			moon.co_wait(10)
+			moon.sleep(10)
 		end)
 	end
 
-	moon.co_wait(100)
+	moon.sleep(100)
 
 	running,free = moon.coroutine_num()
 	test_assert.equal(free, 1000)
