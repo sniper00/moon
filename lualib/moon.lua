@@ -89,7 +89,7 @@ end
 
 local sid_ = core.id()
 
-local uuid = 1
+local uuid = 0
 local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
@@ -104,19 +104,18 @@ end
 
 ---make map<coroutine,sessionid>
 local function make_response(receiver)
-    repeat
-        uuid = uuid + 1
-        if uuid == 0xFFFFFFF then
-            uuid = 1
-        end
-    until nil == session_id_coroutine[uuid]
+    uuid = uuid + 1
+    if uuid == 0x7FFFFFFF then
+        uuid = 1
+    end
+
+    assert(nil == session_id_coroutine[uuid])
 
     if receiver then
         session_watcher[uuid] = receiver
     end
 
-    local co = co_running()
-    session_id_coroutine[uuid] = co
+    session_id_coroutine[uuid] = co_running()
     return uuid
 end
 
@@ -171,7 +170,10 @@ local function _default_dispatch(msg, PTYPE)
             --print(coroutine.status(co))
             return
         end
-        error(string.format( "%s: response [%u] can not find co.",moon.name(), sessionid))
+
+        if co ~= false then
+            error(string.format( "%s: response [%u] can not find co.",moon.name(), sessionid))
+        end
 	else
         if not p.dispatch then
 			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name(), p.PTYPE))
@@ -241,7 +243,6 @@ end
 ---@param stype string
 ---@param config table
 ---@param unique boolean
----@param shared boolean
 ---@param workerid int
 ---@return bool
 function moon.new_service(stype, config, unique, workerid)
@@ -251,7 +252,13 @@ function moon.new_service(stype, config, unique, workerid)
     core.new_service(stype, config, unique, workerid,  0, 0)
 end
 
+---async
 ---创建一个新的服务的协程封装，可以获得所创建的服务ID<br>
+---@param stype string
+---@param config table
+---@param unique boolean
+---@param workerid int
+---@return int
 function moon.co_new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
@@ -405,9 +412,11 @@ core.set_cb('t',
 
 local _repeated = moon.repeated
 
+---async
+---异步等待 mills 毫秒
 ---@param mills int
 ---@return int
-function moon.co_wait(mills)
+function moon.sleep(mills)
     local co = co_running()
     _repeated(
         mills,
@@ -418,8 +427,10 @@ function moon.co_wait(mills)
     )
     return co_yield()
 end
+
 ------------------------------------------
 
+---async
 ---@param serviceid int
 ---@return string
 function moon.co_remove_service(serviceid)
@@ -570,7 +581,7 @@ moon.co_wait_exit = function()
         if num ==0 then
             break
         else
-            moon.co_wait(100)
+            moon.sleep(100)
         end
     end
     moon.quit()
@@ -619,6 +630,26 @@ reg_protocol {
     end
 }
 
+reg_protocol{
+    name = "socket",
+    PTYPE = PTYPE_SOCKET,
+    pack = function(...) return ... end,
+    dispatch = function()
+        error("PTYPE_SOCKET dispatch not implemented")
+    end
+}
+
+reg_protocol{
+    name = "websocket",
+    PTYPE = PTYPE_SOCKET_WS,
+    pack = function(...) return ... end,
+    dispatch = function(_)
+        error("PTYPE_SOCKET_WS dispatch not implemented")
+    end
+}
+
+--------------------------DEBUG----------------------------
+
 local debug_command = {}
 
 debug_command.gc = function(sender, sessionid)
@@ -647,24 +678,6 @@ reg_protocol {
         if func then
             func(sender, sessionid, table.unpack(params,2))
         end
-    end
-}
-
-reg_protocol{
-    name = "socket",
-    PTYPE = PTYPE_SOCKET,
-    pack = function(...) return ... end,
-    dispatch = function()
-        error("PTYPE_SOCKET dispatch not implemented")
-    end
-}
-
-reg_protocol{
-    name = "websocket",
-    PTYPE = PTYPE_SOCKET_WS,
-    pack = function(...) return ... end,
-    dispatch = function(_)
-        error("PTYPE_SOCKET_WS dispatch not implemented")
     end
 }
 

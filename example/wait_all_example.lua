@@ -9,17 +9,17 @@ moon.start(function()
 		end)
 
 		local co2 = moon.async(function()
-			moon.co_wait(5000)
+			moon.sleep(5000)
 			return 2
 		end)
 
 		local co3 = moon.async(function()
-			moon.co_wait(2000)
+			moon.sleep(2000)
 			return 3
 		end)
 
 		local co4 = moon.async(function()
-			moon.co_wait(1000)
+			moon.sleep(1000)
 			return 4
 		end)
 

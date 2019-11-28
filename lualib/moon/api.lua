@@ -96,6 +96,12 @@ function core.now()
     -- body
 end
 
+--- get total service count()
+---@return int
+function core.service_count()
+    -- body
+end
+
 ---@class core.message
 local message = {}
 ignore_param(message)

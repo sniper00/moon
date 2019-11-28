@@ -30,7 +30,7 @@ moon.start(function()
             local res,err = call(db, "set", "dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
             if not res then
                 print("redis set error", res, err)
-                moon.co_wait(1000)
+                moon.sleep(1000)
             else
                 count=count+1
                 index = index+1

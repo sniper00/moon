@@ -74,7 +74,7 @@ local function run_example()
         db:hmset("myhash","name","Ben","age",11)
 
         repeat
-            moon.co_wait(1000)
+            moon.sleep(1000)
 
             local res, err = db:pipeline({
                 {"set", "cat", "Marry"},
