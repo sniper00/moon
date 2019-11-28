@@ -226,8 +226,8 @@ namespace moon
                 {
                     ofs_->flush();
                 }
+                swaps.clear();
             }
-            swaps.clear();
         }
 
         const char* to_string(LogLevel lv) const
