@@ -235,13 +235,13 @@ namespace moon
                 if (mq_.size() != 0)
                 {
                     service* ser = nullptr;
-                    swapmq_.clear();
                     mq_.swap(swapmq_);
                     count = swapmq_.size();
                     for (auto& msg : swapmq_)
                     {
                         handle_one(ser, std::move(msg));
                     }
+                    swapmq_.clear();
                 }
 
                 if (begin_time != 0)
