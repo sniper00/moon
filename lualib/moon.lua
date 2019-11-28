@@ -630,6 +630,26 @@ reg_protocol {
     end
 }
 
+reg_protocol{
+    name = "socket",
+    PTYPE = PTYPE_SOCKET,
+    pack = function(...) return ... end,
+    dispatch = function()
+        error("PTYPE_SOCKET dispatch not implemented")
+    end
+}
+
+reg_protocol{
+    name = "websocket",
+    PTYPE = PTYPE_SOCKET_WS,
+    pack = function(...) return ... end,
+    dispatch = function(_)
+        error("PTYPE_SOCKET_WS dispatch not implemented")
+    end
+}
+
+--------------------------DEBUG----------------------------
+
 local debug_command = {}
 
 debug_command.gc = function(sender, sessionid)
@@ -658,24 +678,6 @@ reg_protocol {
         if func then
             func(sender, sessionid, table.unpack(params,2))
         end
-    end
-}
-
-reg_protocol{
-    name = "socket",
-    PTYPE = PTYPE_SOCKET,
-    pack = function(...) return ... end,
-    dispatch = function()
-        error("PTYPE_SOCKET dispatch not implemented")
-    end
-}
-
-reg_protocol{
-    name = "websocket",
-    PTYPE = PTYPE_SOCKET_WS,
-    pack = function(...) return ... end,
-    dispatch = function(_)
-        error("PTYPE_SOCKET_WS dispatch not implemented")
     end
 }
 
