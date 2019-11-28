@@ -50,7 +50,7 @@ moon.start(function()
             print ( "test1 loop times=" ,i,"\n","query result=")
             print_r( res )
 
-            moon.co_wait(1000)
+            moon.sleep(1000)
             i=i+1
         end
 
