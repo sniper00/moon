@@ -100,12 +100,13 @@ if conf and conf.name then
 		-- no return
 	end
 
-	local docmd = function(sender,sessionid, cmd, ...)
-		sharetable[cmd](sender,sessionid, ...)
-	end
+	local unpack = seri.unpack
+	local unpack_one = seri.unpack_one
 
-	moon.dispatch("lua",function(msg,p)
-		docmd(msg:sender(), msg:sessionid(), p.unpack(msg))
+	moon.dispatch("lua",function(msg)
+		local b = msg:buffer()
+		local cmd = unpack_one(b)
+		sharetable[cmd](msg:sender(), msg:sessionid(), unpack(b))
 	end)
 
 	if conf.dir then
@@ -379,7 +380,7 @@ else
 				if not info then
 					break
 				end
-				info.level = level
+				info.level = is_self and level + 1 or level
 				info.curco = co
 				match_funcinfo(info)
 				level = level + 1
