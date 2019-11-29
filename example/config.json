@@ -250,4 +250,24 @@
             }
         ]
     }
+    ,
+    {
+        "sid": 12,
+        "name": "server_#sid",
+        "thread": 4,
+        "log": "log/#sid_#date.log",
+        "cpath":["../clib"],
+        "path":["../lualib","../service"],
+        "services": [
+            {
+                "unique": true,
+                "name": "sharetable",
+                "file": "../service/sharetable.lua"
+            },
+            {
+                "name": "sharetable_example",
+                "file": "sharetable_example.lua"
+            }
+        ]
+    }
 ]
