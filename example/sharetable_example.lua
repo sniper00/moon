@@ -1,5 +1,5 @@
 local moon = require("moon")
-local sharetable = require("service/sharetable")
+local sharetable = require("sharetable")
 
 local data
 
