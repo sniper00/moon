@@ -454,6 +454,33 @@ static int unpack(lua_State* L)
     return lua_serialize_do_unpack(L, data, len);
 }
 
+static int unpack_one(lua_State* L)
+{
+    if (lua_isnoneornil(L, 1)) {
+        return 0;
+    }
+
+    if (lua_type(L, 1) != LUA_TLIGHTUSERDATA)
+    {
+        return luaL_error(L, "need userdata");
+    }
+
+    buffer* buf = (buffer*)lua_touserdata(L, 1);
+    buffer_view br(buf->data(), buf->size());
+
+    uint8_t type = 0;
+    if (!br.read(&type))
+    {
+        return 0;
+    }
+
+    push_value(L, &br, type & 0x7, type >> 3);
+
+    buf->seek(static_cast<int>(buf->size() - br.size()));
+
+    return 1;
+}
+
 int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len)
 {
     if (len == 0) {
@@ -602,6 +629,7 @@ extern "C"
             {"pack",pack},
             {"packs",packsafe },
             {"unpack",unpack},
+            {"unpack_one",unpack_one},
             {"concat",concat },
             {"concats",concatsafe },
             {NULL,NULL},
