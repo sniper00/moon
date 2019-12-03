@@ -4,59 +4,41 @@
 #include <cmath>
 #include <sstream>
 #include <cctype>
+#include <charconv>
 #include "macro_define.hpp"
 
 namespace moon
 {
-    template<class T>
-    T string_convert(const string_view_t& s);
-
-    template<>
-    inline std::string string_convert< std::string>(const string_view_t& s)
+    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    inline T string_convert(const string_view_t& s, std::errc& ec)
     {
-        return std::string(s.data(), s.size());
+        T result;
+        auto res = std::from_chars(s.data(), s.data() + s.size(), result);
+        ec = res.ec;
+        return result;
     }
 
-    template<>
-    inline string_view_t string_convert<string_view_t>(const string_view_t& s)
+    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    inline T string_convert(const string_view_t& s)
+    {
+        T result;
+        if (auto[p, ec] = std::from_chars(s.data(), s.data() + s.size(), result); ec != std::errc())
+        {
+            throw std::runtime_error(std::to_string(static_cast<int>(ec)));
+        }
+        return result;
+    }
+
+    template<typename T, std::enable_if_t<std::is_same_v<T,std::string>, int> = 0>
+    inline std::string string_convert(const string_view_t& s)
+    {
+        return std::string(s);
+    }
+
+    template<typename T, std::enable_if_t<std::is_same_v<T, string_view_t>, int> = 0>
+    inline string_view_t string_convert(const string_view_t& s)
     {
         return s;
-    }
-
-    template<>
-    inline int32_t string_convert<int32_t>(const string_view_t& s)
-    {
-        return static_cast<int32_t>(std::stoi(std::string(s.data(), s.size())));
-    }
-
-    template<>
-    inline uint32_t string_convert<uint32_t>(const string_view_t& s)
-    {
-        return static_cast<uint32_t>(std::stoul(std::string(s.data(), s.size())));
-    }
-
-    template<>
-    inline int64_t string_convert<int64_t>(const string_view_t& s)
-    {
-        return std::stoll(std::string(s.data(), s.size()));
-    }
-
-    template<>
-    inline uint64_t string_convert<uint64_t>(const string_view_t& s)
-    {
-        return std::stoull(std::string(s.data(), s.size()));
-    }
-
-    template<>
-    inline float string_convert<float>(const string_view_t& s)
-    {
-        return std::stof(std::string(s.data(), s.size()));
-    }
-
-    template<>
-    inline double string_convert<double>(const string_view_t& s)
-    {
-        return std::stod(std::string(s.data(), s.size()));
     }
 
     constexpr uint64_t pow10(int n)
@@ -66,13 +48,13 @@ namespace moon
 
     inline size_t uint64_to_str(uint64_t value, char *dst)
     {
-        static const char digits[201] =
+        static const char digits[] =
             "0001020304050607080910111213141516171819"
             "2021222324252627282930313233343536373839"
             "4041424344454647484950515253545556575859"
             "6061626364656667686970717273747576777879"
             "8081828384858687888990919293949596979899";
-        const  size_t length = static_cast<size_t>(std::log10(value)) + 1;
+        const  size_t length = (value < 10) ? 1 : (static_cast<size_t>(std::log10(value)) + 1);
         size_t next = length - 1;
         while (value >= 100) {
             const int i = (value % 100) * 2;
