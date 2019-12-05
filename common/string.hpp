@@ -41,6 +41,11 @@ namespace moon
         return s;
     }
 
+    constexpr uint64_t pow10(int n)
+    {
+        return (n < 1) ? 1 : 10 * pow10(n - 1);
+    }
+
     inline size_t int_log10(size_t v)
     {
         size_t n = 0;
