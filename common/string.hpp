@@ -29,7 +29,7 @@ namespace moon
         return result;
     }
 
-    template<typename T, std::enable_if_t<std::is_same_v<T,std::string>, int> = 0>
+    template<typename T, std::enable_if_t<std::is_same_v<T, std::string>, int> = 0>
     inline std::string string_convert(const string_view_t& s)
     {
         return std::string(s);
@@ -41,9 +41,26 @@ namespace moon
         return s;
     }
 
-    constexpr uint64_t pow10(int n)
+    inline size_t int_log10(size_t v)
     {
-        return (n < 1) ? 1 : 10 * pow10(n - 1);
+        size_t n = 0;
+        while (v > 9)
+        {
+            v /= 10;
+            ++n;
+        }
+        return n;
+    }
+
+    inline size_t int_log16(size_t v)
+    {
+        size_t n = 0;
+        while (v > 15)
+        {
+            v >>= 4;
+            ++n;
+        }
+        return n;
     }
 
     inline size_t uint64_to_str(uint64_t value, char *dst)
@@ -54,7 +71,7 @@ namespace moon
             "4041424344454647484950515253545556575859"
             "6061626364656667686970717273747576777879"
             "8081828384858687888990919293949596979899";
-        const  size_t length = (value < 10) ? 1 : (static_cast<size_t>(std::log10(value)) + 1);
+        const  size_t length = int_log10(value) + 1;
         size_t next = length - 1;
         while (value >= 100) {
             const int i = (value % 100) * 2;
@@ -94,9 +111,9 @@ namespace moon
             "D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF"
             "E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEF"
             "F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
-        const size_t length = (value < 16) ? 1 : static_cast<size_t>(std::log(value) / std::log(16) + 1);
+        const size_t length = int_log16(value) + 1;
         size_t padding = 0;
-        while (length+ padding < fillzero)
+        while (length + padding < fillzero)
         {
             dst[0] = '0';
             ++dst;
@@ -117,9 +134,12 @@ namespace moon
         else {
             const int i = uint32_t(value) * 2;
             dst[next] = digits[i + 1];
-            dst[next - 1] = digits[i];
+            if (next > 0)
+            {
+                dst[next - 1] = digits[i];
+            }
         }
-        return length+ padding;
+        return length + padding;
     }
 
     /*
