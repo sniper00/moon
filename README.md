@@ -483,9 +483,9 @@ end)
  ./moon.exe -f example/example_timer.lua
 ```
 
-### 使用配置文件的示例(example 目录)
+### 使用配置文件的示例
 
-**config.json**
+**example 目录 config.json**
 
 **配置文件说明，请参考[wiki](https://github.com/sniper00/moon/wiki/Config)**
 
