@@ -52,9 +52,9 @@ end
 --- param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
 --- timeout millseconds
 ---@param host string
----@param port int
----@param protocol int
----@param timeout int
+---@param port integer
+---@param protocol integer
+---@param timeout integer
 function socket.connect(host, port, protocol, timeout)
     timeout = timeout or 0
     local sessionid = make_response()
