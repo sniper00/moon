@@ -6,7 +6,7 @@ require("base.math")
 require("base.util")
 require("base.class")
 
----@class core
+---@type core
 local core = require("moon.api")
 local json = require("json")
 local seri = require("seri")
@@ -192,7 +192,7 @@ core.set_cb('m', _default_dispatch)
 ---param header:message header<br>
 ---param ...:消息内容<br>
 ---@param PTYPE string
----@param receiver int
+---@param receiver integer
 ---@param header string
 ---@return boolean
 function moon.send(PTYPE, receiver, header, ...)
@@ -211,10 +211,10 @@ end
 ---param header:message header<br>
 ---param data 消息内容 string 类型<br>
 ---@param PTYPE string 协议类型
----@param receiver int 接收者服务id
+---@param receiver integer 接收者服务id
 ---@param header string message header
 ---@param data string|userdata 消息内容
----@param sessionid int
+---@param sessionid integer
 ---@return boolean
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
 	local p = protocol[PTYPE]
@@ -228,7 +228,7 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
 end
 
 ---获取当前的服务id
----@return int
+---@return integer
 function moon.sid()
     return sid_
 end
@@ -243,8 +243,8 @@ end
 ---@param stype string
 ---@param config table
 ---@param unique boolean
----@param workerid int
----@return bool
+---@param workerid integer
+---@return boolean
 function moon.new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
@@ -257,8 +257,8 @@ end
 ---@param stype string
 ---@param config table
 ---@param unique boolean
----@param workerid int
----@return int
+---@param workerid integer
+---@return integer
 function moon.co_new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
@@ -271,7 +271,7 @@ end
 ---异步移除指定的服务
 ---param sid 服务id
 ---param bresponse 可选，为true时可以 使用协程等待移除结果
----@param sid int
+---@param sid integer
 ---@param bresponse boolean
 ---@return string
 function moon.remove_service(sid, bresponse)
@@ -293,7 +293,7 @@ end
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
 --- 0 表示服务不存在
 ---@param name string
----@return int
+---@return integer
 function moon.queryservice(name)
 	if type(name)=='string' then
 		return core.queryservice(name)
@@ -346,7 +346,7 @@ end
 
 ---启动一个异步
 ---@param func function
----@return coroutine
+---@return thread
 function moon.async(func)
     local co = tremove(co_pool)
     if not co then
@@ -387,10 +387,10 @@ end
 --------------------------timer-------------
 local timer_cb = {}
 
----@param mills int
----@param times int
+---@param mills integer
+---@param times integer
 ---@param cb function
----@return int
+---@return integer
 function moon.repeated(mills, times, cb)
     local timerid = core.repeated(mills, times)
     timer_cb[timerid] = cb
@@ -414,8 +414,8 @@ local _repeated = moon.repeated
 
 ---async
 ---异步等待 mills 毫秒
----@param mills int
----@return int
+---@param mills integer
+---@return integer
 function moon.sleep(mills)
     local co = co_running()
     _repeated(
@@ -431,7 +431,7 @@ end
 ------------------------------------------
 
 ---async
----@param serviceid int
+---@param serviceid integer
 ---@return string
 function moon.co_remove_service(serviceid)
     return moon.remove_service(serviceid, true)
@@ -452,7 +452,7 @@ end
 ---param receiver:接收者服务id
 ---param ...:发送的数据
 ---@param PTYPE string
----@param receiver int
+---@param receiver integer
 ---@return any
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
@@ -470,8 +470,8 @@ end
 ---param sessionid 调用者的responseid
 ---param ... 数据
 ---@param PTYPE string
----@param receiver int
----@param sessionid int
+---@param receiver integer
+---@param sessionid integer
 function moon.response(PTYPE, receiver, sessionid, ...)
     if sessionid == 0 then return end
     local p = protocol[PTYPE]
@@ -493,7 +493,7 @@ local reg_protocol = moon.register_protocol
 
 ---设置指定协议消息的消息处理函数
 ---@param PTYPE string
----@param cb fun(msg:core.message,ptype:table)
+---@param cb fun(msg:message,ptype:table)
 ---@return boolean
 function moon.dispatch(PTYPE, cb)
     local p = protocol[PTYPE]
