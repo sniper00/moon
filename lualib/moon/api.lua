@@ -311,7 +311,7 @@ function socketcore.setnodelay(fd)
 end
 
 ---@param fd integer
----@param flag string 
+---@param flag string
 ---对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
 ---@return boolean
 function socketcore.set_enable_frame(fd, flag)
