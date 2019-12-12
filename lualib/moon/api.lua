@@ -12,25 +12,25 @@ local ignore_param = print
 core = {}
 
 ---Remove a timer.<br>
----@param timerid int
+---@param timerid integer
 function core.remove_timer(timerid)
     ignore_param(timerid)
 end
 
 ---Return system second.<br>
----@return int
+---@return integer
 function core.second()
     -- body
 end
 
 ---Return system millsecond.<br>
----@return int
+---@return integer
 function core.millsecond()
     -- body
 end
 
 ---Return system microsecond.<br>
----@return int
+---@return integer
 function core.microsecond()
     -- body
 end
@@ -41,7 +41,7 @@ function core.time_offset()
 end
 
 ---Thread sleep millsecond.<br>
----@param milliseconds int
+---@param milliseconds integer
 function core.sleep(milliseconds)
     ignore_param(milliseconds)
 end
@@ -51,7 +51,7 @@ function core.name()
     -- body
 end
 
----@return int
+---@return integer
 function core.id()
     -- body
 end
@@ -64,11 +64,11 @@ function core.make_prefab(buf)
 end
 
 ---根据缓存id发送缓存消息
----@param receiver int
----@param cacheid int
+---@param receiver integer
+---@param prefabid integer
 ---@param header string
----@param sessionid int
----@param type int
+---@param sessionid integer
+---@param type integer
 function core.send_prefab(receiver, prefabid, header, sessionid, type)
     ignore_param(receiver, prefabid, header, sessionid, type)
 end
@@ -91,35 +91,35 @@ function core.abort()
 end
 
 --- get server time(milliseconds)
----@return int
+---@return integer
 function core.now()
     -- body
 end
 
 --- get total service count()
----@return int
+---@return integer
 function core.service_count()
     -- body
 end
 
----@class core.message
+---@class message
 local message = {}
 ignore_param(message)
 
 ---获取消息发送者的serviceid
----@return int
+---@return integer
 function message:sender()
     ignore_param(self)
 end
 
 ---获取responseid，用于send response模式
----@return int
+---@return integer
 function message:sessionid()
     ignore_param(self)
 end
 
 ---获取消息接收者的serviceid
----@return int
+---@return integer
 function message:receiver()
     ignore_param(self)
 end
@@ -131,7 +131,7 @@ end
 ---local PTYPE_SOCKET = 4 --网络消息
 ---local PTYPE_ERROR = 5 --错误消息
 ---local PTYPE_SOCKET_WS = 6--web socket 网络消息
----@return int
+---@return integer
 function message:type()
     ignore_param(self)
 end
@@ -142,7 +142,7 @@ end
 ---local socket_recv = 3
 ---local socket_close =4
 ---local socket_error = 5
----@return int
+---@return integer
 function message:subtype()
     ignore_param(self)
 end
@@ -161,15 +161,15 @@ function message:bytes()
 end
 
 ---获取消息数据长度(number)
----@return int
+---@return integer
 function message:size()
     ignore_param(self)
 end
 
 ---对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)。len=-1
 ---从pos开始的所有数据。
----@param pos int
----@param count int
+---@param pos integer
+---@param count integer
 ---@return string
 function message:substr(pos, count)
     ignore_param(self, pos, count)
@@ -183,17 +183,17 @@ end
 
 ---更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
 ---@param header string
----@param receiver int
----@param mtype int
+---@param receiver integer
+---@param mtype integer
 function message:redirect(header, receiver, mtype)
     ignore_param(self, header, receiver, mtype)
 end
 
----@param sender int
+---@param sender integer
 ---@param header string
----@param receiver int
----@param sessionid int
----@param mtype int
+---@param receiver integer
+---@param sessionid integer
+---@param mtype integer
 function message:resend(sender, header, receiver, sessionid, mtype)
     ignore_param(self, sender, header, receiver, sessionid, mtype)
 end
@@ -219,7 +219,7 @@ ignore_param(fs)
 ---    end
 ---end)
 ---@param dir string 路径
----@param depth int 遍历子目录的深度，0表示 dir 同级目录
+---@param depth integer 遍历子目录的深度，0表示 dir 同级目录
 ---@param callback function 回掉function(path,isdir) end
 function fs.traverse_folder(dir, depth, callback)
     ignore_param(dir, depth, callback)
@@ -276,51 +276,49 @@ ignore_param(socketcore)
 
 ---param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
 ---@param host string
----@param port int
----@param protocol int
+---@param port integer
+---@param protocol integer
 function socketcore.listen(host, port, protocol)
     ignore_param(host, port, protocol)
 end
 
----param T string 、 moon.buffer
----@param fd int
----@param data T
----@return bool
+---send data to fd, data string or userdata moon.buffer*
+---@overload fun(fd:integer, data:string)
+---@overload fun(fd:integer, data:userdata)
+---@return boolean
 function socketcore.write(fd, data)
     ignore_param(fd, data)
 end
 
----@param fd int
----@param m core.message
----@return bool
+---@param fd integer
+---@param m message
+---@return boolean
 function socketcore.write_message(fd, m)
     ignore_param(fd, m)
 end
 
----param t 秒。0不检测超时，默认是0。
----@param fd int
----@param t int
----@return bool
+---@param fd integer
+---@param t integer 秒, 0不检测超时, 默认是0。
+---@return boolean
 function socketcore.settimeout(fd, t)
     ignore_param(fd, t)
 end
 
----@param fd int
----@return bool
+---@param fd integer
+---@return boolean
 function socketcore.setnodelay(fd)
     ignore_param(fd)
 end
 
---- param flag 对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。
---- 可以单独控制read,write "r", "w", "wr"
----@param fd int
+---@param fd integer
 ---@param flag string
----@return bool
+---对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
+---@return boolean
 function socketcore.set_enable_frame(fd, flag)
     ignore_param(fd,flag)
 end
 
----@param fd int
+---@param fd integer
 function socketcore.close(fd)
     ignore_param(fd)
 end
