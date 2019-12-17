@@ -138,6 +138,7 @@ namespace moon
                 {
                     if (counter >= worker::max_uuid)
                     {
+                        serviceid = 0;
                         CONSOLE_ERROR(router_->logger()
                             , "new service failed: can not get more service id. worker[%d] service num[%u].", id(), services_.size());
                         break;
@@ -145,6 +146,11 @@ namespace moon
                     serviceid = uuid();
                     ++counter;
                 } while (services_.find(serviceid)!= services_.end());
+
+                if(serviceid==0)
+                {
+                    break;
+                }
 
                 auto s = router_->make_service(service_type);
                 MOON_ASSERT(s,
@@ -203,10 +209,13 @@ namespace moon
                 services_.erase(serviceid);
                 if (services_.empty()) shared(true);
 
-                string_view_t header{ "exit" };
-                auto buf = message::create_buffer();
-                buf->write_back(content.data(), content.size());
-                router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
+                if (server_->get_state() == state::ready)
+                {
+                    string_view_t header{ "exit" };
+                    auto buf = message::create_buffer();
+                    buf->write_back(content.data(), content.size());
+                    router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
+                }
             }
             else
             {
