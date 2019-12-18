@@ -71,15 +71,9 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
         {
             c->fd(w->socket().uuid());
             w->socket().add_connection(this, ctx, c, sessionid);
-
-            if (sessionid == 0)
-            {
-                accept(ctx->fd, sessionid, owner);
-            }
         }
         else
         {
-            close(ctx->fd, true);
             if (sessionid != 0)
             {
                 response(ctx->fd, ctx->owner, moon::format("socket::accept error %s(%d)", e.message().data(), e.value()), "error"sv, sessionid, PTYPE_ERROR);
@@ -91,6 +85,11 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
                     CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
                 }
             }
+        }
+
+        if (sessionid == 0)
+        {
+            accept(ctx->fd, sessionid, owner);
         }
     });
 }
