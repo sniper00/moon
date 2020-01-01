@@ -118,7 +118,7 @@ if conf and conf.name then
 			end
 			return true
 		end)
-		moon.set_env_pack("LOGIC_CONF", seri.pack(conf_files))
+		moon.set_env_pack("LOGIC_CONF", conf_files)
 	end
 else
 	local function report_close()
