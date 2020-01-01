@@ -3,7 +3,7 @@
 
 using namespace moon;
 
-static sol::table bind_fs(sol::this_state L)
+static sol::table bind_http(sol::this_state L)
 {
     sol::state_view lua(L);
     sol::table module = lua.create_table();
@@ -40,7 +40,7 @@ extern "C"
 {
     int LUAMOD_API luaopen_http(lua_State* L)
     {
-        return sol::stack::call_lua(L, 1, bind_fs);
+        return sol::stack::call_lua(L, 1, bind_http);
     }
 }
 
