@@ -237,7 +237,6 @@ end
 ---param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
 ---param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置<br>
 ---param unique 是否是唯一服务，唯一服务可以用moon.queryservice(name) 查询服务id<br>
----param shared 可选，是否共享工作者线程，默认true<br>
 ---workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者
 ---线程中<br>
 ---@param stype string
@@ -309,6 +308,11 @@ function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
 
+---获取服务器时间, 可以调用 moon.time_offset 偏移时间
+function moon.time()
+    return moon.now()//1000
+end
+
 -------------------------协程操作封装--------------------------
 
 local co_num = 0
@@ -345,7 +349,7 @@ local function routine(f)
 end
 
 ---启动一个异步
----@param func function
+---@param func function | function() end
 ---@return thread
 function moon.async(func)
     local co = tremove(co_pool)
@@ -564,11 +568,13 @@ local ref_services = {}
 --- mark a service, should not exit before this service
 moon.retain =function(name)
     local id = moon.queryservice(name)
+    if id == 0 then return end
     moon.send("system", id, "retain", moon.name())
 end
 
 moon.release =function(name)
     local id = moon.queryservice(name)
+    if id == 0 then return end
     moon.send("system", id, "release", moon.name())
 end
 
