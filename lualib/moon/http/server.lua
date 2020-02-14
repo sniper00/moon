@@ -227,7 +227,7 @@ local function session_handler(fd)
 
     header = request.header
 
-    request.parse_query = function() return parse_query_string(request.parse_query_string) end
+    request.parse_query = function() return parse_query_string(request.query_string) end
 
     request.parse_form = function() return parse_query_string(request.content) end
 

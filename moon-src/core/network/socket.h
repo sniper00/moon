@@ -96,6 +96,8 @@ namespace moon
         bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
 
         size_t socket_num();
+
+		std::string getaddress(uint32_t fd);
     private:
         uint32_t uuid();
 

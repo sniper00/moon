@@ -187,7 +187,10 @@ namespace moon
                 return;
             } while (false);
 
-            shared(services_.empty());
+            if (services_.empty())
+            {
+                shared(true);
+            }
 
             if (0 != sessionid)
             {
@@ -204,7 +207,7 @@ namespace moon
                 count_.fetch_sub(1, std::memory_order_release);
 
                 s->destroy();
-                auto content = moon::format(R"({"name":"%s","serviceid":%X,"errmsg":"service destroy"})", s->name().data(), s->id());
+                auto content = moon::format(R"({"name":"%s","serviceid":%08X,"errmsg":"service destroy"})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, sessionid);
                 services_.erase(serviceid);
                 if (services_.empty()) shared(true);
@@ -219,7 +222,7 @@ namespace moon
             }
             else
             {
-                router_->response(sender, "worker::remove_service "sv, moon::format("service [%X] not found", serviceid), sessionid, PTYPE_ERROR);
+                router_->response(sender, "worker::remove_service "sv, moon::format("service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
             }
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
@@ -259,7 +262,7 @@ namespace moon
                     cpu_time_ += difftime;
                     if (difftime > 1000)
                     {
-                        CONSOLE_WARN(router_->logger(), "worker handle cost %" PRId64 "ms queue size %zu", difftime, count);
+                        CONSOLE_WARN(router_->logger(), "worker %u handle %zu message cost %" PRId64 "ms, queue size %zu",id(), count, difftime, mq_.size());
                     }
                 }
             });
