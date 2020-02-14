@@ -6,16 +6,15 @@ local M={}
 
 function M.load(pbfile)
     local filepath = fs.working_directory()
-    filepath = filepath.."/protocol/"..pbfile
-    reg_file(filepath)
+    reg_file(filepath..pbfile)
 end
 
-function M.loadall()
+function M.loadall(path)
     local curdir = fs.working_directory()
-    fs.traverse_folder(curdir .. "/protocol", 0, function(filepath, filetype)
-        if filetype == 1 then
+    fs.traverse_folder(curdir .. path, 0, function(filepath, isdir)
+        if not isdir then
             if fs.extension(filepath) == ".pb" then
-                --printf("LoadProtocol:%s", filepath)
+                print("LoadProtocol", filepath)
                 reg_file(filepath)
             end
         end
