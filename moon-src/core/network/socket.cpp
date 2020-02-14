@@ -322,6 +322,15 @@ size_t moon::socket::socket_num()
     return connections_.size();
 }
 
+std::string moon::socket::getaddress(uint32_t fd)
+{
+	if (auto iter = connections_.find(fd); iter != connections_.end())
+	{
+		return iter->second->address();
+	}
+	return std::string();
+}
+
 uint32_t socket::uuid()
 {
     uint32_t res = 0;
