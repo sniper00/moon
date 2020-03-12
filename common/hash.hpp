@@ -133,6 +133,11 @@ namespace moon
         return 0 == len ? seed : chash_string(str + 1, len-1, seed ^ (static_cast<uint64_t>(*str) + 0x9e3779b9 + (seed << 6) + (seed >> 2)));
     }
 
+    inline constexpr uint64_t chash_string(const std::string_view& s, uint64_t seed = 0)
+    {
+        return chash_string(s.data(), s.size(), seed);
+    }
+
     inline uint64_t chash_string(const std::string& s, uint64_t seed = 0)
     {
         return chash_string(s.data(),s.size(), seed);

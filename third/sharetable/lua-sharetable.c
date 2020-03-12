@@ -26,8 +26,8 @@ mark_shared(lua_State *L) {
 		int i;
 		for (i=0;i<2;i++) {
 			int idx = -i-1;
-			int t = lua_type(L, idx);
-			switch (t) {
+			int tp = lua_type(L, idx);
+			switch (tp) {
 			case LUA_TTABLE:
 				mark_shared(L);
 				break;
@@ -47,7 +47,7 @@ mark_shared(lua_State *L) {
 				lua_sharestring(L, idx);
 				break;
 			default:
-				luaL_error(L, "Invalid type [%s]", lua_typename(L, t));
+				luaL_error(L, "Invalid type [%s]", lua_typename(L, tp));
 				break;
 			}
 		}

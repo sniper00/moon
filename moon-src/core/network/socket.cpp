@@ -198,14 +198,11 @@ bool socket::write(uint32_t fd, buffer_ptr_t data)
 
 bool socket::write_with_flag(uint32_t fd, buffer_ptr_t data, int flag)
 {
-    auto iter = connections_.find(fd);
-    if (iter == connections_.end())
-    {
-        return false;
-    }
-    MOON_ASSERT(flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max), "socket::write_with_flag flag invalid");
+    MOON_ASSERT(
+        flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max),
+        "socket::write_with_flag flag invalid");
     data->set_flag(static_cast<buffer_flag>(flag));
-    return iter->second->send(std::move(data));
+    return write(fd, std::move(data));
 }
 
 bool socket::write_message(uint32_t fd, message * m)
@@ -291,7 +288,8 @@ bool socket::set_enable_frame(uint32_t fd, std::string flag)
         break;
     }
     default:
-        CONSOLE_WARN(router_->logger(), "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
+        CONSOLE_WARN(router_->logger(),
+            "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
         return false;
     }
 

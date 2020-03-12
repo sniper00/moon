@@ -432,8 +432,6 @@ static int packsafe(lua_State* L)
     return 1;
 }
 
-int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len);
-
 static int unpack(lua_State* L)
 {
     if (lua_isnoneornil(L, 1)) {
@@ -446,43 +444,10 @@ static int unpack(lua_State* L)
     }
     else
     {
-        buffer* buf = (buffer*)lua_touserdata(L, 1);
-        if (nullptr == buf) return 0;
-        data = buf->data();
-        len = buf->size();
-    }
-    return lua_serialize_do_unpack(L, data, len);
-}
-
-static int unpack_one(lua_State* L)
-{
-    if (lua_isnoneornil(L, 1)) {
-        return 0;
+        data = (const char*)lua_touserdata(L, 1);
+        len = luaL_checkinteger(L, 2);
     }
 
-    if (lua_type(L, 1) != LUA_TLIGHTUSERDATA)
-    {
-        return luaL_error(L, "need userdata");
-    }
-
-    buffer* buf = (buffer*)lua_touserdata(L, 1);
-    buffer_view br(buf->data(), buf->size());
-
-    uint8_t type = 0;
-    if (!br.read(&type))
-    {
-        return 0;
-    }
-
-    push_value(L, &br, type & 0x7, type >> 3);
-
-    buf->seek(static_cast<int>(buf->size() - br.size()));
-
-    return 1;
-}
-
-int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len)
-{
     if (len == 0) {
         return 0;
     }
@@ -492,7 +457,6 @@ int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len)
     }
 
     lua_settop(L, 1);
-
     buffer_view br(data, len);
 
     for (int i = 0;; i++)
@@ -509,6 +473,48 @@ int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len)
         push_value(L, &br, type & 0x7, type >> 3);
     }
     return lua_gettop(L) - 1;
+}
+
+static int peek_one(lua_State* L)
+{
+    if (lua_isnoneornil(L, 1)) {
+        return 0;
+    }
+
+    if (lua_type(L, 1) != LUA_TLIGHTUSERDATA)
+    {
+        return luaL_error(L, "need userdata");
+    }
+
+    int seek = 0;
+
+    if (lua_type(L, 2) == LUA_TBOOLEAN)
+    {
+        seek = lua_toboolean(L, 2);
+    }
+
+    buffer* buf = (buffer*)lua_touserdata(L, 1);
+    buffer_view br(buf->data(), buf->size());
+
+    uint8_t type = 0;
+    if (!br.read(&type))
+    {
+        return 0;
+    }
+
+    push_value(L, &br, type & 0x7, type >> 3);
+
+    if (seek)
+    {
+        assert(!buf->has_flag(buffer_flag::broadcast));
+        buf->seek(static_cast<int>(buf->size() - br.size()));
+        return 1;
+    }
+    else
+    {
+        lua_pushinteger(L, static_cast<int>(buf->size() - br.size()));
+        return 2;
+    }
 }
 
 static void concat_one(lua_State *L, buffer* b, int index, int depth);
@@ -620,6 +626,49 @@ static int concatsafe(lua_State *L)
     return 1;
 }
 
+static int sep_concat(lua_State* L)
+{
+    int n = lua_gettop(L);
+    if (n < 1)
+    {
+        return 0;
+    }
+
+    size_t len;
+    const char* sep = luaL_checklstring(L, 1, &len);
+    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
+    buf->set_flag(HEAP_BUFFER);
+    for (int i = 2; i <= n; i++) {
+        concat_one(L, buf, i, 0);
+        if(i!=n)
+            buf->write_back(sep, len);
+    }
+    buf->clear_flag(HEAP_BUFFER);
+    lua_pushlightuserdata(L, buf);
+    return 1;
+}
+
+static int sep_concatsafe(lua_State *L)
+{
+    int n = lua_gettop(L);
+    if (n < 1)
+    {
+        return 0;
+    }
+
+    size_t len;
+    const char* sep = luaL_checklstring(L, 1, &len);
+
+    buffer buf;
+    for (int i = 1; i <= n; i++) {
+        concat_one(L, &buf, i, 0);
+        if (i != n)
+            buf.write_back(sep, len);
+    }
+    lua_pushlstring(L, buf.data(), buf.size());
+    return 1;
+}
+
 extern "C"
 {
     int LUAMOD_API  luaopen_serialize(lua_State *L)
@@ -629,9 +678,11 @@ extern "C"
             {"pack",pack},
             {"packs",packsafe },
             {"unpack",unpack},
-            {"unpack_one",unpack_one},
+            {"unpack_one",peek_one},
             {"concat",concat },
             {"concats",concatsafe },
+            {"sep_concat",sep_concat },
+            {"sep_concats",sep_concatsafe },
             {NULL,NULL},
         };
         luaL_newlib(L, l);
