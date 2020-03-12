@@ -63,6 +63,9 @@ bool lua_service::init(std::string_view config)
         mem_limit = static_cast<size_t>(conf.get_value<int64_t>("memlimit"));
 
         lua_.open_libraries();
+
+        lua_.add_package_loader(custom_package_loader);
+
         sol::table module = lua_.create_table();
         lua_bind lua_bind(module);
         lua_bind.bind_service(this)
@@ -70,47 +73,33 @@ bool lua_service::init(std::string_view config)
             .bind_util()
             .bind_timer(this)
             .bind_message()
-            .bind_socket(this);
+            .bind_socket(this)
+            .bind_datetime(this);
 
-        lua_bind::registerlib(lua_.lua_state(), "fs", luaopen_fs);
-        lua_bind::registerlib(lua_.lua_state(), "http", luaopen_http);
-        lua_bind::registerlib(lua_.lua_state(), "seri", luaopen_serialize);
         lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
-        lua_bind::registerlib(lua_.lua_state(), "moon_core", module);
+        lua_bind::registerlib(lua_.lua_state(), "mooncore", module);
+
+        open_custom_libraries(lua_.lua_state());
 
         sol::object json = lua_.require("json", luaopen_rapidjson, false);
 
-        moon::server_config_manger& server_config = moon::server_config_manger::instance();
         {
-            auto cpaths = conf.get_value<std::vector<std::string_view>>("cpath");
-            if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
-            {
-                std::copy(server_cfg->cpath.begin(), server_cfg->cpath.end(), std::back_inserter(cpaths));
-            }
+            auto cpaths = conf.get_value<std::string_view>("cpath");
             std::string strpath;
             strpath.append("package.cpath ='");
-            for (auto& v : cpaths)
-            {
-                strpath.append(v.data(), v.size());
-                strpath.append(LUA_CPATH_STR);
-            }
+            strpath.append(cpaths);
+            strpath.append(router_->get_env("CPATH"));
             strpath.append("'..package.cpath");
             lua_.script(strpath);
         }
 
-        auto paths = conf.get_value<std::vector<std::string_view>>("path");
+
         {
-            if (auto server_cfg = server_config.get_server_config(); server_cfg != nullptr)
-            {
-                std::copy(server_cfg->path.begin(), server_cfg->path.end(), std::back_inserter(paths));
-            }
+            auto paths = conf.get_value<std::string_view>("path");
             std::string strpath;
             strpath.append("package.path ='");
-            for (auto& v : paths)
-            {
-                strpath.append(v.data(), v.size());
-                strpath.append(LUA_PATH_STR);
-            }
+            strpath.append(paths);
+            strpath.append(router_->get_env("PATH"));
             strpath.append("'..package.path");
             lua_.script(strpath);
         }
@@ -134,7 +123,9 @@ bool lua_service::init(std::string_view config)
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
-        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%X]", worker_->id(), name().data(), id()), id());
+        profile(conf.get_value<bool>("profile"));
+
+        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%08X]", worker_->id(), name().data(), id()), id());
         ok_ = true;
     }
     catch (std::exception& e)
@@ -181,7 +172,7 @@ void lua_service::dispatch(message* msg)
             sol::error err = result;
             if (msg->sessionid() >= 0 || msg->receiver() == 0)//socket mesage receiver==0
             {
-                CONSOLE_ERROR(logger(), "%s dispatch:\n%s", name().data(), err.what());
+                logger()->logstring(true, moon::LogLevel::Error, moon::format("%s dispatch:\n%s", name().data(), err.what()), id());
             }
             else
             {
@@ -241,7 +232,7 @@ void lua_service::exit()
 
 void lua_service::destroy()
 {
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s:%X] ", worker_->id(), name().data(),id()), id());
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s:%08X] ", worker_->id(), name().data(),id()), id());
     if (!ok()) return;
 
     try
@@ -266,8 +257,7 @@ void lua_service::destroy()
 
 void lua_service::error(const std::string & msg, bool initialized)
 {
-    std::string backtrace = lua_traceback(lua_.lua_state());
-    CONSOLE_ERROR(logger(), "%s %s", name().data(), (msg + backtrace).data());
+    CONSOLE_ERROR(logger(), "%s %s", name().data(), msg.data());
 
     if (initialized)
     {

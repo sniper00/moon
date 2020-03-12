@@ -29,6 +29,8 @@ public:
 
     const lua_bind& bind_socket(lua_service* s)const;
 
+    const lua_bind& bind_datetime(lua_service* s)const;
+
     static void registerlib(lua_State *L, const char *name, lua_CFunction f);
 
     static void registerlib(lua_State *L, const char *name, const sol::table&);
@@ -36,13 +38,10 @@ private:
     sol::table& lua;
 };
 
-const char* lua_traceback(lua_State* _state);
-
 extern "C"
 {
     int luaopen_rapidjson(lua_State* L);
-    int luaopen_fs(lua_State* L);
-    int luaopen_http(lua_State* L);
-    int luaopen_serialize(lua_State* L);
+    int custom_package_loader(lua_State* L);
+    void open_custom_libraries(lua_State* L);
 }
 

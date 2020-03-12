@@ -44,10 +44,6 @@ namespace moon
             return content;
         });
 
-        timer_.set_now_func([this]() {
-            return server_->now();
-        });
-
         timer_.set_on_timer([this](timer_id_t timerid, uint32_t serviceid, bool remove) {
             if (auto s = find_service(serviceid); nullptr != s)
             {
@@ -357,8 +353,7 @@ namespace moon
         }
 
         asio::post(io_ctx_, [this] {
-
-            timer_.update();
+            timer_.update(server_->now());
 
             if (!prefabs_.empty())
             {
@@ -398,6 +393,6 @@ namespace moon
             }
         }
         ser->handle_message(std::forward<message_ptr_t>(msg));
-        timer_.update();
+        timer_.update(server_->now());
     }
 }
