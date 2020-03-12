@@ -2,6 +2,7 @@
 #include "config.hpp"
 #include "router.h"
 #include "common/log.hpp"
+#include "common/time.hpp"
 
 namespace moon
 {
@@ -33,6 +34,8 @@ namespace moon
         int64_t now();
 
         uint32_t service_count();
+
+        datetime& get_datetime();
     private:
         void wait();
     private:
@@ -41,6 +44,7 @@ namespace moon
         std::vector<std::unique_ptr<worker>> workers_;
         log default_log_;
         router router_;
+        datetime datetime_;
     };
 };
 
