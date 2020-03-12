@@ -90,9 +90,30 @@ namespace moon
             ok_ = v;
         }
 
+        bool profile() const
+        {
+            return profile_;
+        }
+
+        void profile(bool v)
+        {
+            profile_ = v;
+        }
+
+        int64_t cpu_time()
+        {
+            return cpu_time_;
+        }
+
         template<typename Message>
         void handle_message(Message&& m)
         {
+            int64_t cpu_start = 0;
+            if (profile_)
+            {
+                cpu_start = time::microsecond();
+            }
+
             try
             {
                 dispatch(m.get());
@@ -110,13 +131,17 @@ namespace moon
             {
                 CONSOLE_ERROR(logger(), "service::handle_message exception: %s", e.what());
             }
+
+            if (profile_)
+            {
+                cpu_time_ = time::microsecond() - cpu_start;
+            }
         }
 
         void quit()
         {
             router_->remove_service(id_, 0, 0);
         }
-
     public:
         virtual bool init(std::string_view) = 0;
 
@@ -152,11 +177,13 @@ namespace moon
         bool start_ = false;
         bool ok_ = false;
         bool unique_ = false;
+        bool profile_ = false;
         uint32_t id_ = 0;
         log* log_ = nullptr;
         server* server_ = nullptr;
         router* router_ = nullptr;
         worker* worker_ = nullptr;
+        int64_t cpu_time_ = 0;
         std::string   name_;
     };
 }

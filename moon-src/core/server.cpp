@@ -58,12 +58,23 @@ namespace moon
 
         int64_t previous_tick = time::now();
         int64_t sleep_duration = 0;
+        int64_t total_ = time::now()%1000;
         while (true)
         {
             now_ = time::now();
+
             auto diff = (now_ - previous_tick);
             diff = (diff < 0) ? 0 : diff;
             previous_tick = now_;
+
+            total_ += diff;
+
+            //datetime update on seconds
+            if (total_ >= 1000)
+            {
+                total_ -= 1000;
+                datetime_.update(now_/1000);
+            }
 
             size_t stoped_worker_num = 0;
 
@@ -135,6 +146,10 @@ namespace moon
 
     int64_t server::now()
     {
+        if (now_ == 0)
+        {
+            return time::now();
+        }
         return now_;
     }
 
@@ -146,6 +161,11 @@ namespace moon
             res += w->count_.load(std::memory_order_acquire);
         }
         return res;
+    }
+
+    datetime & server::get_datetime()
+    {
+        return datetime_;
     }
 }
 

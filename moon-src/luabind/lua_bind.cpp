@@ -37,21 +37,6 @@ const lua_bind & lua_bind::bind_timer(lua_service* s) const
     return *this;
 }
 
-int lua_serialize_do_unpack(lua_State* L, const char* data, size_t len);
-
-static int unpack_cluster_header(lua_State* L)
-{
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    uint16_t dlen = 0;
-    buf->read(&dlen, 1);
-    int hlen = static_cast<int>(buf->size() - dlen);
-    buf->seek(dlen);
-    auto n = lua_serialize_do_unpack(L,buf->data(),buf->size());
-    buf->seek(-dlen);
-    buf->offset_writepos(-hlen);
-    return n;
-}
-
 static int lua_table_new(lua_State* L)
 {
     auto arrn = luaL_checkinteger(L, -2);
@@ -81,8 +66,21 @@ static int lua_string_hex(lua_State* L)
 }
 
 static int my_lua_print(lua_State *L) {
+    lua_Debug ar;
+    std::string lineinfo;
+    if (lua_getstack(L, 1, &ar))
+    {
+        if (lua_getinfo(L, "Sl", &ar))
+        {
+            lineinfo.append(ar.source+1);
+            lineinfo.append(":");
+            lineinfo.append(std::to_string(ar.currentline));
+        }
+    }
+
     moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
     auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
+    auto lv = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(3));
     int n = lua_gettop(L);  /* number of arguments */
     int i;
     lua_getglobal(L, "tostring");
@@ -100,8 +98,15 @@ static int my_lua_print(lua_State *L) {
         buf.write_back(s, l);
         lua_pop(L, 1);  /* pop result */
     }
-    logger->logstring(true, moon::LogLevel::Info, string_view_t{ buf.data(), buf.size() }, serviceid);
     lua_pop(L, 1);  /* pop tostring */
+
+    if (!lineinfo.empty())
+    {
+        buf.write_back("\t(", 2);
+        buf.write_back(lineinfo.data(), lineinfo.size());
+        buf.write_back(")", 1);
+    }
+    logger->logstring(true, lv, string_view_t{ buf.data(), buf.size() }, serviceid);
     return 0;
 }
 
@@ -109,8 +114,10 @@ static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t servi
 {
     lua_pushlightuserdata(lua.lua_state(), logger);
     lua_pushinteger(lua.lua_state(), serviceid);
-    lua_pushcclosure(lua.lua_state(), my_lua_print, 2);
+    lua_pushinteger(lua.lua_state(), (int)moon::LogLevel::Info);
+    lua_pushcclosure(lua.lua_state(), my_lua_print, 3);
     lua_setglobal(lua.lua_state(), "print");
+    assert(lua_gettop(lua.lua_state()) == 0);
 }
 
 static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname, const char* name)
@@ -165,30 +172,16 @@ const lua_bind & lua_bind::bind_util() const
             int t = buf[i];
             int a = t / 16;
             int b = t % 16;
-            res.append(1, md5::HEX[a]);
-            res.append(1, md5::HEX[b]);
+            res[i * 2] = md5::HEX[a];
+            res[i * 2 + 1] = md5::HEX[b];
         }
         return res;
     });
-
-    sol_extend_library(lua, unpack_cluster_header, "unpack_cluster_header");
 
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
 
-    lua.new_enum<moon::buffer_flag>("buffer_flag", {
-        {"close",moon::buffer_flag::close},
-        {"ws_text",moon::buffer_flag::ws_text},
-        {"ws_ping",moon::buffer_flag::ws_ping},
-        {"ws_pong",moon::buffer_flag::ws_pong}
-    });
-
-    lua.new_enum<moon::buffer::seek_origin>("seek_origin", {
-        {"begin",moon::buffer::seek_origin::Begin},
-        {"current",moon::buffer::seek_origin::Current},
-        {"end",moon::buffer::seek_origin::End}
-    });
     return *this;
 }
 
@@ -196,6 +189,12 @@ const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
     register_lua_print(lua, logger, serviceid);
+    sol_extend_library(lua, my_lua_print, "error", [logger, serviceid](lua_State* L)->int {
+        lua_pushlightuserdata(L, logger);
+        lua_pushinteger(L, serviceid);
+        lua_pushinteger(L, (int)moon::LogLevel::Error);
+        return 3;
+    });
     return *this;
 }
 
@@ -206,48 +205,20 @@ const lua_bind & lua_bind::bind_message() const
     //so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
     //If you need to get the Lua state that is calling a function, use sol::this_state.
 
-    auto write_front = [](lua_State* L)->int
+    lua.set_function("redirect", [](lua_State* L)->int
     {
+        int top = lua_gettop(L);
         auto m = sol::stack::get<message*>(L, 1);
-        size_t len = 0;
-        auto data = luaL_checklstring(L, 2, &len);
-        m->get_buffer()->write_front(data, len);
+        m->set_header(sol::stack::get<std::string_view>(L, 2));
+        m->set_receiver(sol::stack::get<uint32_t>(L, 3));
+        m->set_type(sol::stack::get<uint8_t>(L, 4));
+        if (top > 4)
+        {
+            m->set_sender(sol::stack::get<uint32_t>(L, 5));
+            m->set_sessionid(sol::stack::get<int32_t>(L, 6));
+        }
         return 0;
-    };
-
-    auto write_back = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, 1);
-        size_t len = 0;
-        auto data = luaL_checklstring(L, 2, &len);
-        m->get_buffer()->write_back(data, len);
-        return 0;
-    };
-
-    auto seek = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, 1);
-        auto pos = static_cast<int>(luaL_checkinteger(L, 2));
-        auto origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
-        m->get_buffer()->seek(pos, origin);
-        return 0;
-    };
-
-    auto offset_writepos = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, 1);
-        auto offset = static_cast<int>(luaL_checkinteger(L, 2));
-        m->get_buffer()->offset_writepos(offset);
-        return 0;
-    };
-
-    auto cstring = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, -1);
-        lua_pushlightuserdata(L, (void*)(m->data()));
-        lua_pushinteger(L, m->size());
-        return 2;
-    };
+    });
 
     auto tobuffer = [](lua_State* L)->int
     {
@@ -256,42 +227,21 @@ const lua_bind & lua_bind::bind_message() const
         return 1;
     };
 
-    auto redirect = [](lua_State* L)->int
+    auto cstr = [](lua_State* L)->int
     {
         auto m = sol::stack::get<message*>(L, 1);
-        size_t hlen = 0;
-        auto hdata = luaL_checklstring(L, 2, &hlen);
-        auto receiver = static_cast<uint32_t>(luaL_checkinteger(L, 3));
-        auto type = static_cast<uint8_t>(luaL_checkinteger(L, 4));
-
-        if (hlen != 0)
+        int offset = 0;
+        if (lua_type(L, 2) == LUA_TNUMBER)
         {
-            m->set_header(std::string_view{ hdata, hlen });
+            offset = static_cast<int>(lua_tointeger(L, 2));
+            if (offset > m->size())
+            {
+                return luaL_error(L, "out of range");
+            }
         }
-        m->set_receiver(receiver);
-        m->set_type(type);
-        return 0;
-    };
-
-    auto resend = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, 1);
-        auto sender = static_cast<uint32_t>(luaL_checkinteger(L, 2));
-        auto receiver = static_cast<uint32_t>(luaL_checkinteger(L, 3));
-        size_t hlen = 0;
-        auto hdata = luaL_checklstring(L, 4, &hlen);
-        auto sessionid = static_cast<int32_t>(luaL_checkinteger(L, 5));
-        auto type = static_cast<uint8_t>(luaL_checkinteger(L, 6));
-
-        if (hlen != 0)
-        {
-            m->set_header(std::string_view{ hdata, hlen });
-        }
-        m->set_sender(sender);
-        m->set_receiver(receiver);
-        m->set_type(type);
-        m->set_sessionid(-sessionid);
-        return 0;
+        lua_pushlightuserdata(L, (void*)(m->data()+ offset));
+        lua_pushinteger(L, m->size()- offset);
+        return 2;
     };
 
     lua.new_usertype<message>("message"
@@ -304,14 +254,130 @@ const lua_bind & lua_bind::bind_message() const
         , "size", (&message::size)
         , "substr", (&message::substr)
         , "buffer", tobuffer
-        , "redirect", redirect
-        , "resend", resend
-        , "cstring", cstring
-        , "write_front", write_front
-        , "write_back", write_back
-        , "seek", seek
-        , "offset_writepos", offset_writepos
+        , "cstr", cstr
         );
+
+    sol::table tb = lua.create();
+    tb.set_function("unsafe_new", [](lua_State* L)->int {
+        size_t capacity = sol::stack::get<size_t>(L, 1);
+        buffer* buf = new buffer(capacity, BUFFER_HEAD_RESERVED);
+        lua_pushlightuserdata(L, buf);
+        return 1;
+    });
+
+    tb.set_function("delete", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        delete buf;
+        return 0;
+    });
+
+    tb.set_function("clear", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        buf->clear();
+        return 0;
+    });
+
+    tb.set_function("size", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        lua_pushinteger(L, buf->size());
+        return 1;
+    });
+
+    tb.set_function("substr", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
+        auto count = static_cast<size_t>(luaL_checkinteger(L, 3));
+
+        string_view_t sw(buf->data(), buf->size());
+        string_view_t sub = sw.substr(pos, count);
+        lua_pushlstring(L, sub.data(), sub.size());
+        return 1;
+    });
+
+    tb.set_function("str", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        lua_pushlstring(L, buf->data(), buf->size());
+        return 1;
+    });
+
+    tb.set_function("cstr", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) {return luaL_error(L, "null pointer");}
+        int offset = 0;
+        if (lua_type(L, 2) == LUA_TNUMBER)
+        {
+            offset = static_cast<int>(lua_tointeger(L, 2));
+            if (offset > static_cast<int>(buf->size()))
+            {
+                return luaL_error(L, "out of range");
+            }
+        }
+        lua_pushlightuserdata(L, (void*)(buf->data()+ offset));
+        lua_pushinteger(L, buf->size()- offset);
+        return 2;
+    });
+
+    tb.set_function("read", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        auto count = static_cast<int>(luaL_checkinteger(L, 2));
+        if (count > static_cast<int>(buf->size()))
+        {
+            lua_pushboolean(L, 0);
+            lua_pushstring(L, "out off index");
+            return 2;
+        }
+
+        lua_pushlstring(L, buf->data(), count);
+        buf->seek(count);
+        return 1;
+    });
+
+    tb.set_function("write_front", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        size_t len = 0;
+        auto data = luaL_checklstring(L, 2, &len);
+        buf->write_front(data, len);
+        return 0;
+    });
+
+    tb.set_function("write_back", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        size_t len = 0;
+        auto data = luaL_checklstring(L, 2, &len);
+        buf->write_back(data, len);
+        return 0;
+    });
+
+    tb.set_function("seek", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        auto pos = static_cast<int>(luaL_checkinteger(L, 2));
+        auto origin = buffer::Current;
+        if (lua_type(L, 3) == LUA_TNUMBER)
+        {
+            origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
+        }
+        buf->seek(pos, origin);
+        return 0;
+    });
+
+    tb.set_function("offset_writepos", [](lua_State* L)->int {
+        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+        if (buf == NULL) { return luaL_error(L, "null pointer"); }
+        auto offset = static_cast<int>(luaL_checkinteger(L, 2));
+        buf->offset_writepos(offset);
+        return 0;
+    });
+
+    registerlib(lua.lua_state(), "buffer", tb);
     return *this;
 }
 
@@ -326,6 +392,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("set_cb", &lua_service::set_callback, s);
+    lua.set_function("cpu", &lua_service::cpu_time, s);
     lua.set_function("make_prefab", &worker::make_prefab, worker_);
     lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t sessionid, uint8_t type) {
         worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
@@ -339,6 +406,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());
+    lua.set_function("get_loglevel", &log::get_level, router_->logger());
     lua.set_function("abort", &server::stop, server_);
     lua.set_function("now", &server::now, server_);
     lua.set_function("service_count", &server::service_count, server_);
@@ -350,7 +418,7 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     auto w = s->get_worker();
     auto& sock = w->socket();
 
-    sol::table tb = lua.create_named("socket");
+    sol::table tb = lua.create();
 
     tb.set_function("listen", [&sock,s](const std::string& host, uint16_t port, uint8_t type) {
         return sock.listen(host, port, s->id(), type);
@@ -367,7 +435,38 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_frame", &moon::socket::set_enable_frame, &sock);
     tb.set_function("set_send_queue_limit", &moon::socket::set_send_queue_limit, &sock);
-    registerlib(lua.lua_state(), "socketcore", tb);
+	tb.set_function("getaddress", [&sock](uint32_t fd) {
+		return sock.getaddress(fd);
+	});
+
+    registerlib(lua.lua_state(), "asio", tb);
+    return *this;
+}
+
+const lua_bind & lua_bind::bind_datetime(lua_service * s) const
+{
+    auto ser = s->get_server();
+    auto& dt = ser->get_datetime();
+
+    sol::table tb = lua.create_named("datetime");
+
+    tb.set_function("localday", &moon::datetime::localday,&dt);
+    tb.set_function("localday_off", &moon::datetime::localday_off, &dt);
+    tb.set_function("year", &moon::datetime::year, &dt);
+    tb.set_function("month", &moon::datetime::month, &dt);
+    tb.set_function("day", &moon::datetime::day, &dt);
+    tb.set_function("hour", &moon::datetime::hour, &dt);
+    tb.set_function("minutes", &moon::datetime::minutes, &dt);
+    tb.set_function("seconds", &moon::datetime::seconds, &dt);
+    tb.set_function("weekday", &moon::datetime::weekday, &dt);
+    tb.set_function("is_leap_year", &moon::datetime::is_leap_year, &dt);
+    tb.set_function("is_same_day", &moon::datetime::is_same_day, &dt);
+    tb.set_function("is_same_week", &moon::datetime::is_same_week, &dt);
+    tb.set_function("is_same_month", &moon::datetime::is_same_month, &dt);
+    tb.set_function("past_day", &moon::datetime::past_day, &dt);
+    tb.set_function("timezone", &moon::datetime::timezone, &dt);
+
+    registerlib(lua.lua_state(), "datetimecore", tb);
     return *this;
 }
 
@@ -375,6 +474,7 @@ void lua_bind::registerlib(lua_State * L, const char * name, lua_CFunction f)
 {
     luaL_requiref(L, name, f, 0);
     lua_pop(L, 1); /* pop result*/
+    assert(lua_gettop(L) == 0);
 }
 
 void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& module)
@@ -384,16 +484,6 @@ void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& m
     module.push();
     lua_setfield(L, -2, name); /* package.loaded[name] = f */
     lua_pop(L, 2); /* pop 'package' and 'loaded' tables */
-}
-
-const char* lua_traceback(lua_State * L)
-{
-    luaL_traceback(L, L, NULL, 1);
-    auto s = lua_tostring(L, -1);
-    if (nullptr != s)
-    {
-        return "";
-    }
-    return s;
+    assert(lua_gettop(L) == 0);
 }
 
