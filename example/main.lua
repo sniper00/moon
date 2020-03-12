@@ -28,25 +28,6 @@ switch[1] = function ()
     services = {
         {
             unique = true,
-            name = "network",
-            file = "start_by_config/network.lua",
-            host = params.host,
-            port = params.port
-        },
-        {
-            unique = true,
-            name = "network_websocket",
-            file = "start_by_config/network_websocket.lua",
-            host = params.host,
-            port = params.wsport
-        }
-    }
-end
-
-switch[2] = function ()
-    services = {
-        {
-            unique = true,
             name = "test",
             file = "start_by_config/test_moon.lua",
             threadid = 1
@@ -54,7 +35,7 @@ switch[2] = function ()
     }
 end
 
-switch[3] = function ()
+switch[2] = function ()
     services = {
         {
             unique = true,
@@ -85,7 +66,7 @@ switch[3] = function ()
     }
 end
 
-switch[4] = function ()
+switch[3] = function ()
     services = {
         {
             unique = true,
@@ -99,7 +80,7 @@ switch[4] = function ()
     }
 end
 
-switch[5] = function ()
+switch[4] = function ()
     services = {
         {
             unique = true,
@@ -122,7 +103,7 @@ switch[5] = function ()
     }
 end
 
-switch[6] = function ()
+switch[5] = function ()
     services = {
         {
             unique = true,
@@ -145,7 +126,7 @@ switch[6] = function ()
     }
 end
 
-switch[7] = function ()
+switch[6] = function ()
     services = {
         {
             unique = true,
@@ -164,7 +145,7 @@ switch[7] = function ()
     }
 end
 
-switch[8] = function ()
+switch[7] = function ()
     services = {
         {
             unique = true,
@@ -179,7 +160,7 @@ switch[8] = function ()
     }
 end
 
-switch[9] = function ()
+switch[8] = function ()
     services = {
         {
             unique = true,
@@ -196,7 +177,7 @@ switch[9] = function ()
     }
 end
 
-switch[10] = function ()
+switch[9] = function ()
     services = {
         {
             unique = true,
