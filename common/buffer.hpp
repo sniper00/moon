@@ -264,7 +264,7 @@ namespace moon
         {
             if (capacity + headreserved > capacity_)
             {
-                check_space(capacity);
+                prepare(capacity);
             }
         }
 
@@ -281,7 +281,7 @@ namespace moon
             readpos_ = headreserved;
             writepos_ = headreserved;
             headreserved_ = headreserved;
-            check_space(capacity);
+            prepare(capacity);
             flag_ = 0;
         }
 
@@ -293,7 +293,7 @@ namespace moon
                 return;
             size_t n = sizeof(T)*count;
 
-            check_space(n);
+            prepare(n);
 
             auto* buff = reinterpret_cast<T*>(std::addressof(*end()));
             memcpy(buff, Indata, n);
@@ -442,7 +442,7 @@ namespace moon
             return capacity_;
         }
 
-        void check_space(size_t need)
+        void prepare(size_t need)
         {
             if (writeablesize() >= need)
             {

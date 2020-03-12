@@ -165,7 +165,7 @@ namespace moon
             }
             else
             {
-                recv_buf_->check_space(size);
+                recv_buf_->prepare(size);
             }
         }
 
