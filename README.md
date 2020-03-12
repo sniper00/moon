@@ -14,7 +14,6 @@ QQ交流群: 543833695
 - [编译](#编译)
 - [Hello World](#Hello-World)
 - [示例](#示例)
-    - [网络-2字节表示长度的协议](#网络-2字节表示长度的协议)
     - [网络-websocket协议](#网络-websocket协议)
     - [动态创建服务](#动态创建服务)
     - [服务间通信-Callback模式](#服务间通信-Callback模式)
@@ -87,6 +86,7 @@ QQ交流群: 543833695
 
 ## Hello World
 下面编写一个`echo server`功能的`lua service`:
+
 ```lua
 local moon = require("moon")
 
@@ -141,60 +141,6 @@ end)
 ## 示例
 
 示例代码可以在 **example** 目录找到
-
-### 网络-2字节表示长度的协议
-
-**network.lua**
-
-```lua
-local moon = require("moon")
-
-local socket = require("moon.socket")
-
-local conf = ...
-
-local HOST = conf.host or "127.0.0.1"
-local PORT = conf.port or 12345
-
--------------------2 bytes len (big endian) protocol------------------------
-socket.on("accept",function(fd, msg)
-    print("accept ", fd, msg:bytes())
-    -- 设置read超时，单位秒
-    socket.settimeout(fd, 10)
-    -- 该协议默认只支持最大长度32KB的数据收发
-    -- 设置标记可以把超多32KB的数据拆分成多个包
-    -- 可以单独设置独写的标记，r:表示读。w:表示写
-    socket.set_enable_frame(fd, "w")
-end)
-
-socket.on("message",function(fd, msg)
-    --echo message to client
-    socket.write(fd, msg:bytes())
-end)
-
-socket.on("close",function(fd, msg)
-    print("close ", fd, msg:bytes())
-end)
-
-socket.on("error",function(fd, msg)
-    print("error ", fd, msg:bytes())
-end)
-
-local listenfd = 0
-
-moon.start(function()
-    -- moon.PTYPE_SOCKET ：2字节(大端)表示长度的协议
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
-    socket.start(listenfd)--start accept
-    print("server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
-end)
-
-moon.destroy(function()
-    socket.close(listenfd)
-end)
-
-```
 
 
 ```shell
@@ -274,173 +220,215 @@ end)
 ```lua
 local moon = require("moon")
 
-moon.start(function()
+local conf = ...
 
-    -- 动态创建服务, 配置同时可以用来传递一些信息
-    moon.new_service("lua", {
-        name = "create_service2",
-        file = "create_service2.lua",
-        message = "Hello create_service",
-        auto_quit = true
-    })
+if conf.slave then
+    local command = {}
 
-    moon.async(function()
-        -- 动态创建服务，协程方式等待获得服务ID，方便用来通信
-        local serviceid =  moon.co_new_service("lua", {
-            name = "create_service2",
-            file = "create_service2.lua",
-            message = "Hello create_service_coroutine"
+    command.QUIT = function ()
+        print("recv quit cmd, bye bye")
+        moon.quit()
+    end
+
+    local function docmd(sender,header,...)
+    -- body
+        local f = command[header]
+        if f then
+            f(sender,...)
+        else
+            error(string.format("Unknown command %s", tostring(header)))
+        end
+    end
+
+    moon.start(function()
+        print("conf:", conf.message)
+
+        moon.dispatch('lua',function(msg,p)
+            local sender = msg:sender()
+            local header = msg:header()
+            docmd(sender,header, p.unpack(msg))
+        end)
+
+        if conf.auto_quit then
+            print("auto quit, bye bye")
+            -- 使服务退出
+            moon.quit()
+        end
+    end)
+else
+    moon.start(function()
+
+        -- 动态创建服务, 配置同时可以用来传递一些信息
+        moon.new_service("lua", {
+            name = "create_service",
+            file = "create_service.lua",
+            message = "Hello create_service",
+            auto_quit = true
         })
 
-        print("new service",string.format("%X",serviceid))
+        moon.async(function()
+            -- 动态创建服务，协程方式等待获得服务ID，方便用来通信
+            local serviceid =  moon.co_new_service("lua", {
+                name = "create_service",
+                file = "create_service.lua",
+                slave = true,
+                message = "Hello create_service_coroutine"
+            })
 
-        moon.send("lua", serviceid, "QUIT")
+            print("new service",string.format("%X",serviceid))
 
-        moon.abort()
+            moon.send("lua", serviceid, "QUIT")
+
+            moon.abort()
+        end)
     end)
-end)
+
+end
 
 ```
 
 ```shell
- ./moon.exe -f example/create_service.lua
+ ./moon.exe -f example/example_create_service.lua
 ```
 
 ### 服务间通信-Callback模式
 
-**service_callback_sender.lua**
+**example_callback.lua**
 
-- sender
 
 ```lua
 local moon = require("moon")
 
-local command = {}
+local conf = ...
 
-command.PONG = function(...)
-    print(...)
-    print(moon.name(), "recv ", "command", "PING")
-    moon.abort()
-end
+if conf.receiver then
+    -----------------------------THIS IS RECEIVER SERVICE-------------------
+    local command = {}
 
-local function docmd(header,...)
-      local f = command[header]
-      if f then
-          f(...)
-      else
-          error(string.format("Unknown command %s", tostring(header)))
-      end
-end
+    command.PING = function(sender, ...)
+        print(moon.name(), "recv ", sender, "command", "PING")
+        print(moon.name(), "send to", sender, "command", "PONG")
+        moon.send('lua', sender,'PONG', ...)
+    end
 
-moon.dispatch('lua',function(msg,p)
-    local header = msg:header()
-    docmd(header, p.unpack(msg))
-end)
+    local function docmd(sender,header,...)
+        -- body
+        local f = command[header]
+        if f then
+            f(sender,...)
+        else
+            error(string.format("Unknown command %s", tostring(header)))
+        end
+    end
 
-moon.start(function()
-    moon.async(function()
-        local receiver =  moon.co_new_service("lua", {
-            name = "service_callback_receiver",
-            file = "service_callback_receiver.lua"
-        })
-
-        print(moon.name(), "call ", receiver, "command", "PING")
-        moon.send('lua', receiver,"PING","Hello")
+    moon.dispatch('lua',function(msg,p)
+        local sender = msg:sender()
+        local header = msg:header()
+        docmd(sender,header, p.unpack(msg))
     end)
-end)
 
-```
+    print("callback example: service receiver start")
+else
+    -----------------------------THIS IS SENDER SERVICE-------------------
+    local command = {}
 
-- receiver
-```lua
-local moon = require("moon")
+    command.PONG = function(...)
+        print(...)
+        print(moon.name(), "recv ", "command", "PING")
+        moon.abort()
+    end
 
-local command = {}
+    local function docmd(header,...)
+          local f = command[header]
+          if f then
+              f(...)
+          else
+              error(string.format("Unknown command %s", tostring(header)))
+          end
+    end
 
-command.PING = function(sender, ...)
-    print(moon.name(), "recv ", sender, "command", "PING")
-    print(moon.name(), "send to", sender, "command", "PONG")
-	moon.send('lua', sender,'PONG', ...)
+    moon.dispatch('lua',function(msg,p)
+        local header = msg:header()
+        docmd(header, p.unpack(msg))
+    end)
+
+    moon.start(function()
+        print("callback example: service sender start")
+
+        moon.async(function()
+            local receiver =  moon.co_new_service("lua", {
+                name = "callback_receiver",
+                file = "example_callback.lua",
+                receiver = true
+            })
+
+            print(moon.name(), "send to", receiver, "command", "PING")
+            moon.send('lua', receiver,"PING","Hello")
+        end)
+    end)
 end
-
-local function docmd(sender,header,...)
-	-- body
-	local f = command[header]
-	if f then
-		f(sender,...)
-	else
-		error(string.format("Unknown command %s", tostring(header)))
-	end
-end
-
-moon.dispatch('lua',function(msg,p)
-	local sender = msg:sender()
-	local header = msg:header()
-	docmd(sender,header, p.unpack(msg))
-end)
 
 ```
 
 ```shell
- ./moon.exe -f example/service_callback_sender.lua
+ ./moon.exe -f example/example_callback.lua
 ```
 
 ### 服务间通信-协程模式
 
-**service_coroutine_sender.lua**
+**example_coroutine.lua**
 
-- sender
 ```lua
 local moon = require("moon")
+local conf = ...
 
-moon.start(function()
-    moon.async(function()
-        local receiver =  moon.co_new_service("lua", {
-            name = "service_coroutine_receiver",
-            file = "service_coroutine_receiver.lua"
-        })
+if conf.receiver then
+    local command = {}
 
-        print(moon.name(), "call ", receiver, "command", "PING")
-        print(moon.co_call("lua", receiver, "PING", "Hello"))
-        moon.abort()
+    command.PING = function(sender,sessionid, ...)
+        print(moon.name(), "recv ", sender, "command", "PING")
+        print(moon.name(), "send to", sender, "command", "PONG")
+        -- 把sessionid发送回去，发送方resume对应的协程
+        moon.response("lua",sender,sessionid,'PONG', ...)
+    end
+
+    local function docmd(sender,sessionid,cmd,...)
+        -- body
+        local f = command[cmd]
+        if f then
+            f(sender,sessionid,...)
+        else
+            error(string.format("Unknown command %s", tostring(cmd)))
+        end
+    end
+
+    moon.dispatch('lua',function(msg,p)
+        local sender = msg:sender()
+        -- sessionid 对应表示发送方 挂起的协程
+        local sessionid = msg:sessionid()
+        docmd(sender,sessionid, p.unpack(msg))
     end)
-end)
 
-```
-- receiver
-```lua
-local moon = require("moon")
+else
+    moon.start(function()
+        moon.async(function()
+            local receiver =  moon.co_new_service("lua", {
+                name = "example_coroutine",
+                file = "example_coroutine.lua",
+                receiver = true
+            })
 
-local command = {}
-
-command.PING = function(sender,sessionid, ...)
-    print(moon.name(), "recv ", sender, "command", "PING")
-    print(moon.name(), "send to", sender, "command", "PONG")
-    -- 把sessionid发送回去，发送方resume对应的协程
-    moon.response("lua",sender,sessionid,'PONG', ...)
+            print(moon.name(), "call ", receiver, "command", "PING")
+            print(moon.co_call("lua", receiver, "PING", "Hello"))
+            moon.abort()
+        end)
+    end)
 end
-
-local function docmd(sender,sessionid,cmd,...)
-	-- body
-	local f = command[cmd]
-	if f then
-		f(sender,sessionid,...)
-	else
-		error(string.format("Unknown command %s", tostring(cmd)))
-	end
-end
-
-moon.dispatch('lua',function(msg,p)
-    local sender = msg:sender()
-    -- sessionid 对应表示发送方 挂起的协程
-    local sessionid = msg:sessionid()
-	docmd(sender,sessionid, p.unpack(msg))
-end)
 
 ```
 
 ```shell
- ./moon.exe -f example/service_coroutine_sender.lua
+ ./moon.exe -f example/example_coroutine.lua
 ```
 
 ### 定时器
@@ -483,72 +471,55 @@ end)
  ./moon.exe -f example/example_timer.lua
 ```
 
-### 使用配置文件的示例(example 目录)
+### 使用配置文件的示例
 
-**config.json**
+**config.json(example 目录)**
 
 **配置文件说明，请参考[wiki](https://github.com/sniper00/moon/wiki/Config)**
 
-#### Socket Example
-启动了`2字节大端表示长度的`协议和`websocket`协议的服务端，并且带有一个采用`协程socket`编写的客户端。运行：
+#### 测试用例
 ```shell
-    # run server
-    ./moon  -c example/config.json -r 1
-    # 另启动一个终端运行 client
-    ./moon -f example/helloworld_client.lua
-
-    # 浏览器运行websocket_client.html
-```
-
-#### Redis Client Example
-`协程socket`编写的redis client, 默认连接 127.0.0.1 6379
-```shell
-    ./moon -c example/config.json -r 2
+    ./moon -c example/config.json -r 1
 ```
 
 #### Service Send Benchmark
 服务间发送消息性能测试
 ```shell
-    ./moon -c example/config.json -r 3
-```
-
-#### Cluster Example
-进程间发送消息示例
-```shell
-    ./moon -c example/config.json -r 4
-    ./moon -c example/config.json -r 5
-```
-
-#### Mysql API Example
-```shell
-    ./moon -c example/config.json -r 6
-```
-
-#### 测试用例
-```shell
-    ./moon -c example/config.json -r 7
+    ./moon -c example/config.json -r 2
 ```
 
 #### 协程socket性能测试
 `协程socket`编写的多线程服务端，采用`redis-benchmark`测试性能
 ```shell
-    ./moon -c example/config.json -r 8
+    ./moon -c example/config.json -r 3
 ```
 
 #### Socket性能测试
 `2字节大端表示长度的`协议的网络性能测试
 ```shell
-    ./moon -c example/config.json -r 9
+    ./moon -c example/config.json -r 4
 ```
 
 #### 编写一个Mysql服务,为其他服务提供访问Mysql DB的功能
 ```shell
-    ./moon -c example/config.json -r 10
+    ./moon -c example/config.json -r 5
 ```
 
 #### 编写一个Redis服务,为其他服务提供访问Redis DB的功能
 ```shell
-    ./moon -c example/config.json -r 11
+    ./moon -c example/config.json -r 6
+```
+
+#### sharetable 更新配表示例
+```shell
+    ./moon -c example/config.json -r 7
+```
+
+#### Cluster Example
+进程间通信示例
+```shell
+    ./moon -c example/config.json -r 8
+    ./moon -c example/config.json -r 9
 ```
 
 # Friend Open Source

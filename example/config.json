@@ -2,17 +2,6 @@
     {
         "sid": 1,
         "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "bootstrap": "main.lua",
-        "params":{
-            "host": "127.0.0.1",
-            "port": 12345,
-            "wsport": 12346
-        }
-    },
-    {
-        "sid": 2,
-        "name": "server_#sid",
         "log_level": "DEBUG",
         "log": "log/#sid-#date.log",
         "bootstrap": "main.lua",
@@ -22,7 +11,7 @@
         }
     },
     {
-        "sid": 3,
+        "sid": 2,
         "name": "server_#sid",
         "log_level": "DEBUG",
         "log": "log/#sid-#date.log",
@@ -30,6 +19,14 @@
         "params": {}
     }
     ,
+    {
+        "sid": 3,
+        "name": "server_#sid",
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
+    },
     {
         "sid": 4,
         "name": "server_#sid",
@@ -68,21 +65,13 @@
         "log_level": "DEBUG",
         "log": "log/#sid-#date.log",
         "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
-        "sid": 9,
-        "name": "server_#sid",
-        "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
-        "bootstrap": "main.lua",
         "params": {
             "cluster_host":"127.0.0.1",
             "cluster_port":42345
         }
     },
     {
-        "sid": 10,
+        "sid": 9,
         "name": "server_#sid",
         "log_level": "DEBUG",
         "log": "log/#sid-#date.log",
