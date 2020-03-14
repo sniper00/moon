@@ -1,8 +1,5 @@
 ---@class core
-local core = require("moon_core")
-if core then
-    return core
-end
+local core = {}
 
 --------------------FOR EMMYLUA HINT---------------------
 
@@ -51,9 +48,18 @@ function core.name()
     -- body
 end
 
+---返回当前service id
 ---@return integer
 function core.id()
     -- body
+end
+
+---更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
+---@param header string
+---@param receiver integer
+---@param mtype integer
+function core.redirect(msg, header, receiver, mtype)
+    ignore_param(msg, header, receiver, mtype)
 end
 
 ---生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用有效。
@@ -100,6 +106,11 @@ end
 ---@return integer
 function core.service_count()
     -- body
+end
+
+--- print error level log
+function core.error(...)
+    ignore_param(...)
 end
 
 ---@class message
@@ -179,14 +190,6 @@ end
 ---@return userdata
 function message:buffer()
     ignore_param(self)
-end
-
----更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
----@param header string
----@param receiver integer
----@param mtype integer
-function message:redirect(header, receiver, mtype)
-    ignore_param(self, header, receiver, mtype)
 end
 
 ---@param sender integer
@@ -270,15 +273,15 @@ function fs.stem(fp)
     ignore_param(fp)
 end
 
----@class socketcore
-local socketcore = {}
-ignore_param(socketcore)
+---@class asio
+local asio = {}
+ignore_param(asio)
 
 ---param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
 ---@param host string
 ---@param port integer
 ---@param protocol integer
-function socketcore.listen(host, port, protocol)
+function asio.listen(host, port, protocol)
     ignore_param(host, port, protocol)
 end
 
@@ -286,27 +289,27 @@ end
 ---@overload fun(fd:integer, data:string)
 ---@overload fun(fd:integer, data:userdata)
 ---@return boolean
-function socketcore.write(fd, data)
+function asio.write(fd, data)
     ignore_param(fd, data)
 end
 
 ---@param fd integer
 ---@param m message
 ---@return boolean
-function socketcore.write_message(fd, m)
+function asio.write_message(fd, m)
     ignore_param(fd, m)
 end
 
 ---@param fd integer
 ---@param t integer 秒, 0不检测超时, 默认是0。
 ---@return boolean
-function socketcore.settimeout(fd, t)
+function asio.settimeout(fd, t)
     ignore_param(fd, t)
 end
 
 ---@param fd integer
 ---@return boolean
-function socketcore.setnodelay(fd)
+function asio.setnodelay(fd)
     ignore_param(fd)
 end
 
@@ -314,13 +317,14 @@ end
 ---@param flag string
 ---对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
 ---@return boolean
-function socketcore.set_enable_frame(fd, flag)
+function asio.set_enable_frame(fd, flag)
     ignore_param(fd,flag)
 end
 
 ---@param fd integer
-function socketcore.close(fd)
+function asio.close(fd)
     ignore_param(fd)
 end
+
 
 return core

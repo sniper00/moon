@@ -5,12 +5,12 @@ local test_case =
 {
     {
         name = "test_api",
-        file = "test_api.lua"
+        file = "start_by_config/test_api.lua"
     }
     ,
     {
         name = "test_network",
-        file = "test_network.lua",
+        file = "start_by_config/test_network.lua",
         network = {
             type = "listen",
             ip = "127.0.0.1",
@@ -19,22 +19,22 @@ local test_case =
     },
     {
         name = "test_send_sender",
-        file = "test_send_sender.lua"
+        file = "start_by_config/test_send.lua"
     }
     ,
     {
         name = "test_call_sender",
-        file = "test_call_sender.lua"
+        file = "start_by_config/test_call.lua"
     }
     ,
     {
         name = "test_redis",
-        file = "test_redis.lua"
+        file = "start_by_config/test_redis.lua"
     }
     ,
     {
         name = "test_large_package",
-        file = "test_large_package.lua",
+        file = "start_by_config/test_large_package.lua",
         network = {
             ip = "127.0.0.1",
             port =  "30002",
@@ -44,7 +44,7 @@ local test_case =
     ,
     {
         name = "test_http",
-        file = "test_http.lua"
+        file = "start_by_config/test_http.lua"
     }
 }
 

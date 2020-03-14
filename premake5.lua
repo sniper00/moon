@@ -12,6 +12,7 @@ workspace "Server"
     filter "configurations:Release"
         defines { "NDEBUG" }
         optimize "On"
+        symbols "On"
 
     filter {"system:windows"}
         characterset "MBCS"
@@ -28,22 +29,23 @@ project "lua53"
     location "projects/build/lua53"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
-    kind "SharedLib"
+    kind "StaticLib"
     language "C"
     includedirs {"./third/lua53"}
     files { "./third/lua53/**.h", "./third/lua53/**.c"}
     removefiles("./third/lua53/luac.c")
     removefiles("./third/lua53/lua.c")
     filter { "system:windows" }
-        defines {"LUA_BUILD_AS_DLL"}
+        disablewarnings { "4244","4324","4702","4310" }
+        --defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
-        links{"dl"}
+        -- links{"dl"}
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
-        links{"dl"}
-    filter{"configurations:*"}
-        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
+        --links{"dl"}
+    -- filter{"configurations:*"}
+    --     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
 project "rapidjson"
     location "projects/build/rapidjson"
@@ -58,6 +60,7 @@ project "rapidjson"
         buildoptions {"-msse4.2"}
     filter { "system:windows" }
         defines {"WIN32"}
+        disablewarnings { "4244","4100","4127","4389" }
 
 project "moon"
     location "projects/build/moon"
@@ -68,7 +71,14 @@ project "moon"
     language "C++"
     includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua53"}
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
-    links{"lua53","rapidjson"}
+    links{
+        "lua53",
+        "rapidjson",
+        "aoi",
+        "crypt",
+        "protobuf",
+        "sharetable",
+    }
     defines {
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
@@ -118,18 +128,19 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"--编译生成的中间文件目录
         targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
 
-        kind "SharedLib" -- 静态库 StaticLib， 动态库 SharedLib
-        includedirs {"./third","./third/lua53"} --头文件搜索目录
+        kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib
+        includedirs {"./", "./third","./third/lua53"} --头文件搜索目录
         files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
-        targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
+        --targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
         language "C"
+        defines{"SOL_ALL_SAFETIES_ON"}
 
         if type(normaladdon)=="function" then
             normaladdon()
         end
         filter { "system:windows" }
-            links{"lua53"} -- windows 版需要链接 lua 库
-            defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
+            --links{"lua53"} -- windows 版需要链接 lua 库
+            --defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
             if type(winddowsaddon)=="function" then
                 winddowsaddon()
             end
@@ -138,12 +149,12 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
                 linuxaddon()
             end
         filter {"system:macosx"}
-            links{"lua53"}
+            -- links{"lua53"}
             if type(macaddon)=="function" then
                 macaddon()
             end
-        filter{"configurations:*"}
-            postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
+        --filter{"configurations:*"}
+            --postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
 end
 
 -----------------------------------------------------------------------------------
@@ -154,11 +165,13 @@ end
 -------------------------protobuf--------------------
 add_lua_module("./third/protobuf", "protobuf",nil,
 function()
-    language "C++"
-    buildoptions {"/TP"} -- protobuf库windows下需要强制用C++编译，默认会根据文件后缀名选择编译
+    defines {"bool=int","false=0","true=!false"}
+    disablewarnings { "4018","4244","4267","4244","4221","4204","4100","4245","4146" }
 end)
 
-add_lua_module("./third/lcrypt", "crypt")
+add_lua_module("./third/lcrypt", "crypt",nil,function ()
+    disablewarnings { "4267","4456","4459","4244" }
+end)
 
 -------------------------laoi--------------------
 add_lua_module("./lualib-src/laoi", "aoi",function()

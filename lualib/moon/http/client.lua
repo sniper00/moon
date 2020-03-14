@@ -163,7 +163,9 @@ local function request( method, host_, path, content, header)
         fd,err = socket.connect(host, port,  moon.PTYPE_TEXT, timeout)
     end
 
-    assert(fd,err)
+    if not fd then
+        return false ,err
+    end
 
     --print(seri.concats(cache))
     socket.write(fd, seri.concat(cache))
@@ -172,8 +174,9 @@ local function request( method, host_, path, content, header)
     socket.close(fd)
     if ok then
         return response
+    else
+        return false, response
     end
-    error(response)
 end
 
 function M.settimeout(v)

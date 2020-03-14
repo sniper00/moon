@@ -135,7 +135,7 @@ namespace moon
             }
             else
             {
-                buf_->check_space(size);
+                buf_->prepare(size);
             }
 
             asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),

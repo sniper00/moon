@@ -40,6 +40,34 @@ namespace moon
         ws_pong = 1 << 7,
         buffer_flag_max,
     };
+
+    enum class socket_data_type :std::uint8_t
+    {
+        socket_connect = 1,
+        socket_accept = 2,
+        socket_recv = 3,
+        socket_close = 4,
+        socket_error = 5,
+        socket_ping = 6,
+        socket_pong = 7,
+    };
+
+    enum class read_delim :std::uint8_t
+    {
+        FIXEDLEN,
+        CRLF,//\r\n
+        DCRLF,// \r\n\r\n
+        LF,// \n
+    };
+
+    enum class frame_enable_flag :std::uint8_t
+    {
+        none = 0,
+        send = 1 << 0,//
+        receive = 1 << 1,//
+        both = 3,
+    };
+
 }
 
 

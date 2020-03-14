@@ -38,5 +38,7 @@ moon.start(function()
 
 		local res =  moon.wait_all(co1,co2)
 		print_r(res)
+
+		moon.abort()
 	end)
 end)

@@ -112,6 +112,8 @@ static sol::table bind_fs(sol::this_state L)
     m.set_function("traverse_folder", traverse_folder);
     m.set_function("exists", directory::exists);
     m.set_function("create_directory", directory::create_directory);
+    m.set_function("remove", directory::remove);
+    m.set_function("remove_all", directory::remove_all);
     m.set_function("working_directory", []() {
         return directory::working_directory.string();
     });
