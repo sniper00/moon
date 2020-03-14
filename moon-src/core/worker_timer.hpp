@@ -82,26 +82,32 @@ namespace moon
             return uuid_;
         }
 
-        int32_t on_timer(timer_id_t id)
+        void on_timer(timer_id_t id)
         {
             auto iter = timers_.find(id);
             if (iter == timers_.end())
             {
-                return 0;
+                return;
             }
 
             auto&ctx = iter->second;
             if (!ctx.has_flag(worker_timer_context::removed))
             {
-                on_timer_(id, ctx.serviceid, false);
+                bool iscontinue = false;
                 if (ctx.has_flag(worker_timer_context::infinite) || ctx.times(ctx.times() - 1))
                 {
-                    return ctx.duration();
+                    insert_timer(ctx.duration(), id);
+                    iscontinue = true;
+                }
+                on_timer_(id, ctx.serviceid, false);
+                if (iscontinue)
+                {
+                    return;
                 }
             }
             on_timer_(id, ctx.serviceid, true);
             timers_.erase(iter);
-            return 0;
+            return;
         }
     private:
         uint32_t uuid_ = 0;

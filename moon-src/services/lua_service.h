@@ -7,14 +7,6 @@
 class lua_service :public moon::service
 {
 public:
-    static constexpr std::string_view LUA_PATH_STR = "/?.lua;"sv;
-
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-    static constexpr std::string_view LUA_CPATH_STR = "/?.dll;"sv;
-#else
-    static constexpr std::string_view LUA_CPATH_STR = "/?.so;"sv;
-#endif
-
     /*
     http://sol2.readthedocs.io/en/latest/safety.html
     http://sol2.readthedocs.io/en/latest/api/protected_function.html

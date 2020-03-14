@@ -11,73 +11,21 @@
 
 namespace moon
 {
-    struct service_config
-    {
-        bool unique = false;
-        int32_t threadid = 0;
-        std::string type;
-        std::string name;
-        std::string config;
-    };
-
     struct server_config
     {
         int32_t sid = 0;
         int32_t thread = 0;
         std::string loglevel;
         std::string name;
-        std::string outer_host;
-        std::string inner_host;
-        std::string startup;
+        std::string bootstrap;
+        std::string params;
         std::string log;
-        std::vector<std::string> path;
-        std::vector<std::string> cpath;
-        std::vector<service_config> services;
     };
 
     class server_config_manger
     {
-        server_config_manger() = default;
-
-        void prepare(const std::string& config)
-        {
-            config_.append("[");
-
-            rapidjson::StringStream ss(config.data());
-            rapidjson::CursorStreamWrapper<rapidjson::StringStream> csw(ss);
-            rapidjson::Document doc;
-            doc.ParseStream<rapidjson::kParseCommentsFlag>(csw);
-            MOON_CHECK(!doc.HasParseError(), moon::format("Parse server config failed:%s(%d).line %d col %d", rapidjson::GetParseError_En(doc.GetParseError()), doc.GetParseError(), csw.GetLine(), csw.GetColumn()));
-            MOON_CHECK(doc.IsArray(), "Server config format error: must be json array.");
-            for (auto&c : doc.GetArray())
-            {
-                if (config_.size() > 1)
-                {
-                    config_.append(",");
-                }
-
-                server_config scfg;
-                scfg.sid = rapidjson::get_value<int32_t>(&c, "sid", -1);//server id
-                MOON_CHECK(-1 != scfg.sid, "Server config format error:must has sid");
-                scfg.outer_host = rapidjson::get_value<std::string>(&c, "outer_host", "*");
-                scfg.inner_host = rapidjson::get_value<std::string>(&c, "inner_host", "127.0.0.1");
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                c.Accept(writer);
-                std::string s(buffer.GetString(), buffer.GetSize());
-                moon::replace(s, "#sid", std::to_string(scfg.sid));
-                moon::replace(s, "#outer_host", scfg.outer_host);
-                moon::replace(s, "#inner_host", scfg.inner_host);
-                config_.append(s);
-            }
-            config_.append("]");
-        }
     public:
-        static server_config_manger& instance()
-        {
-            static server_config_manger obj;
-            return obj;
-        }
+        server_config_manger() = default;
 
         const std::string config()
         {
@@ -88,7 +36,7 @@ namespace moon
         {
             try
             {
-                prepare(config);
+                config_ = config;
                 rapidjson::StringStream ss(config_.data());
                 rapidjson::CursorStreamWrapper<rapidjson::StringStream> csw(ss);
                 rapidjson::Document doc;
@@ -102,14 +50,22 @@ namespace moon
                     MOON_CHECK(-1 != scfg.sid, "Server config format error:must has sid");
                     scfg.name = rapidjson::get_value<std::string>(&c, "name");//server name
                     MOON_CHECK(!scfg.name.empty(), "Server config format error:must has name");
-                    scfg.outer_host = rapidjson::get_value<std::string>(&c, "outer_host", "*");
-                    scfg.inner_host = rapidjson::get_value<std::string>(&c, "inner_host", "127.0.0.1");
                     scfg.thread = rapidjson::get_value<int32_t>(&c, "thread", std::thread::hardware_concurrency());
-                    scfg.startup = rapidjson::get_value<std::string>(&c, "startup");
                     scfg.log = rapidjson::get_value<std::string>(&c, "log");
+                    scfg.bootstrap = rapidjson::get_value<std::string>(&c, "bootstrap");
+                    MOON_CHECK(!scfg.bootstrap.empty(), "Server config format error:must has bootstrap file");
                     scfg.loglevel = rapidjson::get_value<std::string>(&c, "loglevel", "DEBUG");
-                    scfg.path  = rapidjson::get_value<std::vector<std::string>>(&c, "path");
-                    scfg.cpath = rapidjson::get_value<std::vector<std::string>>(&c, "cpath");
+                    auto params = rapidjson::get_value<rapidjson::Value*>(&c, "params");
+                    if (nullptr != params)
+                    {
+                        rapidjson::StringBuffer buffer;
+                        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                        params->Accept(writer);
+                        scfg.params = std::string(buffer.GetString(), buffer.GetSize());
+                    }
+
+                    moon::replace(scfg.name, "#sid", std::to_string(scfg.sid));
+                    moon::replace(scfg.log, "#sid", std::to_string(scfg.sid));
 
                     if (scfg.log.find("#date") != std::string::npos)
                     {
@@ -117,31 +73,10 @@ namespace moon
                         std::tm m;
                         moon::time::localtime(&now, &m);
                         char buff[50 + 1] = { 0 };
-                        std::strftime(buff, 50, "%Y%m%d%H%M%S", &m);
+                        std::strftime(buff, 50, "%Y-%m-%d-%H-%M-%S", &m);
                         moon::replace(scfg.log, "#date", buff);
                     }
 
-                    if (scfg.sid == sid)
-                    {
-                        auto services = rapidjson::get_value<rapidjson::Value*>(&c, "services", nullptr);
-                        MOON_CHECK(services->IsArray(), "Server config format error: services must be array");
-                        for (auto& s : services->GetArray())
-                        {
-                            MOON_CHECK(s.IsObject(), "Server config format error: service must be object");
-                            service_config sc;
-                            sc.type = rapidjson::get_value<std::string>(&s, "type", "lua");
-                            sc.unique = rapidjson::get_value<bool>(&s, "unique", false);
-                            sc.threadid = rapidjson::get_value<int32_t>(&s, "threadid", 0);
-                            sc.name = rapidjson::get_value<std::string>(&s, "name");
-      
-                            rapidjson::StringBuffer buffer;
-                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                            s.Accept(writer);
-                            sc.config = std::string(buffer.GetString(), buffer.GetSize());
-                            MOON_CHECK(!sc.config.empty(), "Server config format error: service config must not be empty");
-                            scfg.services.emplace_back(sc);
-                        }
-                    }
                     MOON_CHECK(data_.emplace(scfg.sid, scfg).second, moon::format("Server config format error:sid %d already exist.", scfg.sid));
                 }
                 sid_ = sid;

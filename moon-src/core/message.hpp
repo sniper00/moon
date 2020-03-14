@@ -127,7 +127,7 @@ namespace moon
             {
                 return string_view_t(nullptr, 0);
             }
-            return string_view_t(reinterpret_cast<const char*>(data_->data()), data_->size());
+            return string_view_t(data_->data(), data_->size());
         }
 
         string_view_t substr(int pos, size_t len = string_view_t::npos) const
@@ -136,7 +136,7 @@ namespace moon
             {
                 return string_view_t(nullptr, 0);
             }
-            string_view_t sr(reinterpret_cast<const char*>(data_->data()), data_->size());
+            string_view_t sr(data_->data(), data_->size());
             return sr.substr(pos, len);
         }
 

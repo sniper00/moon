@@ -66,7 +66,7 @@ namespace moon
         void read_some()
         {
             auto buf = response_->get_buffer();
-            buf->check_space(8192);
+            buf->prepare(8192);
             socket_.async_read_some(asio::buffer((buf->data() + buf->size()), buf->writeablesize()),
                 make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
@@ -101,8 +101,8 @@ namespace moon
                 return;
             }
 
-            string_view_t strref(buf->data(), dszie);
-            size_t pos = strref.find(delim);
+            string_view_t sw(buf->data(), dszie);
+            size_t pos = sw.find(delim);
             if (pos != string_view_t::npos)
             {
                 scope_buffer_offset sbo{ buf , static_cast<int>(pos + delim.size()) , -static_cast<int>(dszie - pos) };

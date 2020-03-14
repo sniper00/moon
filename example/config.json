@@ -2,272 +2,83 @@
     {
         "sid": 1,
         "name": "server_#sid",
-        "outer_host": "127.0.0.1",
-        "inner_host": "127.0.0.1",
-        "thread": 4,
-        "startup": "main.lua",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "network",
-                "file": "network.lua",
-                "host": "#inner_host",
-                "port": 12345
-            },
-            {
-                "name": "network_websocket",
-                "file": "network_websocket.lua",
-                "host": "#inner_host",
-                "port": 12346
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {
+            "outer_host": "0.0.0.0",
+            "outer_port": 12345
+        }
     },
     {
         "sid": 2,
         "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "name": "redis_example",
-                "file": "redis_example.lua"
-            }
-        ]
-    },
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
+    }
+    ,
     {
         "sid": 3,
-        "loglevel":"INFO",
         "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "send_benchmark_sender",
-                "file": "send_benchmark_sender.lua"       
-            },
-            {
-                "unique": true,
-                "name": "send_benchmark_receiver1",
-                "file": "send_benchmark_receiver.lua"
-            },
-            {
-                "unique": true,
-                "name": "send_benchmark_receiver2",
-                "file": "send_benchmark_receiver.lua"
-            },
-            {
-                "unique": true,
-                "name": "send_benchmark_receiver3",
-                "file": "send_benchmark_receiver.lua"
-            },
-            {
-                "unique": true,
-                "name": "send_benchmark_receiver4",
-                "file": "send_benchmark_receiver.lua"
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
     },
     {
         "sid": 4,
         "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "clusterd",
-                "file": "../service/clusterd.lua",
-                "host": "#inner_host",
-                "port": 10001
-            },
-            {
-                "unique": true,
-                "name": "cluster_example_receiver",
-                "file": "cluster_example_receiver.lua"
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
     },
     {
         "sid": 5,
         "name": "server_#sid",
-        "outer_host": "127.0.0.1",
-        "inner_host": "127.0.0.1",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "clusterd",
-                "file": "../service/clusterd.lua",
-                "host": "#inner_host",
-                "port": 10002
-            },
-            {
-                "unique": true,
-                "name": "cluster_example_sender",
-                "file": "cluster_example_sender.lua"
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
     },
     {
         "sid": 6,
         "name": "server_#sid",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "example_mysql",
-                "file": "example_mysql_lua.lua"
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
     },
     {
         "sid": 7,
         "name": "server_#sid",
-        "inner_host": "127.0.0.1",
         "log_level": "DEBUG",
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "test",
-                "file": "test_moon.lua"
-            }
-        ]
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {}
     },
     {
         "sid": 8,
         "name": "server_#sid",
-        "outer_host": "127.0.0.1",
-        "inner_host": "127.0.0.1",
-        "thread": 8,
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "master",
-                "file": "network_text_benchmark.lua",
-                "host": "127.0.0.1",
-                "port": 42345,
-                "master":true,
-                "count":4
-            }
-        ]
-    }
-    ,
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {
+            "cluster_host":"127.0.0.1",
+            "cluster_port":42345
+        }
+    },
     {
         "sid": 9,
         "name": "server_#sid",
-        "outer_host": "127.0.0.1",
-        "inner_host": "127.0.0.1",
-        "thread": 8,
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "server",
-                "file": "network_benchmark.lua",
-                "host": "127.0.0.1",
-                "port": 42346,
-                "master":true,
-                "count":4
-            },
-            {
-                "unique": true,
-                "name": "client",
-                "file": "network_benchmark_client.lua",
-                "host": "127.0.0.1",
-                "port": 42346,
-                "client_num":1000,
-                "count":100
-            }
-        ]
-    },
-    {
-        "sid": 10,
-        "name": "server_#sid",
-        "thread": 8,
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "mysql",
-                "file": "service_mysql.lua",
-                "host":"127.0.0.1",
-                "port":3306,
-                "database":"mysql",
-                "user":"root",
-                "password":"4321",
-                "timeout": 1000,
-                "max_packet_size":102400,
-                "connection_num":4
-            },
-            {
-                "unique": true,
-                "name": "call_mysql_service",
-                "file": "call_mysql_service.lua"
-            }
-        ]
-    },
-    {
-        "sid": 11,
-        "name": "server_#sid",
-        "thread": 4,
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib"],
-        "services": [
-            {
-                "unique": true,
-                "name": "redis",
-                "file": "service_redis.lua",
-                "host":"127.0.0.1",
-                "port":6379,
-                "timeout": 1000,
-                "connection_num":4
-            },
-            {
-                "unique": true,
-                "name": "call_redis_service",
-                "file": "call_redis_service.lua"
-            }
-        ]
-    }
-    ,
-    {
-        "sid": 12,
-        "name": "server_#sid",
-        "thread": 4,
-        "log": "log/#sid_#date.log",
-        "cpath":["../clib"],
-        "path":["../lualib","../service"],
-        "services": [
-            {
-                "unique": true,
-                "name": "sharetable",
-                "file": "../service/sharetable.lua"
-            },
-            {
-                "name": "sharetable_example",
-                "file": "sharetable_example.lua"
-            }
-        ]
+        "log_level": "DEBUG",
+        "log": "log/#sid-#date.log",
+        "bootstrap": "main.lua",
+        "params": {
+            "cluster_host":"127.0.0.1",
+            "cluster_port":42346
+        }
     }
 ]

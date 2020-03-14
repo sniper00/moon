@@ -8,18 +8,55 @@ local ipairs = ipairs
 local pairs = pairs
 local type = type
 local error = error
-local setmetatable = setmetatable
+--local setmetatable = setmetatable
 local getmetatable = getmetatable
 
 
 ---
 --- Make a copy of the indexed elements of the table.
 function table.arraycopy(object)
+	if not object then return nil end
 	local result = {}
 	for i, value in ipairs(object) do
 		result[i] = value
 	end
 	return result
+end
+
+--- array
+--- remove elm only the values satisfying the given predicate.
+--- Swap to last, then remove last
+
+--- local object = {{a=1},{a=2},{a=3},{a=4}}
+--- table.fastremove(object, function (o)
+---     return o.a == 2
+--- end )
+
+--- print_r(object) {{a=1},{a=4},{a=3}}
+
+function table.fastremove(object, fn)
+	local n
+	for i, value in ipairs(object) do
+		if fn(value) then
+			n = i
+			break
+		end
+	end
+
+	if n then
+		if #object == 1 then
+			table.remove(object)
+		else
+			if n == #object then
+				table.remove(object, n)
+			else
+				object[n] = table.remove(object)
+			end
+		end
+		return true
+	end
+
+	return false
 end
 
 ---
@@ -62,7 +99,7 @@ function table.deepcopy(obj)
 			clone[key] = copy(value)
 		end
 
-		setmetatable(clone, getmetatable(object))
+		-- setmetatable(clone, getmetatable(object))
 		return clone
 	end
 
@@ -509,7 +546,7 @@ end
 ---
 --- Enumerate a table sorted by its keys.
 ---
-function spairs(t)
+function table.spairs(t)
 	-- collect the keys
 	local keys = {}
 	for k in pairs(t) do
