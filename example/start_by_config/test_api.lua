@@ -39,10 +39,8 @@ equal(type(msg.subtype) , "function")
 equal(type(msg.header) , "function")
 equal(type(msg.bytes) , "function")
 equal(type(msg.size) , "function")
-equal(type(msg.substr) , "function")
+equal(type(msg.cstr) , "function")
 equal(type(msg.buffer) , "function")
-equal(type(msg.redirect) , "function")
-equal(type(msg.resend) , "function")
 
 equal(type(fs.create_directory) , "function")
 equal(type(fs.working_directory) , "function")
@@ -50,7 +48,7 @@ print(fs.working_directory())
 equal(type(fs.exists) , "function")
 equal(type(fs.traverse_folder) , "function")
 
-local socket = require("socketcore")
+local socket = require("asio")
 equal(type(socket.listen) , "function")
 equal(type(socket.accept) , "function")
 equal(type(socket.connect) , "function")
@@ -158,6 +156,29 @@ do
 	setmetatable(tttt,mt)
 	local res = json.encode(tttt)
 	test_assert.assert(res=='{"a":1,"b":2}' or res == '{"b":2,"a":1}')
+end
+
+do
+	local buffer = require("buffer")
+	local buf = buffer.unsafe_new(256)
+	buffer.write_back(buf, "12345")
+	assert(buffer.read(buf,5) == "12345")
+	buffer.write_back(buf, "abcde")
+	assert(buffer.read(buf,5) == "abcde")
+	assert(buffer.size(buf) == 0)
+
+	for i =1,1000 do
+		buffer.write_back(buf,"abcde")
+	end
+
+	buffer.write_front(buf, "1000")
+
+	assert(buffer.read(buf,4) == "1000")
+
+	buffer.seek(buf,1)
+	assert(buffer.read(buf,1) == "b")
+
+	buffer.delete(buf)
 end
 
 moon.async(function()

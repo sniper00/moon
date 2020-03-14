@@ -7,9 +7,10 @@ require("base.util")
 require("base.class")
 
 ---@type core
-local core = require("moon.api")
+local core = require("mooncore")
 local json = require("json")
 local seri = require("seri")
+-- local buffer = require("buffer")
 
 local pairs = pairs
 local type = type
@@ -401,6 +402,11 @@ function moon.repeated(mills, times, cb)
     return timerid
 end
 
+---@param timerid integer
+function moon.remove_timer(timerid)
+    core.remove_timer(timerid)
+end
+
 core.set_cb('t',
     function(timerid, brm)
         if not brm then
@@ -515,7 +521,7 @@ reg_protocol {
     PTYPE = PTYPE_LUA,
     pack = seri.pack,
     unpack = function(msg)
-        return unpack(msg:buffer())
+        return unpack(msg:cstr())
     end,
     dispatch = function()
         error("PTYPE_LUA dispatch not implemented")
@@ -660,26 +666,34 @@ local debug_command = {}
 
 debug_command.gc = function(sender, sessionid)
     collectgarbage("collect")
-    moon.response("lua",sender,sessionid, collectgarbage("count"))
+    moon.response("debug",sender,sessionid, collectgarbage("count"))
 end
 
 debug_command.mem = function(sender, sessionid)
-    moon.response("lua",sender,sessionid, collectgarbage("count"))
+    moon.response("debug",sender,sessionid, collectgarbage("count"))
 end
 
 debug_command.ping = function(sender, sessionid)
-    moon.response("lua",sender,sessionid, "pong")
+    moon.response("debug",sender,sessionid, "pong")
+end
+
+debug_command.state = function(sender, sessionid)
+    local running_num, free_num = moon.coroutine_num()
+    local s = string.format("coroutine-running %d coroutine-free %d cpu:%d",running_num,free_num, moon.cpu())
+    moon.response("debug",sender,sessionid, s)
 end
 
 reg_protocol {
     name = "debug",
     PTYPE = PTYPE_DEBUG,
     pack = pack,
-    unpack = unpack,
+    unpack = function(msg)
+        return unpack(msg:cstr())
+    end,
     dispatch = function(msg,p)
         local sender = msg:sender()
         local sessionid = msg:sessionid()
-        local params = {p.unpack(msg:bytes())}
+        local params = {p.unpack(msg)}
         local func = debug_command[params[1]]
         if func then
             func(sender, sessionid, table.unpack(params,2))

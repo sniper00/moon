@@ -107,6 +107,11 @@ namespace moon
             level_ = level;
         }
 
+		LogLevel get_level() 
+		{ 
+			return level_; 
+		}
+
         void set_level(string_view_t s)
         {
             if (moon::iequal_string(s, string_view_t{ "DEBUG" }))

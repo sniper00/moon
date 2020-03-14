@@ -1,5 +1,5 @@
 require("base.string")
-local c = require("moon_core")
+local c = require("mooncore")
 
 local strfmt     = string.format
 local dbgtrace   = debug.traceback
@@ -19,9 +19,11 @@ M.LOG_INFO = 3
 M.LOG_DEBUG = 4
 
 -- 设置当前日志等级,低于这个等级的日志不会输出
-M.LOG_LEVEL = M.LOG_DEBUG
+M.LOG_LEVEL = c.get_loglevel()
 
-M.DEBUG = false
+M.DEBUG = function ()
+    return c.get_loglevel() == M.LOG_DEBUG
+end
 
 -----------------------------------------------------------------------
 function M.throw(fmt, ...)
@@ -56,7 +58,7 @@ end
 
 function M.debug(fmt, ...)
     if M.LOG_DEBUG <= M.LOG_LEVEL then
-        do_log(M.DEBUG, M.LOG_DEBUG,fmt,...)
+        do_log(true, M.LOG_DEBUG,fmt,...)
     end
 end
 

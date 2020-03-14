@@ -54,6 +54,20 @@ namespace moon
         return dis(gen);
     }
 
+    template< class RealType = double >
+    inline bool randf_percent(RealType percent)
+    {
+        if (percent <= 0.0)
+        {
+            return false;
+        }
+        if (randf_range(0.0f,1.0f) >= percent)
+        {
+            return false;
+        }
+        return true;
+    }
+
     template<typename Key, typename Weight>
     inline Key rand_weight(const std::map<Key, Weight>& data)
     {

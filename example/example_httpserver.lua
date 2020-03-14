@@ -15,3 +15,4 @@ http_server.on("/home",function(request, response)
 end)
 
 http_server.listen("127.0.0.1",8001)
+print("http_server start", "127.0.0.1",8001)

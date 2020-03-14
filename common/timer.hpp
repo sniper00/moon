@@ -1,12 +1,11 @@
 #pragma once
 #include <cstdint>
-#include <memory>
 #include <functional>
 #include <cassert>
-#include <chrono>
-#include <vector>
-#include <unordered_map>
 #include <list>
+#include <array>
+#include <unordered_map>
+
 
 namespace moon
 {
@@ -14,11 +13,6 @@ namespace moon
 
     namespace detail
     {
-        inline int64_t millseconds()
-        {
-            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        }
-
         template<typename TContainer, uint8_t Size>
         class timer_wheel
         {
@@ -29,7 +23,7 @@ namespace moon
             {
             }
 
-            container_t& operator[](uint8_t pos)
+            container_t& operator[](size_t pos)
             {
                 assert(pos < Size);
                 return array_[pos];
@@ -41,7 +35,7 @@ namespace moon
                 return array_[head_];
             }
 
-            void pop_front() noexcept
+            void tick() noexcept
             {
                 auto tmp = ++head_;
                 head_ = tmp % Size;
@@ -57,7 +51,7 @@ namespace moon
                 return Size;
             }
 
-            size_t next_slot() const noexcept
+            size_t now() const noexcept
             {
                 return head_;
             }
@@ -81,79 +75,64 @@ namespace moon
         //precision ms
         static const int32_t PRECISION = 10;
 
-        base_timer()
-            : stop_(false)
-            , tick_(0)
-            , previous_tick_(0)
-            , now_(detail::millseconds)
-        {
-            wheels_.emplace_back();
-            wheels_.emplace_back();
-            wheels_.emplace_back();
-            wheels_.emplace_back();
-        }
+        base_timer() = default;
 
         base_timer(const base_timer&) = delete;
         base_timer& operator=(const base_timer&) = delete;
 
-        ~base_timer()
+        int64_t update(int64_t now)
         {
-        }
-
-        int64_t update()
-        {
-            auto now_tick = now_();
-            if (previous_tick_ == 0)
+            if (prev_ == 0)
             {
-                previous_tick_ = now_tick;
+                prev_ = now;
             }
-            tick_ += (now_tick - previous_tick_);
-            previous_tick_ = now_tick;
+            delta_ += (now - prev_);
+            prev_ = now;
 
-            auto old_tick = tick_;
+            auto delta = delta_;
 
             auto& wheels = wheels_;
-            while (tick_ >= PRECISION)
+            while (delta_ >= PRECISION)
             {
-                tick_ -= PRECISION;
+                delta_ -= PRECISION;
                 if (stop_)
                     continue;
+                for (size_t i = 0; i < wheels.size(); ++i)
                 {
-                    auto& timers = wheels[0].front();
-                    wheels[0].pop_front();
-                    if (!timers.empty())
+                    auto& wheel = wheels[i];
+                    if (i + 1 == wheels.size())
                     {
-                        expired(timers);
-                    }
-                }
-
-                int i = 0;
-                for (auto wheel = wheels.begin(); wheel != wheels.end(); ++wheel, ++i)
-                {
-                    auto next_wheel = wheel;
-                    if (wheels.end() == (++next_wheel))
                         break;
+                    }
+                    auto& next_wheel = wheels[i + 1];
 
-                    if (wheel->round())
+                    wheel.tick();
+
+                    if (wheel.round())
                     {
-                        auto& timers = next_wheel->front();
+                        auto& timers = next_wheel.front();
                         while (!timers.empty())
                         {
                             auto key = timers.front();
                             timers.pop_front();
                             auto slot = get_slot(key, i);
-                            (*wheel)[slot].push_front(key);
-                            //printf("update timer id %u add to wheel [%d] slot [%d]\r\n", (key>>32), i+1, slot);
+                            wheel[slot].push_front(key);
                         }
-                        next_wheel->pop_front();
                     }
                     else
                     {
                         break;
                     }
                 }
+
+                auto& timers = wheels[0].front();
+
+                if (!timers.empty())
+                {
+                    expired(timers);
+                }
             }
-            return old_tick;
+            return delta;
         }
 
         void stop_all_timer()
@@ -165,13 +144,6 @@ namespace moon
         {
             stop_ = false;
         }
-
-        template<typename TFunc>
-        void set_now_func(TFunc&& f)
-        {
-            now_ = (f);
-        }
-
     protected:
         // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
         uint64_t make_key(timer_id_t id, uint32_t slots)
@@ -179,7 +151,7 @@ namespace moon
             return ((static_cast<uint64_t>(id) << TIMERID_SHIT) | slots);
         }
 
-        inline uint8_t get_slot(uint64_t  key, int which_queue)
+        uint8_t get_slot(uint64_t  key, size_t which_queue)
         {
             return (key >> (which_queue * 8)) & 0xFF;
         }
@@ -193,26 +165,27 @@ namespace moon
                 diff += PRECISION;
             }
             size_t slot_count = diff / PRECISION;
-            slot_count = (slot_count > 0) ? slot_count : 1;
-            uint64_t key = 0;
-            int i = 0;
+            slot_count = ((slot_count > 0) ? slot_count : 1);
+
             uint32_t slots = 0;
-            for (auto it = wheels_.begin(); it != wheels_.end(); ++it, ++i)
+
+            for (size_t i = 0; i < wheels_.size(); ++i)
             {
-                auto& wheel = *it;
-                slot_count += wheel.next_slot();
-                uint8_t slot = (slot_count - 1) % (wheel.size());
-                slot_count -= slot;
-                slots |= (static_cast<uint32_t>(slot) << (i * 8));
-                key = make_key(id, slots);
-                //printf("process timer id %u wheel[%d] slot[%d]\r\n", t->id(), i+1, slot);
+                auto& wheel = wheels_[i];
+                slot_count += wheel.now();
                 if (slot_count < wheel.size())
                 {
-                    //printf("timer id %u add to wheel [%d] slot [%d]\r\n",t->id(),  i + 1, slot);
-                    wheel[slot].push_back(key);
+                    uint64_t key = make_key(id, slots);
+                    wheel[slot_count].push_back(key);
                     break;
                 }
-                slot_count /= wheel.size();
+                else
+                {
+                    auto slot = slot_count % (wheel.size());
+                    slots |= (static_cast<uint32_t>(slot) << (i * 8));
+                    slot_count /= wheel.size();
+                    --slot_count;
+                }
             }
         }
 
@@ -224,19 +197,14 @@ namespace moon
                 expires.pop_front();
                 timer_id_t id = static_cast<timer_id_t>(key >> TIMERID_SHIT);
                 child_t* child = static_cast<child_t*>(this);
-                int32_t duration = child->on_timer(id);
-                if (duration != 0)
-                {
-                    insert_timer(duration, id);
-                }
+                child->on_timer(id);
             }
         }
     private:
-        bool stop_;
-        int64_t tick_;
-        int64_t previous_tick_;
-        std::function<int64_t()> now_;
-        std::vector <timer_wheel_t> wheels_;
+        bool stop_ = false;
+        int64_t delta_ = 0;
+        int64_t prev_ = 0;
+        std::array< timer_wheel_t, 4> wheels_;
     };
 
     class timer_context
@@ -376,25 +344,31 @@ namespace moon
             return uuid_;
         }
 
-        int32_t on_timer(timer_id_t id)
+        void on_timer(timer_id_t id)
         {
             auto iter = timers_.find(id);
             if (iter == timers_.end())
             {
-                return 0;
+                return;
             }
 
             auto&ctx = iter->second;
             if (!ctx.has_flag(timer_context::removed))
             {
-                ctx.expired(id);
+                bool iscontinue = false;
                 if (ctx.has_flag(timer_context::infinite) || ctx.times(ctx.times() - 1))
                 {
-                    return ctx.duration();
+                    insert_timer(ctx.duration(), id);
+                    iscontinue = true;
+                }
+                ctx.expired(id);
+                if (iscontinue)
+                {
+                    return;
                 }
             }
             timers_.erase(iter);
-            return 0;
+            return;
         }
 
     private:

@@ -58,4 +58,6 @@ moon.start(function()
 	end
 
 	print_r(root2)
+
+	moon.abort()
 end)

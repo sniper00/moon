@@ -1,7 +1,7 @@
 local moon = require("moon")
 
----@type socketcore
-local core = require("socketcore")
+---@type asio
+local core = require("asio")
 
 local setmetatable = setmetatable
 local tostring = tostring
@@ -22,12 +22,12 @@ linedelim['\r\n'] = 1
 linedelim['\r\n\r\n'] = 2
 linedelim['\n'] = 3
 
-local close_flag = moon.buffer_flag.close
-local ws_text_flag = moon.buffer_flag.ws_text
-local ws_ping_flag = moon.buffer_flag.ws_ping
-local ws_pong_flag = moon.buffer_flag.ws_pong
+local flag_close = 2
+local flag_ws_text = 16
+local flag_ws_ping = 64
+local flag_ws_pong = 128
 
----@class socket : socketcore
+---@class socket : asio
 local socket = {}
 
 setmetatable(socket,core)
@@ -94,20 +94,20 @@ function socket.readline(fd, delim, limit)
 end
 
 function socket.write_then_close(fd, data)
-    write_with_flag(fd ,data, close_flag)
+    write_with_flag(fd ,data, flag_close)
 end
 
 --- only for websocket
 function socket.write_text(fd, data)
-    write_with_flag(fd ,data, ws_text_flag)
+    write_with_flag(fd ,data, flag_ws_text)
 end
 
 function socket.write_ping(fd, data)
-    write_with_flag(fd ,data, ws_ping_flag)
+    write_with_flag(fd ,data, flag_ws_ping)
 end
 
 function socket.write_pong(fd, data)
-    write_with_flag(fd ,data, ws_pong_flag)
+    write_with_flag(fd ,data, flag_ws_pong)
 end
 
 local socket_data_type = {
