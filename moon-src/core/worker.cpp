@@ -44,6 +44,7 @@ namespace moon
             return content;
         });
 
+        timer_.update(server_->now());
         timer_.set_on_timer([this](timer_id_t timerid, uint32_t serviceid, bool remove) {
             if (auto s = find_service(serviceid); nullptr != s)
             {
@@ -63,6 +64,7 @@ namespace moon
             io_ctx_.run();
             CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
+
         while (state_.load(std::memory_order_acquire) != state::ready)
         {
             std::this_thread::yield();
