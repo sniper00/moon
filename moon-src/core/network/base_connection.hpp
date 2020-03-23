@@ -9,31 +9,6 @@
 
 namespace moon
 {
-    struct read_request
-    {
-        read_request()
-            :delim(read_delim::CRLF)
-            , size(0)
-            , sessionid(0)
-        {
-
-        }
-
-        read_request(read_delim d, size_t s, int32_t r)
-            :delim(d)
-            , size(s)
-            , sessionid(r)
-        {
-        }
-
-        read_request(const read_request&) = default;
-        read_request& operator=(const read_request&) = default;
-
-        read_delim delim;
-        size_t size;
-        int32_t sessionid;
-    };
-
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
     public:
@@ -64,10 +39,9 @@ namespace moon
             recvtime_ = now();
         }
 
-        virtual bool read(const read_request& ctx)
+        virtual void read(size_t, std::string_view, int32_t)
         {
-            (void)ctx;
-            return false;
+            assert(false);
         };
 
         virtual bool send(buffer_ptr_t data)
@@ -204,7 +178,7 @@ namespace moon
             for(auto iter = queue_.begin(); iter!= queue_.end() && (holder_.size() < 50); ++iter)
             {
                 auto& v = *iter;
-                if (v->has_flag(buffer_flag::slice))
+                if (v->has_flag(buffer_flag::chunked))
                 {
                     message_slice(holder_, v);
                 }

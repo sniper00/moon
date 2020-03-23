@@ -5,6 +5,7 @@
 #include "common/log.hpp"
 #include "common/sha1.hpp"
 #include "common/md5.hpp"
+#include "common/byte_convert.hpp"
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
@@ -26,13 +27,12 @@ const lua_bind & lua_bind::bind_timer(lua_service* s) const
 {
     lua.set_function("repeated", [s](int32_t duration, int32_t times)
     {
-        auto& timer = s->get_worker()->timer();
-        return timer.repeat(duration, times, s->id());
+        return s->get_worker()->repeat(duration, times, s->id());
     });
-    lua.set_function("remove_timer", [s](timer_id_t timerid)
+
+    lua.set_function("remove_timer", [s](moon::timer_t timerid)
     {
-        auto& timer = s->get_worker()->timer();
-        timer.remove(timerid);
+        s->get_worker()->remove_timer(timerid);
     });
     return *this;
 }
@@ -234,7 +234,7 @@ const lua_bind & lua_bind::bind_message() const
         if (lua_type(L, 2) == LUA_TNUMBER)
         {
             offset = static_cast<int>(lua_tointeger(L, 2));
-            if (offset > m->size())
+            if (offset > static_cast<int>(m->size()))
             {
                 return luaL_error(L, "out of range");
             }
@@ -360,7 +360,7 @@ const lua_bind & lua_bind::bind_message() const
         auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
         if (buf == NULL) { return luaL_error(L, "null pointer"); }
         auto pos = static_cast<int>(luaL_checkinteger(L, 2));
-        auto origin = buffer::Current;
+        auto origin = buffer::seek_origin::Current;
         if (lua_type(L, 3) == LUA_TNUMBER)
         {
             origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
@@ -369,11 +369,12 @@ const lua_bind & lua_bind::bind_message() const
         return 0;
     });
 
-    tb.set_function("offset_writepos", [](lua_State* L)->int {
+    tb.set_function("commit", [](lua_State* L)->int {
         auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
         if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        auto offset = static_cast<int>(luaL_checkinteger(L, 2));
-        buf->offset_writepos(offset);
+        auto n = static_cast<int64_t>(luaL_checkinteger(L, 2));
+        if (0 == n) { return luaL_error(L, "Invalid buffer commit param"); }
+        buf->commit(n);
         return 0;
     });
 
