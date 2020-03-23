@@ -1,12 +1,12 @@
 #pragma once
 #include "platform_define.hpp"
 
-#if TARGET_PLATFORM == PLATFORM_WINDOWS || TARGET_PLATFORM == PLATFORM_MAC
-#include <filesystem>
-namespace fs = std::filesystem;
-#else
+#if defined(__GNUC__)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
 #endif
 
 namespace moon

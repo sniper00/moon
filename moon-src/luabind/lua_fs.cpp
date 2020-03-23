@@ -24,7 +24,7 @@ static void traverse_folder(const std::string& dir, int depth, sol::protected_fu
     });
 }
 
-#if TARGET_PLATFORM != PLATFORM_WINDOWS
+#if defined(__GNUC__)
 static fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
 {
     using namespace std::string_view_literals; // TRANSITION, VSO#571749
@@ -139,10 +139,10 @@ static sol::table bind_fs(sol::this_state L)
     });
 
     m.set_function("relative_work_path", [](const std::string_view& p) {
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-        return  fs::absolute(p).lexically_relative(directory::working_directory).string();
-#else
+#if defined(__GNUC__)
         return  lexically_relative(fs::absolute(p), directory::working_directory).string();
+#else
+        return  fs::absolute(p).lexically_relative(directory::working_directory).string();
 #endif
     });
     return m;

@@ -43,12 +43,6 @@
 #error  "Cannot recognize the target platform; are you targeting an unsupported platform?"
 #endif 
 
-#if (TARGET_PLATFORM == PLATFORM_WINDOWS)
-#ifndef __MINGW32__
-#pragma warning (disable:4127) 
-#endif 
-#endif  // PLATFORM_WIN32
-
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
 #include <WinSock2.h>
 #include <process.h> //  _get_pid support
@@ -61,12 +55,6 @@ typedef _W64 int   ssize_t;
 #else
 #include <sys/syscall.h>
 #include <unistd.h>
-#endif
-
-#if defined(_USRDLL)
-#define MOON_EXPORT __declspec(dllexport)
-#else /* use as DLL library */
-#define MOON_EXPORT
 #endif
 
 #ifndef __has_feature       // Clang - feature checking macros.
