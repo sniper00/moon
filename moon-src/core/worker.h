@@ -2,7 +2,7 @@
 #include "config.hpp"
 #include "common/concurrent_queue.hpp"
 #include "common/spinlock.hpp"
-#include "worker_timer.hpp"
+#include "common/timer.hpp"
 #include "network/socket.h"
 
 namespace moon
@@ -17,6 +17,22 @@ namespace moon
         using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
 
         using asio_work_t = asio::executor_work_guard<asio::io_context::executor_type>;
+
+        class timer_expire_policy
+        {
+        public:
+            timer_expire_policy(uint32_t serviceid, worker* wk)
+                :serviceid_(serviceid), worker_(wk){}
+
+            void operator()(timer_t id, bool last)
+            {
+                worker_->on_timer(id, serviceid_, last);
+            }
+        private:
+            uint32_t serviceid_;
+            worker* worker_;
+        };
+
     public:
         static constexpr uint16_t max_uuid = 0xFFFF;
 
@@ -62,9 +78,11 @@ namespace moon
             , string_view_t header
             , int32_t sessionid
             , uint8_t type) const;
-    
-        worker_timer& timer() { return timer_; }
 
+        timer_t repeat(int32_t duration, int32_t times, uint32_t serviceid);
+
+        void remove_timer(timer_t id);
+    
         moon::socket& socket() { return *socket_; }
     private:
         void run();
@@ -82,6 +100,8 @@ namespace moon
         void handle_one(service*& ser, message_ptr_t&& msg);
 
         service* find_service(uint32_t serviceid) const;
+
+        void on_timer(timer_t timerid, uint32_t serviceid, bool last);
     private:
         std::atomic<state> state_ = state::init;
         std::atomic_bool shared_ = true;
@@ -98,7 +118,7 @@ namespace moon
         std::thread thread_;
         queue_t mq_;
         queue_t::container_type swapmq_;
-        worker_timer timer_;
+        base_timer<timer_expire_policy> timer_;
         std::unique_ptr<moon::socket> socket_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
         std::unordered_map<uint32_t, moon::buffer_ptr_t> prefabs_;
