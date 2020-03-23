@@ -109,7 +109,7 @@ namespace moon
         send_message(std::move(m));
     }
 
-    void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type)
+    void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type, bool only_unique)
     {
         for (auto& w : workers_)
         {
@@ -118,6 +118,8 @@ namespace moon
             m->set_header(header);
             m->set_sender(sender);
             m->set_type(type);
+            //only send to unique service
+            m->set_subtype(only_unique ? 1 : 0);
             w->send(std::move(m));
         }
     }

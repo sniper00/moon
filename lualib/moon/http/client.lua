@@ -167,6 +167,8 @@ local function request( method, host_, path, content, header)
         return false ,err
     end
 
+    socket.settimeout(fd, timeout//1000)
+
     --print(seri.concats(cache))
     socket.write(fd, seri.concat(cache))
 

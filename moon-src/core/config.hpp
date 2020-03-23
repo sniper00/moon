@@ -32,12 +32,11 @@ namespace moon
     {
         pack_size = 1 << 0,
         close = 1 << 1,
-        slice = 1 << 2,
+        chunked = 1 << 2,
         broadcast = 1 << 3,
         ws_text = 1 << 4,
-        ws_binary = 1 << 5,
-        ws_ping = 1 << 6,
-        ws_pong = 1 << 7,
+        ws_ping = 1 << 5,
+        ws_pong = 1 << 6,
         buffer_flag_max,
     };
 
@@ -50,14 +49,6 @@ namespace moon
         socket_error = 5,
         socket_ping = 6,
         socket_pong = 7,
-    };
-
-    enum class read_delim :std::uint8_t
-    {
-        FIXEDLEN,
-        CRLF,//\r\n
-        DCRLF,// \r\n\r\n
-        LF,// \n
     };
 
     enum class frame_enable_flag :std::uint8_t

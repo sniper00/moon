@@ -29,6 +29,7 @@ namespace moon
         write_message_too_big,//The socket message exceeded the locally configured limit
         read_timeout, //socket read time out
         send_queue_too_big, // send message queue size exceeded config.h configured limit
+        invalid_read_operation, // invalid read operation
         ws_bad_http_header,// websocket parse http header failed
         ws_bad_http_version,// The WebSocket handshake was not HTTP/1.1
         ws_bad_method,//The WebSocket handshake method was not GET
@@ -95,6 +96,7 @@ namespace moon
                 case error::write_message_too_big: return "The socket write message  exceeded the locally configured limit";
                 case error::read_timeout:  return "Socket read timeout";
                 case error::send_queue_too_big: return "The socket send message queue size exceeded configured(config.hpp) limit";
+                case error::invalid_read_operation: return "invalid read operation";
                 case error::ws_bad_http_header: return "Websocket parse http header failed";
                 case error::ws_bad_http_version: return "The WebSocket handshake was not HTTP/1.1";
                 case error::ws_bad_method: return "The WebSocket handshake method was not GET";
