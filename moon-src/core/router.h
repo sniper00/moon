@@ -46,7 +46,7 @@ namespace moon
             , int32_t sessionid
             , uint8_t type) const;
 
-        void broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type);
+        void broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type, bool only_unique);
 
         bool register_service(const std::string& type, register_func func);
 

@@ -43,12 +43,6 @@ namespace moon
 
     void server::run()
     {
-        if (0 == workers_.size())
-        {
-            printf("should run server::init first!\r\n");
-            return;
-        }
-
         state_.store(state::ready, std::memory_order_release);
 
         for (auto& w : workers_)

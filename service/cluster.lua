@@ -20,8 +20,6 @@ local function cluster_service()
     local pairs = pairs
     local strfmt = string.format
 
-
-
     local unpack_one = seri.unpack_one
     local write_back = buffer.write_back
     local queryservice = moon.queryservice
@@ -91,8 +89,8 @@ local function cluster_service()
             socket.write(fd, unsafe_buf)
         else
             moon.error(err)
-            local unsafe_buf = pack(receiver_sname, sender_addr, -sessionid, false, err)
-            socket.write(fd, unsafe_buf)
+            local res = packs(receiver_sname, sender_addr, -sessionid, false, err)
+            socket.write(fd, res)
         end
     end
 
@@ -111,12 +109,12 @@ local function cluster_service()
             moon.async(function ()
                 local ok, err = pcall(do_call, fd, msg, receiver_sname, sender_addr, sessionid)
                 if not ok then
-                    local unsafe_buf = pack(receiver_sname,
+                    local res = packs(receiver_sname,
                                             sender_addr,
                                             -sessionid,
                                             false,
                                             err)
-                    socket.write(fd, unsafe_buf)
+                    socket.write(fd, res)
                 end
             end)
         elseif sessionid > 0 then
@@ -149,13 +147,13 @@ local function cluster_service()
         for k,v in pairs(connectors) do
             if v == fd then
                 connectors[k] = nil
-                print("connectors remove")
+                clusters[k].state = "CLOSED"
             end
         end
     end)
 
     socket.on("error", function(fd, msg)
-        print("socket_error",fd, msg:bytes())
+        print("socket error",fd, msg:bytes())
     end)
 
     local function connect(serverid)
@@ -189,45 +187,46 @@ local function cluster_service()
         local sender = msg:sender()
         local sessionid = msg:sessionid()
         local fd = connectors[serverid]
-        if not fd then
-            local data = msg:bytes()
 
-            local cache = get_message_cache(serverid)
-            table.insert(cache, {sender, sessionid, data})
-
-            local state = clusters[serverid].state
-            if state == "CLOSED" then
-                moon.async(function ()
-                    fd = connect(serverid)
-                    if not fd then
-                        for _, v in ipairs(cache) do
-                            if v[2] ~=0 then
-                                moon.response("lua", v[1], v[2], seri.packs(false, "not connected"))
-                            else
-                                moon.error("can not connect cluster node",
-                                    serverid, "drop message from", sender, "size", #v[3])
-                            end
-                        end
-                        message_cache[serverid] = nil
-                        return
-                    else
-                        for _, v in ipairs(cache) do
-                            if v[2] ~=0 then
-                                add_send_watch(fd, v[1], v[2])
-                            end
-                            socket.write(fd, v[3])
-                        end
-                        message_cache[serverid] = nil
-                        connectors[serverid] = fd
-                    end
-                end)
-            end
-        else
-            if serverid ~=0 then
+        if fd then
+            if sessionid < 0 then
                 add_send_watch(fd, sender, sessionid)
             end
             socket.write_message(fd, msg)
+            return
         end
+
+        local data = msg:bytes()
+        local cache = get_message_cache(serverid)
+        table.insert(cache, {sender, sessionid, data})
+
+        local state = clusters[serverid].state
+        if state ~= "CLOSED" then
+            return
+        end
+
+        moon.async(function ()
+            fd = connect(serverid)
+            message_cache[serverid] = nil
+            if not fd then
+                for _, v in ipairs(cache) do
+                    if v[2] ~=0 then
+                        moon.response("lua", v[1], v[2], seri.packs(false, "not connected"))
+                    else
+                        moon.error("can not connect cluster node",
+                            serverid, "drop message from", sender, "size", #v[3])
+                    end
+                end
+            else
+                for _, v in ipairs(cache) do
+                    if v[2] ~=0 then
+                        add_send_watch(fd, v[1], v[2])
+                    end
+                    socket.write(fd, v[3])
+                end
+                connectors[serverid] = fd
+            end
+        end)
     end
 
     local function load_config()

@@ -72,7 +72,7 @@ switch[3] = function ()
             unique = true,
             name= "master",
             file = "start_by_config/network_text_benchmark.lua",
-            host = "127.0.0.1",
+            host = "0.0.0.0",
             port = 42345,
             master = true,
             count = 4
@@ -133,7 +133,7 @@ switch[6] = function ()
             name = "redis",
             file = "start_by_config/service_redis.lua",
             host = "127.0.0.1",
-            port = 3306,
+            port = 6379,
             timeout = 1000,
             connection_num = 4
         },

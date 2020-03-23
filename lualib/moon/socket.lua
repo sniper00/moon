@@ -17,15 +17,10 @@ local connect = core.connect
 local read = core.read
 local write_with_flag = core.write_with_flag
 
-local linedelim = {}
-linedelim['\r\n'] = 1
-linedelim['\r\n\r\n'] = 2
-linedelim['\n'] = 3
-
 local flag_close = 2
 local flag_ws_text = 16
-local flag_ws_ping = 64
-local flag_ws_pong = 128
+local flag_ws_ping = 32
+local flag_ws_pong = 64
 
 ---@class socket : asio
 local socket = {}
@@ -77,16 +72,12 @@ end
 --- async
 function socket.read(fd, len)
     local sessionid = make_response()
-    read(fd, id, len, 0, sessionid)
+    read(fd, id, len, "", sessionid)
     return yield()
 end
 
 --- async
 function socket.readline(fd, delim, limit)
-    delim = linedelim[delim]
-    if not delim  then
-        error("unsupported read delim "..tostring(delim))
-    end
     limit= limit or 0
     local sessionid = make_response()
     read(fd, id, limit, delim, sessionid)

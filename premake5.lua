@@ -83,7 +83,6 @@ project "moon"
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
         "SOL_ALL_SAFETIES_ON",
-        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING" ,
     }
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
