@@ -390,31 +390,40 @@ function moon.coroutine_num()
 end
 
 --------------------------timer-------------
-local timer_cb = {}
+local function remove_all_timer(t)
+    for k,_ in pairs(t) do
+        core.remove_timer(k)
+    end
+end
+
+local timer_cb = setmetatable({},{
+	__gc = remove_all_timer,
+})
 
 ---@param mills integer
 ---@param times integer
 ---@param cb function
 ---@return integer
-function moon.repeated(mills, times, cb)
+function moon.repeated(mills, times, fn)
     local timerid = core.repeated(mills, times)
-    timer_cb[timerid] = cb
+    timer_cb[timerid] = fn
     return timerid
 end
 
 ---@param timerid integer
 function moon.remove_timer(timerid)
+    timer_cb[timerid] = nil
     core.remove_timer(timerid)
 end
 
 core.set_cb('t',
-    function(timerid, brm)
-        if not brm then
-            local cb = timer_cb[timerid]
-            if cb then
-                cb(timerid)
-            end
-        else
+    function(timerid, last)
+        local cb = timer_cb[timerid]
+        if cb then
+            cb(timerid, last)
+        end
+
+        if last then
             timer_cb[timerid] = nil
         end
     end
