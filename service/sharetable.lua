@@ -132,7 +132,7 @@ end
 
 local function report_close()
 	local addr = moon.queryservice("sharetable")
-	if addr then
+	if addr >0 then
 		moon.send("lua", addr, nil, "close")
 	end
 end
