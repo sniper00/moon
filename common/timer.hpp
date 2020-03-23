@@ -9,17 +9,16 @@
 
 namespace moon
 {
-    using timer_id_t = uint32_t;
+    using timer_t = uint32_t;
 
     namespace detail
     {
-        template<typename TContainer, uint8_t Size>
+        template<typename Container, size_t Size>
         class timer_wheel
         {
-            using container_t = TContainer;
+            using container_t = Container;
         public:
             timer_wheel()
-                :head_(0)
             {
             }
 
@@ -46,34 +45,50 @@ namespace moon
                 return head_ == 0;
             }
 
-            uint8_t size() const noexcept
+            size_t size() const noexcept
             {
                 return Size;
             }
 
             size_t now() const noexcept
             {
-                return head_;
+                return (head_);
             }
         private:
-            container_t 	array_[Size];
-            uint32_t	head_;
+            size_t head_ = 0;
+            container_t array_[Size];
         };
     }
 
-    template<class TChild>
+    template<typename ExpirePolicy>
     class base_timer
     {
-        //every wheel size max 255
-        static constexpr int  WHEEL_SIZE = 255;
+        using expire_policy_type = ExpirePolicy;
+        class context
+        {
+        public:
+            template<typename ...Args>
+            context(int32_t duration, int32_t times, Args&&... args)
+                :duration_(duration), times_(times), policy(std::forward<Args>(args)...) {}
 
-        static constexpr int TIMERID_SHIT = 32;
+            void duration(int32_t v) noexcept { duration_ = v; }
 
-        using timer_wheel_t = detail::timer_wheel<std::list<uint64_t>, WHEEL_SIZE>;
-        using child_t = TChild;
+            int32_t duration()  const noexcept { return duration_; }
+
+            bool continued() noexcept { return (times_ < 0) || ((--times_) > 0); }
+        private:
+            int32_t	duration_;
+            int32_t	times_;
+        public:
+            expire_policy_type policy;
+        };
     public:
+        static constexpr int TIMERID_SHIFT = 32;
         //precision ms
-        static const int32_t PRECISION = 10;
+        static constexpr int PRECISION = 10;
+
+        //each time wheel size 255
+        using timer_wheel_t = detail::timer_wheel<std::list<uint64_t>, 255>;
 
         base_timer() = default;
 
@@ -144,11 +159,34 @@ namespace moon
         {
             stop_ = false;
         }
-    protected:
-        // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
-        uint64_t make_key(timer_id_t id, uint32_t slots)
+
+        template<typename... Args>
+        timer_t repeat(int32_t duration, int32_t times, Args&&... args)
         {
-            return ((static_cast<uint64_t>(id) << TIMERID_SHIT) | slots);
+            if (duration < PRECISION)
+            {
+                duration = PRECISION;
+            }
+
+            timer_t id = create_timerid();
+            insert_timer(duration, id);
+            timers_.emplace(id, context{ duration, times, std::forward<Args>(args)... });
+            return id;
+        }
+
+        void remove(timer_t timerid)
+        {
+            if (auto iter = timers_.find(timerid); iter != timers_.end())
+            {
+                iter->second.duration(0);
+            }
+        }
+
+    private:
+        // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
+        uint64_t make_key(timer_t id, uint32_t slots)
+        {
+            return ((static_cast<uint64_t>(id) << TIMERID_SHIFT) | slots);
         }
 
         uint8_t get_slot(uint64_t  key, size_t which_queue)
@@ -156,15 +194,25 @@ namespace moon
             return (key >> (which_queue * 8)) & 0xFF;
         }
 
-        void insert_timer(int32_t duration, timer_id_t id)
+        timer_t create_timerid()
         {
-            auto diff = duration;
-            auto offset = diff % PRECISION;
-            if (offset > 0)
+            do
             {
-                diff += PRECISION;
+                ++uuid_;
+                if (uuid_ == 0 || uuid_ == std::numeric_limits<uint32_t>::max())
+                    uuid_ = 1;
+            } while (timers_.find(uuid_) != timers_.end());
+            return uuid_;
+        }
+
+        void insert_timer(int32_t duration, timer_t id)
+        {
+            if ((duration % PRECISION) != 0)
+            {
+                duration += PRECISION;
             }
-            size_t slot_count = diff / PRECISION;
+
+            size_t slot_count = duration / PRECISION;
             slot_count = ((slot_count > 0) ? slot_count : 1);
 
             uint32_t slots = 0;
@@ -195,185 +243,60 @@ namespace moon
             {
                 auto key = expires.front();
                 expires.pop_front();
-                timer_id_t id = static_cast<timer_id_t>(key >> TIMERID_SHIT);
-                child_t* child = static_cast<child_t*>(this);
-                child->on_timer(id);
+                timer_t id = static_cast<timer_t>(key >> TIMERID_SHIFT);
+                if (auto iter = timers_.find(id); iter == timers_.end())
+                {
+                    continue;
+                }
+                else
+                {
+                    auto&ctx = iter->second;
+                    if (ctx.duration() > 0)//not removed
+                    {
+                        bool continued = ctx.continued();
+                        if (continued)
+                        {
+                            insert_timer(ctx.duration(), id);
+                        }
+                        ctx.policy(id, !continued);
+                        if (continued)
+                        {
+                            continue;
+                        }
+                    }
+                    timers_.erase(iter);
+                }
             }
         }
     private:
         bool stop_ = false;
         int64_t delta_ = 0;
         int64_t prev_ = 0;
-        std::array< timer_wheel_t, 4> wheels_;
-    };
-
-    class timer_context
-    {
-    public:
-        static constexpr int32_t times_mask = 0xFFFFFFF;
-
-        enum flag
-        {
-            removed = 1 << 29,
-            infinite = 1 << 30,
-        };
-
-        timer_context(int32_t duration, int32_t times)
-            :duration_(duration)
-            , times_(times)
-        {
-        }
-
-        ~timer_context()
-        {
-        }
-
-        int32_t duration()  const noexcept
-        {
-            return duration_;
-        }
-
-        bool times(int32_t value) noexcept
-        {
-            times_ = value;
-            return (times_& times_mask) > 0;
-        }
-
-        int32_t times()  const noexcept
-        {
-            return times_;
-        }
-
-        void set_flag(flag v) noexcept
-        {
-            times_ |= static_cast<int32_t>(v);
-        }
-
-        bool has_flag(flag v) const noexcept
-        {
-            return ((times_& static_cast<int32_t>(v)) != 0);
-        }
-
-        void clear_flag(flag v) noexcept
-        {
-            times_ &= ~static_cast<int32_t>(v);
-        }
-    private:
-        int32_t	duration_;
-        int32_t	times_;
-    };
-
-    class timer :public base_timer<timer>
-    {
-        static constexpr int MAX_TIMER_NUM = (1 << 24) - 1;
-
-        using timer_handler_t = std::function<void(timer_id_t)>;
-
-        friend class base_timer<timer>;
-
-        class context :public timer_context
-        {
-        public:
-            context(int32_t duration, int32_t times, timer_handler_t handler)
-                :timer_context(duration, times)
-                , handler_(std::forward<timer_handler_t>(handler))
-            {
-            }
-
-            ~context()
-            {
-            }
-
-            void  expired(timer_id_t id)
-            {
-                assert(nullptr != handler_);
-                handler_(id);
-            }
-        private:
-            timer_handler_t handler_;
-        };
-
-    public:
-        timer_id_t repeat(int32_t duration, int32_t times, timer_handler_t hander)
-        {
-            if (duration < PRECISION)
-            {
-                duration = PRECISION;
-            }
-
-            assert(times < timer_context::times_mask);
-
-            if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
-                uuid_ = 1;
-
-            while (timers_.find(uuid_) != timers_.end())
-            {
-                ++uuid_;
-            }
-
-            if (times <= 0)
-            {
-                times = (0 | timer_context::infinite);
-            }
-
-            timer_id_t id = uuid_;
-            insert_timer(duration, id);
-            timers_.emplace(id, context{ duration,times, hander });
-            return id;
-        }
-
-        void remove(timer_id_t timerid)
-        {
-            auto iter = timers_.find(timerid);
-            if (iter != timers_.end())
-            {
-                iter->second.set_flag(timer_context::removed);
-                return;
-            }
-        }
-
-    private:
-        timer_id_t create_timerid()
-        {
-            if (uuid_ == 0 || uuid_ == MAX_TIMER_NUM)
-                uuid_ = 1;
-            while (timers_.find(uuid_) != timers_.end())
-            {
-                ++uuid_;
-            }
-            return uuid_;
-        }
-
-        void on_timer(timer_id_t id)
-        {
-            auto iter = timers_.find(id);
-            if (iter == timers_.end())
-            {
-                return;
-            }
-
-            auto&ctx = iter->second;
-            if (!ctx.has_flag(timer_context::removed))
-            {
-                bool iscontinue = false;
-                if (ctx.has_flag(timer_context::infinite) || ctx.times(ctx.times() - 1))
-                {
-                    insert_timer(ctx.duration(), id);
-                    iscontinue = true;
-                }
-                ctx.expired(id);
-                if (iscontinue)
-                {
-                    return;
-                }
-            }
-            timers_.erase(iter);
-            return;
-        }
-
-    private:
         uint32_t uuid_ = 0;
+        std::array< timer_wheel_t, 4> wheels_;
         std::unordered_map<uint32_t, context> timers_;
     };
+
+    class default_expire_policy
+    {
+    public:
+        using handler_type = std::function<void(timer_t)>;
+
+        default_expire_policy(handler_type handler)
+            :handler_(std::move(handler))
+        {
+        }
+
+        void  operator()(timer_t id, bool last)
+        {
+            (void)last;
+            assert(handler_);
+            handler_(id);
+        }
+    private:
+        handler_type handler_;
+    };
+
+    using timer = base_timer<default_expire_policy>;
 }
 

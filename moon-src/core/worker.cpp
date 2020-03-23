@@ -44,16 +44,7 @@ namespace moon
             return content;
         });
 
-        timer_.set_on_timer([this](timer_id_t timerid, uint32_t serviceid, bool remove) {
-            if (auto s = find_service(serviceid); nullptr != s)
-            {
-                s->on_timer(timerid, remove);
-            }
-            else
-            {
-                timer_.remove(timerid);
-            }
-        });
+        timer_.update(server_->now());
 
         socket_ = std::make_unique<moon::socket>(router_, this, io_ctx_);
 
@@ -63,6 +54,7 @@ namespace moon
             io_ctx_.run();
             CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
+
         while (state_.load(std::memory_order_acquire) != state::ready)
         {
             std::this_thread::yield();
@@ -71,7 +63,7 @@ namespace moon
 
     void worker::stop()
     {
-        asio::post(io_ctx_,[this] {
+        asio::post(io_ctx_, [this] {
             if (auto s = state_.load(std::memory_order_acquire); s == state::stopping || s == state::exited)
             {
                 return;
@@ -141,9 +133,9 @@ namespace moon
                     }
                     serviceid = uuid();
                     ++counter;
-                } while (services_.find(serviceid)!= services_.end());
+                } while (services_.find(serviceid) != services_.end());
 
-                if(serviceid==0)
+                if (serviceid == 0)
                 {
                     break;
                 }
@@ -213,7 +205,7 @@ namespace moon
                     string_view_t header{ "exit" };
                     auto buf = message::create_buffer();
                     buf->write_back(content.data(), content.size());
-                    router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
+                    router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM, true);
                 }
             }
             else
@@ -238,29 +230,18 @@ namespace moon
         if (mq_.push_back(std::move(msg)) == 1)
         {
             asio::post(io_ctx_, [this]() {
-                auto begin_time = server_->now();;
-                size_t count = 0;
-                if (mq_.size() != 0)
+                if (mq_.size() == 0)
                 {
-                    service* ser = nullptr;
-                    mq_.swap(swapmq_);
-                    count = swapmq_.size();
-                    for (auto& msg : swapmq_)
-                    {
-                        handle_one(ser, std::move(msg));
-                    }
-                    swapmq_.clear();
+                    return;
                 }
 
-                if (begin_time != 0)
+                service* ser = nullptr;
+                mq_.swap(swapmq_);
+                for (auto& msg : swapmq_)
                 {
-                    auto difftime = server_->now() - begin_time;
-                    cpu_time_ += difftime;
-                    if (difftime > 1000)
-                    {
-                        CONSOLE_WARN(router_->logger(), "worker %u handle %zu message cost %" PRId64 "ms, queue size %zu",id(), count, difftime, mq_.size());
-                    }
+                    handle_one(ser, std::move(msg));
                 }
+                swapmq_.clear();
             });
         }
     }
@@ -278,6 +259,26 @@ namespace moon
             return iter->second.get();
         }
         return nullptr;
+    }
+
+    void worker::on_timer(timer_t timerid, uint32_t serviceid, bool last)
+    {
+        int64_t start_time = moon::time::microsecond();
+        if (auto s = find_service(serviceid); nullptr != s)
+        {
+            s->on_timer(timerid, last);
+        }
+        else
+        {
+            timer_.remove(timerid);
+        }
+        int64_t cost_time = moon::time::microsecond() - start_time;
+        cpu_time_ += cost_time;
+        if (cost_time > 100000)
+        {
+            CONSOLE_WARN(router_->logger(),
+                "worker %u on timer cost %" PRId64 "us, owner %08X timerid %u", id(), cost_time, serviceid, timerid);
+        }
     }
 
     void worker::runcmd(uint32_t sender, const std::string & cmd, int32_t sessionid)
@@ -318,10 +319,20 @@ namespace moon
     {
         if (auto iter = prefabs_.find(prefabid); iter != prefabs_.end())
         {
-            router_->send(sender, receiver, std::move(iter->second), header, sessionid, type);
+            router_->send(sender, receiver, iter->second, header, sessionid, type);
             return;
         }
         CONSOLE_DEBUG(server_->logger(), "send_prefab failed, can not find prepared data. prefabid %u", prefabid);
+    }
+
+    timer_t worker::repeat(int32_t duration, int32_t times, uint32_t serviceid)
+    {
+        return timer_.repeat(duration, times, serviceid, this);
+    }
+
+    void worker::remove_timer(timer_t id)
+    {
+        timer_.remove(id);
     }
 
     void worker::shared(bool v)
@@ -366,12 +377,19 @@ namespace moon
 
     void worker::handle_one(service*& ser, message_ptr_t&& msg)
     {
+        uint32_t sender = msg->sender();
+        uint32_t receiver = msg->receiver();
         if (msg->broadcast())
         {
             for (auto& it : services_)
             {
                 auto& s = it.second;
-                if (s->ok() && s->id() != msg->sender())
+                if (msg->subtype() && !s->unique())
+                {
+                    continue;
+                }
+
+                if (s->ok() && s->id() != sender)
                 {
                     s->handle_message(std::forward<message_ptr_t>(msg));
                 }
@@ -379,20 +397,30 @@ namespace moon
             return;
         }
 
-        if (nullptr == ser || ser->id() != msg->receiver())
+        if (nullptr == ser || ser->id() != receiver)
         {
-            ser = find_service(msg->receiver());
+            ser = find_service(receiver);
             if (nullptr == ser)
             {
-                if (msg->sender() != 0)
+                if (sender != 0)
                 {
                     msg->set_sessionid(-msg->sessionid());
-                    router_->response(msg->sender(), "worker::handle_one "sv, moon::format("[%X] attempt send to dead service [%X]: %s.", msg->sender(), msg->receiver(), moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
+                    router_->response(sender, "worker::handle_one "sv,
+                        moon::format("[%X] attempt send to dead service [%X]: %s.", sender, receiver, moon::hex_string({ msg->data(),msg->size() }).data()).data(), msg->sessionid(), PTYPE_ERROR);
                 }
                 return;
             }
         }
+
+        int64_t start_time = moon::time::microsecond();
         ser->handle_message(std::forward<message_ptr_t>(msg));
+        int64_t cost_time = moon::time::microsecond() - start_time;
+        cpu_time_ += cost_time;
+        if (cost_time > 100000)
+        {
+            CONSOLE_WARN(router_->logger(), 
+                "worker %u handle one message cost %" PRId64 "us, from %08X to %08X", id(), cost_time, sender, receiver);
+        }
         timer_.update(server_->now());
     }
 }

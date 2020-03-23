@@ -16,8 +16,8 @@ namespace moon
     public:
         using iterator_category = std::random_access_iterator_tag;
         using value_type = ValueType;
-        using pointer = value_type * ;
-        using reference = value_type & ;
+        using pointer = value_type*;
+        using reference = value_type&;
         using difference_type = std::ptrdiff_t;
 
         explicit buffer_iterator(pointer p)
@@ -39,7 +39,7 @@ namespace moon
         buffer_iterator operator++(int)
         {	// postincrement
             buffer_iterator _Tmp = *this;
-            ++*this;
+            ++* this;
             return (_Tmp);
         }
 
@@ -52,7 +52,7 @@ namespace moon
         buffer_iterator operator--(int)
         {	// postdecrement
             buffer_iterator _Tmp = *this;
-            --*this;
+            --* this;
             return (_Tmp);
         }
 
@@ -89,7 +89,7 @@ namespace moon
             return (_Ptr - _Right._Ptr);
         }
 
-        bool operator!=(const buffer_iterator &other) const
+        bool operator!=(const buffer_iterator& other) const
         {
             return _Ptr != other._Ptr;
         }
@@ -151,7 +151,7 @@ namespace moon
         buffer_const_iterator operator++(int)
         {	// postincrement
             buffer_const_iterator _Tmp = *this;
-            ++*this;
+            ++* this;
             return (_Tmp);
         }
 
@@ -164,7 +164,7 @@ namespace moon
         buffer_const_iterator operator--(int)
         {	// postdecrement
             buffer_const_iterator _Tmp = *this;
-            --*this;
+            --* this;
             return (_Tmp);
         }
 
@@ -201,7 +201,7 @@ namespace moon
             return (_Ptr - _Right._Ptr);
         }
 
-        bool operator!=(const buffer_const_iterator &other) const
+        bool operator!=(const buffer_const_iterator& other) const
         {
             return _Ptr != other._Ptr;
         }
@@ -247,7 +247,7 @@ namespace moon
         //buffer default size
         constexpr static size_t   STACK_CAPACITY = 256 - 4 * sizeof(size_t) - sizeof(std::unique_ptr<value_type[]>);
 
-        enum seek_origin
+        enum class seek_origin
         {
             Begin,
             Current,
@@ -272,9 +272,9 @@ namespace moon
 
         buffer& operator=(const buffer& other) = delete;
 
-        buffer(buffer &&) = default;
+        buffer(buffer&&) = default;
 
-        buffer& operator=(buffer &&) = default;
+        buffer& operator=(buffer&&) = default;
 
         void init(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
         {
@@ -291,7 +291,7 @@ namespace moon
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
             if (nullptr == Indata || 0 == count)
                 return;
-            size_t n = sizeof(T)*count;
+            size_t n = sizeof(T) * count;
 
             prepare(n);
 
@@ -307,7 +307,7 @@ namespace moon
             if (nullptr == Indata || 0 == count)
                 return false;
 
-            size_t n = sizeof(T)*count;
+            size_t n = sizeof(T) * count;
 
             if (n > readpos_)
             {
@@ -327,7 +327,7 @@ namespace moon
             if (nullptr == Outdata || 0 == count)
                 return false;
 
-            size_t n = sizeof(T)*count;
+            size_t n = sizeof(T) * count;
 
             if (readpos_ + n > writepos_)
             {
@@ -340,21 +340,26 @@ namespace moon
             return true;
         }
 
+        void consume(std::size_t n)
+        {
+            seek(static_cast<int>(n));
+        }
+
         size_t seek(int offset, seek_origin s = seek_origin::Current)  noexcept
         {
             switch (s)
             {
-            case Begin:
+            case seek_origin::Begin:
                 readpos_ = offset;
                 break;
-            case Current:
+            case seek_origin::Current:
                 readpos_ += offset;
                 if (readpos_ > writepos_)
                 {
                     readpos_ = writepos_;
                 }
                 break;
-            case End:
+            case seek_origin::End:
                 readpos_ = writepos_ + offset;
                 if (readpos_ >= writepos_)
                 {
@@ -382,7 +387,7 @@ namespace moon
         template<typename ValueType>
         bool has_flag(ValueType v) const noexcept
         {
-            return ((flag_&static_cast<uint32_t>(v)) != 0);
+            return ((flag_ & static_cast<uint32_t>(v)) != 0);
         }
 
         template<typename ValueType>
@@ -391,34 +396,43 @@ namespace moon
             flag_ &= ~static_cast<uint32_t>(v);
         }
 
-        //mark
-        void offset_writepos(int offset) noexcept
+        void commit(std::size_t n)
         {
-            writepos_ += offset;
+            writepos_ += n;
+            assert(writepos_ <= capacity_);
             if (writepos_ >= capacity_)
             {
                 writepos_ = capacity_;
             }
         }
 
+        void revert(size_t n)
+        {
+            assert((writepos_ >= n)&& (writepos_ - n) >= readpos_);
+            if (writepos_ >= n)
+            {
+                writepos_ -= n;
+            }
+        }
+
         const_iterator begin() const noexcept
         {
-            return buffer_const_iterator{ data_() + readpos_ };
+            return const_iterator{ data_() + readpos_ };
         }
 
         iterator begin() noexcept
         {
-            return buffer_iterator{ data_() + readpos_ };
+            return iterator{ data_() + readpos_ };
         }
 
         const_iterator end() const noexcept
         {
-            return buffer_const_iterator{ data_() + writepos_ };
+            return const_iterator{ data_() + writepos_ };
         }
 
         iterator end() noexcept
         {
-            return buffer_iterator{ data_() + writepos_ };
+            return iterator{ data_() + writepos_ };
         }
 
         pointer data() noexcept
@@ -437,9 +451,14 @@ namespace moon
             return writepos_ - readpos_;
         }
 
-        size_t max_size() const noexcept
+        size_t capacity() const noexcept
         {
             return capacity_;
+        }
+
+        size_t reserved() const noexcept
+        {
+            return headreserved_;
         }
 
         void prepare(size_t need)
@@ -471,6 +490,7 @@ namespace moon
                 size_t readable = size();
                 if (readable != 0)
                 {
+                    assert(readpos_ >= headreserved_);
                     memcpy(data_() + headreserved_, data_() + readpos_, readable);
                 }
                 readpos_ = headreserved_;
