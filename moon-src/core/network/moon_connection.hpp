@@ -26,7 +26,8 @@ namespace moon
             base_connection_t::start(accepted);
             auto m = message::create();
             m->write_data(address());
-            m->set_subtype(static_cast<uint8_t>(accepted ? socket_data_type::socket_accept : socket_data_type::socket_connect));
+            m->set_subtype(static_cast<uint8_t>(accepted ? 
+                socket_data_type::socket_accept : socket_data_type::socket_connect));
             handle_message(std::move(m));
             read_header();
         }
@@ -43,7 +44,7 @@ namespace moon
                         error(make_error_code(moon::error::write_message_too_big));
                         return false;
                     }
-                    data->set_flag(buffer_flag::slice);
+                    data->set_flag(buffer_flag::chunked);
                 }
                 else
                 {
@@ -154,7 +155,7 @@ namespace moon
                     return;
                 }
 
-                buf_->offset_writepos(static_cast<int>(bytes_transferred));
+                buf_->commit(static_cast<int>(bytes_transferred));
                 if (!continued)
                 {
                     auto m = message::create(std::move(buf_));

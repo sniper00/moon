@@ -230,7 +230,7 @@ namespace moon
                 {
                     auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
                     asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                        [this, self = shared_from_this(), sbuf, key = std::move(key)](const asio::error_code& e, std::size_t bytes_transferred)
+                        [this, self = shared_from_this(), sbuf, key](const asio::error_code& e, std::size_t bytes_transferred)
                     {
                         if (e || bytes_transferred == 0)
                         {
@@ -330,7 +330,7 @@ namespace moon
                 }
 
                 recvtime_ = now();
-                recv_buf_->offset_writepos(static_cast<int>(bytes_transferred));
+                recv_buf_->commit(static_cast<int>(bytes_transferred));
  
                 if (!handle_frame())
                 {
@@ -588,11 +588,11 @@ namespace moon
 
             if (fh.op == ws::opcode::close)
             {
-                recv_buf_->seek(static_cast<int>(need), buffer::Current);
+                recv_buf_->seek(static_cast<int>(need), buffer::seek_origin::Current);
                 return make_error_code(moon::error::ws_closed);
             }
 
-            recv_buf_->seek(static_cast<int>(need), buffer::Current);
+            recv_buf_->seek(static_cast<int>(need), buffer::seek_origin::Current);
             message_ptr_t msg = nullptr;
             if (recv_buf_->size()==reallen)
             {

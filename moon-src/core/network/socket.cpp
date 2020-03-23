@@ -169,18 +169,14 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
     return 0;
 }
 
-void socket::read(uint32_t fd, uint32_t owner, size_t n, read_delim delim, int32_t sessionid)
+void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid)
 {
-    do
+    if (auto iter = connections_.find(fd); iter != connections_.end())
     {
-        if (auto iter = connections_.find(fd); iter != connections_.end())
-        {
-            if (iter->second->read(moon::read_request{ delim, n, sessionid }))
-            {
-                return;
-            }
-        }
-    } while (0);
+        iter->second->read(n, delim, sessionid);
+        return;
+    }
+
     asio::post(ioc_, [this, owner, sessionid]() {
         response(0, owner, "read an invalid socket", "closed", sessionid, PTYPE_ERROR);
     });

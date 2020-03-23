@@ -89,7 +89,7 @@ static int lconnect(lua_State *L)
     }
 
     asio::async_connect(client->socket, endpoints,
-        [L, &ec, client](const asio::error_code& e, const asio::ip::tcp::endpoint&)
+        [&ec](const asio::error_code& e, const asio::ip::tcp::endpoint&)
     {
         ec = e;
     });
@@ -195,7 +195,7 @@ static int lreceive(lua_State *L)
         }
 
         int64_t total_tm = 0;
-        while (0 == client->socket.available())
+        while (0 == client->socket.available(ec)&&!ec)
         {
             int64_t start_tm =  millisecond();
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
