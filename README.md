@@ -20,6 +20,7 @@ QQ交流群: 543833695
     - [服务间通信-协程模式](#服务间通信-协程模式)
     - [定时器](#定时器)
     - [使用配置文件的示例](#使用配置文件的示例)
+- [游戏示例](#游戏示例)
 
 ## 依赖
 
@@ -522,6 +523,9 @@ end)
     ./moon -c example/config.json -r 8
     ./moon -c example/config.json -r 9
 ```
+
+## 游戏示例
+- 简单示例Demo(BallGame): https://github.com/sniper00/BallGame.git
 
 # Friend Open Source
 **NoahGameFrame**  
