@@ -305,7 +305,7 @@ public:
     }
 
     template<typename... Args>
-    void query(int x, int y, int w, int h, std::vector<int64_t>& out, const Args&...args)
+    void query(int x, int y, int w, int h, std::vector<int64_t>& out, Args&&...args)
     {
         auto rc = make_rect(x, y, w, h);
         auto tile_rc = make_tile_rect(x, y, w, h);
