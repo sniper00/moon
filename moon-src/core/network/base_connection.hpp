@@ -175,16 +175,20 @@ namespace moon
             if (queue_.size() == 0)
                 return;
 
-            for(auto iter = queue_.begin(); iter!= queue_.end() && (holder_.size() < 50); ++iter)
+            for (const auto& buf : queue_)
             {
-                auto& v = *iter;
-                if (v->has_flag(buffer_flag::chunked))
+                if (buf->has_flag(buffer_flag::chunked))
                 {
-                    message_slice(holder_, v);
+                    message_slice(holder_, buf);
                 }
                 else
                 {
-                    holder_.push_back(v->data(), v->size(), v->has_flag(buffer_flag::close));
+                    holder_.push_back(buf->data(), buf->size(), buf->has_flag(buffer_flag::close));
+                }
+
+                if (holder_.size() >= const_buffers_holder::max_count)
+                {
+                    break;
                 }
             }
 
