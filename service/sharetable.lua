@@ -104,8 +104,8 @@ local function sharetable_service()
 	local unpack_one = seri.unpack_one
 
 	moon.dispatch("lua",function(msg)
-		local b = msg:buffer()
-		local cmd, offset = unpack_one(b)
+        local buf = msg:buffer()
+		local cmd, offset = unpack_one(buf)
 		local fn = sharetable[cmd]
 		if fn then
 			fn(msg:sender(), msg:sessionid(), unpack(msg:cstr(offset)))
@@ -132,8 +132,8 @@ end
 
 local function report_close()
 	local addr = moon.queryservice("sharetable")
-	if addr >0 then
-		moon.send("lua", addr, nil, "close")
+    if addr >0 then
+        moon.raw_send("lua", addr,"", seri.packs("close"))
 	end
 end
 
