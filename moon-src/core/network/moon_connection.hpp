@@ -16,7 +16,7 @@ namespace moon
         template <typename... Args>
         explicit moon_connection(Args&&... args)
             :base_connection(std::forward<Args>(args)...)
-            , flag_(frame_enable_flag::none)
+            , flag_(enable_chunked::none)
             , header_(0)
         {
         }
@@ -38,7 +38,7 @@ namespace moon
             {
                 if (data->size() > MAX_MSG_FRAME_SIZE)
                 {
-                    bool enable = (static_cast<int>(flag_)&static_cast<int>(frame_enable_flag::send)) != 0;
+                    bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::send)) != 0;
                     if (!enable)
                     {
                         error(make_error_code(moon::error::write_message_too_big));
@@ -58,7 +58,7 @@ namespace moon
             return base_connection_t::send(std::move(data));
         }
 
-        void set_frame_flag(frame_enable_flag v)
+        void set_enable_chunked(enable_chunked v)
         {
             flag_ = v;
         }
@@ -66,7 +66,7 @@ namespace moon
         void message_slice(const_buffers_holder& holder, const buffer_ptr_t& buf) override
         {
             size_t n = buf->size();
-            holder.begin_slice(n / MAX_NET_MSG_SIZE + 1);
+            holder.push();
             do
             {
                 message_size_t  size = 0, header = 0;
@@ -107,7 +107,7 @@ namespace moon
                 recvtime_ = now();
                 net2host(header_);
 
-                bool enable = (static_cast<int>(flag_)&static_cast<int>(frame_enable_flag::receive)) != 0;
+                bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::receive)) != 0;
                 bool continued = false;
                 if (enable)
                 {
@@ -168,7 +168,7 @@ namespace moon
         }
 
     protected:
-        frame_enable_flag flag_;
+        enable_chunked flag_;
         message_size_t header_;
         buffer_ptr_t buf_;
     };

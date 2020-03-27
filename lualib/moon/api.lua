@@ -317,7 +317,7 @@ end
 ---@param flag string
 ---对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
 ---@return boolean
-function asio.set_enable_frame(fd, flag)
+function asio.set_enable_chunked(fd, flag)
     ignore_param(fd,flag)
 end
 
@@ -325,6 +325,5 @@ end
 function asio.close(fd)
     ignore_param(fd)
 end
-
 
 return core
