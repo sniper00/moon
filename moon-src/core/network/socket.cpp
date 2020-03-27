@@ -256,36 +256,36 @@ bool socket::setnodelay(uint32_t fd)
     return false;
 }
 
-bool socket::set_enable_frame(uint32_t fd, std::string flag)
+bool socket::set_enable_chunked(uint32_t fd, std::string flag)
 {
     moon::lower(flag);
-    moon::frame_enable_flag v = frame_enable_flag::none;
+    moon::enable_chunked v = enable_chunked::none;
     switch (moon::chash_string(flag))
     {
     case "none"_csh:
     {
-        v = moon::frame_enable_flag::none;
+        v = moon::enable_chunked::none;
         break;
     }
     case "r"_csh:
     {
-        v = moon::frame_enable_flag::receive;
+        v = moon::enable_chunked::receive;
         break;
     }
     case "w"_csh:
     {
-        v = moon::frame_enable_flag::send;
+        v = moon::enable_chunked::send;
         break;
     }
     case "wr"_csh:
     case "rw"_csh:
     {
-        v = moon::frame_enable_flag::both;
+        v = moon::enable_chunked::both;
         break;
     }
     default:
         CONSOLE_WARN(router_->logger(),
-            "tcp::set_enable_frame Unsupported  enable frame flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
+            "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
         return false;
     }
 
@@ -294,7 +294,7 @@ bool socket::set_enable_frame(uint32_t fd, std::string flag)
         auto c = std::dynamic_pointer_cast<moon_connection>(iter->second);
         if (c)
         {
-            c->set_frame_flag(v);
+            c->set_enable_chunked(v);
             return true;
         }
     }

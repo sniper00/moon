@@ -35,6 +35,7 @@ local function cluster_service()
             send_watch[fd] = senders
         end
         local key = ((-sessionid)<<32)|sender
+        --print("addkey", key, sessionid)
         senders[key] = true
     end
 
@@ -46,6 +47,7 @@ local function cluster_service()
         end
 
         local key = ((-sessionid)<<32)|sender
+        --print("remove key", key, sessionid)
         senders[key] = nil
     end
 
@@ -165,7 +167,7 @@ local function cluster_service()
             c.state = "CLOSED"
             return
         end
-        socket.set_enable_frame(fd, "wr")
+        socket.set_enable_chunked(fd, "wr")
         c.state = "CONNECTED"
         return fd
     end
