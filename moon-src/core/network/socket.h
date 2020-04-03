@@ -64,7 +64,7 @@ namespace moon
 
         bool setnodelay(uint32_t fd);
 
-        bool set_enable_frame(uint32_t fd, std::string flag);
+        bool set_enable_chunked(uint32_t fd, std::string flag);
 
         bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
 

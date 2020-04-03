@@ -15,7 +15,7 @@ local listenfd = socket.listen("127.0.0.1", 30002, moon.PTYPE_SOCKET)
 socket.start(listenfd)
 
 socket.on("accept",function(fd)
-	test_assert.assert(socket.set_enable_frame(fd,"rw"),"set_enable_frame failed!")
+	test_assert.assert(socket.set_enable_chunked(fd,"rw"),"set_enable_chunked failed!")
 end)
 
 socket.on("message",function(_, msg)
@@ -30,7 +30,7 @@ end)
 moon.start(function()
 	local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET)
 	test_assert.assert(fd>0,"connect server failed")
-	socket.set_enable_frame(fd,"rw")
+	socket.set_enable_chunked(fd,"rw")
 	socket.write_then_close(fd,data)
 end)
 

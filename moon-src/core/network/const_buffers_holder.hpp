@@ -8,6 +8,8 @@ namespace moon
     class const_buffers_holder
     {
     public:
+        static constexpr size_t max_count = 64;
+
         const_buffers_holder() = default;
 
         void push_back(const char* data, size_t len, bool close)
@@ -17,17 +19,16 @@ namespace moon
             ++count_;
         }
 
-        void begin_slice(size_t n)
+        void push()
         {
-            headers_.reserve(n);
             ++count_;
         }
 
         void push_slice(message_size_t header, const char* data, size_t len)
         {
-            headers_.push_back(header);
-            message_size_t& back = headers_.back();
-            buffers_.emplace_back(reinterpret_cast<const char*>(&back), sizeof(back));
+            headers_.emplace_front(header);
+            message_size_t& value = headers_.front();
+            buffers_.emplace_back(reinterpret_cast<const char*>(&value), sizeof(value));
             buffers_.emplace_back(data, len);
         }
 
@@ -63,7 +64,7 @@ namespace moon
         bool close_ = false;
         size_t count_ = 0;
         std::vector<asio::const_buffer> buffers_;
-        std::vector<message_size_t> headers_;
+        std::forward_list< message_size_t> headers_;
     };
 
     /*
@@ -109,9 +110,4 @@ namespace moon
         return buffers_ref<BufferSequence>(buffers);
     }
 }
-
-
-
-
-
 
