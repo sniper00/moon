@@ -15,7 +15,7 @@ socket.on("accept",function(fd, msg)
     -- 该协议默认只支持最大长度32KB的数据收发
     -- 设置标记可以把超多32KB的数据拆分成多个包
     -- 可以单独设置独写的标记，r:表示读。w:表示写
-    socket.set_enable_frame(fd, "w")
+    socket.set_enable_chunked(fd, "w")
 end)
 
 socket.on("message",function(fd, msg)

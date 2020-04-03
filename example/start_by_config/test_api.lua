@@ -59,7 +59,7 @@ equal(type(socket.write_message) , "function")
 equal(type(socket.close) , "function")
 equal(type(socket.settimeout) , "function")
 equal(type(socket.setnodelay) , "function")
-equal(type(socket.set_enable_frame) , "function")
+equal(type(socket.set_enable_chunked) , "function")
 
 equal(type(moon.millsecond) , "function")
 

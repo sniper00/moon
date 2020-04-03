@@ -37,13 +37,13 @@ project "lua53"
     removefiles("./third/lua53/lua.c")
     filter { "system:windows" }
         disablewarnings { "4244","4324","4702","4310" }
-        --defines {"LUA_BUILD_AS_DLL"}
+        -- defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
         -- links{"dl"}
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
-        --links{"dl"}
+        -- links{"dl"}
     -- filter{"configurations:*"}
     --     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
@@ -83,6 +83,7 @@ project "moon"
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
         "SOL_ALL_SAFETIES_ON",
+        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING"
     }
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
