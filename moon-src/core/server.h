@@ -21,7 +21,7 @@ namespace moon
 
         void init(int worker_num, const std::string& logpath);
 
-        void run();
+        void run(size_t count);
 
         void stop();
 
@@ -39,6 +39,7 @@ namespace moon
     private:
         void wait();
     private:
+        volatile bool signalstop_ = false;
         std::atomic<state> state_;
         int64_t now_;
         std::vector<std::unique_ptr<worker>> workers_;

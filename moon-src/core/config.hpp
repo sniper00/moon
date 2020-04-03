@@ -51,7 +51,7 @@ namespace moon
         socket_pong = 7,
     };
 
-    enum class frame_enable_flag :std::uint8_t
+    enum class enable_chunked :std::uint8_t
     {
         none = 0,
         send = 1 << 0,//

@@ -52,23 +52,25 @@ static void signal_handler(int signal)
         return;
     }
 
+    const char* msg = nullptr;
     switch (signal)
     {
     case SIGTERM:
-        CONSOLE_ERROR(svr->logger(), "RECV SIGTERM SIGNAL");
-        svr->stop();
+        msg = "Received SIGTERM,shutdown...\n";
         break;
     case SIGINT:
-        CONSOLE_ERROR(svr->logger(), "RECV SIGINT SIGNAL");
-        svr->stop();
+        msg = "Received SIGINT,shutdown...\n";
         break;
     default:
+        msg = "Received shutdown signal,shutdown...\n";
         break;
     }
+    svr->stop();
+    write(1, msg, strlen(msg));
 }
 #endif
 
-static void register_signal(int argc, char*argv[])
+static void register_signal(int argc, char* argv[])
 {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
     SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
@@ -110,6 +112,7 @@ void usage(void) {
 
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\
             int lua_c_fn(lua_State* L);\
+\
             lua_bind::registerlib(L, name, lua_c_fn);\
 
 
@@ -156,7 +159,7 @@ extern "C"
 }
 
 
-int main(int argc, char*argv[])
+int main(int argc, char* argv[])
 {
     using namespace moon;
 
@@ -218,7 +221,7 @@ int main(int argc, char*argv[])
 
             router_->register_service("lua", []()->service_ptr_t {
                 return std::make_unique<lua_service>();
-            });
+                });
 
             moon::server_config_manger smgr;
 
@@ -309,9 +312,9 @@ int main(int argc, char*argv[])
 
             if (c->bootstrap[0] != '@')
             {
-                bootstrap = moon::file::read_all(c->bootstrap, std::ios::binary | std::ios::in);
                 MOON_CHECK(directory::exists(c->bootstrap)
                     , moon::format("can not found bootstrap file: '%s'.", c->bootstrap.data()).data());
+                bootstrap = moon::file::read_all(c->bootstrap, std::ios::binary | std::ios::in);
             }
 
             auto res = lua.script(bootstrap);
@@ -323,16 +326,7 @@ int main(int argc, char*argv[])
             }
 
             size_t count = res;
-
-            //wait all bootstrap service created
-            while ((server_->get_state() == moon::state::init)
-                && server_->service_count() < count)
-            {
-                std::this_thread::yield();
-            }
-
-            // then call services's start callback
-            server_->run();
+            server_->run(count);
         }
         catch (std::exception& e)
         {
