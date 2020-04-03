@@ -41,54 +41,77 @@ namespace moon
         state_.store(state::init, std::memory_order_release);
     }
 
-    void server::run()
+    void server::run(size_t count)
     {
+        //wait all bootstrap service created
+        while (!signalstop_ && service_count() < count)
+        {
+            thread_sleep(10);
+        }
+
+        if (signalstop_)
+        {
+            return;
+        }
+
         state_.store(state::ready, std::memory_order_release);
 
+        // then call services's start callback
         for (auto& w : workers_)
         {
             w->start();
         }
 
-        int64_t previous_tick = time::now();
+        int64_t prev = time::now();
         int64_t sleep_duration = 0;
-        int64_t total_ = time::now()%1000;
+        int64_t datetime_tick = time::now() % 1000;
         while (true)
         {
-            now_ = time::now();
-
-            auto diff = (now_ - previous_tick);
-            diff = (diff < 0) ? 0 : diff;
-            previous_tick = now_;
-
-            total_ += diff;
-
-            //datetime update on seconds
-            if (total_ >= 1000)
+            state old = state::ready;
+            if (signalstop_ && state_.compare_exchange_strong(old
+                , state::stopping
+                , std::memory_order_acquire))
             {
-                total_ -= 1000;
-                datetime_.update(now_/1000);
+                for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
+                {
+                    (*iter)->stop();
+                }
             }
 
-            size_t stoped_worker_num = 0;
+            now_ = time::now();
+
+            auto delta = (now_ - prev);
+            delta = (delta < 0) ? 0 : delta;
+            prev = now_;
+
+            datetime_tick += delta;
+
+            //datetime update on seconds
+            if (datetime_tick >= 1000)
+            {
+                datetime_tick -= 1000;
+                datetime_.update(now_ / 1000);
+            }
+
+            size_t stoped_num = 0;
 
             for (const auto& w : workers_)
             {
                 if (w->stoped())
                 {
-                    stoped_worker_num++;
+                    stoped_num++;
                 }
                 w->update();
             }
 
-            if (stoped_worker_num == workers_.size())
+            if (stoped_num == workers_.size())
             {
                 break;
             }
 
-            if (diff <= UPDATE_INTERVAL + sleep_duration)
+            if (delta <= UPDATE_INTERVAL + sleep_duration)
             {
-                sleep_duration = UPDATE_INTERVAL + sleep_duration - diff;
+                sleep_duration = UPDATE_INTERVAL + sleep_duration - delta;
                 thread_sleep(sleep_duration);
             }
             else
@@ -101,15 +124,7 @@ namespace moon
 
     void server::stop()
     {
-        if (state_.exchange(state::stopping, std::memory_order_acquire) > state::ready)
-        {
-            return;
-        }
-
-        for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
-        {
-            (*iter)->stop();
-        }
+        signalstop_ = true;
     }
 
     log* server::logger()
@@ -135,7 +150,7 @@ namespace moon
 
     state server::get_state()
     {
-        return state_.load();
+        return state_.load(std::memory_order_acquire);
     }
 
     int64_t server::now()
@@ -157,7 +172,7 @@ namespace moon
         return res;
     }
 
-    datetime & server::get_datetime()
+    datetime& server::get_datetime()
     {
         return datetime_;
     }

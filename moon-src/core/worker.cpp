@@ -55,7 +55,7 @@ namespace moon
             CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
 
-        while (state_.load(std::memory_order_acquire) != state::ready)
+        while (state_.load(std::memory_order_acquire) == state::init)
         {
             std::this_thread::yield();
         }
