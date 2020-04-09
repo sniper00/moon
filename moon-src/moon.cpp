@@ -125,6 +125,7 @@ extern "C"
         REGISTER_CUSTOM_LIBRARY("http", luaopen_http);
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
         REGISTER_CUSTOM_LIBRARY("json", luaopen_rapidjson);
+        REGISTER_CUSTOM_LIBRARY("buffer", luaopen_buffer);
         //custom
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);
         REGISTER_CUSTOM_LIBRARY("aoi", luaopen_aoi);
@@ -137,22 +138,21 @@ extern "C"
     //if register lua c module, name like a.b.c, use this
     int custom_package_loader(lua_State* L)
     {
+        typedef std::unordered_map<std::string_view, lua_CFunction> pkg_map;
+        static const pkg_map pkgs{
+            { "protobuf.c", luaopen_protobuf_c},
+            { "sharetable.core", luaopen_sharetable_core },
+            { "socket.core", luaopen_socket_core },
+        };
+
         std::string_view path = sol::stack::get<std::string_view>(L, 1);
-        if (path == "protobuf.c"sv)
+        if (auto iter = pkgs.find(path); iter != pkgs.end())
         {
-            sol::stack::push(L, luaopen_protobuf_c);
-        }
-        else if (path == "sharetable.core"sv)
-        {
-            sol::stack::push(L, luaopen_sharetable_core);
-        }
-        else if (path == "socket.core"sv)
-        {
-            sol::stack::push(L, luaopen_socket_core);
+            sol::stack::push(L, iter->second);
         }
         else
         {
-            sol::stack::push(L, "This is not the module you're looking for!");
+            sol::stack::push(L, moon::format("Can not find module %s!",std::string(path).data()));
         }
         return 1;
     }
@@ -173,6 +173,7 @@ int main(int argc, char* argv[])
 
             std::string conf = "config.json";//default config
             int32_t sid = 1;//default start server 1
+            bool enable_console = true;
             std::string service_file;
 
             for (int i = 1; i < argc; ++i)
@@ -206,6 +207,10 @@ int main(int argc, char* argv[])
                         usage();
                         return -1;
                     }
+                }
+                else if (v == "--hide"sv)
+                {
+                    enable_console = false;
                 }
                 else
                 {
@@ -295,9 +300,10 @@ int main(int argc, char* argv[])
 #else
             router_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
-
-            server_->init(static_cast<uint8_t>(c->thread), c->log);
             server_->logger()->set_level(c->loglevel);
+            server_->logger()->set_enable_console(enable_console);
+
+            server_->init(c->thread, c->log);
 
             sol::state lua;
             lua.open_libraries();
