@@ -9,10 +9,62 @@
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
-#include "lua_buffer.hpp"
 #include "services/lua_service.h"
 
 using namespace moon;
+
+template <typename Handler>
+inline static bool sol_lua_check(sol::types<buffer_ptr_t>, lua_State* L, int index, Handler&& handler, sol::stack::record& tracking) {
+    sol::type t = sol::type_of(L, index);
+    switch (t)
+    {
+    case sol::type::lua_nil:
+    case sol::type::lightuserdata:
+    case sol::type::string:
+        tracking.use(1);
+        return true;
+    default:
+        handler(L, index, sol::type::lightuserdata, t, "expected nil or a  lightuserdata(buffer*) or a string");
+        return false;
+    }
+}
+
+inline static buffer_ptr_t sol_lua_get(sol::types<buffer_ptr_t>, lua_State* L, int index, sol::stack::record& tracking) {
+    tracking.use(1);
+    sol::type t = sol::type_of(L, index);
+    switch (t)
+    {
+    case sol::type::lua_nil:
+    {
+        return nullptr;
+    }
+    case sol::type::string:
+    {
+        std::size_t len;
+        auto str = lua_tolstring(L, index, &len);
+        auto buf = moon::message::create_buffer(len);
+        buf->write_back(str, len);
+        return buf;
+    }
+    case sol::type::lightuserdata:
+    {
+        moon::buffer* p = static_cast<moon::buffer*>(lua_touserdata(L, index));
+        return moon::buffer_ptr_t(p);
+    }
+    default:
+        break;
+    }
+    luaL_error(L, "expected nil or a  lightuserdata(buffer*) or a string");
+    return nullptr;
+}
+
+inline static int sol_lua_push(sol::types<buffer_ptr_t>, lua_State* L, const moon::buffer_ptr_t& buf) {
+    if (nullptr == buf)
+    {
+        return sol::stack::push(L, sol::lua_nil);
+    }
+    return sol::stack::push(L, (const char*)buf->data(), buf->size());
+}
 
 lua_bind::lua_bind(sol::table& l)
     :lua(l)
@@ -256,129 +308,6 @@ const lua_bind & lua_bind::bind_message() const
         , "buffer", tobuffer
         , "cstr", cstr
         );
-
-    sol::table tb = lua.create();
-    tb.set_function("unsafe_new", [](lua_State* L)->int {
-        size_t capacity = sol::stack::get<size_t>(L, 1);
-        buffer* buf = new buffer(capacity, BUFFER_HEAD_RESERVED);
-        lua_pushlightuserdata(L, buf);
-        return 1;
-    });
-
-    tb.set_function("delete", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        delete buf;
-        return 0;
-    });
-
-    tb.set_function("clear", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        buf->clear();
-        return 0;
-    });
-
-    tb.set_function("size", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        lua_pushinteger(L, buf->size());
-        return 1;
-    });
-
-    tb.set_function("substr", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
-        auto count = static_cast<size_t>(luaL_checkinteger(L, 3));
-
-        string_view_t sw(buf->data(), buf->size());
-        string_view_t sub = sw.substr(pos, count);
-        lua_pushlstring(L, sub.data(), sub.size());
-        return 1;
-    });
-
-    tb.set_function("str", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        lua_pushlstring(L, buf->data(), buf->size());
-        return 1;
-    });
-
-    tb.set_function("cstr", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) {return luaL_error(L, "null pointer");}
-        int offset = 0;
-        if (lua_type(L, 2) == LUA_TNUMBER)
-        {
-            offset = static_cast<int>(lua_tointeger(L, 2));
-            if (offset > static_cast<int>(buf->size()))
-            {
-                return luaL_error(L, "out of range");
-            }
-        }
-        lua_pushlightuserdata(L, (void*)(buf->data()+ offset));
-        lua_pushinteger(L, buf->size()- offset);
-        return 2;
-    });
-
-    tb.set_function("read", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        auto count = static_cast<int>(luaL_checkinteger(L, 2));
-        if (count > static_cast<int>(buf->size()))
-        {
-            lua_pushboolean(L, 0);
-            lua_pushstring(L, "out off index");
-            return 2;
-        }
-
-        lua_pushlstring(L, buf->data(), count);
-        buf->seek(count);
-        return 1;
-    });
-
-    tb.set_function("write_front", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        size_t len = 0;
-        auto data = luaL_checklstring(L, 2, &len);
-        buf->write_front(data, len);
-        return 0;
-    });
-
-    tb.set_function("write_back", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        size_t len = 0;
-        auto data = luaL_checklstring(L, 2, &len);
-        buf->write_back(data, len);
-        return 0;
-    });
-
-    tb.set_function("seek", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        auto pos = static_cast<int>(luaL_checkinteger(L, 2));
-        auto origin = buffer::seek_origin::Current;
-        if (lua_type(L, 3) == LUA_TNUMBER)
-        {
-            origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
-        }
-        buf->seek(pos, origin);
-        return 0;
-    });
-
-    tb.set_function("commit", [](lua_State* L)->int {
-        auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-        if (buf == NULL) { return luaL_error(L, "null pointer"); }
-        auto n = static_cast<int64_t>(luaL_checkinteger(L, 2));
-        if (0 == n) { return luaL_error(L, "Invalid buffer commit param"); }
-        buf->commit(n);
-        return 0;
-    });
-
-    registerlib(lua.lua_state(), "buffer", tb);
     return *this;
 }
 
