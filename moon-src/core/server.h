@@ -40,10 +40,10 @@ namespace moon
         void wait();
     private:
         volatile bool signalstop_ = false;
-        std::atomic<state> state_;
-        int64_t now_;
+        std::atomic<state> state_ = state::unknown;
+        int64_t now_ = 0;
         std::vector<std::unique_ptr<worker>> workers_;
-        log default_log_;
+        log logger_;
         router router_;
         datetime datetime_;
     };

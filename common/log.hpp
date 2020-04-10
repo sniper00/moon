@@ -91,6 +91,8 @@ namespace moon
                 return;
             }
 
+            console = enable_console_ ? console : enable_console_;
+
             auto buf = buffer_cache_.create(s.size());
             auto b = std::addressof(*buf->begin());
             *(b++) = static_cast<char>(console);
@@ -111,6 +113,11 @@ namespace moon
 		{ 
 			return level_; 
 		}
+
+        void set_enable_console(bool v)
+        {
+            enable_console_ = v;
+        }
 
         void set_level(string_view_t s)
         {
@@ -252,6 +259,7 @@ namespace moon
             }
         }
 
+        bool enable_console_ = true;
         std::atomic<state> state_;
         std::atomic<LogLevel> level_;
         std::unique_ptr<std::ofstream > ofs_;
