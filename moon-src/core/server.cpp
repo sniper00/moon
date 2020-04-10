@@ -4,11 +4,7 @@
 namespace moon
 {
     server::server()
-        :state_(state::unknown)
-        , now_(0)
-        , workers_()
-        , default_log_()
-        , router_(workers_, &default_log_)
+        :router_(workers_, &logger_)
     {
     }
 
@@ -43,7 +39,7 @@ namespace moon
 
     void server::run(size_t count)
     {
-        //wait all bootstrap service created
+        //wait all bootstrap services created
         while (!signalstop_ && service_count() < count)
         {
             thread_sleep(10);
@@ -51,12 +47,13 @@ namespace moon
 
         if (signalstop_)
         {
+            wait();
             return;
         }
 
         state_.store(state::ready, std::memory_order_release);
 
-        // then call services's start callback
+        //call services's start callback
         for (auto& w : workers_)
         {
             w->start();
@@ -129,7 +126,7 @@ namespace moon
 
     log* server::logger()
     {
-        return &default_log_;
+        return &logger_;
     }
 
     router* server::get_router()
@@ -144,7 +141,7 @@ namespace moon
             (*iter)->wait();
         }
         CONSOLE_INFO(logger(), "STOP");
-        default_log_.wait();
+        logger_.wait();
         state_.store(state::exited, std::memory_order_release);
     }
 
