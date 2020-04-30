@@ -143,8 +143,6 @@ static int lreceive(lua_State *L)
     int top = lua_gettop(L);
     auto& client = box->client;
 
-    asio::error_code ec;
-
     size_t count = 0;
     size_t seek = 0;
 
@@ -170,6 +168,7 @@ static int lreceive(lua_State *L)
         luaL_argcheck(L, readn > 0, 2, "invalid receive pattern");
     }
 
+    asio::error_code ec;
     while (true)
     {
         const char* data = reinterpret_cast<const char*>(client->buf.data().data());
@@ -313,8 +312,7 @@ static int ltcp(lua_State *L)
         lua_setfield(L, -2, "__gc");//mt[__gc] = lrelease
     }
     lua_setmetatable(L, -2);// set userdata metatable
-    lua_pushlightuserdata(L, box);
-    return 2;
+    return 1;
 }
 
 extern "C"

@@ -40,7 +40,7 @@ private:
 
 extern "C"
 {
-    int luaopen_rapidjson(lua_State* L);
+    int luaopen_json(lua_State* L);
     int custom_package_loader(lua_State* L);
     void open_custom_libraries(lua_State* L);
 }

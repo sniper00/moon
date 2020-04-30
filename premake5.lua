@@ -47,21 +47,6 @@ project "lua53"
     -- filter{"configurations:*"}
     --     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
-project "rapidjson"
-    location "projects/build/rapidjson"
-    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
-    targetdir "projects/bin/%{cfg.buildcfg}"
-
-    kind "StaticLib"
-    language "C++"
-    includedirs {"./third","./third/lua53","./third/rapidjsonlua"}
-    files { "./third/rapidjsonlua/**.hpp", "./third/rapidjsonlua/**.cpp"}
-    filter {"system:linux or macosx"}
-        buildoptions {"-msse4.2"}
-    filter { "system:windows" }
-        defines {"WIN32"}
-        disablewarnings { "4244","4100","4127","4389" }
-
 project "moon"
     location "projects/build/moon"
     objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
@@ -73,11 +58,11 @@ project "moon"
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
         "lua53",
-        "rapidjson",
         "aoi",
         "crypt",
-        "protobuf",
+        "pb",
         "sharetable",
+        "clonefunc"
     }
     defines {
         "ASIO_STANDALONE" ,
@@ -163,11 +148,7 @@ end
 ]]
 
 -------------------------protobuf--------------------
-add_lua_module("./third/protobuf", "protobuf",nil,
-function()
-    defines {"bool=int","false=0","true=!false"}
-    disablewarnings { "4018","4244","4267","4244","4221","4204","4100","4245","4146" }
-end)
+add_lua_module("./third/pb", "pb")
 
 add_lua_module("./third/lcrypt", "crypt",nil,function ()
     disablewarnings { "4267","4456","4459","4244" }
@@ -180,5 +161,8 @@ end)
 
 -------------------------sharetable--------------------
 add_lua_module("./third/sharetable", "sharetable")
+
+-------------------------clonefunc: for hotfix--------------------
+add_lua_module("./third/lclonefunc", "clonefunc")
 
 --include("./lualib-src/mysql/premake5.lua")
