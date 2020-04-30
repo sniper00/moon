@@ -55,28 +55,39 @@ QQ交流群: 543833695
 3. 获取最新的premake5。[下载链接](https://premake.github.io/download.html)。选择自己的平台，把下载好的`premake`可执行文件复制到源码中```premake5.lua```同级目录。
 
 4. 生成工程文件并编译
-- windows
-```shell
-    premake5.exe vs2017
+
+- 直接编译
+```
+    build.bat # windows
+    build.sh # linux
 ```
 
-- linux
-```shell
-    # 默认采用gcc编译，中括号表示可选项: clang
-    ./premake5 gmake [--cc=clang]
-    # 默认debug版本，中括号表示可选项: release版本
-    make clean [config=release]
-    make [config=release]
-```
+- 详细编译步骤
 
-- macosx
-```shell
-    # 只支持使用clang编译
-    ./premake5 gmake --cc=clang
-    # 默认debug版本，中括号表示可选项: release版本
-    make clean [config=release]
-    make [config=release]
-```
+    - windows
+    ```shell
+        # vs2017 or vs2019
+        premake5.exe vs2017
+        # 打开visual studio编译
+    ```
+
+    - linux
+    ```shell
+        # 默认采用gcc编译，中括号表示可选项: clang
+        ./premake5 gmake [--cc=clang]
+        # 默认debug版本，中括号表示可选项: release版本
+        make clean [config=release]
+        make [config=release]
+    ```
+
+    - macosx
+    ```shell
+        # 只支持使用clang编译
+        ./premake5 gmake --cc=clang
+        # 默认debug版本，中括号表示可选项: release版本
+        make clean [config=release]
+        make [config=release]
+    ```
 
 5. 运行
 ```shell
