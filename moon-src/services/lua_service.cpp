@@ -76,12 +76,11 @@ bool lua_service::init(std::string_view config)
             .bind_socket(this)
             .bind_datetime(this);
 
-        lua_bind::registerlib(lua_.lua_state(), "codecache", luaopen_cache);
         lua_bind::registerlib(lua_.lua_state(), "mooncore", module);
 
         open_custom_libraries(lua_.lua_state());
 
-        sol::object json = lua_.require("json", luaopen_rapidjson, false);
+        sol::object json = lua_.require("json", luaopen_json, false);
 
         {
             auto cpaths = conf.get_value<std::string_view>("cpath");
@@ -122,8 +121,6 @@ bool lua_service::init(std::string_view config)
         {
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
-
-        profile(conf.get_value<bool>("profile"));
 
         logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%08X]", worker_->id(), name().data(), id()), id());
         ok_ = true;

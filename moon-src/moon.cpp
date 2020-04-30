@@ -52,7 +52,7 @@ static void signal_handler(int signal)
         return;
     }
 
-    const char* msg = nullptr;
+    std::string_view msg = nullptr;
     switch (signal)
     {
     case SIGTERM:
@@ -66,7 +66,7 @@ static void signal_handler(int signal)
         break;
     }
     svr->stop();
-    write(1, msg, strlen(msg));
+    [[maybe_unused]]auto n = write(STDERR_FILENO, msg.data(), msg.size());
 }
 #endif
 
@@ -121,28 +121,31 @@ extern "C"
     void open_custom_libraries(lua_State* L)
     {
         //core
+        REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
         REGISTER_CUSTOM_LIBRARY("fs", luaopen_fs);
         REGISTER_CUSTOM_LIBRARY("http", luaopen_http);
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
-        REGISTER_CUSTOM_LIBRARY("json", luaopen_rapidjson);
+        REGISTER_CUSTOM_LIBRARY("json", luaopen_json);
         REGISTER_CUSTOM_LIBRARY("buffer", luaopen_buffer);
         //custom
+        REGISTER_CUSTOM_LIBRARY("pb", luaopen_pb);
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);
         REGISTER_CUSTOM_LIBRARY("aoi", luaopen_aoi);
+        REGISTER_CUSTOM_LIBRARY("clonefunc", luaopen_clonefunc);
     }
 
-    int luaopen_protobuf_c(lua_State* L);
     int luaopen_sharetable_core(lua_State* L);
     int luaopen_socket_core(lua_State* L);
+    int luaopen_pb_unsafe(lua_State* L);
 
     //if register lua c module, name like a.b.c, use this
     int custom_package_loader(lua_State* L)
     {
         typedef std::unordered_map<std::string_view, lua_CFunction> pkg_map;
         static const pkg_map pkgs{
-            { "protobuf.c", luaopen_protobuf_c},
             { "sharetable.core", luaopen_sharetable_core },
             { "socket.core", luaopen_socket_core },
+            { "pb.unsafe", luaopen_pb_unsafe }
         };
 
         std::string_view path = sol::stack::get<std::string_view>(L, 1);
@@ -234,22 +237,17 @@ int main(int argc, char* argv[])
 
             if (!service_file.empty())
             {
-                auto filepath = directory::find_file(directory::module_path().string(), "moon.lua");
-                if (filepath.empty())
-                {
-                    filepath = directory::find_file(directory::working_directory.string(), "moon.lua");
-                }
-                std::string clibdir;
-                std::string lualibdir;
-                if (!filepath.empty())
-                {
-                    clibdir = fs::path(filepath).parent_path().append("clib").string();
-                    moon::replace(clibdir, "\\", "/");
-                    lualibdir = fs::path(filepath).parent_path().string();
-                    moon::replace(lualibdir, "\\", "/");
-                }
+                std::string searchdir = directory::module_path().string();
+                searchdir += ";";
+                searchdir += directory::working_directory.string();
 
+                auto lualibdir = directory::find(searchdir, "moon.lua");
                 MOON_CHECK(!lualibdir.empty(), "can not found moon 'lualib' path.");
+                lualibdir = fs::path(lualibdir).parent_path().string();
+                moon::replace(lualibdir, "\\", "/");
+
+                auto clibdir = directory::find(searchdir, "clib");
+                moon::replace(clibdir, "\\", "/");
 
                 std::string_view fmt = R"(
                         local json = require("json")
@@ -260,18 +258,22 @@ int main(int argc, char* argv[])
                         local cpath = "%s"..get_env("LUA_CPATH_EXT")
                         set_env("PATH", path)
                         set_env("CPATH", cpath)
-                        new_service("lua", json.encode({name= "test",file = "%s"}), true, 0, 0 ,0 )
+                        new_service("lua", json.encode({name= "%s",file = "%s"}), true, 0, 0 ,0 )
                         return 1;
                     )";
 
                 smgr.parse(R"([{"sid":1,"name":"test_#sid","bootstrap":"@"}])", sid);
 
-                bootstrap = moon::format(fmt.data(),
-                    lualibdir.data(), clibdir.data(),
-                    fs::path(service_file).filename().string().data());
+                bootstrap = moon::format(
+                    fmt.data(),
+                    lualibdir.data(),
+                    clibdir.data(),
+                    fs::path(service_file).stem().string().data(),
+                    fs::path(service_file).filename().string().data()
+                    );
 
                 printf("use clib search path: %s\n", clibdir.data());
-                printf("use lualib search path: %s\n", clibdir.data());
+                printf("use lualib search path: %s\n", lualibdir.data());
 
                 fs::current_path(fs::absolute(fs::path(service_file)).parent_path());
                 directory::working_directory = fs::current_path();
@@ -279,7 +281,7 @@ int main(int argc, char* argv[])
             else
             {
                 MOON_CHECK(directory::exists(conf)
-                    , moon::format("can not found default config file: '%s'.", conf.data()).data());
+                    , moon::format("can not found config file: '%s'.", conf.data()).data());
                 MOON_CHECK(smgr.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
                 fs::current_path(fs::absolute(fs::path(conf)).parent_path());
                 directory::working_directory = fs::current_path();

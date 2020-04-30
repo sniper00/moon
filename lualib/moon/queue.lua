@@ -24,11 +24,12 @@ function M:run(fn, err_fn)
         moon.async(function()
             self.thread = running()
             while #self.q >0 do
-                local fn_ = tbremove(self.q,1)
+                local fn_ = tbremove(self.q, 1)
                 local ok, errmsg = xpcall(fn_, debug.traceback)
+                --print(ok,errmsg,cc)
                 if ok == false  then
                     if err_fn then
-                     err_fn(errmsg)
+                        err_fn(errmsg)
                     else
                         moon.error(errmsg)
                     end

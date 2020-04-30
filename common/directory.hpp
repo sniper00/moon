@@ -1,5 +1,6 @@
 #pragma once
 #include "platform_define.hpp"
+#include "common/string.hpp"
 
 #if defined(__GNUC__)
 #include <experimental/filesystem>
@@ -98,21 +99,27 @@ namespace moon
             return !ec;
         }
 
-        static std::string find_file(const std::string& path, const std::string& filename, int depth = 10)
+        static std::string find(const std::string& path, const std::string& filename, int depth = 10)
         {
             std::string result;
-            traverse_folder(path, depth, [&result, &filename](const fs::path& p, bool isdir)
+            std::vector<std::string> searchdir = moon::split<std::string>(path, ";");
+            for (const auto& v : searchdir)
             {
-                if (!isdir)
-                {
-                    if (p.filename().string() == filename)
+                traverse_folder(v, depth, [&result, &filename](const fs::path& p, bool)
                     {
-                        result = fs::absolute(p).string();
-                        return false;
-                    }
+                        if (p.filename().string() == filename)
+                        {
+                            result = fs::absolute(p).string();
+                            return false;
+                        }
+                        return true;
+                    });
+
+                if (!result.empty())
+                {
+                    return result;
                 }
-                return true;
-            });
+            }
             return result;
         }
     };
