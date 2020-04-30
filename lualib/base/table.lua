@@ -44,16 +44,18 @@ function table.fastremove(object, fn)
 	end
 
 	if n then
+		local v
 		if #object == 1 then
-			table.remove(object)
+			v = table.remove(object)
 		else
 			if n == #object then
-				table.remove(object, n)
+				v = table.remove(object, n)
 			else
+				v = object[n]
 				object[n] = table.remove(object)
 			end
 		end
-		return true
+		return true, v
 	end
 
 	return false

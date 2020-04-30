@@ -27,8 +27,8 @@ namespace moon
         //register commands
         commands_.try_emplace("stat", [this](const std::vector<std::string>& params) {
             (void)params;
-            auto response = moon::format(R"({"work_time":%lld,"socket_num":%zu})", cpu_time_, socket_->socket_num());
-            cpu_time_ = 0;
+            auto response = moon::format(R"({"work_time":%lld,"socket_num":%zu})", cpu_cost_, socket_->socket_num());
+            cpu_cost_ = 0;
             return response;
         });
 
@@ -263,21 +263,22 @@ namespace moon
 
     void worker::on_timer(timer_t timerid, uint32_t serviceid, bool last)
     {
-        int64_t start_time = moon::time::microsecond();
         if (auto s = find_service(serviceid); nullptr != s)
         {
+            int64_t start_time = moon::time::microsecond();
             s->on_timer(timerid, last);
+            int64_t cost_time = moon::time::microsecond() - start_time;
+            s->add_cpu_cost(cost_time);
+            cpu_cost_ += cost_time;
+            if (cost_time > 100000)
+            {
+                CONSOLE_WARN(router_->logger(),
+                    "worker %u on timer cost %" PRId64 "us, owner %08X timerid %u", id(), cost_time, serviceid, timerid);
+            }
         }
         else
         {
             timer_.remove(timerid);
-        }
-        int64_t cost_time = moon::time::microsecond() - start_time;
-        cpu_time_ += cost_time;
-        if (cost_time > 100000)
-        {
-            CONSOLE_WARN(router_->logger(),
-                "worker %u on timer cost %" PRId64 "us, owner %08X timerid %u", id(), cost_time, serviceid, timerid);
         }
     }
 
@@ -415,7 +416,8 @@ namespace moon
         int64_t start_time = moon::time::microsecond();
         ser->handle_message(std::forward<message_ptr_t>(msg));
         int64_t cost_time = moon::time::microsecond() - start_time;
-        cpu_time_ += cost_time;
+        ser->add_cpu_cost(cost_time);
+        cpu_cost_ += cost_time;
         if (cost_time > 100000)
         {
             CONSOLE_WARN(router_->logger(), 

@@ -375,6 +375,7 @@ namespace moon
         void clear() noexcept
         {
             readpos_ = writepos_ = headreserved_;
+            if (heap_data_) heap_data_.reset(nullptr);
             flag_ = 0;
         }
 
