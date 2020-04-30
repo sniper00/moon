@@ -61,7 +61,8 @@ project "moon"
         "aoi",
         "crypt",
         "pb",
-        "sharetable"
+        "sharetable",
+        "clonefunc"
     }
     defines {
         "ASIO_STANDALONE" ,
@@ -160,5 +161,8 @@ end)
 
 -------------------------sharetable--------------------
 add_lua_module("./third/sharetable", "sharetable")
+
+-------------------------clonefunc: for hotfix--------------------
+add_lua_module("./third/lclonefunc", "clonefunc")
 
 --include("./lualib-src/mysql/premake5.lua")
