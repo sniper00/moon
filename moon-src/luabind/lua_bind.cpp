@@ -54,7 +54,6 @@ inline static buffer_ptr_t sol_lua_get(sol::types<buffer_ptr_t>, lua_State* L, i
     default:
         break;
     }
-    luaL_error(L, "expected nil or a  lightuserdata(buffer*) or a string");
     return nullptr;
 }
 
@@ -118,48 +117,48 @@ static int lua_string_hex(lua_State* L)
 }
 
 static int my_lua_print(lua_State *L) {
-    lua_Debug ar;
-    std::string lineinfo;
-    if (lua_getstack(L, 1, &ar))
-    {
-        if (lua_getinfo(L, "Sl", &ar))
-        {
-            lineinfo.append(ar.source+1);
-            lineinfo.append(":");
-            lineinfo.append(std::to_string(ar.currentline));
-        }
-    }
-
     moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
     auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
     auto lv = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(3));
     int n = lua_gettop(L);  /* number of arguments */
     int i;
     lua_getglobal(L, "tostring");
-    buffer buf;
-    for (i = 1; i <= n; i++) {
-        const char *s;
-        size_t l;
-        lua_pushvalue(L, -1);  /* function to be called */
-        lua_pushvalue(L, i);   /* value to print */
-        lua_call(L, 1, 1);
-        s = lua_tolstring(L, -1, &l);  /* get result */
-        if (s == NULL)
-            return luaL_error(L, "'tostring' must return a string to 'print'");
-        if (i > 1) buf.write_back("\t",1);
-        buf.write_back(s, l);
-        lua_pop(L, 1);  /* pop result */
-    }
-    lua_pop(L, 1);  /* pop tostring */
-
-    if (!lineinfo.empty())
     {
-        buf.write_back("\t(", 2);
-        buf.write_back(lineinfo.data(), lineinfo.size());
-        buf.write_back(")", 1);
+        buffer buf;
+        for (i = 1; i <= n; i++) {
+            const char* s;
+            size_t l;
+            lua_pushvalue(L, -1);  /* function to be called */
+            lua_pushvalue(L, i);   /* value to print */
+            lua_call(L, 1, 1);
+            s = lua_tolstring(L, -1, &l);  /* get result */
+            if (s == NULL)
+                goto PRINT_ERROR;
+            if (i > 1) buf.write_back("\t", 1);
+            buf.write_back(s, l);
+            lua_pop(L, 1);  /* pop result */
+        }
+        lua_pop(L, 1);  /* pop tostring */
+
+        lua_Debug ar;
+        if (lua_getstack(L, 1, &ar))
+        {
+            if (lua_getinfo(L, "Sl", &ar))
+            {
+                buf.write_back("\t(", 2);
+                if (ar.source != nullptr && ar.source[0] != '\0')
+                    buf.write_back(ar.source + 1, std::strlen(ar.source) - 1);
+                buf.write_back(":", 1);
+                auto line = std::to_string(ar.currentline);
+                buf.write_back(line.data(), line.size());
+                buf.write_back(")", 1);
+            }
+        }
+        logger->logstring(true, lv, string_view_t{ buf.data(), buf.size() }, serviceid);
+        return 0;
     }
-    logger->logstring(true, lv, string_view_t{ buf.data(), buf.size() }, serviceid);
-    return 0;
+PRINT_ERROR:
+    return luaL_error(L, "'tostring' must return a string to 'print'");
 }
 
 static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t serviceid)
@@ -322,7 +321,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("set_cb", &lua_service::set_callback, s);
-    lua.set_function("cpu", &lua_service::cpu_time, s);
+    lua.set_function("cpu", &lua_service::cpu_cost, s);
     lua.set_function("make_prefab", &worker::make_prefab, worker_);
     lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t sessionid, uint8_t type) {
         worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
@@ -365,8 +364,28 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_chunked", &moon::socket::set_enable_chunked, &sock);
     tb.set_function("set_send_queue_limit", &moon::socket::set_send_queue_limit, &sock);
-	tb.set_function("getaddress", [&sock](uint32_t fd) {
-		return sock.getaddress(fd);
+    tb.set_function("getaddress", &moon::socket::getaddress, &sock);
+
+	tb.set_function("write2", [&sock](uint32_t fd, moon::buffer_ptr_t data) {
+		if (!data->has_flag(buffer_flag::pack_size))
+		{
+			int len = (int)data->size();
+			moon::host2net(len);
+			data->write_front(&len, 1);
+			data->set_flag(buffer_flag::pack_size);
+		}
+		sock.write(fd, std::move(data));
+	});
+
+	tb.set_function("write_message2", [&sock](uint32_t fd, message* m) {
+		if (!m->get_buffer()->has_flag(buffer_flag::pack_size))
+		{
+			int len = (int)m->size();
+			moon::host2net(len);
+			m->get_buffer()->write_front(&len, 1);
+			m->get_buffer()->set_flag(buffer_flag::pack_size);
+		}
+		sock.write_message(fd, m);
 	});
 
     registerlib(lua.lua_state(), "asio", tb);
