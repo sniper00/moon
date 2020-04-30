@@ -109,7 +109,7 @@ namespace moon
         std::atomic_flag update_state_ = ATOMIC_FLAG_INIT;
         std::atomic_uint32_t count_ = 0;
         uint32_t uuid_ = 0;
-        int64_t cpu_time_ = 0;
+        int64_t cpu_cost_ = 0;
         uint32_t workerid_;
         router*  router_;
         server*  server_;
