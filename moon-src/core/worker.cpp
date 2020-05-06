@@ -52,6 +52,7 @@ namespace moon
             state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(router_->logger(), "WORKER-%u START", workerid_);
             io_ctx_.run();
+            services_.clear();
             CONSOLE_INFO(router_->logger(), "WORKER-%u STOP", workerid_);
         });
 
