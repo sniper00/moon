@@ -9,30 +9,27 @@
 
 namespace moon
 {
-    router::router(std::vector<std::unique_ptr<worker>>& workers, log* logger)
-        :next_workerid_(0)
-        , workers_(workers)
-        , logger_(logger)
-        , server_(nullptr)
+    void router::init(server* svr)
     {
+        server_ = svr;
+        logger_ = svr->logger();
     }
 
     void router::new_service(std::string service_type
-        ,std::string config
+        , std::string config
         , bool unique
         , int32_t workerid
         , uint32_t creatorid
         , int32_t sessionid)
     {
-        worker* w;
-        if (workerid_valid(workerid))
+        worker* w = server_->get_worker(workerid);
+        if (nullptr != w)
         {
-            w = get_worker(workerid);
             w->shared(false);
         }
         else
         {
-            w = next_worker();
+            w = server_->next_worker();
         }
         w->add_service(std::move(service_type), std::move(config), unique, creatorid, sessionid);
     }
@@ -40,9 +37,10 @@ namespace moon
     void router::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid)
     {
         auto workerid = worker_id(serviceid);
-        if (workerid_valid(workerid))
+        worker* w = server_->get_worker(workerid);
+        if (nullptr != w)
         {
-            get_worker(workerid)->remove_service(serviceid, sender, sessionid);
+            w->remove_service(serviceid, sender, sessionid);
         }
         else
         {
@@ -63,16 +61,17 @@ namespace moon
 
         switch (moon::chash_string(params[0]))
         {
-            case "worker"_csh:
+        case "worker"_csh:
+        {
+            int32_t workerid = moon::string_convert<int32_t>(params[1]);
+            worker* w = server_->get_worker(workerid);
+            if (nullptr != w)
             {
-                int32_t workerid = moon::string_convert<int32_t>(params[1]);
-                if (workerid_valid(workerid))
-                {
-                    get_worker(workerid)->runcmd(sender, cmd, sessionid);
-                    return;
-                }
-                break;
+                w->runcmd(sender, cmd, sessionid);
+                return;
             }
+            break;
+        }
         }
 
         auto content = moon::format("invalid cmd: %s.", cmd.data());
@@ -84,9 +83,10 @@ namespace moon
         MOON_CHECK(m->type() != PTYPE_UNKNOWN, "invalid message type.");
         MOON_CHECK(m->receiver() != 0, "message receiver serviceid is 0.");
         int32_t id = worker_id(m->receiver());
-        MOON_CHECK(workerid_valid(id)
-            ,moon::format("invalid message receiver serviceid %X",m->receiver()).data());
-        get_worker(id)->send(std::forward<message_ptr_t>(m));
+        worker* w = server_->get_worker(id);
+        MOON_CHECK(nullptr!= w
+            , moon::format("invalid message receiver serviceid %X", m->receiver()).data());
+        w->send(std::forward<message_ptr_t>(m));
     }
 
     void router::send(uint32_t sender
@@ -111,7 +111,7 @@ namespace moon
 
     void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type, bool only_unique)
     {
-        for (auto& w : workers_)
+        for (auto& w : server_->get_workers())
         {
             auto m = message::create(buf);
             m->set_broadcast(true);
@@ -124,7 +124,7 @@ namespace moon
         }
     }
 
-    bool router::register_service(const std::string & type, register_func f)
+    bool router::register_service(const std::string& type, register_func f)
     {
         auto ret = regservices_.emplace(type, f);
         MOON_ASSERT(ret.second
@@ -132,7 +132,7 @@ namespace moon
         return ret.second;
     }
 
-    service_ptr_t router::make_service(const std::string & type)
+    service_ptr_t router::make_service(const std::string& type)
     {
         auto iter = regservices_.find(type);
         if (iter != regservices_.end())
@@ -142,7 +142,7 @@ namespace moon
         return nullptr;
     }
 
-    std::string router::get_env(const std::string & name) const
+    std::string router::get_env(const std::string& name) const
     {
         std::string v;
         if (env_.try_get_value(name, v))
@@ -152,7 +152,7 @@ namespace moon
         return std::string{};
     }
 
-    void router::set_env(std::string name,  std::string value)
+    void router::set_env(std::string name, std::string value)
     {
         env_.set(std::move(name), std::move(value));
     }
@@ -182,7 +182,7 @@ namespace moon
         return unique_services_.size();
     }
 
-    log * router::logger() const
+    log* router::logger() const
     {
         return logger_;
     }
@@ -195,7 +195,7 @@ namespace moon
     {
         if (to == 0 || sessionid == 0)
         {
-            if (server_->get_state()== state::ready && mtype == PTYPE_ERROR && !content.empty())
+            if (server_->get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
                 CONSOLE_DEBUG(logger()
                     , "server::make_response %s:%s"
@@ -212,30 +212,5 @@ namespace moon
         m->set_sessionid(sessionid);
         m->write_data(content);
         send_message(std::move(m));
-    }
-
-    worker* router::next_worker()
-    {
-        uint32_t  n = next_workerid_.fetch_add(1);
-        std::vector<uint32_t> free_worker;
-        for (auto& w : workers_)
-        {
-            if (w->shared())
-            {
-                free_worker.push_back(w->id()-1U);
-            }
-        }
-        if (!free_worker.empty())
-        {
-            auto wkid = free_worker[n%free_worker.size()];
-            return workers_[wkid].get();
-        }
-        n %= workers_.size();
-        return workers_[n].get();
-    }
-
-    void router::set_server(server * sv)
-    {
-        server_ = sv;
     }
 }
