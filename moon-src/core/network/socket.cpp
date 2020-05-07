@@ -3,6 +3,8 @@
 #include "common/string.hpp"
 #include "common/hash.hpp"
 #include "worker.h"
+#include "server.h"
+#include "router.h"
 
 #include "network/moon_connection.hpp"
 #include "network/stream_connection.hpp"
@@ -62,7 +64,7 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
         return;
     }
 
-    worker* w = router_->get_worker(router_->worker_id(owner));
+    worker* w = router_->get_server()->get_worker(router_->worker_id(owner));
     auto c = w->socket().make_connection(owner, ctx->type);
 
     ctx->acceptor.async_accept(c->socket(), [this, ctx, c, w, sessionid, owner](const asio::error_code& e)

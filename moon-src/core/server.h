@@ -1,15 +1,16 @@
 #pragma once
 #include "config.hpp"
-#include "router.h"
 #include "common/log.hpp"
 #include "common/time.hpp"
+#include "router.h"
+#include "worker.h"
 
 namespace moon
 {
     class  server final
     {
     public:
-        server();
+        server() = default;
 
         ~server();
 
@@ -36,15 +37,22 @@ namespace moon
         uint32_t service_count();
 
         datetime& get_datetime();
+
+        worker* next_worker();
+
+        worker* get_worker(uint32_t workerid) const;
+
+        std::vector<std::unique_ptr<worker>>& get_workers();
     private:
         void wait();
     private:
         volatile bool signalstop_ = false;
         std::atomic<state> state_ = state::unknown;
+        std::atomic<uint32_t> next_ = 0;
         int64_t now_ = 0;
-        std::vector<std::unique_ptr<worker>> workers_;
         log logger_;
         router router_;
+        std::vector<std::unique_ptr<worker>> workers_;
         datetime datetime_;
     };
 };

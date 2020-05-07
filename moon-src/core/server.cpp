@@ -3,11 +3,6 @@
 
 namespace moon
 {
-    server::server()
-        :router_(workers_, &logger_)
-    {
-    }
-
     server::~server()
     {
         stop();
@@ -18,9 +13,9 @@ namespace moon
     {
         worker_num = (worker_num <= 0) ? 1 : worker_num;
 
-        logger()->init(logpath);
+        logger_.init(logpath);
 
-        router_.set_server(this);
+        router_.init(this);
 
         CONSOLE_INFO(logger(), "INIT with %d workers.", worker_num);
 
@@ -172,6 +167,42 @@ namespace moon
     datetime& server::get_datetime()
     {
         return datetime_;
+    }
+
+    worker* server::next_worker()
+    {
+        uint32_t  n = next_.fetch_add(1);
+        std::vector<uint32_t> free_worker;
+        for (auto& w : workers_)
+        {
+            if (w->shared())
+            {
+                free_worker.push_back(w->id() - 1U);
+            }
+        }
+        if (!free_worker.empty())
+        {
+            auto wkid = free_worker[n % free_worker.size()];
+            return workers_[wkid].get();
+        }
+        n %= workers_.size();
+        return workers_[n].get();
+    }
+
+    worker* server::get_worker(uint32_t workerid) const
+    {
+        if ((workerid <= 0 || workerid > static_cast<uint32_t>(workers_.size())))
+        {
+            return nullptr;
+        }
+
+        --workerid;
+        return workers_[workerid].get();
+    }
+
+    std::vector<std::unique_ptr<worker>>& server::get_workers()
+    {
+        return workers_;
     }
 }
 
