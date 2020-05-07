@@ -16,15 +16,15 @@ namespace moon
     class router
     {
     public:
-        friend class server;
-
         using register_func = service_ptr_t(*)();
 
-        router(std::vector<std::unique_ptr<worker>>& workers, log* logger);
+        router() = default;
 
         router(const router&) = delete;
 
         router& operator=(const router&) = delete;
+
+        void init(server* svr);
 
         void new_service(std::string service_type
             , std::string config
@@ -75,27 +75,15 @@ namespace moon
             return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
         }
 
-        worker* get_worker(uint32_t workerid) const
+        server* get_server()
         {
-            --workerid;
-            return workers_[workerid].get();
+            return server_;
         }
     private:
-        void set_server(server* sv);
-
-        bool workerid_valid(uint32_t workerid) const
-        {
-            return (workerid > 0 && workerid <= static_cast<uint32_t>(workers_.size()));
-        }
-
-        worker* next_worker();
-    private:
-        std::atomic<uint32_t> next_workerid_;
-        std::vector<std::unique_ptr<worker>>& workers_;
+        log* logger_ = nullptr;
+        server* server_ = nullptr;
         std::unordered_map<std::string, register_func > regservices_;
         concurrent_map<std::string, std::string, rwlock> env_;
         concurrent_map<std::string, uint32_t, rwlock> unique_services_;
-        log* logger_;
-        server* server_;
     };
 }
