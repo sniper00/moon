@@ -52,17 +52,19 @@ QQ交流群: 543833695
     git clone https://github.com/sniper00/moon.git
 ``` 
 
-3. 获取最新的premake5。[下载链接](https://premake.github.io/download.html)。选择自己的平台，把下载好的`premake`可执行文件复制到源码中```premake5.lua```同级目录。
+- 编译
+    - windows 双击运行 build.bat。**如果失败，参考详细编译步骤**。
+    - linux 运行 build.sh。**如果没有可执行权限请自行添加**:
+        ```
+            chmod +x build.sh
+            chmod +x premake5
+        ```
 
-4. 生成工程文件并编译
+3. 详细编译步骤
 
-- 直接编译
-```
-    build.bat # windows
-    build.sh # linux
-```
+- 获取最新的premake5。[下载链接](https://premake.github.io/download.html)。选择自己的平台，把下载好的`premake`可执行文件复制到源码中```premake5.lua```同级目录。
 
-- 详细编译步骤
+- 生成工程文件并编译
 
     - windows
     ```shell
