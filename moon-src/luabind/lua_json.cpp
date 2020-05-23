@@ -1,5 +1,6 @@
 #include "lua.hpp"
 #include <vector>
+#include <charconv>
 
 // __SSE2__ and __SSE4_2__ are recognized by gcc, clang, and the Intel compiler.
 // We use -march=native with gmake to enable -msse2 and -msse4.2, if supported.
@@ -138,16 +139,33 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
         lua_pushnil(L);
         while (lua_next(L, -2))
         {
-            if (lua_type(L, -2) == LUA_TSTRING)
+            int key_type = lua_type(L, -2);
+            switch (key_type)
+            {
+            case LUA_TSTRING:
             {
                 size_t len = 0;
                 const char* key = lua_tolstring(L, -2, &len);
                 writer->Key(key, static_cast<rapidjson::SizeType>(len));
                 encode_one(L, writer, -1, depth);
+                break;
             }
-            else
+            case LUA_TNUMBER:
             {
-                luaL_error(L, "json encode: object only support string key");
+                lua_Integer key = luaL_checkinteger(L, -2);
+                char tmp[256];
+                auto res = std::to_chars(tmp, tmp + 255, key);
+                if (res.ec != std::errc())
+                {
+                    luaL_error(L, "json encode: int key to_chars failed.");
+                }
+                writer->Key(tmp, static_cast<rapidjson::SizeType>(res.ptr - tmp), true);
+                encode_one(L, writer, -1, depth);
+                break;
+            }
+            default:
+                luaL_error(L, "json encode: object only support string and integer key");
+                break;
             }
             lua_pop(L, 1);
         }
@@ -311,7 +329,7 @@ static int decode(lua_State* L)
         lua_pushnil(L);
         lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
     }
-    return lua_gettop(L)-1;
+    return lua_gettop(L) - 1;
 }
 
 extern "C"
