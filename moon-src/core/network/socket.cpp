@@ -315,7 +315,8 @@ bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t
 
 size_t moon::socket::socket_num()
 {
-    return connections_.size();
+    std::unique_lock lck(lock_);
+    return fd_watcher_.size();
 }
 
 std::string moon::socket::getaddress(uint32_t fd)

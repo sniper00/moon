@@ -84,6 +84,8 @@ namespace moon
         void remove_timer(timer_t id);
     
         moon::socket& socket() { return *socket_; }
+
+        std::string info();
     private:
         void run();
 
@@ -110,6 +112,7 @@ namespace moon
         std::atomic_uint32_t count_ = 0;
         uint32_t uuid_ = 0;
         int64_t cpu_cost_ = 0;
+        std::atomic_int32_t mqsize_ = 0;
         uint32_t workerid_;
         router*  router_;
         server*  server_;
