@@ -213,4 +213,15 @@ namespace moon
         m->write_data(content);
         send_message(std::move(m));
     }
+
+    std::string router::worker_info(uint32_t workerid)
+    {
+        worker* w = server_->get_worker(workerid);
+        if (nullptr == w)
+        {
+            return std::string{};
+        }
+        return w->info();
+    }
 }
+

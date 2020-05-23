@@ -79,6 +79,8 @@ namespace moon
         {
             return server_;
         }
+
+        std::string worker_info(uint32_t workerid);
     private:
         log* logger_ = nullptr;
         server* server_ = nullptr;
