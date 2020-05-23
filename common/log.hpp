@@ -7,6 +7,7 @@
 #include "common/object_pool.hpp"
 #include "common/buffer.hpp"
 #include "common/spinlock.hpp"
+#include "common/string.hpp"
 
 namespace moon
 {
@@ -62,7 +63,8 @@ namespace moon
             state_.store(state::ready, std::memory_order_release);
         }
 
-        void logfmt(bool console, LogLevel level, const char* fmt, ...)
+        template<typename... Args>
+        void logfmt(bool console, LogLevel level, const char* fmt, Args&&... args)
         {
             if (level_ < level)
             {
@@ -72,19 +74,11 @@ namespace moon
             if (nullptr == fmt)
                 return;
 
-            static thread_local char fmtbuf[MAX_LOG_LEN+1];
-            va_list ap;
-            va_start(ap, fmt);
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-            int n = vsnprintf_s(fmtbuf, MAX_LOG_LEN, fmt, ap);
-#else
-            int n = vsnprintf(fmtbuf, MAX_LOG_LEN, fmt, ap);
-#endif
-            va_end(ap);
-            logstring(console, level, moon::string_view_t(fmtbuf, n));
+            std::string str = moon::format(fmt, std::forward<Args>(args)...);
+            logstring(console, level, std::string_view{ str });
         }
 
-        void logstring(bool console, LogLevel level, moon::string_view_t s, uint64_t serviceid = 0)
+        void logstring(bool console, LogLevel level, std::string_view s, uint64_t serviceid = 0)
         {
             if (level_ < level)
             {

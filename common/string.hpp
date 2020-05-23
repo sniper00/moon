@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cctype>
 #include <charconv>
+#include <iostream>
 #include "macro_define.hpp"
 
 namespace moon
@@ -183,18 +184,46 @@ namespace moon
     {
         if (!fmt) return std::string("");
 
-        static constexpr size_t MAX_FMT_LEN = 8192;
-        static thread_local char fmtbuf[MAX_FMT_LEN + 1];
+        size_t fmt_buffer_size = 1024;
+
+        std::string res;
+        res.resize(fmt_buffer_size);
+
         va_list ap;
         va_start(ap, fmt);
-        // win32
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-        int n = vsnprintf_s(fmtbuf, MAX_FMT_LEN, fmt, ap);
-#else
-        int n = vsnprintf(fmtbuf, MAX_FMT_LEN, fmt, ap);
-#endif
+        int len = moon_vsnprintf(res.data(), res.size(), fmt, ap);
         va_end(ap);
-        return std::string(fmtbuf, n);
+        if (len >= 0 && len <= static_cast<int>(res.size()))
+        {
+            res.resize(len);
+            return res;
+        }
+        else
+        {
+            for (;;)
+            {
+                fmt_buffer_size *= 2;
+                res.resize(fmt_buffer_size);
+                va_start(ap, fmt);
+                len = moon_vsnprintf(res.data(), res.size(), fmt, ap);
+                va_end(ap);
+                if (len < 0)
+                {
+                    continue;
+                }
+                else
+                {
+                    res.resize(len);
+                    break;
+                }
+            }
+        }
+
+        if (len < 0) {
+            std::cerr << "vsnprintf error :" << std::endl;
+            return std::string("");
+        }
+        return res;
     }
 
     //return left n char
