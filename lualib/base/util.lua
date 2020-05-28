@@ -54,6 +54,13 @@ local function _dump_value(v)
     return tostring(v)
 end
 
+local function _dump_key(v)
+    if type(v) == "number" then
+        v = "[" .. v .. "]"
+    end
+    return tostring(v)
+end
+
 function print_r(value, desciption, nesting, _print)
     if type(nesting) ~= "number" then nesting = 10 end
     _print = _print or print
@@ -67,19 +74,19 @@ function print_r(value, desciption, nesting, _print)
         _desciption = _desciption or "<var>"
         local spc = ""
         if type(keylen) == "number" then
-            spc = strrep(" ", keylen - strlen(_dump_value(_desciption)))
+            spc = strrep(" ", keylen - strlen(_dump_key(_desciption)))
         end
         if type(_value) ~= "table" then
-            result[#result + 1] = strfmt("%s%s%s = %s", _indent, _dump_value(_desciption),
+            result[#result + 1] = strfmt("%s%s%s = %s,", _indent, _dump_key(_desciption),
             spc, _dump_value(_value))
         elseif lookup[tostring(_value)] then
-            result[#result + 1] = strfmt("%s%s%s = *REF*", _indent, _dump_value(_desciption), spc)
+            result[#result + 1] = strfmt("%s%s%s = '*REF*',", _indent, _dump_key(_desciption), spc)
         else
             lookup[tostring(_value)] = true
             if nest > nesting then
-                result[#result + 1] = strfmt("%s%s = *MAX NESTING*", _indent, _dump_value(_desciption))
+                result[#result + 1] = strfmt("%s%s = '*MAX NESTING*',", _indent, _dump_key(_desciption))
             else
-                result[#result + 1] = strfmt("%s%s = {", _indent, _dump_value(_desciption))
+                result[#result + 1] = strfmt("%s%s = {", _indent, _dump_key(_desciption))
                 local indent2 = _indent .. "    "
                 local keys = {}
                 keylen = 0
@@ -101,11 +108,11 @@ function print_r(value, desciption, nesting, _print)
                 for _, k in ipairs(keys) do
                     _dump(values[k], k, indent2, nest + 1, keylen)
                 end
-                result[#result + 1] = strfmt("%s}", _indent)
+                result[#result + 1] = strfmt("%s},", _indent)
             end
         end
     end
-    _dump(value, desciption, "- ", 1)
+    _dump(value, desciption, " ", 1)
     _print(tbconcat(result,"\n"))
 end
 
