@@ -66,7 +66,7 @@ static void signal_handler(int signal)
         break;
     }
     svr->stop();
-    [[maybe_unused]]auto n = write(STDERR_FILENO, msg.data(), msg.size());
+    [[maybe_unused]] auto n = write(STDERR_FILENO, msg.data(), msg.size());
 }
 #endif
 
@@ -155,7 +155,7 @@ extern "C"
         }
         else
         {
-            sol::stack::push(L, moon::format("Can not find module %s!",std::string(path).data()));
+            sol::stack::push(L, moon::format("Can not find module %s!", std::string(path).data()));
         }
         return 1;
     }
@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
                     clibdir.data(),
                     fs::path(service_file).stem().string().data(),
                     fs::path(service_file).filename().string().data()
-                    );
+                );
 
                 printf("use clib search path: %s\n", clibdir.data());
                 printf("use lualib search path: %s\n", lualibdir.data());

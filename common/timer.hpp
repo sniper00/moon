@@ -6,7 +6,6 @@
 #include <array>
 #include <unordered_map>
 
-
 namespace moon
 {
     using timer_t = uint32_t;
@@ -68,16 +67,16 @@ namespace moon
         {
         public:
             template<typename ...Args>
-            context(int32_t duration, int32_t times, Args&&... args)
-                :duration_(duration), times_(times), policy(std::forward<Args>(args)...) {}
+            context(uint32_t slotcount, int32_t times, Args&&... args)
+                :slotcount_(slotcount), times_(times), policy(std::forward<Args>(args)...) {}
 
-            void duration(int32_t v) noexcept { duration_ = v; }
+            void slotcount(uint32_t v) noexcept { slotcount_ = v; }
 
-            int32_t duration()  const noexcept { return duration_; }
+            uint32_t slotcount()  const noexcept { return slotcount_; }
 
             bool continued() noexcept { return (times_ < 0) || ((--times_) > 0); }
         private:
-            int32_t	duration_;
+            uint32_t	slotcount_;
             int32_t	times_;
         public:
             expire_policy_type policy;
@@ -115,13 +114,14 @@ namespace moon
                 for (size_t i = 0; i < wheels.size(); ++i)
                 {
                     auto& wheel = wheels[i];
+
+                    wheel.tick();
+
                     if (i + 1 == wheels.size())
                     {
                         break;
                     }
                     auto& next_wheel = wheels[i + 1];
-
-                    wheel.tick();
 
                     if (wheel.round())
                     {
@@ -161,16 +161,28 @@ namespace moon
         }
 
         template<typename... Args>
-        timer_t repeat(int32_t duration, int32_t times, Args&&... args)
+        timer_t repeat(int64_t duration, int32_t times, Args&&... args)
         {
             if (duration < PRECISION)
             {
                 duration = PRECISION;
             }
 
+            if ((duration % PRECISION) != 0)
+            {
+                duration += PRECISION;
+            }
+
+            size_t slot_count = duration / PRECISION;
+            if (slot_count > std::numeric_limits<uint32_t>::max())
+            {
+                return 0;
+            }
+
             timer_t id = create_timerid();
-            insert_timer(duration, id);
-            timers_.emplace(id, context{ duration, times, std::forward<Args>(args)... });
+
+            insert_timer(slot_count, id);
+            timers_.emplace(id, context{ static_cast<uint32_t>(slot_count), times, std::forward<Args>(args)... });
             return id;
         }
 
@@ -178,7 +190,7 @@ namespace moon
         {
             if (auto iter = timers_.find(timerid); iter != timers_.end())
             {
-                iter->second.duration(0);
+                iter->second.slotcount(0);
             }
         }
 
@@ -205,14 +217,8 @@ namespace moon
             return uuid_;
         }
 
-        void insert_timer(int32_t duration, timer_t id)
+        void insert_timer(size_t slot_count, timer_t id)
         {
-            if ((duration % PRECISION) != 0)
-            {
-                duration += PRECISION;
-            }
-
-            size_t slot_count = duration / PRECISION;
             slot_count = ((slot_count > 0) ? slot_count : 1);
 
             uint32_t slots = 0;
@@ -250,13 +256,13 @@ namespace moon
                 }
                 else
                 {
-                    auto&ctx = iter->second;
-                    if (ctx.duration() > 0)//not removed
+                    auto& ctx = iter->second;
+                    if (ctx.slotcount() > 0)//not removed
                     {
                         bool continued = ctx.continued();
                         if (continued)
                         {
-                            insert_timer(ctx.duration(), id);
+                            insert_timer(ctx.slotcount(), id);
                         }
                         ctx.policy(id, !continued);
                         if (continued)
