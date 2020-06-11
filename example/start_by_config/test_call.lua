@@ -52,7 +52,7 @@ else
             moon.async(
                 function()
                     local receiverid =
-                    moon.co_new_service(
+                    moon.new_service(
                         "lua",
                         {
                             name = "test_call_receiver",
