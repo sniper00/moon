@@ -187,12 +187,19 @@ local function read_chunked(fd)
     return chunkdata
 end
 
+local traceback = debug.traceback
+
 local function request_handler(fd, request)
     local response = http_response.new()
     local conn_type = request.header["Connection"]
     local handler =  routers[request.path]
     if handler then
-        handler(request, response)
+        local ok,err = xpcall(handler, traceback, request, response)
+        if not ok then
+            response.status_code = 500
+            response:write_header("Content-Type","text/plain")
+            response:write(tostring(err))
+        end
     else
         response.status_code = 404
         response:write_header("Content-Type","text/plain")
