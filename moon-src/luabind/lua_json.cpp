@@ -259,7 +259,25 @@ struct LuaPushHandler {
     }
 
     bool Key(const char* str, rapidjson::SizeType length, bool /*copy*/) const {
-        lua_pushlstring(L, str, length);
+        if (length == 0)
+        {
+            return false;
+        }
+        char c = str[0];
+        if (c == '-' || (c >= '0' && c <= '9'))
+        {
+            int64_t v = 0;
+            auto [p, ec] = std::from_chars(str, str + length, v);
+            if (ec != std::errc())
+            {
+                return false;
+            }
+            lua_pushinteger(L, v);
+        }
+        else
+        {
+            lua_pushlstring(L, str, length);
+        }
         return true;
     }
 
