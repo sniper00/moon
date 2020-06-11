@@ -32,9 +32,10 @@ function core.microsecond()
     -- body
 end
 
----offset[+,-] server time(millsecond)<br>
-function core.time_offset()
-    -- body
+---推进时间 server time(millsecond)
+---@param milliseconds integer
+function core.advtime(milliseconds)
+    ignore_param(milliseconds)
 end
 
 ---Thread sleep millsecond.<br>
