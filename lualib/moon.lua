@@ -137,7 +137,7 @@ function moon.start(callback)
     core.set_cb('s', callback)
 end
 
----注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 服务不会马上退出。
+---注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 否则服务不会退出。
 ---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
 ---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
 ---@param callback fun()
@@ -152,7 +152,7 @@ function moon.destroy(callback)
     core.set_cb('d', callback)
 end
 
----@param msg core.message
+---@param msg message
 ---@param PTYPE string
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
@@ -187,14 +187,11 @@ end
 core.set_cb('m', _default_dispatch)
 
 ---
----向指定服务发送消息,消息内容会根据协议类型进行打包<br>
----param PTYPE:协议类型<br>
----param receiver:接收者服务id<br>
----param header:message header<br>
----param ...:消息内容<br>
----@param PTYPE string
----@param receiver integer
----@param header string
+---向指定服务发送消息,消息内容会根据协议类型进行打包
+---@param PTYPE string @协议类型
+---@param receiver integer @接收者服务id
+---@param header string @message header
+---@param vararg any
 ---@return boolean
 function moon.send(PTYPE, receiver, header, ...)
     local p = protocol[PTYPE]
@@ -206,15 +203,11 @@ function moon.send(PTYPE, receiver, header, ...)
     return true
 end
 
----向指定服务发送消息，消息内容不进行协议打包<br>
----param PTYPE:协议类型<br>
----param receiver:接收者服务id<br>
----param header:message header<br>
----param data 消息内容 string 类型<br>
----@param PTYPE string 协议类型
----@param receiver integer 接收者服务id
----@param header string message header
----@param data string|userdata 消息内容
+---向指定服务发送消息，消息内容不进行协议打包
+---@param PTYPE string @协议类型
+---@param receiver integer @接收者服务id
+---@param header string @Message Header
+---@param data string|userdata @消息内容
 ---@param sessionid integer
 ---@return boolean
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
@@ -234,32 +227,13 @@ function moon.sid()
     return sid_
 end
 
----创建一个新的服务<br>
----param stype 服务类型，根据所注册的服务类型，可选有 'lua'<br>
----param config 服务的启动配置，数据类型table, 可以用来向服务传递初始化配置<br>
----param unique 是否是唯一服务，唯一服务可以用moon.queryservice(name) 查询服务id<br>
----workerid 可选，工作者线程ID,在指定工作者线程创建该服务。默认0,服务将轮询加入工作者
----线程中<br>
----@param stype string
----@param config table
----@param unique boolean
----@param workerid integer
----@return boolean
+---async 创建一个新的服务
+---@param stype string @服务类型，根据所注册的服务类型，可选有 'lua'
+---@param config table @服务的启动配置，数据类型table, 可以用来向服务传递参数
+---@param unique boolean @default false, 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
+---@param workerid integer @default 0 ,在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
+---@return integer @返回服务id
 function moon.new_service(stype, config, unique, workerid)
-    unique = unique or false
-    workerid = workerid or 0
-    config = jencode(config)
-    core.new_service(stype, config, unique, workerid,  0, 0)
-end
-
----async
----创建一个新的服务的协程封装，可以获得所创建的服务ID<br>
----@param stype string
----@param config table
----@param unique boolean
----@param workerid integer
----@return integer
-function moon.co_new_service(stype, config, unique, workerid)
     unique = unique or false
     workerid = workerid or 0
     config = jencode(config)
@@ -269,13 +243,11 @@ function moon.co_new_service(stype, config, unique, workerid)
 end
 
 ---异步移除指定的服务
----param sid 服务id
----param bresponse 可选，为true时可以 使用协程等待移除结果
----@param sid integer
----@param bresponse boolean
+---@param sid integer @服务id
+---@param iswait boolean @可选，为true时可以 使用协程等待移除结果
 ---@return string
-function moon.remove_service(sid, bresponse)
-    if bresponse then
+function moon.remove_service(sid, iswait)
+    if iswait then
         local sessionid = make_response()
         core.remove_service(sid,sid_,sessionid)
         return co_yield()
@@ -284,16 +256,14 @@ function moon.remove_service(sid, bresponse)
     end
 end
 
-
 ---使当前服务退出
 function moon.quit()
     moon.remove_service(sid_)
 end
 
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
---- 0 表示服务不存在
 ---@param name string
----@return integer
+---@return integer @ 0 表示服务不存在
 function moon.queryservice(name)
 	if type(name)=='string' then
 		return core.queryservice(name)
@@ -309,7 +279,7 @@ function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
 
----获取服务器时间, 可以调用 moon.time_offset 偏移时间
+---获取服务器时间, 可以调用 moon.advtime 偏移时间
 function moon.time()
     return moon.now()//1000
 end
@@ -332,7 +302,7 @@ local function routine(fn)
 end
 
 ---启动一个异步
----@param func function | function() end
+---@param func fun()
 ---@return thread
 function moon.async(func)
     local co = tremove(co_pool)
@@ -348,7 +318,7 @@ end
 
 ---返回运行中的协程个数,和协程池空闲的协程个数
 function moon.coroutine_num()
-    return co_num,#co_pool
+    return co_num, #co_pool
 end
 
 --------------------------timer-------------
@@ -426,15 +396,11 @@ function moon.co_runcmd(command)
     return co_yield()
 end
 
----send-response 形式调用，发送消息附带一个responseid，对方收到后把responseid发送回来，
----必须调用moon.response应答.如果没有错误, 返回调用结果。如果发生错误第一个参数是false,
----后面是错误信息。
----param PTYPE:协议类型
----param receiver:接收者服务id
----param ...:发送的数据
----@param PTYPE string
----@param receiver integer
----@return any
+---RPC形式调用，发送消息附带一个responseid，对方收到后把responseid发送回来，必须调用moon.response应答.
+---@param PTYPE string @协议类型
+---@param receiver integer @接收者服务id
+---@param vararg any @发送的数据
+---@return any|bool,string @如果没有错误, 返回调用结果。如果发生错误第一个参数是false,后面是错误信息。
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -446,13 +412,10 @@ function moon.co_call(PTYPE, receiver, ...)
 end
 
 ---回应moon.call
----param PTYPE 协议类型
----param receiver 调用者服务id
----param sessionid 调用者的responseid
----param ... 数据
----@param PTYPE string
----@param receiver integer
+---@param PTYPE string @协议类型
+---@param receiver integer  @接收者服务id
 ---@param sessionid integer
+---@param vararg any @返回的数据
 function moon.response(PTYPE, receiver, sessionid, ...)
     if sessionid == 0 then return end
     local p = protocol[PTYPE]
@@ -668,6 +631,8 @@ reg_protocol {
         local func = debug_command[params[1]]
         if func then
             func(sender, sessionid, table.unpack(params,2))
+        else
+            moon.response("debug",sender,sessionid, "unknow debug cmd "..params[1])
         end
     end
 }
