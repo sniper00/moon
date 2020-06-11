@@ -1,5 +1,7 @@
 local moon = require("moon")
 
+local context = ...
+
 local M = {}
 
 M.__index = M
@@ -13,7 +15,8 @@ end
 
 function M:func()
     print("before", self.n)
-    self.n=self.n+1
+    print(context.tb)
+    self.n=self.n-1
     moon.sleep(1000)
 end
 

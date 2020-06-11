@@ -62,7 +62,7 @@ else
             io.writefile(file, content1)
             sharetable.loadfile(file)
 
-            local agent =  moon.co_new_service(
+            local agent =  moon.new_service(
                 "lua",
                 {
                     name = "agent",

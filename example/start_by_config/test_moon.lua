@@ -51,7 +51,9 @@ local test_case =
 local next_case = function ()
     local cfg = table.remove(test_case,1)
     if cfg then
-        moon.new_service("lua",cfg)
+        moon.async(function ()
+            moon.new_service("lua",cfg)
+        end)
     else
         --print("abort")
         moon.abort()
