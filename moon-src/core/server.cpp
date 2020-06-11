@@ -145,8 +145,13 @@ namespace moon
         return state_.load(std::memory_order_acquire);
     }
 
-    int64_t server::now()
+    int64_t server::now(bool sync)
     {
+        if (sync)
+        {
+            now_ = time::now();
+        }
+
         if (now_ == 0)
         {
             return time::now();

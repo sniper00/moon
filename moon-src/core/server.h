@@ -32,7 +32,7 @@ namespace moon
 
         state get_state();
 
-        int64_t now();
+        int64_t now(bool sync = false);
 
         uint32_t service_count();
 

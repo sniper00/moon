@@ -57,7 +57,7 @@ else
         print("callback example: service sender start")
 
         moon.async(function()
-            local receiver =  moon.co_new_service("lua", {
+            local receiver =  moon.new_service("lua", {
                 name = "callback_receiver",
                 file = "example_callback.lua",
                 receiver = true

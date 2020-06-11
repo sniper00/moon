@@ -54,7 +54,7 @@ local function run_master(conf)
 
     moon.async(function()
         for _=1,conf.count do
-            local sid = moon.co_new_service("lua",{name="slave",file="start_by_config/network_text_benchmark.lua"})
+            local sid = moon.new_service("lua",{name="slave",file="start_by_config/network_text_benchmark.lua"})
             table.insert(slave,sid)
         end
 

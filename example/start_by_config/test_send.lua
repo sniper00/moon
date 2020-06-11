@@ -58,7 +58,7 @@ else
     moon.start(
         function()
             moon.async(function ()
-                receiver = moon.co_new_service(
+                receiver = moon.new_service(
                     "lua",
                     {
                         name = "test_send",

@@ -37,18 +37,17 @@ if conf.slave then
     end)
 else
     moon.start(function()
-
-        -- 动态创建服务, 配置同时可以用来传递一些信息
-        moon.new_service("lua", {
-            name = "create_service",
-            file = "create_service.lua",
-            message = "Hello create_service",
-            auto_quit = true
-        })
-
         moon.async(function()
-            -- 动态创建服务，协程方式等待获得服务ID，方便用来通信
-            local serviceid =  moon.co_new_service("lua", {
+            -- 动态创建服务, 配置同时可以用来传递一些信息
+            moon.new_service("lua", {
+                name = "create_service",
+                file = "create_service.lua",
+                message = "Hello create_service",
+                auto_quit = true
+            })
+
+            -- 动态创建服务，获得服务ID，方便用来通信
+            local serviceid =  moon.new_service("lua", {
                 name = "create_service",
                 file = "create_service.lua",
                 slave = true,
