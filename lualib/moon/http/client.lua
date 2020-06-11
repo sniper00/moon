@@ -79,10 +79,13 @@ local function response_handler(fd)
         if not content_length then
             error("content-length is not number")
         end
-        --print("Content-Length",content_length)
-        data, err = socket.read(fd, content_length)
-        assert(data,err)
-        response.content = data
+
+        if content_length >0 then
+            --print("Content-Length",content_length)
+            data, err = socket.read(fd, content_length)
+            assert(data,err)
+            response.content = data
+        end
     elseif header["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd)
         if not chunkdata then
@@ -90,7 +93,7 @@ local function response_handler(fd)
         end
         response.content = tbconcat( chunkdata )
     else
-        error ("Unsupport transfer-encoding")
+        --error ("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
     end
     return response
 end
@@ -191,6 +194,10 @@ end
 
 function M.get(host, path, content, header)
     return request("GET", host, path, content, header)
+end
+
+function M.put(host, path, content, header)
+    return request("PUT", host, path, content, header)
 end
 
 function M.post(host, path, content, header)

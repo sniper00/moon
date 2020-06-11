@@ -31,7 +31,7 @@ if conf.receiver then
 else
     moon.start(function()
         moon.async(function()
-            local receiver =  moon.co_new_service("lua", {
+            local receiver =  moon.new_service("lua", {
                 name = "example_coroutine",
                 file = "example_coroutine.lua",
                 receiver = true

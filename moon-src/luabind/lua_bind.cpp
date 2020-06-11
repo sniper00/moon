@@ -200,7 +200,6 @@ const lua_bind & lua_bind::bind_util() const
     lua.set_function("second", time::second);
     lua.set_function("millsecond", time::millisecond);
     lua.set_function("microsecond", time::microsecond);
-    lua.set_function("time_offset", time::offset);
 
     lua.set_function("sha1", [](std::string_view s) {
         std::string buf(sha1::sha1_context::digest_size, '\0');
@@ -317,7 +316,6 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     auto worker_ = s->get_worker();
 
     lua.set("null", (void*)(router_));
-
     lua.set_function("name", &lua_service::name, s);
     lua.set_function("id", &lua_service::id, s);
     lua.set_function("set_cb", &lua_service::set_callback, s);
@@ -338,8 +336,12 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());
     lua.set_function("get_loglevel", &log::get_level, router_->logger());
     lua.set_function("abort", &server::stop, server_);
-    lua.set_function("now", &server::now, server_);
     lua.set_function("service_count", &server::service_count, server_);
+    lua.set_function("now", [server_]() {return server_->now();});
+    lua.set_function("advtime", [server_](int64_t v){
+        time::offset(v);
+        server_->now(true);
+    });
     return *this;
 }
 
@@ -366,28 +368,6 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("set_enable_chunked", &moon::socket::set_enable_chunked, &sock);
     tb.set_function("set_send_queue_limit", &moon::socket::set_send_queue_limit, &sock);
     tb.set_function("getaddress", &moon::socket::getaddress, &sock);
-
-	tb.set_function("write2", [&sock](uint32_t fd, moon::buffer_ptr_t data) {
-		if (!data->has_flag(buffer_flag::pack_size))
-		{
-			int len = (int)data->size();
-			moon::host2net(len);
-			data->write_front(&len, 1);
-			data->set_flag(buffer_flag::pack_size);
-		}
-		sock.write(fd, std::move(data));
-	});
-
-	tb.set_function("write_message2", [&sock](uint32_t fd, message* m) {
-		if (!m->get_buffer()->has_flag(buffer_flag::pack_size))
-		{
-			int len = (int)m->size();
-			moon::host2net(len);
-			m->get_buffer()->write_front(&len, 1);
-			m->get_buffer()->set_flag(buffer_flag::pack_size);
-		}
-		sock.write_message(fd, m);
-	});
 
     registerlib(lua.lua_state(), "asio", tb);
     return *this;

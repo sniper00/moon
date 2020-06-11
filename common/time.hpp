@@ -30,7 +30,11 @@ namespace moon
 
         static void offset(int64_t v)
         {
-            offset_ = v;
+            if (v <= 0)
+            {
+                return;
+            }
+            offset_ += v;
         }
 
         static int64_t now()
