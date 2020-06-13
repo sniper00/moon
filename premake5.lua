@@ -12,7 +12,7 @@ workspace "Server"
     filter "configurations:Release"
         defines { "NDEBUG" }
         optimize "On"
-        symbols "On"
+        --symbols "On" --带上调试信息
 
     filter {"system:windows"}
         characterset "MBCS"
