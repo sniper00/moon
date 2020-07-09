@@ -4,7 +4,6 @@ local moon = require("moon")
 local core = require("asio")
 
 local setmetatable = setmetatable
-local tostring = tostring
 local tointeger = math.tointeger
 local yield = coroutine.yield
 local make_response = moon.make_response
@@ -121,8 +120,8 @@ moon.dispatch(
     "socket",
     function(msg)
         local fd = msg:sender()
-        local subtype = msg:subtype()
-        local f = callbacks[subtype]
+        local sdt = msg:receiver()
+        local f = callbacks[sdt]
         if f then
             f(fd, msg)
         end
@@ -133,8 +132,8 @@ moon.dispatch(
     "websocket",
     function(msg)
         local fd = msg:sender()
-        local subtype = msg:subtype()
-        local f = wscallbacks[subtype]
+        local sdt = msg:receiver()
+        local f = wscallbacks[sdt]
         if f then
             f(fd, msg)
         end

@@ -20,13 +20,18 @@ namespace moon
     constexpr uint8_t PTYPE_SOCKET_WS = 6; //websocket
     constexpr uint8_t PTYPE_DEBUG = 7;//
 
+    inline bool is_socket_message(uint8_t ptype)
+    {
+        return (ptype == PTYPE_SOCKET) || (ptype == PTYPE_SOCKET_WS);
+    }
+
     //network
     using message_size_t = uint16_t;
     constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
 
-    constexpr  string_view_t STR_LF = "\n"sv;
-    constexpr  string_view_t STR_CRLF = "\r\n"sv;
-    constexpr  string_view_t STR_DCRLF = "\r\n\r\n"sv;
+    constexpr  std::string_view STR_LF = "\n"sv;
+    constexpr  std::string_view STR_CRLF = "\r\n"sv;
+    constexpr  std::string_view STR_DCRLF = "\r\n\r\n"sv;
 
     enum class buffer_flag :uint8_t
     {
