@@ -18,7 +18,7 @@ namespace moon
         void start(bool accepted) override
         {
             base_connection_t::start(accepted);
-            response_ = message::create(8192- BUFFER_HEAD_RESERVED);
+            response_ = message::create(8192 - BUFFER_HEAD_RESERVED);
         }
 
         void read(size_t n, std::string_view delim, int32_t sessionid) override
@@ -30,21 +30,22 @@ namespace moon
             }
 
             buffer* buf = response_->get_buffer();
-            std::size_t size = buf->size()+ delim_.size();
+            std::size_t size = buf->size() + delim_.size();
             buf->commit(revert_);
             revert_ = 0;
             buf->consume(size);
 
-            count_ = (n > 0 ? n : std::numeric_limits<size_t>::max());
             delim_ = delim;
             sessionid_ = sessionid;
 
             if (!delim_.empty())
             {
+                count_ = (n > 0 ? n : std::numeric_limits<size_t>::max());
                 read_until();
             }
             else
             {
+                count_ = n;
                 read();
             }
         }
@@ -83,7 +84,7 @@ namespace moon
             }));
         }
 
-        void error(const asio::error_code& e, const std::string& additional ="") override
+        void error(const asio::error_code& e, const std::string& additional = "") override
         {
             (void)additional;
 
@@ -115,7 +116,7 @@ namespace moon
             parent_ = nullptr;
         }
 
-        void response(size_t count, const message_ptr_t & m, uint8_t type = PTYPE_TEXT)
+        void response(size_t count, const message_ptr_t& m, uint8_t type = PTYPE_TEXT)
         {
             if (sessionid_ == 0)
             {
@@ -123,7 +124,7 @@ namespace moon
             }
             auto buf = response_->get_buffer();
             assert(buf->size() >= count);
-            revert_ = (buf->size() - count)+ delim_.size();
+            revert_ = (buf->size() - count) + delim_.size();
             m->set_type(type);
             m->set_sender(fd());
             m->set_sessionid(sessionid_);

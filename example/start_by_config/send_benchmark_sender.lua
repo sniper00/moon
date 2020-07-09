@@ -30,9 +30,9 @@ local function docmd(header,...)
       end
 end
 
-moon.dispatch('lua',function(msg,p)
+moon.dispatch('lua',function(msg,unpack)
     local header = msg:header()
-    docmd(header, p.unpack(msg))
+    docmd(header, unpack(msg:cstr()))
 end)
 
 moon.start(function()

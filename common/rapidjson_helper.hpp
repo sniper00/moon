@@ -76,11 +76,11 @@ namespace rapidjson
 		}
 
         template<>
-        inline moon::string_view_t get_value<moon::string_view_t>(rapidjson::Value* value, const moon::string_view_t& dv)
+        inline std::string_view get_value<std::string_view>(rapidjson::Value* value, const std::string_view& dv)
         {
             if (value->IsString())
             {
-                return moon::string_view_t(value->GetString(), value->GetStringLength());
+                return std::string_view(value->GetString(), value->GetStringLength());
             }
             return dv;
         }
@@ -105,9 +105,9 @@ namespace rapidjson
 	}
 
 	template<typename T>
-    inline T get_value(rapidjson::Value* value, moon::string_view_t path, const T& dv = T())
+    inline T get_value(rapidjson::Value* value, std::string_view path, const T& dv = T())
 	{
-        auto vecs = moon::split<moon::string_view_t>(path, ".");
+        auto vecs = moon::split<std::string_view>(path, ".");
 		for (auto& v : vecs)
 		{
             auto iter = value->FindMember(rapidjson::Value::ValueType(v.data(), static_cast<rapidjson::SizeType>(v.size())));

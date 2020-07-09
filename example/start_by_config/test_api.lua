@@ -35,7 +35,7 @@ equal(type(moon.abort) , "function")
 local msg = moon.message
 equal(type(msg.sender) , "function")
 equal(type(msg.sessionid) , "function")
-equal(type(msg.subtype) , "function")
+equal(type(msg.receiver) , "function")
 equal(type(msg.header) , "function")
 equal(type(msg.bytes) , "function")
 equal(type(msg.size) , "function")

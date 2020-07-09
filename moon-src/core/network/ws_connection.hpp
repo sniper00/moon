@@ -125,9 +125,9 @@ namespace moon
         static constexpr size_t PAYLOAD_MAX_LEN = 127;
         static constexpr size_t FIN_FRAME_FLAG = 0x80;// 1 0 0 0 0 0 0 0
 
-        static constexpr const string_view_t WEBSOCKET = "websocket"sv;
-        static constexpr const string_view_t UPGRADE = "upgrade"sv;
-        static constexpr const string_view_t WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
+        static constexpr const std::string_view WEBSOCKET = "websocket"sv;
+        static constexpr const std::string_view UPGRADE = "upgrade"sv;
+        static constexpr const std::string_view WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
 
         template <typename... Args>
         explicit ws_connection(Args&&... args)
@@ -241,7 +241,7 @@ namespace moon
                         std::string_view status_code;
                         std::string_view ignore;
                         http::case_insensitive_multimap_view header;
-                        if (!http::response_parser::parse(string_view_t{ reinterpret_cast<const char*>(sbuf->data().data()), sbuf->size() }
+                        if (!http::response_parser::parse(std::string_view{ reinterpret_cast<const char*>(sbuf->data().data()), sbuf->size() }
                             , ignore
                             , status_code
                             , header))
@@ -298,7 +298,7 @@ namespace moon
                         handshaked_ = true;
                         auto msg = message::create();
                         msg->write_data(address());
-                        msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_connect));
+                        msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_connect));
                         handle_message(std::move(msg));
                         check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
                         read_some();
@@ -347,7 +347,7 @@ namespace moon
             std::string_view ignore;
             std::string_view version;
             http::case_insensitive_multimap_view header;
-            if(!http::request_parser::parse(string_view_t{ reinterpret_cast<const char*>(buf->data().data()), buf->size() }
+            if(!http::request_parser::parse(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), buf->size() }
                 , method
                 , ignore
                 , ignore
@@ -403,7 +403,7 @@ namespace moon
             send_response(answer);
             auto msg = message::create();
             msg->write_data(address());
-            msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_accept));
+            msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return std::error_code();
         }
@@ -609,16 +609,16 @@ namespace moon
             {
             case ws::opcode::ping:
             {
-                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_ping));
+                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_ping));
                 break;
             }
             case ws::opcode::pong:
             {
-                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_pong));
+                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_pong));
                 break;
             }
             default:
-                msg->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
                 break;
             }
 
@@ -702,7 +702,7 @@ namespace moon
             return base64_encode(shakey, sizeof(shakey));
         }
 
-        std::string upgrade_response(string_view_t seckey, string_view_t wsprotocol)
+        std::string upgrade_response(std::string_view seckey, std::string_view wsprotocol)
         {
             std::string response;
             response.append("HTTP/1.1 101 Switching Protocols\r\n");

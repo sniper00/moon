@@ -1,3 +1,4 @@
+local moon = require("moon")
 local log = require("moon.log")
 
 do
@@ -29,6 +30,7 @@ log.debug("this line will not print")
 log.warn("this line will  print")
 log.error("this line will  print")
 
-log.LOG_LEVEL = log.LOG_DEBUG
-log.DEBUG = false
+log.LOG_LEVEL = log.LOG_INFO
 log.debug("this line will not print or log file")
+
+moon.abort()

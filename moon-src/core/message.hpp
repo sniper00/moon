@@ -63,31 +63,31 @@ namespace moon
             return receiver_;
         }
 
-        void set_header(string_view_t header)
+        void set_header(std::string_view header)
         {
             if (header.size() != 0)
             {
                 if (!header_)
                 {
-                    header_ = std::make_unique<std::string>(header.data(), header.size());
+                    header_ = std::make_unique<std::string>(header);
                 }
                 else
                 {
                     header_->clear();
-                    header_->assign(header.data(), header.size());
+                    header_->assign(header);
                 }
             }
         }
 
-        string_view_t header() const
+        std::string_view header() const
         {
             if (nullptr == header_)
             {
-                return string_view_t{};
+                return std::string_view{};
             }
             else
             {
-                return string_view_t{ header_->data(),header_->size() };
+                return std::string_view{ *header_ };
             }
         }
 
@@ -111,36 +111,26 @@ namespace moon
             return type_;
         }
 
-        void set_subtype(uint8_t v)
-        {
-            subtype_ = v;
-        }
-
-        uint8_t subtype() const
-        {
-            return subtype_;
-        }
-
-        string_view_t bytes() const
+        std::string_view bytes() const
         {
             if (!data_)
             {
-                return string_view_t(nullptr, 0);
+                return std::string_view(nullptr, 0);
             }
-            return string_view_t(data_->data(), data_->size());
+            return std::string_view{ data_->data(), data_->size() };
         }
 
-        string_view_t substr(int pos, size_t len = string_view_t::npos) const
+        std::string_view substr(int pos, size_t len = std::string_view::npos) const
         {
             if (!data_)
             {
-                return string_view_t(nullptr, 0);
+                return std::string_view(nullptr, 0);
             }
-            string_view_t sr(data_->data(), data_->size());
+            std::string_view sr(data_->data(), data_->size());
             return sr.substr(pos, len);
         }
 
-        void write_data(string_view_t s)
+        void write_data(std::string_view s)
         {
             assert(data_);
             data_->write_back(s.data(), s.size());
@@ -183,7 +173,6 @@ namespace moon
         void reset()
         {
             type_ = 0;
-            subtype_ = 0;
             sender_ = 0;
             receiver_ = 0;
             sessionid_ = 0;
@@ -200,7 +189,6 @@ namespace moon
         }
     private:
         uint8_t type_ = 0;
-        uint8_t subtype_ = 0;
         uint32_t sender_ = 0;
         uint32_t receiver_ = 0;
         int32_t sessionid_ = 0;
