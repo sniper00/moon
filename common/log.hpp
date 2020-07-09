@@ -113,21 +113,21 @@ namespace moon
             enable_console_ = v;
         }
 
-        void set_level(string_view_t s)
+        void set_level(std::string_view s)
         {
-            if (moon::iequal_string(s, string_view_t{ "DEBUG" }))
+            if (moon::iequal_string(s, std::string_view{ "DEBUG" }))
             {
                 set_level(LogLevel::Debug);
             }
-            else  if (moon::iequal_string(s, string_view_t{ "INFO" }))
+            else  if (moon::iequal_string(s, std::string_view{ "INFO" }))
             {
                 set_level(LogLevel::Info);
             }
-            else  if (moon::iequal_string(s, string_view_t{ "WARN" }))
+            else  if (moon::iequal_string(s, std::string_view{ "WARN" }))
             {
                 set_level(LogLevel::Warn);
             }
-            else  if (moon::iequal_string(s, string_view_t{ "ERROR" }))
+            else  if (moon::iequal_string(s, std::string_view{ "ERROR" }))
             {
                 set_level(LogLevel::Error);
             }
@@ -202,7 +202,7 @@ namespace moon
                     it->seek(2, buffer::seek_origin::Current);
                     if (bconsole)
                     {
-                        auto s = moon::string_view_t(reinterpret_cast<const char*>(it->data()), it->size());
+                        auto s = std::string_view(reinterpret_cast<const char*>(it->data()), it->size());
                         switch (level)
                         {
                         case LogLevel::Error:

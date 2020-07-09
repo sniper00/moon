@@ -33,12 +33,6 @@
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
 
-namespace moon
-{
-    using string_view_t = std::string_view;
-    using wstring_view_t = std::wstring_view;
-}
-
 #undef min
 #undef max
 

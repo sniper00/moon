@@ -26,7 +26,7 @@ namespace moon
             base_connection_t::start(accepted);
             auto m = message::create();
             m->write_data(address());
-            m->set_subtype(static_cast<uint8_t>(accepted ? 
+            m->set_receiver(static_cast<uint8_t>(accepted ?
                 socket_data_type::socket_accept : socket_data_type::socket_connect));
             handle_message(std::move(m));
             read_header();
@@ -159,7 +159,7 @@ namespace moon
                 if (!continued)
                 {
                     auto m = message::create(std::move(buf_));
-                    m->set_subtype(static_cast<uint8_t>(socket_data_type::socket_recv));
+                    m->set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
                     handle_message(std::move(m));
                 }
 

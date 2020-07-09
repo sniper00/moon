@@ -18,12 +18,13 @@ end
 -- Read content from new file.
 --
 function io.readfile(filename)
-    local file = io.open(filename, "rb")
+    local file, err = io.open(filename, "rb")
     if file then
         local content = file:read("*a")
         file:close()
         return content
     end
+    return false, err
 end
 
 function io.pathinfo(path)

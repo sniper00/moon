@@ -75,7 +75,7 @@ namespace moon
         void send_prefab(uint32_t sender
             , uint32_t receiver
             , uint32_t prefabid
-            , string_view_t header
+            , std::string_view header
             , int32_t sessionid
             , uint8_t type) const;
 

@@ -271,8 +271,8 @@ local function cluster_service()
         name = "lua",
         PTYPE = moon.PTYPE_LUA,
         pack = function(...)return ...end,
-        unpack = function(...) return ... end,
-        dispatch =  function(msg, _)
+        unpack = nil,
+        dispatch =  function(msg)
             local cmd, receiver_serverid = unpack(msg:header())
             local fn = command[cmd]
             if fn then
