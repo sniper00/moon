@@ -1,5 +1,7 @@
 local moon   = require("moon")
 
+print("Press Ctrl-C exit server")
+
 moon.exit(function(  )
     print("exit once")
     moon.async(function ()

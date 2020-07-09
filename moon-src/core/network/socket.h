@@ -76,7 +76,7 @@ namespace moon
 
         connection_ptr_t make_connection(uint32_t serviceid, uint8_t type);
 
-        void response(uint32_t sender, uint32_t receiver, string_view_t data, string_view_t header, int32_t sessionid, uint8_t type);
+        void response(uint32_t sender, uint32_t receiver, std::string_view data, std::string_view header, int32_t sessionid, uint8_t type);
 
         bool try_lock_fd(uint32_t fd);
 
@@ -112,8 +112,6 @@ namespace moon
             close(m->sender(), true);
             return;
         }
-        m->set_receiver(0);
-
         s->handle_message(std::forward<Message>(m));
     }
 }

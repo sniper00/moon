@@ -15,8 +15,7 @@ end
 
 function M:func()
     print("before", self.n)
-    print(context.tb)
-    self.n=self.n-1
+    self.n=self.n+1
     moon.sleep(1000)
 end
 

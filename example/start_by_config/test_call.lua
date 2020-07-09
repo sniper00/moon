@@ -40,10 +40,10 @@ if conf.receiver then
         end
     end
 
-    moon.dispatch('lua',function(msg,p)
+    moon.dispatch('lua',function(msg,unpack)
         local sender = msg:sender()
         local sessionid = msg:sessionid()
-        docmd(sender,sessionid, p.unpack(msg))
+        docmd(sender,sessionid, unpack(msg:cstr()))
     end)
 
 else
@@ -58,7 +58,7 @@ else
                             name = "test_call_receiver",
                             file = "start_by_config/test_call.lua",
                             receiver = true
-                        }
+                        },false,0,true
                     )
 
                     print(moon.co_call("lua", receiverid, "SUB", 1000, 2000))

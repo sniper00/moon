@@ -100,11 +100,11 @@ assert(fd, "connect db redis failed")
 
 socket.close(fd)
 
-moon.dispatch('lua',function(msg,p)
+moon.dispatch('lua',function(msg,unpack)
     if #msg:header() >0 then
-        send(p.unpack(msg))
+        send(unpack(msg:cstr()))
     else
-        call(msg:sender(), msg:sessionid(), p.unpack(msg))
+        call(msg:sender(), msg:sessionid(), unpack(msg:cstr()))
     end
 end)
 

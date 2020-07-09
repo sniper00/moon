@@ -12,7 +12,7 @@ namespace moon
     {
         rapidjson::Document doc;
     public:
-        bool parse(TService* s,  string_view_t config)
+        bool parse(TService* s,  std::string_view config)
         {
             doc.Parse(config.data(), config.size());
             if (doc.HasParseError() || !doc.IsObject())
@@ -26,7 +26,7 @@ namespace moon
         }
 
         template<typename T>
-        T get_value(string_view_t name)
+        T get_value(std::string_view name)
         {
             return rapidjson::get_value<T>(&doc, name);
         }

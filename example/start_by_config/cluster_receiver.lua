@@ -60,9 +60,9 @@ local function docmd(sender,sessionid, CMD,...)
     end
 end
 
-moon.dispatch('lua',function(msg,p)
+moon.dispatch('lua',function(msg,unpack)
     local sender = msg:sender()
     local sessionid = msg:sessionid()
-    docmd(sender,sessionid, p.unpack(msg))
+    docmd(sender,sessionid, unpack(msg:cstr()))
 end)
 

@@ -26,22 +26,29 @@ static sol::table bind_http(sol::this_state L)
         return std::make_tuple(ok, version, status_code, sol::as_table(header));
     });
 
-    module.set_function("parse_query_string", [](const std::string& data) {
+    module.set_function("parse_query_string", [](const std::string &data) {
         return sol::as_table(http::query_string::parse(data));
     });
 
     module.set_function("create_query_string", [](sol::as_table_t<http::case_insensitive_multimap> src) {
         return http::query_string::create(src.value());
     });
+
+    module.set_function("urlencode", [](std::string_view src) {
+        return http::percent::encode(std::string{ src });
+    });
+
+    module.set_function("urldecode", [](std::string_view src) {
+        return http::percent::decode(std::string{ src });
+    });
+
     return module;
 }
 
 extern "C"
 {
-    int LUAMOD_API luaopen_http(lua_State* L)
+    int LUAMOD_API luaopen_http(lua_State *L)
     {
         return sol::stack::call_lua(L, 1, bind_http);
     }
 }
-
-

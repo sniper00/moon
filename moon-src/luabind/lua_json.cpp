@@ -1,6 +1,7 @@
 #include "lua.hpp"
 #include <vector>
 #include <charconv>
+#include <string_view>
 
 // __SSE2__ and __SSE4_2__ are recognized by gcc, clang, and the Intel compiler.
 // We use -march=native with gmake to enable -msse2 and -msse4.2, if supported.
@@ -109,6 +110,21 @@ static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0)
     }
 }
 
+static inline size_t array_size(lua_State* L, int idx)
+{
+    if (lua_getmetatable(L, idx)) {
+        // [metatable]
+        lua_getfield(L, -1, "__jsonobject");
+        auto v = lua_isnoneornil(L, -1);
+        lua_pop(L, 2);
+        if (!v)
+        {
+            return 0;
+        }
+    }
+    return lua_rawlen(L, idx);
+}
+
 template<typename Writer>
 static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
 {
@@ -121,11 +137,10 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
 
     luaL_checkstack(L, LUA_MINSTACK, NULL);
 
-    size_t array_size = lua_rawlen(L, idx);
-    if (array_size > 0)
+    if (size_t size = array_size(L, idx); size >0)
     {
         writer->StartArray();
-        for (size_t i = 1; i <= array_size; i++)
+        for (size_t i = 1; i <= size; i++)
         {
             lua_rawgeti(L, idx, i);
             encode_one(L, writer, -1, depth);
