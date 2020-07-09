@@ -93,7 +93,7 @@ local function response_handler(fd)
         end
         response.content = tbconcat( chunkdata )
     else
-        --error ("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
+        error ("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
     end
     return response
 end
@@ -112,16 +112,63 @@ local M = {}
 
 local timeout  = 0
 
-local proxyhost = nil
+local proxyaddress = nil
 
-local function request( method, host_, path, content, header)
+local pool = {}
 
-    local host, port = parse_host(host_, 80)
+local max_connection_num = 10
+
+local function do_request(baseaddress, keepalive, req)
+
+    local fd
+    local err
+    local fdpool = pool[baseaddress]
+    if not fdpool then
+        fdpool = {}
+        pool[baseaddress] = fdpool
+    end
+
+    if #fdpool == 0 then
+        local host, port = parse_host(baseaddress, 80)
+        fd, err = socket.connect(host, port,  moon.PTYPE_TEXT, timeout)
+        if not fd then
+            return false ,err
+        end
+        socket.settimeout(fd, timeout//1000)
+    else
+        fd = table.remove(fdpool)
+    end
+
+    socket.write(fd, seri.concat(req))
+
+    local ok , response = pcall(response_handler, fd)
+
+    if not ok and #fdpool>0 then
+        --request socket error remove all pool fd
+        pool[baseaddress] = {}
+    end
+
+    if not keepalive then
+        socket.close(fd)
+    else
+        if ok and keepalive then
+            if #fdpool < max_connection_num then
+                table.insert(fdpool, fd)
+            end
+        end
+    end
+    return ok, response
+end
+
+local function request( method, baseaddress, path, content, header, keepalive)
+
+    local host, port = parse_host(baseaddress, 80)
 
     if not path or path=="" then
         path = "/"
     end
-    if proxyhost then
+
+    if proxyaddress then
         path = "http://"..host..':'..port..path
     end
 
@@ -155,28 +202,27 @@ local function request( method, host_, path, content, header)
             end
         end
     end
+
+    if keepalive then
+        tbinsert( cache, "Connection: keep-alive")
+        tbinsert( cache, "\r\n")
+        tbinsert( cache, "Keep-Alive: "..tostring(keepalive))
+        tbinsert( cache, "\r\n")
+    end
     tbinsert( cache, "\r\n")
     tbinsert( cache, content)
 
-    local fd,err
-    if proxyhost then
-        local phost,pport = parse_host(proxyhost, 8080)
-        fd,err = socket.connect(phost, pport,  moon.PTYPE_TEXT, timeout)
-    else
-        fd,err = socket.connect(host, port,  moon.PTYPE_TEXT, timeout)
+
+    if proxyaddress then
+        baseaddress = proxyaddress
     end
 
-    if not fd then
-        return false ,err
+    local ok, response = do_request(baseaddress, keepalive, cache)
+    if not ok then
+        --reconnect
+        ok, response = do_request(baseaddress, keepalive, cache)
     end
 
-    socket.settimeout(fd, timeout//1000)
-
-    --print(seri.concats(cache))
-    socket.write(fd, seri.concat(cache))
-
-    local ok , response = pcall(response_handler,fd)
-    socket.close(fd)
     if ok then
         return response
     else
@@ -188,30 +234,30 @@ function M.settimeout(v)
     timeout = v
 end
 
-function M.setproxyhost(host)
-    proxyhost = host
+function M.setproxy(host)
+    proxyaddress = host
 end
 
-function M.get(host, path, content, header)
-    return request("GET", host, path, content, header)
+function M.get(host, path, content, header, keepalive)
+    return request("GET", host, path, content, header, keepalive)
 end
 
-function M.put(host, path, content, header)
-    return request("PUT", host, path, content, header)
+function M.put(host, path, content, header, keepalive)
+    return request("PUT", host, path, content, header, keepalive)
 end
 
-function M.post(host, path, content, header)
-    return request("POST", host, path, content, header)
+function M.post(host, path, content, header, keepalive)
+    return request("POST", host, path, content, header, keepalive)
 end
 
-function M.postform(host, path, form, header)
+function M.postform(host, path, form, header, keepalive)
     header = header or {}
     header["content-type"] = "application/x-www-form-urlencoded"
 
     for k,v in pairs(form) do
         form[k] = tostring(v)
     end
-    return request("POST", host, path, create_query_string(form), header)
+    return request("POST", host, path, create_query_string(form), header, keepalive)
 end
 
 return M

@@ -154,7 +154,7 @@ static int my_lua_print(lua_State *L) {
                 buf.write_back(")", 1);
             }
         }
-        logger->logstring(true, lv, string_view_t{ buf.data(), buf.size() }, serviceid);
+        logger->logstring(true, lv, std::string_view{ buf.data(), buf.size() }, serviceid);
         return 0;
     }
 PRINT_ERROR:
@@ -228,6 +228,13 @@ const lua_bind & lua_bind::bind_util() const
         return res;
     });
 
+    lua.set_function("tostring", [](lua_State* L) {
+        const char* data = (const char*)lua_touserdata(L, 1);
+        size_t len = luaL_checkinteger(L, 2);
+        lua_pushlstring(L, data, len);
+        return 1;
+    });
+
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
@@ -297,8 +304,8 @@ const lua_bind & lua_bind::bind_message() const
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
+        , "receiver", (&message::receiver)
         , "sessionid", (&message::sessionid)
-        , "subtype", (&message::subtype)
         , "header", (&message::header)
         , "bytes", (&message::bytes)
         , "size", (&message::size)
@@ -321,7 +328,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_cb", &lua_service::set_callback, s);
     lua.set_function("cpu", &lua_service::cpu_cost, s);
     lua.set_function("make_prefab", &worker::make_prefab, worker_);
-    lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const string_view_t& header, int32_t sessionid, uint8_t type) {
+    lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const std::string_view& header, int32_t sessionid, uint8_t type) {
         worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
     });
     lua.set_function("send", &router::send, router_);
@@ -333,7 +340,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("wstate", &router::worker_info, router_);
-    lua.set_function("set_loglevel", (void(moon::log::*)(string_view_t))&log::set_level, router_->logger());
+    lua.set_function("set_loglevel", (void(moon::log::*)(std::string_view))&log::set_level, router_->logger());
     lua.set_function("get_loglevel", &log::get_level, router_->logger());
     lua.set_function("abort", &server::stop, server_);
     lua.set_function("service_count", &server::service_count, server_);
@@ -416,4 +423,3 @@ void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& m
     lua_pop(L, 2); /* pop 'package' and 'loaded' tables */
     assert(lua_gettop(L) == 0);
 }
-

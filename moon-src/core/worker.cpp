@@ -212,10 +212,10 @@ namespace moon
 
                 if (server_->get_state() == state::ready)
                 {
-                    string_view_t header{ "exit" };
+                    std::string_view header{ "exit" };
                     auto buf = message::create_buffer();
                     buf->write_back(content.data(), content.size());
-                    router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM, true);
+                    router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
                 }
             }
             else
@@ -326,7 +326,7 @@ namespace moon
     void worker::send_prefab(uint32_t sender
         , uint32_t receiver
         , uint32_t prefabid
-        , string_view_t header
+        , std::string_view header
         , int32_t sessionid
         , uint8_t type) const
     {
@@ -397,7 +397,8 @@ namespace moon
             for (auto& it : services_)
             {
                 auto& s = it.second;
-                if (msg->subtype() && !s->unique())
+
+                if (!s->unique() && msg->type() == PTYPE_SYSTEM)
                 {
                     continue;
                 }

@@ -10,8 +10,8 @@
 
 namespace moon
 {
-    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
-    inline T string_convert(const string_view_t& s, std::errc& ec)
+    template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+    inline T string_convert(const std::string_view& s, std::errc& ec)
     {
         T result;
         auto res = std::from_chars(s.data(), s.data() + s.size(), result);
@@ -19,11 +19,31 @@ namespace moon
         return result;
     }
 
-    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
-    inline T string_convert(const string_view_t& s)
+    template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+    inline T string_convert(const std::string_view& s)
     {
         T result;
-        if (auto[p, ec] = std::from_chars(s.data(), s.data() + s.size(), result); ec != std::errc())
+        if (auto [p, ec] = std::from_chars(s.data(), s.data() + s.size(), result); ec != std::errc())
+        {
+            throw std::runtime_error(std::to_string(static_cast<int>(ec)));
+        }
+        return result;
+    }
+
+    template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+    inline T string_convert(const std::string_view& s, std::errc& ec, int base = 10)
+    {
+        T result;
+        auto res = std::from_chars(s.data(), s.data() + s.size(), result, base);
+        ec = res.ec;
+        return result;
+    }
+
+    template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+    inline T string_convert(const std::string_view& s, int base = 10)
+    {
+        T result;
+        if (auto[p, ec] = std::from_chars(s.data(), s.data() + s.size(), result, base); ec != std::errc())
         {
             throw std::runtime_error(std::to_string(static_cast<int>(ec)));
         }
@@ -31,13 +51,13 @@ namespace moon
     }
 
     template<typename T, std::enable_if_t<std::is_same_v<T, std::string>, int> = 0>
-    inline std::string string_convert(const string_view_t& s)
+    inline std::string string_convert(const std::string_view& s)
     {
         return std::string(s);
     }
 
-    template<typename T, std::enable_if_t<std::is_same_v<T, string_view_t>, int> = 0>
-    inline string_view_t string_convert(const string_view_t& s)
+    template<typename T, std::enable_if_t<std::is_same_v<T, std::string_view>, int> = 0>
+    inline std::string_view string_convert(const std::string_view& s)
     {
         return s;
     }
@@ -152,18 +172,18 @@ namespace moon
     e. split("aa/bb/cc","/")
     */
     template<class T>
-    std::vector<T> split(const string_view_t& src, const string_view_t& sep)
+    std::vector<T> split(const std::string_view& src, const std::string_view& sep)
     {
         std::vector<T> r;
-        string_view_t::const_iterator b = src.begin();
-        string_view_t::const_iterator e = src.end();
+        std::string_view::const_iterator b = src.begin();
+        std::string_view::const_iterator e = src.end();
         for (auto i = src.begin(); i != src.end(); ++i)
         {
-            if (sep.find(*i) != string_view_t::npos)
+            if (sep.find(*i) != std::string_view::npos)
             {
                 if (b != e && b != i)
                 {
-                    r.push_back(string_convert<T>(string_view_t(std::addressof(*b), size_t(i - b))));
+                    r.push_back(string_convert<T>(std::string_view(std::addressof(*b), size_t(i - b))));
                 }
                 b = e;
             }
@@ -175,7 +195,7 @@ namespace moon
                 }
             }
         }
-        if (b != e) r.push_back(string_convert<T>(string_view_t(std::addressof(*b), size_t(e - b))));
+        if (b != e) r.push_back(string_convert<T>(std::string_view(std::addressof(*b), size_t(e - b))));
         return r;
     }
 
@@ -240,26 +260,26 @@ namespace moon
     }
 
     //" /t/n/r"
-    inline string_view_t trim_right(string_view_t v)
+    inline std::string_view trim_right(std::string_view v)
     {
         const auto words_end(v.find_last_not_of(" \t\n\r"));
-        if (words_end != string_view_t::npos) {
+        if (words_end != std::string_view::npos) {
             v.remove_suffix(v.size() - words_end - 1);
         }
         return v;
     }
 
-    inline string_view_t trim_left(string_view_t v)
+    inline std::string_view trim_left(std::string_view v)
     {
         const auto words_begin(v.find_first_not_of(" \t\n\r"));
         v.remove_prefix(std::min(words_begin, v.size()));
         return v;
     }
 
-    inline string_view_t trim_surrounding(string_view_t v)
+    inline std::string_view trim_surrounding(std::string_view v)
     {
         const auto words_end(v.find_last_not_of(" \t\n\r"));
-        if (words_end != string_view_t::npos) {
+        if (words_end != std::string_view::npos) {
             v.remove_suffix(v.size() - words_end - 1);
         }
         const auto words_begin(v.find_first_not_of(" \t\n\r"));
@@ -267,7 +287,7 @@ namespace moon
         return v;
     }
 
-    inline void replace(std::string& src, string_view_t old, string_view_t strnew)
+    inline void replace(std::string& src, std::string_view old, std::string_view strnew)
     {
         for (std::string::size_type pos(0); pos != std::string::npos; pos += strnew.size()) {
             if ((pos = src.find(old, pos)) != std::string::npos)
@@ -346,7 +366,7 @@ namespace moon
         return true;
     }
 
-    inline std::string hex_string(string_view_t s, string_view_t tok = "")
+    inline std::string hex_string(std::string_view s, std::string_view tok = "")
     {
         std::stringstream ss;
         ss << std::setiosflags(std::ios::uppercase) << std::hex;
@@ -371,7 +391,7 @@ namespace moon
     };
 
     using ihash_string_functor_t = ihash_string_functor<std::string>;
-    using ihash_string_view_functor_t = ihash_string_functor<string_view_t>;
+    using ihash_string_view_functor_t = ihash_string_functor<std::string_view>;
 
     template<typename TString>
     struct iequal_string_functor
@@ -383,5 +403,5 @@ namespace moon
     };
 
     using iequal_string_functor_t = iequal_string_functor<std::string>;
-    using iequal_string_view_functor_t = iequal_string_functor<string_view_t>;
+    using iequal_string_view_functor_t = iequal_string_functor<std::string_view>;
 };

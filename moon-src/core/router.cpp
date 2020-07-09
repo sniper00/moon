@@ -92,7 +92,7 @@ namespace moon
     void router::send(uint32_t sender
         , uint32_t receiver
         , buffer_ptr_t data
-        , string_view_t header
+        , std::string_view header
         , int32_t sessionid
         , uint8_t type) const
     {
@@ -109,7 +109,7 @@ namespace moon
         send_message(std::move(m));
     }
 
-    void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type, bool only_unique)
+    void router::broadcast(uint32_t sender, const buffer_ptr_t& buf, std::string_view header, uint8_t type)
     {
         for (auto& w : server_->get_workers())
         {
@@ -118,8 +118,6 @@ namespace moon
             m->set_header(header);
             m->set_sender(sender);
             m->set_type(type);
-            //only send to unique service
-            m->set_subtype(only_unique ? 1 : 0);
             w->send(std::move(m));
         }
     }
@@ -188,8 +186,8 @@ namespace moon
     }
 
     void router::response(uint32_t to
-        , string_view_t header
-        , string_view_t content
+        , std::string_view header
+        , std::string_view content
         , int32_t sessionid
         , uint8_t mtype) const
     {

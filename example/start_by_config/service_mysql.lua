@@ -123,8 +123,8 @@ local function docmd(sender, sessionid, cmd, ...)
     end
 end
 
-moon.dispatch('lua',function(msg,p)
-    docmd(msg:sender(), msg:sessionid(), p.unpack(msg))
+moon.dispatch('lua',function(msg,unpack)
+    docmd(msg:sender(), msg:sessionid(), unpack(msg:cstr()))
 end)
 
 -- moon.exit(function()
