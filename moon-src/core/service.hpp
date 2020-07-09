@@ -104,7 +104,7 @@ namespace moon
             {
                 dispatch(m.get());
                 //redirect message
-                if (m->receiver() != id() && m->receiver() != 0)
+                if (m->receiver() != id() && m->receiver() != 0 && !is_socket_message(m->type()))
                 {
                     MOON_ASSERT(!m->broadcast(), "can not redirect broadcast message");
                     if constexpr (std::is_rvalue_reference_v<decltype(m)>)

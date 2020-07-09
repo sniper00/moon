@@ -42,11 +42,11 @@ namespace moon
         void send(uint32_t sender
             , uint32_t receiver
             , buffer_ptr_t buf
-            , string_view_t header
+            , std::string_view header
             , int32_t sessionid
             , uint8_t type) const;
 
-        void broadcast(uint32_t sender, const buffer_ptr_t& buf, string_view_t header, uint8_t type, bool only_unique);
+        void broadcast(uint32_t sender, const buffer_ptr_t& buf, std::string_view header, uint8_t type);
 
         bool register_service(const std::string& type, register_func func);
 
@@ -65,8 +65,8 @@ namespace moon
         log* logger() const;
 
         void response(uint32_t to
-            , string_view_t header
-            , string_view_t content
+            , std::string_view header
+            , std::string_view content
             , int32_t sessionid
             , uint8_t mtype = PTYPE_TEXT) const;
 

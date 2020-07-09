@@ -369,7 +369,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     return connection;
 }
 
-void socket::response(uint32_t sender, uint32_t receiver, string_view_t data, string_view_t header, int32_t sessionid, uint8_t type)
+void socket::response(uint32_t sender, uint32_t receiver, std::string_view data, std::string_view header, int32_t sessionid, uint8_t type)
 {
     if (0 == sessionid)
         return;

@@ -66,13 +66,8 @@ end
 
 local searchers = {}
 
-searchers[1] = function ( name )
-	local file = io.open(name..".lua", "rb")
-	if file then
-		local content = file:read("*a")
-		return load(content,"@"..name),name
-	end
-	return false
+function hardreload.addsearcher(fn)
+	searchers[#searchers+1] = fn
 end
 
 local function findloader(name)

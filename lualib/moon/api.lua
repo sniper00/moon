@@ -239,6 +239,16 @@ function fs.create_directory(dir)
     ignore_param(dir)
 end
 
+---@param fp string
+function fs.remove(fp)
+    ignore_param(fp)
+end
+
+---@param dir string
+function fs.remove_all(dir)
+    ignore_param(dir)
+end
+
 ---@return string
 function fs.working_directory()
     -- body

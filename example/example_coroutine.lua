@@ -21,11 +21,11 @@ if conf.receiver then
         end
     end
 
-    moon.dispatch('lua',function(msg,p)
+    moon.dispatch('lua',function(msg,unpack)
         local sender = msg:sender()
         -- sessionid 对应表示发送方 挂起的协程
         local sessionid = msg:sessionid()
-        docmd(sender,sessionid, p.unpack(msg))
+        docmd(sender,sessionid, unpack(msg:cstr()))
     end)
 
 else

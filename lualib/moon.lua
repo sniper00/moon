@@ -167,7 +167,11 @@ local function _default_dispatch(msg, PTYPE)
         if co then
             session_id_coroutine[sessionid] = nil
             --print(coroutine.status(co))
-            coresume(co, p.unpack(msg))
+            if p.unpack then
+                coresume(co, p.unpack(msg:cstr()))
+            else
+                coresume(co, msg)
+            end
             --print(coroutine.status(co))
             return
         end
@@ -180,7 +184,7 @@ local function _default_dispatch(msg, PTYPE)
 			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name(), p.PTYPE))
 			return
         end
-        p.dispatch(msg, p)
+        p.dispatch(msg, p.unpack)
     end
 end
 
@@ -379,6 +383,11 @@ function moon.sleep(mills)
     return co_yield()
 end
 
+local json_object_mt = {__jsonobject=true}
+function moon.make_json_object()
+    return setmetatable({}, json_object_mt)
+end
+
 ------------------------------------------
 
 ---async
@@ -428,6 +437,9 @@ end
 ------------------------------------
 function moon.register_protocol(t)
     local PTYPE = t.PTYPE
+    if protocol[PTYPE] then
+        print("Warning attemp register duplicated PTYPE", t.name)
+    end
     protocol[PTYPE] = t
     protocol[t.name] = t
 end
@@ -454,9 +466,7 @@ reg_protocol {
     name = "lua",
     PTYPE = PTYPE_LUA,
     pack = seri.pack,
-    unpack = function(msg)
-        return unpack(msg:cstr())
-    end,
+    unpack = unpack,
     dispatch = function()
         error("PTYPE_LUA dispatch not implemented")
     end
@@ -468,9 +478,7 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(msg)
-        return msg:bytes()
-    end,
+    unpack = moon.tostring,
     dispatch = function()
         error("PTYPE_TEXT dispatch not implemented")
     end
@@ -482,13 +490,11 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(msg)
-        return msg:bytes()
-    end,
-    dispatch = function(msg, p)
+    unpack = moon.tostring,
+    dispatch = function(msg, unpack_fn)
         local sessionid = msg:sessionid()
         local content = msg:header()
-        local data = p.unpack(msg)
+        local data = unpack_fn(msg:cstr())
         if data and #data >0 then
             content = content..":"..data
         end
@@ -563,9 +569,7 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(msg)
-        return msg:bytes()
-    end,
+    unpack = moon.tostring,
     dispatch = function(msg, _)
         local sender = msg:sender()
         local header = msg:header()
@@ -621,13 +625,11 @@ reg_protocol {
     name = "debug",
     PTYPE = PTYPE_DEBUG,
     pack = pack,
-    unpack = function(msg)
-        return unpack(msg:cstr())
-    end,
-    dispatch = function(msg,p)
+    unpack = unpack,
+    dispatch = function(msg, unpack_fn)
         local sender = msg:sender()
         local sessionid = msg:sessionid()
-        local params = {p.unpack(msg)}
+        local params = {unpack_fn(msg:cstr())}
         local func = debug_command[params[1]]
         if func then
             func(sender, sessionid, table.unpack(params,2))
