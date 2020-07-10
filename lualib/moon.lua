@@ -48,7 +48,7 @@ local moon = {
 
 setmetatable(moon, {__index = core})
 
-moon.cache = require("codecache")
+--moon.codecache = require("codecache")
 
 moon.pack = pack
 moon.unpack = unpack
