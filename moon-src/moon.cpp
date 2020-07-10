@@ -121,7 +121,9 @@ extern "C"
     void open_custom_libraries(lua_State* L)
     {
         //core
+#ifdef LUA_CACHELIB
         REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
+#endif
         REGISTER_CUSTOM_LIBRARY("fs", luaopen_fs);
         REGISTER_CUSTOM_LIBRARY("http", luaopen_http);
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
@@ -168,7 +170,9 @@ int main(int argc, char* argv[])
 
     register_signal(argc, argv);
 
+#ifdef LUA_CACHELIB
     luaL_initcodecache();
+#endif
     {
         try
         {
