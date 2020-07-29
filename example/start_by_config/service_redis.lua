@@ -73,25 +73,37 @@ local function call(sender, sessionid, ...)
     end)
 end
 
-local send_queue = {}
-local sending = false
-local db
-local function send(...)
-    tbinsert(send_queue, {...})
-    if sending then
+local wpoolsize = 10
+
+local writepool = {}
+
+for _=1,wpoolsize do
+    tbinsert(writepool,{queue = {}, sending = false, db = false})
+end
+
+local function send(hash, ...)
+    hash = hash%wpoolsize
+    if hash == 0 then
+        hash = wpoolsize
+    end
+
+    local ctx = writepool[hash]
+
+    tbinsert(ctx.queue, {...})
+    if ctx.sending then
         return
     end
 
     moon.async(function()
-        sending = true
-        while #send_queue >0 do
-            local req = send_queue[1]
-            db = exec_one(db, 0, 0, req, true)
-            if db then
-                tbremove(send_queue,1)
+        ctx.sending = true
+        while #ctx.queue >0 do
+            local req = ctx.queue[1]
+            ctx.db = exec_one(ctx.db, 0, 0, req, true)
+            if ctx.db then
+                tbremove(ctx.queue,1)
             end
         end
-        sending = false
+        ctx.sending = false
     end)
 end
 
