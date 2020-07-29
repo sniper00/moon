@@ -206,27 +206,20 @@ end
 local fs = {}
 ignore_param(fs)
 
----广度递归遍历一个目录
----local fs = require("fs")
----example 遍历D:/Test目录
----fs.traverse_folder("D:/Test",0,function (path,isdir)
----    --filepath 完整的路径/文件
----    if not isdir then
----        print("File:"..path)
----        print(fs.parent_path(path))
----        print(fs.filename(path))
----        print(fs.extension(path))
----        print(fs.root_path(path))
----        print(fs.stem(path))
----    else
----        print("Path:"..path)
----    end
----end)
----@param dir string 路径
----@param depth integer 遍历子目录的深度，0表示 dir 同级目录
----@param callback function 回掉function(path,isdir) end
-function fs.traverse_folder(dir, depth, callback)
-    ignore_param(dir, depth, callback)
+---返回指定的文件夹包含的文件或文件夹的名字的列表
+---@param dir string @路径
+---@param depth integer @遍历子目录的深度，默认0
+---@return table @返回数组
+function fs.listdir(dir, depth)
+    ignore_param(dir, depth)
+end
+
+function fs.isdir(dir)
+    ignore_param(dir)
+end
+
+function fs.join(dir1, dir2)
+    ignore_param(dir1, dir2)
 end
 
 ---@param dir string
