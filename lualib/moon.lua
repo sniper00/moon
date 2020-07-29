@@ -383,11 +383,6 @@ function moon.sleep(mills)
     return co_yield()
 end
 
-local json_object_mt = {__jsonobject=true}
-function moon.make_json_object()
-    return setmetatable({}, json_object_mt)
-end
-
 ------------------------------------------
 
 ---async
@@ -524,7 +519,8 @@ moon.release =function(name)
     moon.send("system", id, "release", moon.name())
 end
 
-moon.co_wait_exit = function()
+moon.co_wait_exit = function(isquit)
+    if isquit == nil then isquit = true end
     while true do
         local num = 0
         for _,_ in pairs(ref_services) do
@@ -536,7 +532,9 @@ moon.co_wait_exit = function()
             moon.sleep(100)
         end
     end
-    moon.quit()
+    if isquit then
+        moon.quit()
+    end
 end
 
 system_command.exit = function(sender, msg)
@@ -617,7 +615,7 @@ end
 
 debug_command.state = function(sender, sessionid)
     local running_num, free_num = moon.coroutine_num()
-    local s = string.format("coroutine-running %d coroutine-free %d cpu:%d",running_num,free_num, moon.cpu())
+    local s = string.format("%s co-running %d co-free %d cpu:%d",moon.name(), running_num,free_num, moon.cpu())
     moon.response("debug",sender,sessionid, s)
 end
 
