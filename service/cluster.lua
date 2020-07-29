@@ -150,6 +150,7 @@ local function cluster_service()
             if v == fd then
                 connectors[k] = nil
                 clusters[k].state = "CLOSED"
+                break
             end
         end
     end)
