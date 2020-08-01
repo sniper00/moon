@@ -194,7 +194,7 @@ namespace moon
             }
         }
 
-        size_t size()
+        size_t size() const
         {
             return timers_.size();
         }
