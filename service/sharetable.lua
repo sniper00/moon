@@ -113,14 +113,14 @@ local function sharetable_service()
 	end)
 
 	if conf.dir then
-		local conf_files = {}
-		fs.traverse_folder(conf.dir, 0, function(filepath, isdir)
-			if not isdir and fs.extension(filepath) == ".lua" then
-				sharetable.loadfile(0,0,filepath)
-				conf_files[fs.stem(filepath)] = filepath
-			end
-			return true
-		end)
+        local conf_files = {}
+        local list = fs.listdir(conf.dir)
+        for _,file in ipairs(list) do
+            if not fs.isdir(file) and fs.extension(file) == ".lua" then
+                sharetable.loadfile(0,0,file)
+				conf_files[fs.stem(file)] = file
+            end
+        end
 		moon.set_env_pack("STATIC_CONF_INDEX", conf_files)
 	end
 end

@@ -121,7 +121,9 @@ extern "C"
     void open_custom_libraries(lua_State* L)
     {
         //core
+#ifdef LUA_CACHELIB
         REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
+#endif
         REGISTER_CUSTOM_LIBRARY("fs", luaopen_fs);
         REGISTER_CUSTOM_LIBRARY("http", luaopen_http);
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
@@ -168,7 +170,9 @@ int main(int argc, char* argv[])
 
     register_signal(argc, argv);
 
+#ifdef LUA_CACHELIB
     luaL_initcodecache();
+#endif
     {
         try
         {
@@ -318,14 +322,18 @@ int main(int argc, char* argv[])
             lua.set_function("set_env", &router::set_env, router_);
             lua.set_function("get_env", &router::get_env, router_);
 
+            sol::protected_function_result res;
             if (c->bootstrap[0] != '@')
             {
                 MOON_CHECK(directory::exists(c->bootstrap)
                     , moon::format("can not found bootstrap file: '%s'.", c->bootstrap.data()).data());
-                bootstrap = moon::file::read_all(c->bootstrap, std::ios::binary | std::ios::in);
+                res = lua.script_file(c->bootstrap);
+            }
+            else
+            {
+                res = lua.script(bootstrap);
             }
 
-            auto res = lua.script(bootstrap);
             if (!res.valid())
             {
                 sol::error err = res;

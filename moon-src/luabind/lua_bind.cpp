@@ -11,6 +11,11 @@
 #include "worker.h"
 #include "services/lua_service.h"
 
+//https://sol2.readthedocs.io/en/latest/functions.html?highlight=lua_CFunction
+//Note that stateless lambdas can be converted to a function pointer, 
+//so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
+//If you need to get the Lua state that is calling a function, use sol::this_state.
+
 using namespace moon;
 
 template <typename Handler>
@@ -255,52 +260,68 @@ const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
     return *this;
 }
 
+static int message_redirect(lua_State* L)
+{
+    int top = lua_gettop(L);
+    auto m = sol::stack::get<message*>(L, 1);
+    m->set_header(sol::stack::get<std::string_view>(L, 2));
+    m->set_receiver(sol::stack::get<uint32_t>(L, 3));
+    m->set_type(sol::stack::get<uint8_t>(L, 4));
+    if (top > 4)
+    {
+        m->set_sender(sol::stack::get<uint32_t>(L, 5));
+        m->set_sessionid(sol::stack::get<int32_t>(L, 6));
+    }
+    return 0;
+}
+
+static int message_tobuffer(lua_State* L)
+{
+    auto m = sol::stack::get<message*>(L, -1);
+    lua_pushlightuserdata(L, (void*)m->get_buffer());
+    return 1;
+}
+
+static int message_cstr(lua_State* L)
+{
+    auto m = sol::stack::get<message*>(L, 1);
+    int offset = 0;
+    if (lua_type(L, 2) == LUA_TNUMBER)
+    {
+        offset = static_cast<int>(lua_tointeger(L, 2));
+        if (offset > static_cast<int>(m->size()))
+        {
+            return luaL_error(L, "out of range");
+        }
+    }
+    lua_pushlightuserdata(L, (void*)(m->data() + offset));
+    lua_pushinteger(L, m->size() - offset);
+    return 2;
+};
+
+static int message_clone(lua_State* L)
+{
+    auto m = sol::stack::get<message*>(L, 1);
+    message* nm = new message((const buffer_ptr_t&)*m);
+    nm->set_broadcast(m->broadcast());
+    nm->set_header(m->header());
+    nm->set_receiver(m->receiver());
+    nm->set_sender(m->sender());
+    nm->set_sessionid(m->sessionid());
+    nm->set_type(m->type());
+    sol::stack::push(L, nm);
+    return 1;
+}
+
+static int message_release(lua_State* L)
+{
+    auto m = sol::stack::get<message*>(L, 1);
+    delete m;
+    return 0;
+}
+
 const lua_bind & lua_bind::bind_message() const
 {
-    //https://sol2.readthedocs.io/en/latest/functions.html?highlight=lua_CFunction
-    //Note that stateless lambdas can be converted to a function pointer, 
-    //so stateless lambdas similar to the form [](lua_State*) -> int { ... } will also be pushed as raw functions.
-    //If you need to get the Lua state that is calling a function, use sol::this_state.
-
-    lua.set_function("redirect", [](lua_State* L)->int
-    {
-        int top = lua_gettop(L);
-        auto m = sol::stack::get<message*>(L, 1);
-        m->set_header(sol::stack::get<std::string_view>(L, 2));
-        m->set_receiver(sol::stack::get<uint32_t>(L, 3));
-        m->set_type(sol::stack::get<uint8_t>(L, 4));
-        if (top > 4)
-        {
-            m->set_sender(sol::stack::get<uint32_t>(L, 5));
-            m->set_sessionid(sol::stack::get<int32_t>(L, 6));
-        }
-        return 0;
-    });
-
-    auto tobuffer = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, -1);
-        lua_pushlightuserdata(L, (void*)m->get_buffer());
-        return 1;
-    };
-
-    auto cstr = [](lua_State* L)->int
-    {
-        auto m = sol::stack::get<message*>(L, 1);
-        int offset = 0;
-        if (lua_type(L, 2) == LUA_TNUMBER)
-        {
-            offset = static_cast<int>(lua_tointeger(L, 2));
-            if (offset > static_cast<int>(m->size()))
-            {
-                return luaL_error(L, "out of range");
-            }
-        }
-        lua_pushlightuserdata(L, (void*)(m->data()+ offset));
-        lua_pushinteger(L, m->size()- offset);
-        return 2;
-    };
-
     lua.new_usertype<message>("message"
         , sol::call_constructor, sol::no_constructor
         , "sender", (&message::sender)
@@ -310,9 +331,13 @@ const lua_bind & lua_bind::bind_message() const
         , "bytes", (&message::bytes)
         , "size", (&message::size)
         , "substr", (&message::substr)
-        , "buffer", tobuffer
-        , "cstr", cstr
+        , "buffer", message_tobuffer
+        , "cstr", message_cstr
         );
+
+    lua.set_function("redirect", message_redirect);
+    lua.set_function("clone_message", message_clone);
+    lua.set_function("release_message", message_release);
     return *this;
 }
 

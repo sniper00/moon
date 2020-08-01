@@ -114,7 +114,7 @@ static inline size_t array_size(lua_State* L, int idx)
 {
     if (lua_getmetatable(L, idx)) {
         // [metatable]
-        lua_getfield(L, -1, "__jsonobject");
+        lua_getfield(L, -1, "__jobject");
         auto v = lua_isnoneornil(L, -1);
         lua_pop(L, 2);
         if (!v)
@@ -365,6 +365,19 @@ static int decode(lua_State* L)
     return lua_gettop(L) - 1;
 }
 
+static int newobject(lua_State* L)
+{
+    int n = (int)luaL_optinteger(L, 1, 7);
+    lua_createtable(L, 0, n);
+    if (luaL_newmetatable(L, "json_object_mt"))//mt
+    {
+        lua_pushboolean(L, 1);
+        lua_setfield(L, -2, "__jobject");//
+    }
+    lua_setmetatable(L, -2);// set userdata metatable
+    return 1;
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_json(lua_State* L)
@@ -373,6 +386,7 @@ extern "C"
             {"encode", encode},
             {"pretty_encode", pretty_encode},
             {"decode", decode},
+            {"newobject", newobject},
             {NULL,NULL}
         };
         luaL_checkversion(L);

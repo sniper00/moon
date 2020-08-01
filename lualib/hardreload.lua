@@ -70,6 +70,16 @@ function hardreload.addsearcher(fn)
 	searchers[#searchers+1] = fn
 end
 
+-- searchers[1] = function ( name )
+-- 	local file, err = io.open(name..".lua", "rb")
+-- 	if file then
+-- 		local content = file:read("*a")
+-- 		return load(content,"@"..name),name
+-- 	end
+-- 	print("@@@@@@@@@@@@@@@@@@@@@@@open file faile", name..".lua", err)
+-- 	return false
+-- end
+
 local function findloader(name)
 	local msg = {}
 	for _, loader in ipairs(searchers) do
