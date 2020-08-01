@@ -3,25 +3,19 @@
 
 using namespace moon;
 
-static void traverse_folder(const std::string& dir, int depth, sol::protected_function func, sol::this_state s)
+static auto listdir(const std::string& dir, sol::optional<int> depth)
 {
-    directory::traverse_folder(dir, depth, [func, s](const fs::path& path, bool isdir)->bool {
-        auto result = func(path.string(), isdir);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            luaL_error(s.lua_state(), err.what());
-            return false;
-        }
-        else
-        {
-            if (result.return_count())
-            {
-                return  ((bool)result);
-            }
-            return true;
-        }
+    int n = 0;
+    if (depth)
+    {
+        n = depth.value();
+    }
+    std::vector<std::string> files;
+    directory::traverse_folder(dir, n, [&files](const fs::path& path, bool)->bool {
+        files.emplace_back(path.string());
+        return true;
     });
+    return sol::as_table(files);
 }
 
 #if defined(__GNUC__)
@@ -109,7 +103,18 @@ static sol::table bind_fs(sol::this_state L)
 {
     sol::state_view lua(L);
     sol::table m = lua.create_table();
-    m.set_function("traverse_folder", traverse_folder);
+    m.set_function("listdir", listdir);
+
+    m.set_function("isdir", [](const std::string_view& s) {
+        return fs::is_directory(s);
+    });
+
+    m.set_function("join", [](const std::string_view& p1, const std::string_view& p2) {
+        fs::path p(p1);
+        p += fs::path(p2);
+        return p.string();
+    });
+
     m.set_function("exists", directory::exists);
     m.set_function("create_directory", directory::create_directory);
     m.set_function("remove", directory::remove);
