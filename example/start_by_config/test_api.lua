@@ -46,7 +46,7 @@ equal(type(fs.create_directory) , "function")
 equal(type(fs.working_directory) , "function")
 print(fs.working_directory())
 equal(type(fs.exists) , "function")
-equal(type(fs.traverse_folder) , "function")
+equal(type(fs.listdir) , "function")
 
 local socket = require("asio")
 equal(type(socket.listen) , "function")

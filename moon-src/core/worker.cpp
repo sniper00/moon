@@ -25,10 +25,11 @@ namespace moon
     std::string worker::info()
     {
         auto response = moon::format(
-            R"({"cpu":%lld,"socket_num":%zu,"mqsize":%d})",
+            R"({"cpu":%lld,"socket_num":%zu,"mqsize":%d, "timer":%zu})",
             cpu_cost_,
             socket_->socket_num(),
-            mqsize_.load()
+            mqsize_.load(),
+            timer_.size()
         );
         cpu_cost_ = 0;
         return response;
@@ -385,7 +386,7 @@ namespace moon
             }
 
             update_state_.clear(std::memory_order_release);
-            });
+         });
     }
 
     void worker::handle_one(service*& ser, message_ptr_t&& msg)

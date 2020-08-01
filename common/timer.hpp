@@ -194,6 +194,11 @@ namespace moon
             }
         }
 
+        size_t size() const
+        {
+            return timers_.size();
+        }
+
     private:
         // slots:      8bit(notuse) 8bit(wheel3_slot)  8bit(wheel2_slot)  8bit(wheel1_slot)  
         uint64_t make_key(timer_t id, uint32_t slots)
