@@ -1,5 +1,5 @@
 #include "common/directory.hpp"
-#include "sol.hpp"
+#include "sol/sol.hpp"
 
 using namespace moon;
 

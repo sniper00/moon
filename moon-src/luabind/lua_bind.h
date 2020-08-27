@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "sol.hpp"
+#include "sol/sol.hpp"
 #include "common/noncopyable.hpp"
 
 class lua_service;
