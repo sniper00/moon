@@ -7,6 +7,14 @@
 
 namespace moon
 {
+    inline unsigned int rand()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<unsigned int> dis(1, std::numeric_limits<unsigned int>::max());
+        return dis(gen);
+    }
+
     ///[min.max]
     template<typename IntType>
     inline IntType rand_range(IntType min, IntType max)
@@ -14,14 +22,6 @@ namespace moon
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<IntType> dis(min, max);
-        return dis(gen);
-    }
-
-    inline unsigned int rand()
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<unsigned int> dis(1, std::numeric_limits<unsigned int>::max());
         return dis(gen);
     }
 
@@ -68,30 +68,18 @@ namespace moon
         return true;
     }
 
-    template<typename Key, typename Weight>
-    inline Key rand_weight(const std::map<Key, Weight>& data)
+    template<typename Values, typename Weights>
+    inline auto  rand_weight(const Values& v, const Weights& w)
     {
-        Weight total = 0;
-        for (auto& it : data)
+        if (v.empty() || v.size() != w.size())
         {
-            total += it.second;
+            return -1;
         }
-        if (total == 0)
-        {
-            return 0;
-        }
-        Weight rd = rand(1, total);
 
-        Weight tmp = 0;
-        for (auto& it : data)
-        {
-            tmp += it.second;
-            if (rd <= tmp)
-            {
-                return it.first;
-            }
-        }
-        return 0;
+        auto dist = std::discrete_distribution<int>(w.begin(), w.end());
+        auto g = std::mt19937(std::random_device{}());
+        int index = dist(g);
+        return v[index];
     }
 };
 
