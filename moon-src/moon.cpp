@@ -27,12 +27,12 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     switch (dwCtrlType)
     {
     case CTRL_C_EVENT:
-        svr->stop();
+        svr->stop(-1);
         return TRUE;
     case CTRL_CLOSE_EVENT:
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
-        svr->stop();
+        svr->stop(dwCtrlType);
         while (svr->get_state() != moon::state::exited)
         {
             std::this_thread::yield();
@@ -65,7 +65,7 @@ static void signal_handler(int signal)
         msg = "Received shutdown signal,shutdown...\n";
         break;
     }
-    svr->stop();
+    svr->stop(signal);
     [[maybe_unused]] auto n = write(STDERR_FILENO, msg.data(), msg.size());
 }
 #endif
@@ -163,6 +163,19 @@ extern "C"
     }
 }
 
+
+#ifdef MOON_ENABLE_MIMALLOC
+#include "mimalloc.h"
+void print_mem_stats()
+{
+    mi_collect(true);
+    mi_stats_print(nullptr);
+}
+#else
+void print_mem_stats()
+{
+}
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -349,6 +362,7 @@ int main(int argc, char* argv[])
             printf("ERROR:%s\n", e.what());
         }
     }
+    print_mem_stats();
     return 0;
 }
 
