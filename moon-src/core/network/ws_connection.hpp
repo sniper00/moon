@@ -173,7 +173,6 @@ namespace moon
         {
             auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
             asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -211,7 +210,7 @@ namespace moon
                     // client close, or server check read timeout.
                     send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
-            }));
+            });
         }
 
         void request_handshake()
@@ -314,7 +313,6 @@ namespace moon
         void read_some()
         {
             socket_.async_read_some(asio::buffer(recv_buf_->data() + recv_buf_->size(), recv_buf_->writeablesize()),
-                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -338,7 +336,7 @@ namespace moon
                 }
 
                 read_some();
-            }));
+            });
         }
 
         std::error_code handshake(const std::shared_ptr<asio::streambuf>& buf)
