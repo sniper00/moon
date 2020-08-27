@@ -5,7 +5,7 @@ namespace moon
 {
     server::~server()
     {
-        stop();
+        stop(-1);
         wait();
     }
 
@@ -35,12 +35,12 @@ namespace moon
     void server::run(size_t count)
     {
         //wait all bootstrap services created
-        while (!signalstop_ && service_count() < count)
+        while (!signalcode_ && service_count() < count)
         {
             thread_sleep(10);
         }
 
-        if (signalstop_)
+        if (signalcode_)
         {
             wait();
             return;
@@ -60,7 +60,7 @@ namespace moon
         while (true)
         {
             state old = state::ready;
-            if (signalstop_ && state_.compare_exchange_strong(old
+            if (signalcode_ && state_.compare_exchange_strong(old
                 , state::stopping
                 , std::memory_order_acquire))
             {
@@ -114,9 +114,9 @@ namespace moon
         wait();
     }
 
-    void server::stop()
+    void server::stop(int  signalcode)
     {
-        signalstop_ = true;
+        signalcode_ = signalcode;
     }
 
     log* server::logger()
@@ -135,7 +135,7 @@ namespace moon
         {
             (*iter)->wait();
         }
-        CONSOLE_INFO(logger(), "STOP");
+        CONSOLE_INFO(logger(), "STOP signal %d", signalcode_);
         logger_.wait();
         state_.store(state::exited, std::memory_order_release);
     }
