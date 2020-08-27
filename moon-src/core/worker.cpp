@@ -341,6 +341,7 @@ namespace moon
 
     timer_t worker::repeat(int32_t duration, int32_t times, uint32_t serviceid)
     {
+        timer_.update(server_->now());
         return timer_.repeat(duration, times, serviceid, this);
     }
 
@@ -420,7 +421,7 @@ namespace moon
                 if (sender != 0)
                 {
                     std::string hexdata = moon::hex_string({ msg->data(),msg->size() });
-                    std::string str = moon::format("[%X] attempt send to dead service [%X]: %s."
+                    std::string str = moon::format("[%08X] attempt send to dead service [%08X]: %s."
                         , sender
                         , receiver
                         , hexdata.data());

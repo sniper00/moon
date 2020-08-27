@@ -54,7 +54,6 @@ namespace moon
         void read_until()
         {
             asio::async_read_until(socket_, moon::streambuf(response_->get_buffer(), count_), delim_,
-                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -64,14 +63,13 @@ namespace moon
                 }
                 recvtime_ = now();
                 response(bytes_transferred, response_);
-            }));
+            });
         }
 
         void read()
         {
             std::size_t size = (response_->size() >= count_ ? 0 : (response_->size() - count_));
             asio::async_read(socket_, moon::streambuf(response_->get_buffer(), count_), asio::transfer_exactly(size),
-                make_custom_alloc_handler(rallocator_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
                 if (e)
@@ -81,7 +79,7 @@ namespace moon
                 }
                 recvtime_ = now();
                 response(count_, response_);
-            }));
+            });
         }
 
         void error(const asio::error_code& e, const std::string& additional = "") override

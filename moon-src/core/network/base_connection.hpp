@@ -2,7 +2,6 @@
 #include "config.hpp"
 #include "asio.hpp"
 #include "message.hpp"
-#include "handler_alloc.hpp"
 #include "const_buffers_holder.hpp"
 #include "common/string.hpp"
 #include "error.hpp"
@@ -196,8 +195,7 @@ namespace moon
             asio::async_write(
                 socket_,
                 make_buffers_ref(holder_.buffers()),
-                make_custom_alloc_handler(wallocator_,
-                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
+                [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
                 sending_ = false;
 
@@ -223,7 +221,7 @@ namespace moon
                 {
                     error(e);
                 }
-            }));
+            });
         }
 
         virtual void error(const asio::error_code& e, const std::string& additional = "")
@@ -293,8 +291,6 @@ namespace moon
         uint8_t type_;
         moon::socket* parent_;
         socket_t socket_;
-        handler_allocator rallocator_;
-        handler_allocator wallocator_;
         const_buffers_holder  holder_;
         std::deque<buffer_ptr_t> queue_;
     };

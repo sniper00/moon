@@ -24,7 +24,7 @@ namespace moon
 
         void run(size_t count);
 
-        void stop();
+        void stop(int signalcode);
 
         log* logger();
 
@@ -46,7 +46,7 @@ namespace moon
     private:
         void wait();
     private:
-        volatile bool signalstop_ = false;
+        volatile int signalcode_ = 0;
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> next_ = 0;
         int64_t now_ = 0;

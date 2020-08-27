@@ -17003,7 +17003,7 @@ namespace function_detail {
 		using function_type = std::remove_pointer_t<std::decay_t<Function>>;
 		using traits_type = meta::bind_traits<function_type>;
 
-		static int real_call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int real_call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			auto udata = stack::stack_detail::get_as_upvalues<function_type*>(L);
 			function_type* fx = udata.first;
 			return call_detail::call_wrapped<void, true, false>(L, fx);
@@ -17029,7 +17029,7 @@ namespace function_detail {
 		typedef std::remove_pointer_t<std::decay_t<Function>> function_type;
 		typedef lua_bind_traits<function_type> traits_type;
 
-		static int real_call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int real_call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			// Layout:
 			// idx 1...n: verbatim data of member function pointer
 			// idx n + 1: is the object's void pointer
@@ -17040,7 +17040,7 @@ namespace function_detail {
 			return call_detail::call_wrapped<T, true, false, -1>(L, memfx, item);
 		}
 
-		static int call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			int nr = detail::typed_static_trampoline<decltype(&real_call), (&real_call)>(L);
 			if (is_yielding) {
 				return lua_yield(L, nr);
@@ -17060,7 +17060,7 @@ namespace function_detail {
 		typedef std::remove_pointer_t<std::decay_t<Function>> function_type;
 		typedef lua_bind_traits<function_type> traits_type;
 
-		static int real_call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int real_call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			// Layout:
 			// idx 1...n: verbatim data of member variable pointer
 			// idx n + 1: is the object's void pointer
@@ -17080,7 +17080,7 @@ namespace function_detail {
 			}
 		}
 
-		static int call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			int nr = detail::typed_static_trampoline<decltype(&real_call), (&real_call)>(L);
 			if (is_yielding) {
 				return lua_yield(L, nr);
@@ -17100,7 +17100,7 @@ namespace function_detail {
 		typedef std::remove_pointer_t<std::decay_t<Function>> function_type;
 		typedef lua_bind_traits<function_type> traits_type;
 
-		static int real_call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int real_call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			// Layout:
 			// idx 1...n: verbatim data of member variable pointer
 			// idx n + 1: is the object's void pointer
@@ -17138,7 +17138,7 @@ namespace function_detail {
 		typedef std::remove_pointer_t<std::decay_t<Function>> function_type;
 		typedef lua_bind_traits<function_type> traits_type;
 
-		static int real_call(lua_State* L) noexcept(traits_type::is_noexcept) {
+		static int real_call(lua_State* L) /*noexcept(traits_type::is_noexcept)*/ {
 			// Layout:
 			// idx 1...n: verbatim data of member variable pointer
 			function_type& memfx = stack::get<user<function_type>>(L, upvalue_index(2));

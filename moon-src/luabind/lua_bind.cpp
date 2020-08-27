@@ -384,6 +384,7 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
 
     sol::table tb = lua.create();
 
+    tb.set_function("try_open", &moon::socket::try_open, &sock);
     tb.set_function("listen", [&sock,s](const std::string& host, uint16_t port, uint8_t type) {
         return sock.listen(host, port, s->id(), type);
     });
