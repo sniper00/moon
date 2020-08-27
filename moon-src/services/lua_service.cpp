@@ -7,6 +7,13 @@
 #include "service_config.hpp"
 #include "server_config.hpp"
 
+
+#ifdef MOON_ENABLE_MIMALLOC
+#include "mimalloc.h"
+#define free mi_free 
+#define realloc mi_realloc 
+#endif
+
 using namespace moon;
 
 constexpr size_t mb_memory = 1024 * 1024;
@@ -46,7 +53,7 @@ void *lua_service::lalloc(void *ud, void *ptr, size_t osize, size_t nsize)
     }
     else
     {
-        return ::realloc(ptr, nsize);
+        return realloc(ptr, nsize);
     }
 }
 
@@ -128,7 +135,7 @@ bool lua_service::init(std::string_view config)
             MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
-        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s:%08X]", worker_->id(), name().data(), id()), id());
+        logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
         ok_ = true;
     }
     catch (std::exception &e)
@@ -239,7 +246,7 @@ void lua_service::exit()
 
 void lua_service::destroy()
 {
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s:%08X] ", worker_->id(), name().data(), id()), id());
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
     if (!ok())
         return;
 
@@ -276,7 +283,7 @@ void lua_service::error(const std::string &msg, bool initialized)
     if (unique())
     {
         CONSOLE_ERROR(logger(), "unique service %s crashed, server will abort.", name().data());
-        server_->stop();
+        server_->stop(-1);
     }
 }
 

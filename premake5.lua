@@ -27,7 +27,7 @@ workspace "Server"
 
 project "lua53"
     location "projects/build/lua53"
-    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
+    objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
     kind "StaticLib"
     language "C"
@@ -49,7 +49,7 @@ project "lua53"
 
 project "moon"
     location "projects/build/moon"
-    objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"
+    objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"
     targetdir "projects/bin/%{cfg.buildcfg}"
 
     kind "ConsoleApp"
@@ -68,22 +68,16 @@ project "moon"
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
         "SOL_ALL_SAFETIES_ON",
-        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING"
+        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING",
+        --"MOON_ENABLE_MIMALLOC"
     }
+    --links {"mimalloc"}
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
         linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-rpath=./","-Wl,--as-needed"}
     filter {"system:macosx"}
-        if os.istarget("macosx") then
-            local tb = os.matchfiles("/usr/local/Cellar/llvm/**/c++fs.a")
-            if #tb > 0 then
-                print("use c++fs.a: ", tb[1])
-                libdirs({path.getdirectory(tb[1])})
-                links{"c++fs"}
-            end
-        end
         links{"dl","pthread"}
         linkoptions {"-Wl,-rpath,./"}
     filter "configurations:Debug"
@@ -110,7 +104,7 @@ project "moon"
 local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon, macaddon )
     project(name)
         location("projects/build/"..name)
-        objdir "projects/obj/%{cfg.project.name}/%{cfg.platform}_%{cfg.buildcfg}"--编译生成的中间文件目录
+        objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"--编译生成的中间文件目录
         targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
 
         kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib

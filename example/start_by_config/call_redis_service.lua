@@ -1,7 +1,7 @@
 local moon = require("moon")
 
 local function send(db, ...)
-    moon.send("lua", db, "send", ...)
+    moon.send("lua", db, "send", 1, ...)
 end
 
 local function call(db, ...)
