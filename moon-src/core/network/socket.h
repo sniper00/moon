@@ -44,6 +44,8 @@ namespace moon
 
         socket& operator =(const socket&) = delete;
 
+        bool try_open(const std::string& host, uint16_t port);
+
         uint32_t listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
 
         void accept(int fd, int32_t sessionid, uint32_t owner);
