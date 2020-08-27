@@ -15,6 +15,7 @@ namespace moon
     {
     public:
         using iterator_category = std::random_access_iterator_tag;
+        using self_type = buffer_iterator;
         using value_type = ValueType;
         using pointer = value_type*;
         using reference = value_type&;
@@ -122,130 +123,19 @@ namespace moon
         pointer _Ptr;
     };
 
-    template<typename ValueType>
-    class buffer_const_iterator
+    template<class Alloc>
+    class base_buffer
     {
     public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = ValueType;
-        using pointer = const value_type*;
-        using reference = const value_type&;
-        using difference_type = std::ptrdiff_t;
-
-        explicit buffer_const_iterator(pointer p)
-            :_Ptr(p)
-        {
-        }
-
-        reference operator*() const
-        {
-            return  *_Ptr;
-        }
-
-        buffer_const_iterator& operator++()
-        {
-            ++_Ptr;
-            return *this;
-        }
-
-        buffer_const_iterator operator++(int)
-        {	// postincrement
-            buffer_const_iterator _Tmp = *this;
-            ++* this;
-            return (_Tmp);
-        }
-
-        buffer_const_iterator& operator--()
-        {
-            --_Ptr;
-            return *this;
-        }
-
-        buffer_const_iterator operator--(int)
-        {	// postdecrement
-            buffer_const_iterator _Tmp = *this;
-            --* this;
-            return (_Tmp);
-        }
-
-        buffer_const_iterator& operator+=(const difference_type _Off)
-        {	// increment by integer
-            _Ptr += _Off;
-            return (*this);
-        }
-
-        buffer_const_iterator operator+(const difference_type _Off) const
-        {	// return this + integer
-            buffer_const_iterator _Tmp = *this;
-            return (_Tmp += _Off);
-        }
-
-        buffer_const_iterator& operator-=(const difference_type _Off)
-        {	// decrement by integer
-            return (*this += -_Off);
-        }
-
-        buffer_const_iterator operator-(const difference_type _Off) const
-        {	// return this - integer
-            buffer_const_iterator _Tmp = *this;
-            return (_Tmp -= _Off);
-        }
-
-        reference operator[](const difference_type _Off) const
-        {	// subscript
-            return (*(*this + _Off));
-        }
-
-        difference_type operator-(const buffer_const_iterator& _Right) const
-        {	// return difference of iterators
-            return (_Ptr - _Right._Ptr);
-        }
-
-        bool operator!=(const buffer_const_iterator& other) const
-        {
-            return _Ptr != other._Ptr;
-        }
-
-        bool operator==(const buffer_const_iterator& _Right) const
-        {	// test for iterator equality
-            return (_Ptr == _Right._Ptr);
-        }
-
-        bool operator<(const buffer_const_iterator& _Right) const
-        {	// test if this < _Right
-            return (_Ptr < _Right._Ptr);
-        }
-
-        bool operator>(const buffer_const_iterator& _Right) const
-        {	// test if this > _Right
-            return (_Right < *this);
-        }
-
-        bool operator<=(const buffer_const_iterator& _Right) const
-        {	// test if this <= _Right
-            return (!(_Right < *this));
-        }
-
-        bool operator>=(const buffer_const_iterator& _Right) const
-        {	// test if this >= _Right
-            return (!(*this < _Right));
-        }
-
-    private:
-        pointer _Ptr;
-    };
-
-    class buffer
-    {
-    public:
-        using iterator = buffer_iterator<char>;
-        using const_iterator = buffer_const_iterator<char>;
-        using value_type = typename iterator::value_type;
+        using allocator_type = Alloc;
+        using value_type = typename allocator_type::value_type;
+        using iterator = buffer_iterator<value_type>;
+        using const_iterator = buffer_iterator<const value_type>;
         using pointer = typename iterator::pointer;
         using const_pointer = typename const_iterator::pointer;
 
         //buffer default size
-        constexpr static size_t   STACK_CAPACITY = 256 - 4 * sizeof(size_t) - sizeof(std::unique_ptr<value_type[]>);
+        constexpr static size_t   STACK_CAPACITY = 256 - 4 * sizeof(size_t) - sizeof(value_type*) - sizeof(allocator_type);
 
         enum class seek_origin
         {
@@ -254,27 +144,34 @@ namespace moon
             End
         };
 
-        buffer(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
+        base_buffer(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
             :flag_(0)
             , headreserved_(headreserved)
             , capacity_(sizeof(stack_data_))
             , readpos_(headreserved)
             , writepos_(headreserved)
             , stack_data_()
+            , allocator_(al)
         {
+            assert(headreserved <= STACK_CAPACITY);
             if (capacity + headreserved > capacity_)
             {
                 prepare(capacity);
             }
         }
 
-        buffer(const buffer& other) = delete;
+        base_buffer(const base_buffer&) = delete;
 
-        buffer& operator=(const buffer& other) = delete;
+        base_buffer& operator=(const base_buffer&) = delete;
 
-        buffer(buffer&&) = default;
+        base_buffer(base_buffer&&) = delete;
 
-        buffer& operator=(buffer&&) = default;
+        base_buffer& operator=(base_buffer&&) = delete;
+
+        ~base_buffer()
+        {
+            clear();
+        }
 
         void init(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
         {
@@ -375,7 +272,11 @@ namespace moon
         void clear() noexcept
         {
             readpos_ = writepos_ = headreserved_;
-            if (heap_data_) heap_data_.reset(nullptr);
+            if (nullptr != heap_data_)
+            {
+                allocator_.deallocate(heap_data_, capacity_);
+                heap_data_ = nullptr;
+            }
             flag_ = 0;
         }
 
@@ -473,16 +374,17 @@ namespace moon
             {
                 auto required_size = writepos_ + need;
                 required_size = next_pow2(required_size);
-                if (!heap_data_)
+                if (nullptr == heap_data_)
                 {
-                    heap_data_.reset(new char[required_size]);
-                    memcpy(heap_data_.get(), stack_data_, writepos_);
+                    heap_data_ = allocator_.allocate(required_size);
+                    memcpy(heap_data_, stack_data_, writepos_);
                 }
                 else
                 {
-                    std::unique_ptr < char[] > new_heap_data(new char[required_size]);
-                    memcpy(new_heap_data.get(), heap_data_.get(), writepos_);
-                    heap_data_.swap(new_heap_data);
+                    auto new_heap_data = allocator_.allocate(required_size);
+                    memcpy(new_heap_data, heap_data_, writepos_);
+                    allocator_.deallocate(heap_data_, capacity_);
+                    heap_data_ = new_heap_data;
                 }
                 capacity_ = required_size;
             }
@@ -522,12 +424,12 @@ namespace moon
 
         pointer data_() noexcept
         {
-            return (!heap_data_) ? stack_data_ : heap_data_.get();
+            return (!heap_data_) ? stack_data_ : heap_data_;
         }
 
         const_pointer data_() const noexcept
         {
-            return (!heap_data_) ? stack_data_ : heap_data_.get();
+            return (!heap_data_) ? stack_data_ : heap_data_;
         }
 
     protected:
@@ -541,12 +443,26 @@ namespace moon
         //write position
         size_t writepos_;
 
-        std::unique_ptr<value_type[]> heap_data_;
+        value_type* heap_data_ = nullptr;
 
         value_type stack_data_[STACK_CAPACITY];
-    };
 
+        allocator_type allocator_;
+    };
 };
+
+#ifdef MOON_ENABLE_MIMALLOC
+#include "mimalloc.h"
+namespace moon
+{
+    using buffer = base_buffer<mi_stl_allocator<char>>;
+}
+#else
+namespace moon
+{
+    using buffer = base_buffer<std::allocator<char>>;
+}
+#endif
 
 
 

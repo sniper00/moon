@@ -22,6 +22,24 @@ socket::socket(router * r, worker* w, asio::io_context & ioctx)
     timeout();
 }
 
+bool socket::try_open(const std::string& host, uint16_t port)
+{
+    try
+    {
+        asio::ip::tcp::resolver resolver(ioc_);
+        asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+        asio::ip::tcp::acceptor acceptor{ ioc_ };
+        acceptor.open(endpoint.protocol());
+        acceptor.close();
+        return true;
+    }
+    catch (asio::system_error& e)
+    {
+        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        return false;
+    }
+}
+
 uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
 {
     try
