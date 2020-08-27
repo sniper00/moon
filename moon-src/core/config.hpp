@@ -1,5 +1,6 @@
 #pragma once
 #include "common/macro_define.hpp"
+#include "common/buffer.hpp"
 
 namespace moon
 {
@@ -8,8 +9,10 @@ namespace moon
     constexpr int32_t BUFFER_HEAD_RESERVED = 14;//max : websocket header  max  len
 
     DECLARE_UNIQUE_PTR(message);
-    DECLARE_SHARED_PTR(buffer);
+
     DECLARE_UNIQUE_PTR(service);
+
+    using buffer_ptr_t = std::shared_ptr<buffer>;
 
     constexpr uint8_t PTYPE_UNKNOWN = 0;
     constexpr uint8_t PTYPE_SYSTEM = 1;
