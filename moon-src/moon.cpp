@@ -134,6 +134,7 @@ extern "C"
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);
         REGISTER_CUSTOM_LIBRARY("aoi", luaopen_aoi);
         REGISTER_CUSTOM_LIBRARY("clonefunc", luaopen_clonefunc);
+        REGISTER_CUSTOM_LIBRARY("random", luaopen_random);
     }
 
     int luaopen_sharetable_core(lua_State* L);
