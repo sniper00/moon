@@ -660,7 +660,7 @@ static int sep_concatsafe(lua_State *L)
     const char* sep = luaL_checklstring(L, 1, &len);
 
     buffer buf;
-    for (int i = 1; i <= n; i++) {
+    for (int i = 2; i <= n; i++) {
         concat_one(L, &buf, i, 0);
         if (i != n)
             buf.write_back(sep, len);
