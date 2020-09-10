@@ -1,5 +1,11 @@
 #pragma once
 
+#define luaL_rawsetfield(L, tbindex, kname, valueexp)\
+    lua_pushliteral(L, kname);\
+    (valueexp);\
+    lua_rawset(L, tbindex);\
+
+
 namespace moon
 {
     struct lua_scope_pop
@@ -27,6 +33,11 @@ namespace moon
         size_t pos_;
     public:
         using iterator_category = std::random_access_iterator_tag;
+        using self_type = lua_array_view_iterator;
+        using value_type = typename LuaArrayView::value_type;
+        using pointer = value_type*;
+        using reference = value_type&;
+        using difference_type = std::ptrdiff_t;
 
         explicit lua_array_view_iterator(const LuaArrayView* lav, size_t pos)
             :lav_(lav)
@@ -39,22 +50,27 @@ namespace moon
             return lav_->get_lua_value(pos_ + 1);
         }
 
-        lua_array_view_iterator& operator++()
+        self_type& operator++()
         {
             assert(pos_ != lav_->size());
             ++pos_;
             return *this;
         }
 
-        lua_array_view_iterator operator++(int)
+        self_type operator++(int)
         {
             assert(pos_ != lav_->size());
             auto old = pos_;
             pos_++;
-            return lua_array_view_iterator{ lav_, old };
+            return self_type{ lav_, old };
         }
 
-        bool operator!=(const lua_array_view_iterator& other) const {
+        difference_type operator-(const self_type& _Right) const
+        {	// return difference of iterators
+            return (pos_ - _Right.pos_);
+        }
+
+        bool operator!=(const self_type& other) const {
             return pos_ != other.pos_;
         }
     };
