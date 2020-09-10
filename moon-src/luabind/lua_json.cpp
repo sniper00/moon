@@ -17,6 +17,8 @@
 #include "rapidjson/reader.h"
 #include "rapidjson/error/en.h"
 
+#include "common/buffer.hpp"
+
 static constexpr int max_depth = 64;
 
 using StreamBuf = rapidjson::StringBuffer;
@@ -192,9 +194,29 @@ static int  encode(lua_State* L)
 {
     StreamBuf stream;
     JsonWriter writer(stream);
-    encode_one(L, &writer, -1);
-    lua_pushlstring(L, stream.GetString(), stream.GetSize());
-    return 1;
+
+    moon::buffer* buffer = nullptr;
+    if (lua_gettop(L) == 2)
+    {
+        if (lua_type(L, 2) != LUA_TLIGHTUSERDATA)
+        {
+            luaL_error(L, "json encode param 2 only access lightuserdata(moon::buffer*)");
+            return 0;
+        }
+        buffer = (moon::buffer*)lua_touserdata(L, 2);
+        lua_settop(L, 1);
+    }
+    encode_one(L, &writer, 1);
+    if (nullptr != buffer)
+    {
+        buffer->write_back(stream.GetString(), stream.GetSize());
+        return 0;
+    }
+    else
+    {
+        lua_pushlstring(L, stream.GetString(), stream.GetSize());
+        return 1;
+    }
 }
 
 static int  pretty_encode(lua_State* L)
