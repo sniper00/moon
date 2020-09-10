@@ -6,6 +6,7 @@
 #include "common/sha1.hpp"
 #include "common/md5.hpp"
 #include "common/byte_convert.hpp"
+#include "common/lua_utility.hpp"
 #include "message.hpp"
 #include "server.h"
 #include "worker.h"
@@ -240,6 +241,33 @@ const lua_bind & lua_bind::bind_util() const
         return 1;
     });
 
+    lua.set_function("localtime",[](lua_State* L) {
+        time_t t = luaL_checkinteger(L, 1);
+        std::tm local_tm;
+        time::localtime(&t, &local_tm);
+        lua_createtable(L, 0, 8);
+        luaL_rawsetfield(L, -3, "yeay", lua_pushinteger(L, (lua_Integer)local_tm.tm_year + 1900));
+        luaL_rawsetfield(L, -3, "month", lua_pushinteger(L, (lua_Integer)local_tm.tm_mon + 1));
+        luaL_rawsetfield(L, -3, "day", lua_pushinteger(L, local_tm.tm_mday));
+        luaL_rawsetfield(L, -3, "hour", lua_pushinteger(L, local_tm.tm_hour));
+        luaL_rawsetfield(L, -3, "min", lua_pushinteger(L, local_tm.tm_min));
+        luaL_rawsetfield(L, -3, "sec", lua_pushinteger(L, local_tm.tm_sec));
+        luaL_rawsetfield(L, -3, "weekday", lua_pushinteger(L, local_tm.tm_wday));
+        luaL_rawsetfield(L, -3, "yearday", lua_pushinteger(L, local_tm.tm_yday));
+        return 1;
+    });
+
+    lua.set_function("dailytime", [](lua_State* L) {
+        time_t t = luaL_checkinteger(L, 1);
+        std::tm local_tm;
+        time::localtime(&t, &local_tm);
+        auto t2 = time::make_time(local_tm.tm_year+ 1900, local_tm.tm_mon + 1, local_tm.tm_mday, 0, 0, 0);
+        lua_pushinteger(L, t2);
+        return 1;
+    });
+
+    lua.set("timezone", time::timezone());
+
     lua_extend_library(lua.lua_state(), lua_table_new, "table", "new");
     lua_extend_library(lua.lua_state(), lua_string_hash, "string", "hash");
     lua_extend_library(lua.lua_state(), lua_string_hex, "string", "hex");
@@ -370,9 +398,10 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("abort", &server::stop, server_);
     lua.set_function("service_count", &server::service_count, server_);
     lua.set_function("now", [server_]() {return server_->now();});
-    lua.set_function("advtime", [server_](int64_t v){
-        time::offset(v);
+    lua.set_function("adjtime", [server_](int64_t v){
+        bool ok = time::offset(v);
         server_->now(true);
+        return ok;
     });
     return *this;
 }
@@ -402,34 +431,9 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     tb.set_function("set_send_queue_limit", &moon::socket::set_send_queue_limit, &sock);
     tb.set_function("getaddress", &moon::socket::getaddress, &sock);
 
+	
+
     registerlib(lua.lua_state(), "asio", tb);
-    return *this;
-}
-
-const lua_bind & lua_bind::bind_datetime(lua_service * s) const
-{
-    auto ser = s->get_server();
-    auto& dt = ser->get_datetime();
-
-    sol::table tb = lua.create_named("datetime");
-
-    tb.set_function("localday", &moon::datetime::localday,&dt);
-    tb.set_function("localday_off", &moon::datetime::localday_off, &dt);
-    tb.set_function("year", &moon::datetime::year, &dt);
-    tb.set_function("month", &moon::datetime::month, &dt);
-    tb.set_function("day", &moon::datetime::day, &dt);
-    tb.set_function("hour", &moon::datetime::hour, &dt);
-    tb.set_function("minutes", &moon::datetime::minutes, &dt);
-    tb.set_function("seconds", &moon::datetime::seconds, &dt);
-    tb.set_function("weekday", &moon::datetime::weekday, &dt);
-    tb.set_function("is_leap_year", &moon::datetime::is_leap_year, &dt);
-    tb.set_function("is_same_day", &moon::datetime::is_same_day, &dt);
-    tb.set_function("is_same_week", &moon::datetime::is_same_week, &dt);
-    tb.set_function("is_same_month", &moon::datetime::is_same_month, &dt);
-    tb.set_function("past_day", &moon::datetime::past_day, &dt);
-    tb.set_function("timezone", &moon::datetime::timezone, &dt);
-
-    registerlib(lua.lua_state(), "datetimecore", tb);
     return *this;
 }
 

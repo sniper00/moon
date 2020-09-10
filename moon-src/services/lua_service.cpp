@@ -87,8 +87,7 @@ bool lua_service::init(std::string_view config)
             .bind_util()
             .bind_timer(this)
             .bind_message()
-            .bind_socket(this)
-            .bind_datetime(this);
+            .bind_socket(this);
 
         lua_bind::registerlib(lua_.lua_state(), "mooncore", module);
 

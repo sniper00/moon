@@ -28,13 +28,14 @@ namespace moon
             return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
-        static void offset(int64_t v)
+        static bool offset(int64_t v)
         {
             if (v <= 0)
             {
-                return;
+                return false;
             }
             offset_ += v;
+            return true;
         }
 
         static int64_t now()
@@ -57,9 +58,9 @@ namespace moon
             moon::time::localtime(&now, &m);
             uint64_t ymd = (m.tm_year + 1900ULL) * moon::pow10(15)
                 + (m.tm_mon + 1ULL) * moon::pow10(12)
-                + m.tm_mday*moon::pow10(9)
-                + m.tm_hour*moon::pow10(6)
-                + m.tm_min*moon::pow10(3)
+                + m.tm_mday * moon::pow10(9)
+                + m.tm_hour * moon::pow10(6)
+                + m.tm_min * moon::pow10(3)
                 + m.tm_sec;
 
             size_t n = uint64_to_str(ymd, buf);
@@ -75,7 +76,7 @@ namespace moon
 
         static time_t make_time(int year, int month, int day, int hour, int min, int sec)
         {
-            assert(year >= 1990);
+            assert(year >= 1900);
             assert(month > 0 && month <= 12);
             assert(day > 0 && day <= 31);
             assert(hour >= 0 && hour < 24);
@@ -104,7 +105,7 @@ namespace moon
             return result;
         }
 
-        static std::tm gmtime(const std::time_t &time_tt)
+        static std::tm gmtime(const std::time_t& time_tt)
         {
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
@@ -115,6 +116,29 @@ namespace moon
             gmtime_r(&time_tt, &tm);
 #endif
             return tm;
+        }
+
+        static int timezone()
+        {
+            static int tz = 0;
+            if (tz == 0)
+            {
+                auto t = time::second();
+                auto gm_tm = time::gmtime(t);
+                std::tm local_tm;
+                time::localtime(&t, &local_tm);
+                auto diff = local_tm.tm_hour - gm_tm.tm_hour;
+                if (diff < -12)
+                {
+                    diff += 24;
+                }
+                else if (diff > 12)
+                {
+                    diff -= 24;
+                }
+                tz = diff;
+            }
+            return tz;
         }
     };
 
@@ -155,16 +179,110 @@ namespace moon
         datetime()
             :now_(time::second())
         {
-            init_timezone();
-
-            update(now_);
+            init(now_);
         }
 
-        void update(time_t now)
+        datetime(int64_t t)
+            :now_(t)
         {
-            now_ = now;
+            init(now_);
+        }
 
-            localday_ = localday(now);
+        int localday() const
+        {
+            return localday_;
+        }
+
+        int32_t year() const
+        {
+            return year_;
+        }
+
+        int32_t month() const
+        {
+            return month_;
+        }
+
+        int32_t day() const
+        {
+            return day_;
+        }
+
+        int32_t hour() const
+        {
+            return hour_;
+        }
+
+        int32_t minutes() const
+        {
+            return min_;
+        }
+
+        int32_t seconds() const
+        {
+            return sec_;
+        }
+
+        //[0-6]
+        int32_t weekday() const
+        {
+            return sec_;
+        }
+
+        bool is_leap_year()
+        {
+            return (year_ % 4) == 0 && ((year_ % 100) != 0 || (year_ % 400) == 0);
+        }
+
+        static int localday(time_t t)
+        {
+            return static_cast<int>((t + time::timezone() * seconds_one_hour) / seconds_one_day);
+        }
+
+        static int localday_off(int hour, int64_t second = 0)
+        {
+            auto t = second + ((int64_t)24 - hour) * seconds_one_hour;
+            return static_cast<int>((t + time::timezone() * seconds_one_hour) / seconds_one_day);
+        }
+
+        static bool is_same_day(time_t t1, time_t t2)
+        {
+            return localday(t1) == localday(t2);
+        }
+
+        static bool is_same_week(time_t t1, time_t t2)
+        {
+            auto nday = past_day(t1, t2);
+            int dow = datetime(t1).weekday();
+            if (dow == 0) dow = 7;
+            if (nday >= 7 || nday >= dow) return false;
+            else return true;
+        }
+
+        bool is_same_month(time_t t1, time_t t2)
+        {
+            auto dt1 = datetime(t1);
+            auto dt2 = datetime(t2);
+            if (dt1.year() == dt2.year() && dt1.month() == dt2.month())
+            {
+                return true;
+            }
+            return false;
+        }
+
+        //day diff (at 24:00)
+        static int past_day(time_t t1, time_t t2)
+        {
+            int d1 = localday(t1);
+            int d2 = localday(t2);
+            return d1 > d2 ? (d1 - d2) : (d2 - d1);
+        }
+    private:
+        void init(time_t t)
+        {
+            now_ = t;
+
+            localday_ = localday(t);
 
             std::tm local_tm;
             time::localtime(&now_, &local_tm);
@@ -178,176 +296,7 @@ namespace moon
             weekday_ = local_tm.tm_wday;
             yearday_ = local_tm.tm_yday;
         }
-
-        int localday(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                return static_cast<int>((t+timezone_* seconds_one_hour)/ seconds_one_day);
-            }
-            else
-            {
-                return localday_;
-            }
-        }
-
-        int localday_off(int hour, int64_t second = 0) const
-        {
-            auto now = second + (24 - hour) * seconds_one_hour;
-            return localday(now);
-        }
-
-        int32_t year(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_year + 1900;
-            }
-            return year_;
-        }
-
-        int32_t month(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_mon + 1;
-            }
-            return month_;
-        }
-
-        int32_t day(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_mday;
-            }
-            return day_;
-        }
-
-        int32_t hour(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_hour;
-            }
-            return hour_;
-        }
-
-        int32_t minutes(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_min;
-            }
-            return min_;
-        }
-
-        int32_t seconds(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_sec;
-            }
-            return sec_;
-        }
-
-        //[0-6]
-        int32_t weekday(time_t t = 0) const
-        {
-            if (t != 0)
-            {
-                std::tm local_tm;
-                time::localtime(&t, &local_tm);
-                return local_tm.tm_wday;
-            }
-            return sec_;
-        }
-
-        bool is_leap_year(time_t t = 0)
-        {
-            int y = year_;
-            if (t != 0)
-            {
-                y = year(t);
-            }
-            return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
-        }
-
-        bool is_same_day(time_t t1, time_t t2 = 0)
-        {
-            if (t2 == 0)
-            {
-                t2 = now_;
-            }
-            return localday(t1) == localday(t2);
-        }
-
-        bool is_same_week(time_t t1, time_t t2 = 0)
-        {
-            if (t2 == 0)
-            {
-                return weekday(t1) == weekday_;
-            }
-            return weekday(t1) == weekday(t2);
-        }
-
-        bool is_same_month(time_t t1, time_t t2 = 0)
-        {
-            if (t2 == 0)
-            {
-                return month(t1) == month_;
-            }
-            return month(t1) == month(t2);
-        }
-
-        //day diff (24:00)
-        int past_day(time_t t1, time_t t2 = 0)
-        {
-            if (t2 == 0)
-            {
-                t2 = now_;
-            }
-            int d1 = localday(t1);
-            int d2 = localday(t2);
-            return d1 > d2 ? (d1 - d2) : (d2 - d1);
-        }
-
-        int timezone()
-        {
-            return timezone_;
-        }
-
     private:
-        void init_timezone()
-        {
-            auto gm_tm = time::gmtime(now_);
-            std::tm local_tm;
-            time::localtime(&now_, &local_tm);
-            auto diff = local_tm.tm_hour - gm_tm.tm_hour;
-            if (diff < -12)
-            {
-                diff += 24;
-            }
-            else if (diff > 12)
-            {
-                diff -= 24;
-            }
-            timezone_ = diff;
-        }
-    private:
-        int32_t timezone_ = 0;
         int32_t year_ = 0;
         int32_t day_ = 0;
         int32_t month_ = 0;

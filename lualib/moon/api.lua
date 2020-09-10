@@ -34,7 +34,7 @@ end
 
 ---推进时间 server time(millsecond)
 ---@param milliseconds integer
-function core.advtime(milliseconds)
+function core.adjtime(milliseconds)
     ignore_param(milliseconds)
 end
 
@@ -329,5 +329,59 @@ end
 function asio.close(fd)
     ignore_param(fd)
 end
+
+---@class random
+local random = {}
+ignore_param(random)
+
+---integer rand range [min,max]
+---@param min integer
+---@param max integer
+---@return integer
+function random.rand_range(min, max)
+    ignore_param(min, max)
+end
+
+---integer rand range [min,max],返回范围内指定个数不重复的随机数
+---@param min integer
+---@param max integer
+---@param count integer
+---@return table
+function random.rand_range_some(min, max, count)
+    ignore_param(min, max, count)
+end
+
+---double rand range [min,max)
+---@param min number
+---@param max number
+---@return number
+function random.randf_range(min, max)
+    ignore_param(min, max)
+end
+
+---参数 percent (0,1.0),返回bool
+---@param percent number
+---@return boolean
+function random.randf_percent(percent)
+    ignore_param(percent)
+end
+
+---按权重随机
+---@param values integer[] @要随机的值
+---@param weights integer[] @要随机的值的权重
+---@return integer
+function random.rand_weight(values, weights)
+    ignore_param(values, weights)
+end
+
+---按权重随机count个值
+---@param values integer[] @要随机的值
+---@param weights integer[] @要随机的值的权重
+---@param count integer @要随机的个数
+---@return table
+function random.rand_weight_some(values, weights, count)
+    ignore_param(values, weights, count)
+end
+
 
 return core
