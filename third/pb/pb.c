@@ -1563,7 +1563,7 @@ static void lpb_encode(lpb_Env *e, const pb_Type *t) {
             else if (f->repeated)
                 lpbE_repeated(e, f);
             else if (!f->type || !f->type->is_dead)
-                lpbE_tagfield(e, f, 0);
+                lpbE_tagfield(e, f, t->is_proto3 && !f->oneof_idx);
         }
         lua_pop(L, 1);
     }

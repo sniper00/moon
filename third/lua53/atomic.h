@@ -11,7 +11,7 @@
 #define ATOM_DEC(ptr) (InterlockedDecrement64((LONG64 volatile *)ptr))
 #define ATOM_ADD(ptr,n) (InterlockedAdd64((LONG64 volatile *)ptr, n))
 #define ATOM_SUB(ptr,n) (InterlockedAdd64((LONG64 volatile *)ptr, -n))
-#define ATOM_AND(ptr,n)  (InterlockedAnd64((LONG64 volatile *)ptr,n))
+#define ATOM_AND(ptr,n) {(InterlockedAnd64((LONG64 volatile *)ptr,n));}
 #else
 
 #define ATOM_CAS(ptr, oval, nval) __sync_bool_compare_and_swap(ptr, oval, nval)
