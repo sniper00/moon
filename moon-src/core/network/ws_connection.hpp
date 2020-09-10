@@ -116,7 +116,7 @@ namespace moon
 
         static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 8192;
 
-        static constexpr size_t DEFAULT_RECV_BUFFER_SIZE = buffer::STACK_CAPACITY - BUFFER_HEAD_RESERVED;
+        static constexpr size_t DEFAULT_RECV_BUFFER_SIZE = 128;
 
         static constexpr size_t SEC_WEBSOCKET_KEY_LEN = 24;
 
