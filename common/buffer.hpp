@@ -135,7 +135,7 @@ namespace moon
         using const_pointer = typename const_iterator::pointer;
 
         //buffer default size
-        constexpr static size_t   STACK_CAPACITY = 256 - 4 * sizeof(size_t) - sizeof(value_type*) - sizeof(allocator_type);
+        constexpr static size_t   DEFAULT_CAPACITY = 128;
 
         enum class seek_origin
         {
@@ -144,36 +144,58 @@ namespace moon
             End
         };
 
-        base_buffer(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
+        base_buffer(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
             :flag_(0)
             , headreserved_(headreserved)
-            , capacity_(sizeof(stack_data_))
-            , readpos_(headreserved)
-            , writepos_(headreserved)
-            , stack_data_()
+            , capacity_(0)
+            , readpos_(0)
+            , writepos_(0)
             , allocator_(al)
         {
-            assert(headreserved <= STACK_CAPACITY);
-            if (capacity + headreserved > capacity_)
-            {
-                prepare(capacity);
-            }
+            capacity = (capacity > 0 ? capacity : DEFAULT_CAPACITY);
+            prepare(capacity + headreserved);
+            readpos_ = writepos_ = headreserved_;
         }
 
         base_buffer(const base_buffer&) = delete;
 
         base_buffer& operator=(const base_buffer&) = delete;
 
-        base_buffer(base_buffer&&) = delete;
+        base_buffer(base_buffer&& other) noexcept
+            : flag_(other.flag_)
+            , headreserved_(other.headreserved_)
+            , capacity_(other.capacity_)
+            , readpos_(other.readpos_)
+            , writepos_(other.writepos_)
+            , data_(other.data_)
+            , allocator_(std::move(other.allocator_))
+        {
+            other.headreserved_ = 0;
+            other.data_ = nullptr;
+            other.clear();
+        }
 
-        base_buffer& operator=(base_buffer&&) = delete;
+        base_buffer& operator=(base_buffer&& other) noexcept
+        {
+            flag_ = other.flag_;
+            headreserved_ = other.headreserved_;
+            capacity_ = other.capacity_;
+            readpos_ = other.readpos_;
+            writepos_ = other.writepos_;
+            data_ = other.data_;
+            allocator_ = std::move(other.allocator_);
+            other.headreserved_ = 0;
+            other.data_ = nullptr;
+            other.clear();
+            return *this;
+        }
 
         ~base_buffer()
         {
             clear();
         }
 
-        void init(size_t capacity = STACK_CAPACITY, uint32_t headreserved = 0)
+        void init(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0)
         {
             readpos_ = headreserved;
             writepos_ = headreserved;
@@ -271,13 +293,15 @@ namespace moon
 
         void clear() noexcept
         {
-            readpos_ = writepos_ = headreserved_;
-            if (nullptr != heap_data_)
+            if (nullptr != data_)
             {
-                allocator_.deallocate(heap_data_, capacity_);
-                heap_data_ = nullptr;
+                allocator_.deallocate(data_, capacity_);
+                data_ = nullptr;
             }
             flag_ = 0;
+            capacity_ = 0;
+            readpos_ = 0;
+            writepos_ = 0;
         }
 
         template<typename ValueType>
@@ -298,7 +322,7 @@ namespace moon
             flag_ &= ~static_cast<uint32_t>(v);
         }
 
-        void commit(std::size_t n)
+        void commit(std::size_t n) noexcept
         {
             writepos_ += n;
             assert(writepos_ <= capacity_);
@@ -308,7 +332,7 @@ namespace moon
             }
         }
 
-        void revert(size_t n)
+        void revert(size_t n) noexcept
         {
             assert((writepos_ >= n)&& (writepos_ - n) >= readpos_);
             if (writepos_ >= n)
@@ -319,22 +343,22 @@ namespace moon
 
         const_iterator begin() const noexcept
         {
-            return const_iterator{ data_() + readpos_ };
+            return const_iterator{ data_ + readpos_ };
         }
 
         iterator begin() noexcept
         {
-            return iterator{ data_() + readpos_ };
+            return iterator{ data_ + readpos_ };
         }
 
         const_iterator end() const noexcept
         {
-            return const_iterator{ data_() + writepos_ };
+            return const_iterator{ data_ + writepos_ };
         }
 
         iterator end() noexcept
         {
-            return iterator{ data_() + writepos_ };
+            return iterator{ data_ + writepos_ };
         }
 
         pointer data() noexcept
@@ -374,18 +398,13 @@ namespace moon
             {
                 auto required_size = writepos_ + need;
                 required_size = next_pow2(required_size);
-                if (nullptr == heap_data_)
+                auto tmp = allocator_.allocate(required_size);
+                if (nullptr != data_)
                 {
-                    heap_data_ = allocator_.allocate(required_size);
-                    memcpy(heap_data_, stack_data_, writepos_);
+                    std::memcpy(tmp, data_, writepos_);
+                    allocator_.deallocate(data_, capacity_);
                 }
-                else
-                {
-                    auto new_heap_data = allocator_.allocate(required_size);
-                    memcpy(new_heap_data, heap_data_, writepos_);
-                    allocator_.deallocate(heap_data_, capacity_);
-                    heap_data_ = new_heap_data;
-                }
+                data_ = tmp;
                 capacity_ = required_size;
             }
             else
@@ -394,20 +413,20 @@ namespace moon
                 if (readable != 0)
                 {
                     assert(readpos_ >= headreserved_);
-                    memcpy(data_() + headreserved_, data_() + readpos_, readable);
+                    std::memcpy(data_ + headreserved_, data_ + readpos_, readable);
                 }
                 readpos_ = headreserved_;
                 writepos_ = readpos_ + readable;
             }
         }
 
-        size_t writeablesize() const
+        size_t writeablesize() const noexcept
         {
             assert(capacity_ >= writepos_);
             return capacity_ - writepos_;
         }
 
-    protected:
+    private:
         size_t next_pow2(size_t x)
         {
             if (!(x & (x - 1)))
@@ -421,18 +440,7 @@ namespace moon
             x |= x >> 16;
             return x + 1;
         }
-
-        pointer data_() noexcept
-        {
-            return (!heap_data_) ? stack_data_ : heap_data_;
-        }
-
-        const_pointer data_() const noexcept
-        {
-            return (!heap_data_) ? stack_data_ : heap_data_;
-        }
-
-    protected:
+    private:
         uint32_t flag_;
 
         uint32_t headreserved_;
@@ -443,9 +451,7 @@ namespace moon
         //write position
         size_t writepos_;
 
-        value_type* heap_data_ = nullptr;
-
-        value_type stack_data_[STACK_CAPACITY];
+        value_type* data_ = nullptr;
 
         allocator_type allocator_;
     };
