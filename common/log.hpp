@@ -87,7 +87,7 @@ namespace moon
 
             console = enable_console_ ? console : enable_console_;
 
-            auto buf = buffer_cache_.create(s.size());
+            auto buf = buffer_cache_.create(64+s.size());
             auto b = std::addressof(*buf->begin());
             *(b++) = static_cast<char>(console);
             *(b++) = static_cast<char>(level);
