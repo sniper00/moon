@@ -182,6 +182,8 @@ int main(int argc, char* argv[])
 {
     using namespace moon;
 
+    time::timezone();
+
     register_signal(argc, argv);
 
 #ifdef LUA_CACHELIB

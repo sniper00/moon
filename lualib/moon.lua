@@ -283,7 +283,7 @@ function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
 
----获取服务器时间, 可以调用 moon.advtime 偏移时间
+---获取服务器时间, 可以调用 moon.adjtime 偏移时间
 function moon.time()
     return moon.now()//1000
 end
