@@ -56,7 +56,6 @@ namespace moon
 
         int64_t prev = time::now();
         int64_t sleep_duration = 0;
-        int64_t datetime_tick = time::now() % 1000;
         while (true)
         {
             state old = state::ready;
@@ -64,6 +63,7 @@ namespace moon
                 , state::stopping
                 , std::memory_order_acquire))
             {
+                CONSOLE_WARN(logger(), "Received signal code %d", signalcode_);
                 for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
                 {
                     (*iter)->stop();
@@ -75,15 +75,6 @@ namespace moon
             auto delta = (now_ - prev);
             delta = (delta < 0) ? 0 : delta;
             prev = now_;
-
-            datetime_tick += delta;
-
-            //datetime update on seconds
-            if (datetime_tick >= 1000)
-            {
-                datetime_tick -= 1000;
-                datetime_.update(now_ / 1000);
-            }
 
             size_t stoped_num = 0;
 
@@ -135,7 +126,7 @@ namespace moon
         {
             (*iter)->wait();
         }
-        CONSOLE_INFO(logger(), "STOP signal %d", signalcode_);
+        CONSOLE_INFO(logger(), "STOP");
         logger_.wait();
         state_.store(state::exited, std::memory_order_release);
     }
@@ -167,11 +158,6 @@ namespace moon
             res += w->count_.load(std::memory_order_acquire);
         }
         return res;
-    }
-
-    datetime& server::get_datetime()
-    {
-        return datetime_;
     }
 
     worker* server::next_worker()

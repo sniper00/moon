@@ -76,6 +76,46 @@ static int read(lua_State* L)
     return 1;
 }
 
+static void write_string(lua_State* L, int index, buffer* b)
+{
+    int type = lua_type(L, index);
+    switch (type) {
+    case LUA_TNIL:
+        break;
+    case LUA_TNUMBER:
+    {
+        if (lua_isinteger(L, index))
+        {
+            lua_Integer x = lua_tointeger(L, index);
+            auto s = std::to_string(x);
+            b->write_back(s.data(), s.size());
+        }
+        else
+        {
+            lua_Number n = lua_tonumber(L, index);
+            auto s = std::to_string(n);
+            b->write_back(s.data(), s.size());
+        }
+        break;
+    }
+    case LUA_TBOOLEAN:
+    {
+        int n = lua_toboolean(L, index);
+        const char* s = n ? "true" : "false";
+        b->write_back(s, std::strlen(s));
+        break;
+    }
+    case LUA_TSTRING: {
+        size_t sz = 0;
+        const char* str = lua_tolstring(L, index, &sz);
+        b->write_back(str, sz);
+        break;
+    }
+    default:
+        luaL_error(L, "buffer.write unsupport type %s", lua_typename(L, type));
+    }
+}
+
 static int write_front(lua_State* L)
 {
     auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
@@ -91,9 +131,7 @@ static int write_back(lua_State* L)
 {
     auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
     if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
-    size_t len = 0;
-    auto data = luaL_checklstring(L, 2, &len);
-    buf->write_back(data, len);
+    write_string(L, 2, buf);
     return 0;
 }
 
