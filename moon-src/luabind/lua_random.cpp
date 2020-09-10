@@ -2,8 +2,10 @@
 #include "lua.hpp"
 #include <cstdint>
 #include <numeric>
+#include <iterator>
 #include "common/random.hpp"
 #include "common/lua_utility.hpp"
+#include "common/utils.hpp"
 
 #define METANAME "lrandom"
 
@@ -78,7 +80,7 @@ static int lrand_weight(lua_State *L)
 
     if (values.empty() || weights.empty() || values.size() != weights.size())
     {
-        return luaL_error(L, "lrand_weight values size != values size");
+        return luaL_error(L, "lrand_weight values size != weights size");
     }
 
     int64_t sum = std::accumulate(weights.begin(), weights.end(), int64_t{ 0 });
@@ -104,26 +106,39 @@ static int lrand_weight_some(lua_State *L)
     moon::lua_array_view<int64_t> values{ L,1 };
     moon::lua_array_view<int64_t> weights{ L,2 };
 
-    if (values.empty() || weights.empty() || values.size() != weights.size())
+    if (values.size() != weights.size())
     {
-        return luaL_error(L, "lrand_weight values size != values size");
+        return luaL_error(L, "lrand_weight_some values size != weights size");
     }
 
-    int64_t sum = std::accumulate(weights.begin(), weights.end(), int64_t{ 0 });
+    if (values.empty() || weights.empty())
+    {
+        return 0;
+    }
+
+    std::vector<int64_t> v;
+    std::vector<int64_t> w;
+
+    std::copy(values.begin(), values.end(), std::back_inserter(v));
+    std::copy(weights.begin(), weights.end(), std::back_inserter(w));
 
     lua_createtable(L, (int)count, 0);
     for (int64_t i = 0; i < count; ++i)
     {
+        int64_t sum = std::accumulate(w.begin(), w.end(), int64_t{ 0 });
         int64_t cutoff = moon::rand_range(int64_t{ 0 }, sum - 1);
-        auto vi = values.begin();
-        auto wi = weights.begin();
-        while (cutoff > * wi)
+        auto idx = 0;
+        while (cutoff > w[idx])
         {
-            cutoff -= *wi++;
-            ++vi;
+            cutoff -= w[idx];
+            ++idx;
         }
-        lua_pushinteger(L, *vi);
+        lua_pushinteger(L, v[idx]);
         lua_rawseti(L, -2, i + 1);
+        v[idx] = v[v.size() - 1];
+        v.pop_back();
+        w[idx] = w[w.size() - 1];
+        w.pop_back();
     }
     return 1;
 }
