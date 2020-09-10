@@ -76,7 +76,7 @@ local nt = table.new(10,1)
 nt[1] = 10
 
 print("now server time")
-moon.advtime(1000*1000)--forward 1000s
+moon.adjtime(1000*1000)--forward 1000s
 print("after offset, now server time")
 
 print("*********************api test ok**********************")

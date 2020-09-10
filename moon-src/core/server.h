@@ -36,8 +36,6 @@ namespace moon
 
         uint32_t service_count();
 
-        datetime& get_datetime();
-
         worker* next_worker();
 
         worker* get_worker(uint32_t workerid) const;
@@ -53,7 +51,6 @@ namespace moon
         log logger_;
         router router_;
         std::vector<std::unique_ptr<worker>> workers_;
-        datetime datetime_;
     };
 };
 
