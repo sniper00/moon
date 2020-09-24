@@ -24,13 +24,13 @@ do
     log.info("log info")
 end
 
-log.LOG_LEVEL = log.LOG_WARN
-log.info("this line will not print")
-log.debug("this line will not print")
-log.warn("this line will  print")
-log.error("this line will  print")
+-- log.LOG_LEVEL = log.LOG_WARN
+-- log.info("this line will not print")
+-- log.debug("this line will not print")
+-- log.warn("this line will  print")
+-- log.error("this line will  print")
 
-log.LOG_LEVEL = log.LOG_INFO
-log.debug("this line will not print or log file")
+-- log.LOG_LEVEL = log.LOG_INFO
+-- log.debug("this line will not print or log file")
 
 moon.abort()
