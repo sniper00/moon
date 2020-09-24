@@ -131,11 +131,11 @@ switch[6] = function ()
         {
             unique = true,
             name = "redis",
-            file = "start_by_config/service_redis.lua",
+            file = "../service/redisd.lua",
             host = "127.0.0.1",
             port = 6379,
             timeout = 1000,
-            connection_num = 4
+            poolsize = 4
         },
         {
             unique = true,

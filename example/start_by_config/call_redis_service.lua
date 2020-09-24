@@ -1,33 +1,27 @@
 local moon = require("moon")
-
-local function send(db, ...)
-    moon.send("lua", db, "send", 1, ...)
-end
-
-local function call(db, ...)
-    return moon.co_call("lua", db, ...)
-end
+---@type redis_client
+local redis = require("service.redisd")
 
 moon.start(function()
     local count = 0
     local db = moon.queryservice("redis")
 
-    send(db,"del","C")
-    send(db,"set", "A", "hello")
-    send(db,"set", "B", "world")
-    send(db,"sadd", "C", "one")
+    redis.send(db,"del","C")
+    redis.send(db,"set", "A", "hello")
+    redis.send(db,"set", "B", "world")
+    redis.send(db,"sadd", "C", "one")
 
     moon.async(function()
-        print(call(db, "get", "A"))
-        print(call(db, "get", "B"))
-        print(call(db, "sadd", "C", "two"))
+        print(redis.call(db, "get", "A"))
+        print(redis.call(db, "get", "B"))
+        print(redis.call(db, "sadd", "C", "two"))
     end)
 
     moon.async(function()
         local index = 1
         while true do
             -- call(db, "get", "dog")
-            local res,err = call(db, "set", "dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+            local res,err = redis.call(db, "set", "dog"..tostring(index), "an animaldadadaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
             if not res then
                 print("redis set error", res, err)
                 moon.sleep(1000)
