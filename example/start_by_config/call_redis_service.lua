@@ -1,6 +1,6 @@
 local moon = require("moon")
 ---@type redis_client
-local redis = require("service.redisd")
+local redis = require("redisd")
 
 moon.start(function()
     local count = 0
