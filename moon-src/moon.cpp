@@ -52,7 +52,7 @@ static void signal_handler(int signal)
         return;
     }
 
-    std::string_view msg = nullptr;
+    std::string_view msg;
     switch (signal)
     {
     case SIGTERM:
