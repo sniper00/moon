@@ -54,8 +54,12 @@ namespace moon
             w->start();
         }
 
-        int64_t prev = time::now();
+        asio::io_context io_context;
+
+        asio::steady_timer timer(io_context);
+
         int64_t sleep_duration = 0;
+        asio::error_code ignore;
         while (true)
         {
             state old = state::ready;
@@ -70,24 +74,20 @@ namespace moon
                 }
             }
 
-            now_ = time::now();
+            auto delta = (time::now() - now_);
+            now_ += delta;
 
-            auto delta = (now_ - prev);
-            delta = (delta < 0) ? 0 : delta;
-            prev = now_;
-
-            size_t stoped_num = 0;
-
+            size_t alive = workers_.size();
             for (const auto& w : workers_)
             {
                 if (w->stoped())
                 {
-                    stoped_num++;
+                    --alive;
                 }
                 w->update();
             }
 
-            if (stoped_num == workers_.size())
+            if (0 == alive)
             {
                 break;
             }
@@ -95,7 +95,8 @@ namespace moon
             if (delta <= UPDATE_INTERVAL + sleep_duration)
             {
                 sleep_duration = UPDATE_INTERVAL + sleep_duration - delta;
-                thread_sleep(sleep_duration);
+                timer.expires_after(std::chrono::milliseconds(sleep_duration));
+                timer.wait(ignore);
             }
             else
             {
