@@ -50,6 +50,4 @@ local function run_test()
     end)
 end
 
-moon.start(function()
-    run_test()
-end)
+run_test()

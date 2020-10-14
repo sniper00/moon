@@ -20,49 +20,45 @@ if conf.slave then
         end
     end
 
-    moon.start(function()
-        print("conf:", conf.message)
+    print("conf:", conf.message)
 
-        moon.dispatch('lua',function(msg,unpack)
-            local sender = msg:sender()
-            local header = msg:header()
-            docmd(sender,header, unpack(msg:cstr()))
-        end)
-
-        if conf.auto_quit then
-            print("auto quit, bye bye")
-            -- 使服务退出
-            moon.quit()
-        end
+    moon.dispatch('lua',function(msg,unpack)
+        local sender = msg:sender()
+        local header = msg:header()
+        docmd(sender,header, unpack(msg:cstr()))
     end)
+
+    if conf.auto_quit then
+        print("auto quit, bye bye")
+        -- 使服务退出
+        moon.quit()
+    end
 else
-    moon.start(function()
-        moon.async(function()
-            -- 动态创建服务, 配置同时可以用来传递一些信息
-            moon.new_service("lua", {
-                name = "create_service",
-                file = "example_create_service.lua",
-                message = "Hello create_service",
-                slave = true,
-                auto_quit = true
-            })
 
-            -- 动态创建服务，获得服务ID，方便用来通信
-            local serviceid =  moon.new_service("lua", {
-                name = "create_service",
-                file = "example_create_service.lua",
-                slave = true,
-                message = "Hello create_service2"
-            })
+    moon.async(function()
+        -- 动态创建服务, 配置同时可以用来传递一些信息
+        moon.new_service("lua", {
+            name = "create_service",
+            file = "example_create_service.lua",
+            message = "Hello create_service",
+            slave = true,
+            auto_quit = true
+        })
 
-            print("new service",string.format("%X",serviceid))
+        -- 动态创建服务，获得服务ID，方便用来通信
+        local serviceid =  moon.new_service("lua", {
+            name = "create_service",
+            file = "example_create_service.lua",
+            slave = true,
+            message = "Hello create_service2"
+        })
 
-            moon.send("lua", serviceid, "QUIT")
+        print("new service",string.format("%X",serviceid))
 
-            moon.abort()
-        end)
+        moon.send("lua", serviceid, "QUIT")
+
+        moon.exit(-1)
     end)
-
 end
 
 

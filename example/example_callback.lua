@@ -36,7 +36,7 @@ else
     command.PONG = function(...)
         print(...)
         print(moon.name(), "recv ", "command", "PING")
-        moon.abort()
+        moon.exit(-1)
     end
 
     local function docmd(header,...)
@@ -53,19 +53,17 @@ else
         docmd(header, unpack(msg:cstr()))
     end)
 
-    moon.start(function()
-        print("callback example: service sender start")
+    print("callback example: service sender start")
 
-        moon.async(function()
-            local receiver =  moon.new_service("lua", {
-                name = "callback_receiver",
-                file = "example_callback.lua",
-                receiver = true
-            })
+    moon.async(function()
+        local receiver =  moon.new_service("lua", {
+            name = "callback_receiver",
+            file = "example_callback.lua",
+            receiver = true
+        })
 
-            print(moon.name(), "send to", receiver, "command", "PING")
-            moon.send('lua', receiver,"PING","Hello")
-        end)
+        print(moon.name(), "send to", receiver, "command", "PING")
+        moon.send('lua', receiver,"PING","Hello")
     end)
 end
 

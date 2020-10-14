@@ -85,11 +85,13 @@ total = conf.client_num * conf.count
 client_num = conf.client_num
 send_count = conf.count
 
-moon.start(function()
+moon.async(function()
+    moon.sleep(10)
     for _=1,conf.client_num do
         local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET)
     end
 end)
+
 
 
 

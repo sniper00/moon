@@ -139,12 +139,12 @@ namespace moon
 
         void wait()
         {
-            if (state_.load() == state::exited)
+            if (state_.load() == state::stopped)
             {
                 return;
             }
 
-            state_.store(state::exited);
+            state_.store(state::stopped);
             log_queue_.exit();
 
             if (thread_.joinable())

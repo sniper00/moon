@@ -57,26 +57,28 @@ else
         return M
     ]]
 
-    moon.start(function()
-        moon.async(function()
-            io.writefile(file, content1)
-            sharetable.loadfile(file)
+    moon.async(function()
+        io.writefile(file, content1)
+        sharetable.loadfile(file)
 
-            local agent =  moon.new_service(
-                "lua",
-                {
-                    name = "agent",
-                    file = "start_by_config/sharetable_example.lua",
-                    agent = true
-                }
-            )
+        local agent =  moon.new_service(
+            "lua",
+            {
+                name = "agent",
+                file = "start_by_config/sharetable_example.lua",
+                agent = true
+            }
+        )
 
-            print(moon.co_call("lua", agent, "LOAD"))
-            io.writefile(file, content2)
-            sharetable.loadfile(file)
+        print(moon.co_call("lua", agent, "LOAD"))
+        io.writefile(file, content2)
+        sharetable.loadfile(file)
 
-            print(moon.co_call("lua", agent, "UPDATE"))
-        end)
+        print(moon.co_call("lua", agent, "UPDATE"))
+    end)
+
+    moon.shutdown(function()
+        moon.send("system", moon.queryservice("sharetable"), "shutdown")
     end)
 end
 

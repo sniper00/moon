@@ -30,6 +30,10 @@ bool socket::try_open(const std::string& host, uint16_t port)
         asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
         asio::ip::tcp::acceptor acceptor{ ioc_ };
         acceptor.open(endpoint.protocol());
+#if TARGET_PLATFORM != PLATFORM_WINDOWS
+        acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+#endif
+        acceptor.bind(endpoint);
         acceptor.close();
         return true;
     }

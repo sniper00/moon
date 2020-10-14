@@ -11,7 +11,7 @@ end
 local data = json.encode(large_data)
 
 local listenfd = socket.listen("127.0.0.1", 30002, moon.PTYPE_SOCKET)
-
+print(listenfd)
 socket.start(listenfd)
 
 socket.on("accept",function(fd)
@@ -27,15 +27,17 @@ socket.on("error",function(_, msg)
 	test_assert.assert(false,msg:bytes())
 end)
 
-moon.start(function()
+moon.async(function()
+	moon.sleep(10)
 	local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET)
 	test_assert.assert(fd>0,"connect server failed")
 	socket.set_enable_chunked(fd,"rw")
-	socket.write_then_close(fd,data)
+	socket.write(fd, data)
 end)
 
-moon.destroy(function()
-	socket.close(listenfd)
-end)
+
+
+
+
 
 

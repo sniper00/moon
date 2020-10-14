@@ -56,7 +56,7 @@ local next_case = function ()
         end)
     else
         --print("abort")
-        moon.abort(-1)
+        moon.exit(-1)
     end
 end
 
@@ -93,6 +93,4 @@ moon.dispatch('lua',function(msg,unpack)
     docmd(header, unpack(msg:cstr()))
 end)
 
-moon.start(function()
-    next_case()
-end)
+next_case()

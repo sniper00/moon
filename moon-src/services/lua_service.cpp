@@ -64,6 +64,7 @@ lua_service::lua_service()
 
 lua_service::~lua_service()
 {
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
 }
 
 bool lua_service::init(std::string_view config)
@@ -95,38 +96,22 @@ bool lua_service::init(std::string_view config)
 
         sol::object json = lua_.require("json", luaopen_json, false);
 
-        {
-            auto cpaths = conf.get_value<std::string_view>("cpath");
-            std::string strpath;
-            strpath.append("package.cpath ='");
-            strpath.append(cpaths);
-            strpath.append(router_->get_env("CPATH"));
-            strpath.append("'..package.cpath");
-            lua_.script(strpath);
-        }
+        lua_.script(router_->get_env("CPATH"));
 
-        {
-            auto paths = conf.get_value<std::string_view>("path");
-            std::string strpath;
-            strpath.append("package.path ='");
-            strpath.append(paths);
-            strpath.append(router_->get_env("PATH"));
-            strpath.append("'..package.path");
-            lua_.script(strpath);
-        }
+        lua_.script(router_->get_env("PATH"));
 
         sol::load_result load_result = lua_.load_file(luafile);
         if (!load_result.valid())
         {
             auto errmsg = sol::stack::get<std::string>(load_result.lua_state(), -1);
-            MOON_CHECK(false, moon::format("lua service init failed: %s.", errmsg.data()));
+            MOON_CHECK(false, moon::format("lua_service::init load failed: %s.", errmsg.data()));
         }
         sol::table tconfig = json.as<sol::table>().get<sol::function>("decode").call(config).get<sol::table>();
         sol::protected_function_result call_result = load_result.call(tconfig);
         if (!call_result.valid())
         {
             sol::error err = call_result;
-            MOON_CHECK(false, moon::format("lua service init failed: %s.", err.what()));
+            MOON_CHECK(false, moon::format("lua_service::init run failed: %s.", err.what()));
         }
 
         if (unique())
@@ -137,35 +122,11 @@ bool lua_service::init(std::string_view config)
         logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
         ok_ = true;
     }
-    catch (std::exception &e)
+    catch (const std::exception &e)
     {
-        CONSOLE_ERROR(logger(), "lua service init failed with config: %s", config.data());
-        error(e.what(), false);
+        CONSOLE_ERROR(logger(), "lua_service::init config:\n%s. \n%s.", config.data(), e.what());
     }
     return ok_;
-}
-
-void lua_service::start()
-{
-    if (is_start() || !ok())
-        return;
-    service::start();
-    try
-    {
-        if (start_.valid())
-        {
-            auto result = start_();
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-        }
-    }
-    catch (std::exception &e)
-    {
-        error(moon::format("lua_service::start :\n%s\n", e.what()));
-    }
 }
 
 void lua_service::dispatch(message *msg)
@@ -192,10 +153,40 @@ void lua_service::dispatch(message *msg)
             }
         }
     }
-    catch (std::exception &e)
+    catch (const std::exception &e)
     {
-        error(moon::format("lua_service::dispatch:\n%s\n", e.what()));
+        CONSOLE_ERROR(logger(), "lua_service::dispatch:\n%s\n", e.what());
+        quit();
     }
+}
+
+void lua_service::shutdown()
+{
+    if (!ok())
+        return;
+
+    try
+    {
+        if (shutdown_.valid())
+        {
+            auto result = shutdown_();
+            if (!result.valid())
+            {
+                sol::error err = result;
+                CONSOLE_ERROR(logger(), "%s", err.what());
+            }
+            return;
+        }
+        else if (unique())
+        {
+            return;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CONSOLE_ERROR(logger(), "lua_service::shutdown:\n%s\n", e.what());
+    }
+    quit();
 }
 
 void lua_service::on_timer(uint32_t timerid, bool remove)
@@ -211,78 +202,9 @@ void lua_service::on_timer(uint32_t timerid, bool remove)
             CONSOLE_ERROR(logger(), "%s", err.what());
         }
     }
-    catch (std::exception &e)
+    catch (const std::exception &e)
     {
-        error(moon::format("lua_service::on_timer:\n%s\n", e.what()));
-    }
-}
-
-void lua_service::exit()
-{
-    if (!ok())
-        return;
-
-    try
-    {
-        if (exit_.valid())
-        {
-            auto result = exit_();
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-            return;
-        }
-    }
-    catch (std::exception &e)
-    {
-        error(moon::format("lua_service::exit :%s\n", e.what()));
-    }
-
-    service::exit();
-}
-
-void lua_service::destroy()
-{
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
-    if (!ok())
-        return;
-
-    try
-    {
-        if (destroy_.valid())
-        {
-            auto result = destroy_();
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-        }
-    }
-    catch (std::exception &e)
-    {
-        error(moon::format("lua_service::destroy :%s\n", e.what()));
-    }
-
-    service::destroy();
-}
-
-void lua_service::error(const std::string &msg, bool initialized)
-{
-    CONSOLE_ERROR(logger(), "%s %s", name().data(), msg.data());
-
-    if (initialized)
-    {
-        destroy();
-        quit();
-    }
-
-    if (unique())
-    {
-        CONSOLE_ERROR(logger(), "unique service %s crashed, server will abort.", name().data());
-        server_->stop(-1);
+        CONSOLE_ERROR(logger(), "lua_service::on_timer:\n%s\n", e.what());
     }
 }
 
@@ -290,30 +212,20 @@ void lua_service::set_callback(char c, sol_function_t f)
 {
     switch (c)
     {
-    case 's':
-    {
-        start_ = f;
-        break;
-    }
-    case 'm':
-    {
-        dispatch_ = f;
-        break;
-    }
-    case 'e':
-    {
-        exit_ = f;
-        break;
-    }
-    case 'd':
-    {
-        destroy_ = f;
-        break;
-    }
-    case 't':
-    {
-        on_timer_ = f;
-        break;
-    }
+        case 'm':
+        {
+            dispatch_ = f;
+            break;
+        }
+        case 's':
+        {
+            shutdown_ = f;
+            break;
+        }
+        case 't':
+        {
+            on_timer_ = f;
+            break;
+        }
     }
 }
