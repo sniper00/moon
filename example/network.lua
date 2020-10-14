@@ -31,18 +31,15 @@ socket.on("error",function(fd, msg)
     print("error ", fd, msg:bytes())
 end)
 
-local listenfd = 0
+-- moon.PTYPE_SOCKET ：2字节(大端)表示长度的协议
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
+socket.start(listenfd)--start accept
+print("server start ", HOST, PORT)
+print("enter 'CTRL-C' stop server.")
 
-moon.start(function()
-    -- moon.PTYPE_SOCKET ：2字节(大端)表示长度的协议
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
-    socket.start(listenfd)--start accept
-    print("server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
-end)
-
-moon.destroy(function()
+moon.shutdown(function()
     socket.close(listenfd)
+	moon.quit()
 end)
 
 

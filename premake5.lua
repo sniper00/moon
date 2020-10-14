@@ -4,6 +4,7 @@ workspace "Server"
     cppdialect "C++17"
     location "./"
     architecture "x64"
+    staticruntime "on"
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -26,9 +27,9 @@ workspace "Server"
         warnings "High"
 
 project "lua53"
-    location "projects/build/lua53"
-    objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"
-    targetdir "projects/bin/%{cfg.buildcfg}"
+    location "build/projects/%{prj.name}"
+    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+    targetdir "build/bin/%{cfg.buildcfg}"
     kind "StaticLib"
     language "C"
     includedirs {"./third/lua53"}
@@ -48,9 +49,9 @@ project "lua53"
     --     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
 project "moon"
-    location "projects/build/moon"
-    objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"
-    targetdir "projects/bin/%{cfg.buildcfg}"
+    location "build/projects/%{prj.name}"
+    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+    targetdir "build/bin/%{cfg.buildcfg}"
 
     kind "ConsoleApp"
     language "C++"
@@ -103,9 +104,9 @@ project "moon"
 ]]
 local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon, macaddon )
     project(name)
-        location("projects/build/"..name)
-        objdir "projects/obj/%{cfg.project.name}/%{cfg.buildcfg}"--编译生成的中间文件目录
-        targetdir "projects/bin/%{cfg.buildcfg}"--目标文件目录
+        location("build/projects/%{prj.name}")
+        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"--编译生成的中间文件目录
+        targetdir "build/bin/%{cfg.buildcfg}"--目标文件目录
 
         kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib
         includedirs {"./", "./third","./third/lua53"} --头文件搜索目录
