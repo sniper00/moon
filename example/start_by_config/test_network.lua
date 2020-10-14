@@ -56,25 +56,24 @@ local function session_read( fd )
     return data
 end
 
-moon.start(function()
-    moon.async(function()
-        for i=1,100 do
-            local fd,err = socket.connect(HOST,PORT,moon.PTYPE_TEXT)
-            if not fd then
-                print("connect failed", err)
-                return
-            end
-            moon.async(function ()
-                local send_data = tostring(fd)
-                send(fd, send_data)
-                local rdata = session_read(fd)
-                test_assert.equal(rdata, send_data)
-                socket.close(fd)
-                if i == 100 then
-                    socket.close(listenfd)
-                    test_assert.success()
-                end
-            end)
+moon.async(function()
+    for i=1,100 do
+        local fd,err = socket.connect(HOST,PORT,moon.PTYPE_TEXT)
+        if not fd then
+            print("connect failed", err)
+            return
         end
-    end)
+        moon.async(function ()
+            local send_data = tostring(fd)
+            send(fd, send_data)
+            local rdata = session_read(fd)
+            test_assert.equal(rdata, send_data)
+            socket.close(fd)
+            if i == 100 then
+                socket.close(listenfd)
+                test_assert.success()
+            end
+        end)
+    end
 end)
+

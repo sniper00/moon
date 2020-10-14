@@ -75,23 +75,23 @@ namespace moon
     void worker::stop()
     {
         asio::post(io_ctx_, [this] {
-            if (auto s = state_.load(std::memory_order_acquire); s == state::stopping || s == state::exited)
+            if (auto s = state_.load(std::memory_order_acquire); s == state::stopping || s == state::stopped)
             {
                 return;
             }
 
             if (services_.empty())
             {
-                state_.store(state::exited, std::memory_order_release);
+                state_.store(state::stopped, std::memory_order_release);
                 return;
             }
             state_.store(state::stopping, std::memory_order_release);
+
             for (auto& it : services_)
             {
-                auto& s = it.second;
-                s->exit();
+                it.second->shutdown();
             }
-            });
+         });
     }
 
     void worker::wait()
@@ -105,7 +105,7 @@ namespace moon
 
     bool worker::stoped() const
     {
-        return (state_.load(std::memory_order_acquire) == state::exited);
+        return (state_.load(std::memory_order_acquire) == state::stopped);
     }
 
     uint32_t worker::uuid()
@@ -174,11 +174,6 @@ namespace moon
 
                 count_.fetch_add(1, std::memory_order_release);
 
-                if (server_->get_state() != state::init)
-                {
-                    res.first->second->start();
-                }
-
                 if (0 != sessionid)
                 {
                     router_->response(creatorid, std::string_view{}, std::to_string(serviceid), sessionid);
@@ -205,7 +200,6 @@ namespace moon
             {
                 count_.fetch_sub(1, std::memory_order_release);
 
-                s->destroy();
                 auto content = moon::format(R"({"name":"%s","serviceid":%08X,"errmsg":"service destroy"})", s->name().data(), s->id());
                 router_->response(sender, "service destroy"sv, content, sessionid);
                 services_.erase(serviceid);
@@ -213,7 +207,7 @@ namespace moon
 
                 if (server_->get_state() == state::ready)
                 {
-                    std::string_view header{ "exit" };
+                    std::string_view header{ "_service_exit" };
                     auto buf = message::create_buffer();
                     buf->write_back(content.data(), content.size());
                     router_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
@@ -226,7 +220,7 @@ namespace moon
 
             if (services_.size() == 0 && (state_.load() == state::stopping))
             {
-                state_.store(state::exited, std::memory_order_release);
+                state_.store(state::stopped, std::memory_order_release);
             }
             });
     }
@@ -358,16 +352,6 @@ namespace moon
     bool worker::shared() const
     {
         return shared_.load();
-    }
-
-    void worker::start()
-    {
-        asio::post(io_ctx_, [this] {
-            for (auto& it : services_)
-            {
-                it.second->start();
-            }
-            });
     }
 
     void worker::update()

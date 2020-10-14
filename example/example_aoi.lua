@@ -40,7 +40,7 @@ local function test(space)
 	aoi_erase(space, 2)
 	aoi_insert(space,2,42,5,0,0,0,AOI_MARHER)
 
-	moon.abort(-1)
+	moon.exit(-1)
 end
 
 local function run()
@@ -49,7 +49,5 @@ local function run()
 	aoi.release(space)
 end
 
-moon.start(function()
-	run()
-end)
+run()
 

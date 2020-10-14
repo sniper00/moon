@@ -32,27 +32,9 @@ namespace moon
         state_.store(state::init, std::memory_order_release);
     }
 
-    void server::run(size_t count)
+    void server::run()
     {
-        //wait all bootstrap services created
-        while (!signalcode_ && service_count() < count)
-        {
-            thread_sleep(10);
-        }
-
-        if (signalcode_)
-        {
-            wait();
-            return;
-        }
-
         state_.store(state::ready, std::memory_order_release);
-
-        //call services's start callback
-        for (auto& w : workers_)
-        {
-            w->start();
-        }
 
         asio::io_context io_context;
 
@@ -129,7 +111,7 @@ namespace moon
         }
         CONSOLE_INFO(logger(), "STOP");
         logger_.wait();
-        state_.store(state::exited, std::memory_order_release);
+        state_.store(state::stopped, std::memory_order_release);
     }
 
     state server::get_state()

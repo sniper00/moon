@@ -55,23 +55,19 @@ else
 
     local receiver
 
-    moon.start(
-        function()
-            moon.async(function ()
-                receiver = moon.new_service(
-                    "lua",
-                    {
-                        name = "test_send",
-                        file = "start_by_config/test_send.lua",
-                        receiver = true
-                    }
-                )
-                moon.send("lua", receiver, "HELLO", "123456789")
-            end)
-        end
-    )
+    moon.async(function ()
+        receiver = moon.new_service(
+            "lua",
+            {
+                name = "test_send",
+                file = "start_by_config/test_send.lua",
+                receiver = true
+            }
+        )
+        moon.send("lua", receiver, "HELLO", "123456789")
+    end)
 
-    moon.destroy(function()
+    moon.shutdown(function()
         moon.remove_service(receiver)
     end)
 end

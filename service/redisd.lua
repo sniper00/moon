@@ -144,9 +144,8 @@ if conf.name then
         end
     end
 
-    moon.exit(function()
+    moon.system("shutdown", function()
         moon.async(function()
-            moon.co_wait_exit(false)
             wait_all_send()
             moon.quit()
         end)

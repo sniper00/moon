@@ -1,24 +1,17 @@
-local json = require("json")
-
-local get_env = _G.get_env
-local set_env = _G.set_env
-local new_service = _G.new_service
 
 -- define lua module search dir
 local path = "../lualib/?.lua;../service/?.lua;start_by_config/?.lua;"
 
--- define lua c module search dir
-local cpath = "../clib/?.dll;../clib/?.so;"
-
-set_env("PATH", path)
-set_env("CPATH", cpath)
-
 package.path = path .. package.path
-package.cpath = cpath .. package.cpath
 
-local params = json.decode(get_env("PARAMS"))
+local moon = require("moon")
+local json = require("json")
 
-local sid = math.tointeger(get_env("SID"))
+moon.set_env("PATH", string.format("package.path='%s'..package.path", path))
+
+local params = json.decode(moon.get_env("PARAMS"))
+
+local sid = math.tointeger(moon.get_env("SID"))
 
 local services
 
@@ -39,11 +32,6 @@ switch[2] = function ()
     services = {
         {
             unique = true,
-            name = "send_benchmark_sender",
-            file = "start_by_config/send_benchmark_sender.lua",
-        },
-        {
-            unique = true,
             name = "send_benchmark_receiver1",
             file = "start_by_config/send_benchmark_receiver.lua",
         },    {
@@ -62,6 +50,11 @@ switch[2] = function ()
             unique = true,
             name = "send_benchmark_receiver4",
             file = "start_by_config/send_benchmark_receiver.lua",
+        },
+        {
+            unique = true,
+            name = "send_benchmark_sender",
+            file = "start_by_config/send_benchmark_sender.lua",
         }
     }
 end
@@ -201,12 +194,26 @@ end
 
 fn()
 
-for _, conf in ipairs(services) do
-    local service_type = conf.service_type or "lua"
-    local unique = conf.unique or false
-    local threadid = conf.threadid or 0
+local addrs = {}
+moon.async(function()
+    for _, conf in ipairs(services) do
+        local service_type = conf.service_type or "lua"
+        local unique = conf.unique or false
+        local threadid = conf.threadid or 0
+        local addr = moon.new_service(service_type, conf, unique, threadid)
+        if 0 == addr then
+            moon.exit(-100)
+            return
+        end
+        table.insert(addrs, addr)
+    end
+end)
 
-    new_service(service_type, json.encode(conf), unique, threadid, 0 ,0 )
-end
-
-return #services
+moon.shutdown(function()
+    moon.async(function()
+        for _, addr in ipairs(addrs) do
+            moon.remove_service(addr)
+        end
+        moon.quit()
+    end)
+end)

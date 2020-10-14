@@ -22,17 +22,11 @@ public:
 private:
     bool init(std::string_view config) override;
 
-    void start()  override;
-
-    void exit() override;
-
-    void destroy() override;
-
     void dispatch(moon::message* msg) override;
 
-    void on_timer(uint32_t timerid, bool remove) override;
+    void shutdown()  override;
 
-    void error(const std::string& msg, bool initialized = true);
+    void on_timer(uint32_t timerid, bool remove) override;
 
     static void* lalloc(void * ud, void *ptr, size_t osize, size_t nsize);
 public:
@@ -41,9 +35,7 @@ public:
     size_t mem_report = 8 * 1024 * 1024;
 private:
     sol::state lua_;
-    sol_function_t start_;
     sol_function_t dispatch_;
-    sol_function_t exit_;
-    sol_function_t destroy_;
+    sol_function_t shutdown_;
     sol_function_t on_timer_;
 };
