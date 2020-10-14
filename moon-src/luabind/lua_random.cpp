@@ -30,7 +30,7 @@ static int lrand_range_some(lua_State *L)
     int64_t v_max = (int64_t)luaL_checkinteger(L, 2);
     int64_t v_count = (int64_t)luaL_checkinteger(L, 3);
 
-    if (v_count <= 0 || (v_max - v_min) < v_count)
+    if (v_count <= 0 || (v_max - v_min + 1) < v_count)
     {
         return luaL_error(L, "rand_range_some range count < num");
     }

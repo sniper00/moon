@@ -1,9 +1,9 @@
 local moon   = require("moon")
 
-print("Press Ctrl-C exit server")
+print("Press Ctrl-C shutdown server")
 
-moon.exit(function(  )
-    print("exit once")
+moon.shutdown(function( )
+    print("run once")
     moon.async(function ()
         moon.sleep(1000)
         print("t1")

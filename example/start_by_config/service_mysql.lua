@@ -126,9 +126,3 @@ end
 moon.dispatch('lua',function(msg,unpack)
     docmd(msg:sender(), msg:sessionid(), unpack(msg:cstr()))
 end)
-
--- moon.exit(function()
---     moon.async(function()
---         moon.co_wait_exit()
---     end)
--- end)

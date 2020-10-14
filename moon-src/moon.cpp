@@ -33,7 +33,7 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
         svr->stop(dwCtrlType);
-        while (svr->get_state() != moon::state::exited)
+        while (svr->get_state() != moon::state::stopped)
         {
             std::this_thread::yield();
         }
@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
             std::string conf = "config.json";//default config
             int32_t sid = 1;//default start server 1
             bool enable_console = true;
-            std::string service_file;
+            std::string bootstrap;
 
             for (int i = 1; i < argc; ++i)
             {
@@ -223,8 +223,8 @@ int main(int argc, char* argv[])
                 }
                 else if ((v == "-f"sv || v == "--file"sv) && !lastarg)
                 {
-                    service_file = argv[++i];
-                    if (fs::path(service_file).extension() != ".lua")
+                    bootstrap = argv[++i];
+                    if (fs::path(bootstrap).extension() != ".lua")
                     {
                         std::cout << "service file must be a lua script.\n";
                         usage();
@@ -251,11 +251,15 @@ int main(int argc, char* argv[])
                 return std::make_unique<lua_service>();
                 });
 
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+            router_->set_env("LUA_CPATH_EXT", "/?.dll;");
+#else
+            router_->set_env("LUA_CPATH_EXT", "/?.so;");
+#endif
+
             moon::server_config_manger smgr;
 
-            std::string bootstrap;
-
-            if (!service_file.empty())
+            if (!bootstrap.empty())
             {
                 std::string searchdir = directory::module_path().string();
                 searchdir += ";";
@@ -269,34 +273,22 @@ int main(int argc, char* argv[])
                 auto clibdir = directory::find(searchdir, "clib");
                 moon::replace(clibdir, "\\", "/");
 
-                std::string_view fmt = R"(
-                        local json = require("json")
-                        local set_env = _G.set_env
-                        local get_env = _G.get_env
-                        local new_service = _G.new_service
-                        local path = "%s/?.lua;"
-                        local cpath = "%s"..get_env("LUA_CPATH_EXT")
-                        set_env("PATH", path)
-                        set_env("CPATH", cpath)
-                        new_service("lua", json.encode({name= "%s",file = "%s"}), true, 0, 0 ,0 )
-                        return 1;
-                    )";
-
-                smgr.parse(R"([{"sid":1,"name":"test_#sid","bootstrap":"@"}])", sid);
-
-                bootstrap = moon::format(
-                    fmt.data(),
-                    lualibdir.data(),
-                    clibdir.data(),
-                    fs::path(service_file).stem().string().data(),
-                    fs::path(service_file).filename().string().data()
-                );
+                router_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
+                if (!clibdir.empty())
+                {
+                    router_->set_env("CPATH", moon::format("package.path='%s/%s'..package.path", clibdir.data(), router_->get_env("LUA_CPATH_EXT").data()));
+                }
 
                 printf("use clib search path: %s\n", clibdir.data());
                 printf("use lualib search path: %s\n", lualibdir.data());
 
-                fs::current_path(fs::absolute(fs::path(service_file)).parent_path());
+                moon::replace(bootstrap, "\\", "/");
+
+                fs::path p(bootstrap);
+                std::string filename = p.filename().string();
+                fs::current_path(fs::absolute(p).parent_path());
                 directory::working_directory = fs::current_path();
+                MOON_CHECK(smgr.parse(moon::format("[{\"sid\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), sid),"pase config failed");
             }
             else
             {
@@ -314,51 +306,16 @@ int main(int argc, char* argv[])
             router_->set_env("SERVER_NAME", c->name);
             router_->set_env("THREAD_NUM", std::to_string(c->thread));
             router_->set_env("CONFIG", smgr.config());
-
             router_->set_env("PARAMS", c->params);
 
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-            router_->set_env("LUA_CPATH_EXT", "/?.dll;");
-#else
-            router_->set_env("LUA_CPATH_EXT", "/?.so;");
-#endif
             server_->logger()->set_level(c->loglevel);
             server_->logger()->set_enable_console(enable_console);
 
             server_->init(c->thread, c->log);
 
-            sol::state lua;
-            lua.open_libraries();
+            router_->new_service("lua", moon::format(R"({"name": "bootstrap","file":"%s"})",c->bootstrap.data()), false, 0,  0, 0);
 
-            lua.add_package_loader(custom_package_loader);
-
-            open_custom_libraries(lua.lua_state());
-
-            lua.set_function("new_service", &router::new_service, router_);
-            lua.set_function("set_env", &router::set_env, router_);
-            lua.set_function("get_env", &router::get_env, router_);
-
-            sol::protected_function_result res;
-            if (c->bootstrap[0] != '@')
-            {
-                MOON_CHECK(directory::exists(c->bootstrap)
-                    , moon::format("can not found bootstrap file: '%s'.", c->bootstrap.data()).data());
-                res = lua.script_file(c->bootstrap);
-            }
-            else
-            {
-                res = lua.script(bootstrap);
-            }
-
-            if (!res.valid())
-            {
-                sol::error err = res;
-                printf("bootstrap error %s\n", err.what());
-                return -1;
-            }
-
-            size_t count = res;
-            server_->run(count);
+            server_->run();
         }
         catch (std::exception& e)
         {

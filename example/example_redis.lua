@@ -117,6 +117,4 @@ local function run_example()
 
 end
 
-moon.start(function()
-    run_example()
-end)
+run_example()

@@ -30,7 +30,7 @@ equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
 equal(type(moon.set_cb) , "function")
-equal(type(moon.abort) , "function")
+equal(type(moon.exit) , "function")
 
 local msg = moon.message
 equal(type(msg.sender) , "function")
@@ -221,11 +221,11 @@ moon.async(function()
 	--coroutine reuse
 	for _= 1, 1000 do
 		moon.async(function()
-			moon.sleep(10)
+			moon.sleep(1000)
 		end)
 	end
 
-	moon.sleep(100)
+	moon.sleep(2000)
 
 	running,free = moon.coroutine_num()
 	test_assert.equal(free, 1000)

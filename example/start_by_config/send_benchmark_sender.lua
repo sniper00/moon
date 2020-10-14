@@ -35,22 +35,21 @@ moon.dispatch('lua',function(msg,unpack)
     docmd(header, unpack(msg:cstr()))
 end)
 
-moon.start(function()
-    receiver1 = moon.queryservice("send_benchmark_receiver1")
-    receiver2 = moon.queryservice("send_benchmark_receiver2")
-    receiver3 = moon.queryservice("send_benchmark_receiver3")
-    receiver4 = moon.queryservice("send_benchmark_receiver4")
+receiver1 = moon.queryservice("send_benchmark_receiver1")
+receiver2 = moon.queryservice("send_benchmark_receiver2")
+receiver3 = moon.queryservice("send_benchmark_receiver3")
+receiver4 = moon.queryservice("send_benchmark_receiver4")
 
-    moon.repeated(1000, -1, function()
-        sttime = moon.millsecond()
-        for _=1,ncount do
-            moon.send('lua', receiver1,"TEST","123456789")
-            moon.send('lua', receiver2,"TEST","123456789")
-            moon.send('lua', receiver3,"TEST","123456789")
-            moon.send('lua', receiver4,"TEST","123456789")
-        end
-    end)
+moon.repeated(1000, -1, function()
+    sttime = moon.millsecond()
+    for _=1,ncount do
+        moon.send('lua', receiver1,"TEST","123456789")
+        moon.send('lua', receiver2,"TEST","123456789")
+        moon.send('lua', receiver3,"TEST","123456789")
+        moon.send('lua', receiver4,"TEST","123456789")
+    end
 end)
+
 
 
 

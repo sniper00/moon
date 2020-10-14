@@ -24,16 +24,12 @@ socket.on("error",function(fd, msg)
     print("error ", fd, msg:bytes())
 end)
 
-local listenfd = 0
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
+socket.start(listenfd)--start accept
+print("server start ", HOST, PORT)
+print("enter 'CTRL-C' stop server.")
 
-moon.start(function()
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
-    socket.start(listenfd)--start accept
-    print("server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
-end)
-
--- 服务销毁
-moon.destroy(function()
+moon.shutdown(function()
     socket.close(listenfd)
+	moon.quit()
 end)
