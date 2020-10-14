@@ -284,13 +284,9 @@ local function cluster_service()
         end
     })
 
-    moon.start(function()
-        local listenfd = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET)
-
-        socket.start(listenfd)
-
-        print(strfmt("cluster run at %s %d", conf.host, conf.port))
-    end)
+    local listenfd = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET)
+    socket.start(listenfd)
+    print(strfmt("cluster run at %s %d", conf.host, conf.port))
 end
 
 if conf and conf.name then

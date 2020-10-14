@@ -121,29 +121,17 @@ namespace moon
 
         void quit()
         {
+            ok_ = false;
             router_->remove_service(id_, 0, 0);
         }
     public:
         virtual bool init(std::string_view) = 0;
 
-        virtual void start()
-        {
-            start_ = true;
-        }
-
         virtual void dispatch(message* msg) = 0;
 
+        virtual void shutdown() = 0;
+
         virtual void on_timer(uint32_t, bool) {};
-
-        virtual void exit()
-        {
-            quit();
-        }
-
-        virtual void destroy()
-        {
-            ok_ = false;
-        }
     protected:
         void set_unique(bool v)
         {

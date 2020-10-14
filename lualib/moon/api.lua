@@ -93,8 +93,9 @@ function core.get_env(key)
 end
 
 ---使服务进程退出
-function core.abort()
-    -- body
+---@param exitcode integer
+function core.exit(exitcode)
+    ignore_param(exitcode)
 end
 
 --- get server time(milliseconds)
@@ -103,7 +104,7 @@ function core.now()
     -- body
 end
 
---- get total service count()
+--- get total services's count()
 ---@return integer
 function core.service_count()
     -- body

@@ -61,7 +61,7 @@ namespace moon
         init,
         ready,
         stopping,
-        exited
+        stopped
     };
 }
 
