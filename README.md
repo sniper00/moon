@@ -24,9 +24,9 @@ QQ交流群: 543833695
 
 ## 依赖
 
-- [asio-1.12.1](https://github.com/chriskohlhoff/asio)(without boost)
+- [asio](https://github.com/chriskohlhoff/asio)
 - [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
-- [sol2](https://github.com/ThePhD/sol2)(a C++ library binding to Lua)
+- [sol2](https://github.com/ThePhD/sol2)(A C++ library binding to Lua)
 - [rapidjson](https://github.com/Tencent/rapidjson)
 
 ## 主要特性
@@ -129,19 +129,10 @@ socket.on("error",function(fd, msg)
     print("error ", fd, msg:bytes())
 end)
 
-local listenfd = 0
-
-moon.start(function()
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
-    socket.start(listenfd)--start accept
-    print("server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
-end)
-
-moon.destroy(function()
-    socket.close(listenfd)
-end)
-
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
+socket.start(listenfd)--start accept
+print("server start ", HOST, PORT)
+print("enter 'CTRL-C' stop server.")
 
 ```
 
@@ -208,18 +199,10 @@ socket.wson("ping",function(fd, msg)
     socket.write_pong(fd,"my pong")
 end)
 
-local listenfd = 0
-moon.start(function()
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_WS)
-    socket.start(listenfd)
-    print("websocket server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
-end)
-
-moon.destroy(function()
-    socket.close(listenfd)
-end)
-
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_WS)
+socket.start(listenfd)
+print("websocket server start ", HOST, PORT)
+print("enter 'CTRL-C' stop server.")
 
 ```
 
@@ -255,50 +238,44 @@ if conf.slave then
         end
     end
 
-    moon.start(function()
-        print("conf:", conf.message)
+    print("conf:", conf.message)
 
-        moon.dispatch('lua',function(msg,p)
-            local sender = msg:sender()
-            local header = msg:header()
-            docmd(sender,header, p.unpack(msg))
-        end)
-
-        if conf.auto_quit then
-            print("auto quit, bye bye")
-            -- 使服务退出
-            moon.quit()
-        end
+    moon.dispatch('lua',function(msg,p)
+        local sender = msg:sender()
+        local header = msg:header()
+        docmd(sender,header, p.unpack(msg))
     end)
+
+    if conf.auto_quit then
+        print("auto quit, bye bye")
+        -- 使服务退出
+        moon.quit()
+    end
 else
-    moon.start(function()
-
-        moon.async(function()
-            -- 动态创建服务, 配置同时可以用来传递一些信息
-            moon.new_service("lua", {
-                name = "create_service",
-                file = "create_service.lua",
-                message = "Hello create_service",
-                auto_quit = true
-            })
+    moon.async(function()
+        -- 动态创建服务, 配置同时可以用来传递一些信息
+        moon.new_service("lua", {
+            name = "create_service",
+            file = "create_service.lua",
+            message = "Hello create_service",
+            auto_quit = true
+        })
 
 
-            -- 动态创建服务，获得服务ID，方便用来通信
-            local serviceid =  moon.new_service("lua", {
-                name = "create_service",
-                file = "create_service.lua",
-                slave = true,
-                message = "Hello create_service_coroutine"
-            })
+        -- 动态创建服务，获得服务ID，方便用来通信
+        local serviceid =  moon.new_service("lua", {
+            name = "create_service",
+            file = "create_service.lua",
+            slave = true,
+            message = "Hello create_service_coroutine"
+        })
 
-            print("new service",string.format("%X",serviceid))
+        print("new service",string.format("%X",serviceid))
 
-            moon.send("lua", serviceid, "QUIT")
+        moon.send("lua", serviceid, "QUIT")
 
-            moon.abort()
-        end)
+        moon.abort()
     end)
-
 end
 
 ```
@@ -368,19 +345,17 @@ else
         docmd(header, p.unpack(msg))
     end)
 
-    moon.start(function()
-        print("callback example: service sender start")
+    print("callback example: service sender start")
 
-        moon.async(function()
-            local receiver =  moon.new_service("lua", {
-                name = "callback_receiver",
-                file = "example_callback.lua",
-                receiver = true
-            })
+    moon.async(function()
+        local receiver =  moon.new_service("lua", {
+            name = "callback_receiver",
+            file = "example_callback.lua",
+            receiver = true
+        })
 
-            print(moon.name(), "send to", receiver, "command", "PING")
-            moon.send('lua', receiver,"PING","Hello")
-        end)
+        print(moon.name(), "send to", receiver, "command", "PING")
+        moon.send('lua', receiver,"PING","Hello")
     end)
 end
 
@@ -426,18 +401,16 @@ if conf.receiver then
     end)
 
 else
-    moon.start(function()
-        moon.async(function()
-            local receiver =  moon.new_service("lua", {
-                name = "example_coroutine",
-                file = "example_coroutine.lua",
-                receiver = true
-            })
+    moon.async(function()
+        local receiver =  moon.new_service("lua", {
+            name = "example_coroutine",
+            file = "example_coroutine.lua",
+            receiver = true
+        })
 
-            print(moon.name(), "call ", receiver, "command", "PING")
-            print(moon.co_call("lua", receiver, "PING", "Hello"))
-            moon.abort()
-        end)
+        print(moon.name(), "call ", receiver, "command", "PING")
+        print(moon.co_call("lua", receiver, "PING", "Hello"))
+        moon.abort()
     end)
 end
 
@@ -454,32 +427,30 @@ end
 ```lua
 local moon = require("moon")
 
-moon.start(function()
-
-    local count = 10
-    moon.repeated(1000,count,function()
-        print("repeate 10 times timer tick",count)
-        count = count - 1
-        if 0 == count then
-            moon.abort()
-        end
-    end)
-
-    moon.async(function()
-        print("coroutine timer start")
-        moon.sleep(1000)
-        print("coroutine timer tick 1 seconds")
-        moon.sleep(1000)
-        print("coroutine timer tick 1 seconds")
-        moon.sleep(1000)
-        print("coroutine timer tick 1 seconds")
-        moon.sleep(1000)
-        print("coroutine timer tick 1 seconds")
-        moon.sleep(1000)
-        print("coroutine timer tick 1 seconds")
-        print("coroutine timer end")
-    end)
+local count = 10
+moon.repeated(1000,count,function()
+    print("repeate 10 times timer tick",count)
+    count = count - 1
+    if 0 == count then
+        moon.abort()
+    end
 end)
+
+moon.async(function()
+    print("coroutine timer start")
+    moon.sleep(1000)
+    print("coroutine timer tick 1 seconds")
+    moon.sleep(1000)
+    print("coroutine timer tick 1 seconds")
+    moon.sleep(1000)
+    print("coroutine timer tick 1 seconds")
+    moon.sleep(1000)
+    print("coroutine timer tick 1 seconds")
+    moon.sleep(1000)
+    print("coroutine timer tick 1 seconds")
+    print("coroutine timer end")
+end)
+
 
 ```
 

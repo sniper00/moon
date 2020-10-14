@@ -127,31 +127,6 @@ end
 
 moon.make_response = make_response
 
----
----注册服务启动回掉函数,这个函数的调用时机:
----1.如果服务是在配置文件中配置的服务，回掉函数会在所有配置的服务
----被创建之后调用。所以可以在回掉函数内查询其它唯一服务的 serviceid。
----2.运行时动态创建的服务，第一次update之前调用
----@param callback fun()
-function moon.start(callback)
-    core.set_cb('s', callback)
-end
-
----注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 否则服务不会退出。
----在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
----注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
----@param callback fun()
-function moon.exit(callback)
-    assert(callback)
-    core.set_cb('e', callback)
-end
-
----注册服务对象销毁时的回掉函数，这个函数会在服务正常销毁时调用
----@param callback fun()
-function moon.destroy(callback)
-    core.set_cb('d', callback)
-end
-
 ---@param msg message
 ---@param PTYPE string
 local function _default_dispatch(msg, PTYPE)
@@ -190,6 +165,14 @@ end
 
 core.set_cb('m', _default_dispatch)
 
+---注册进程退出信号回调处理,注册此回调后, 除非调用moon.quit, 否则服务不会退出。
+---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
+---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
+---@param callback fun()
+function moon.shutdown(callback)
+    assert(callback)
+    core.set_cb('s', callback)
+end
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
 ---@param PTYPE string @协议类型
@@ -504,40 +487,7 @@ reg_protocol {
 
 local system_command = {}
 
-local ref_services = {}
-
---- mark a service, should not exit before this service
-moon.retain =function(name)
-    local id = moon.queryservice(name)
-    if id == 0 then return end
-    moon.send("system", id, "retain", moon.name())
-end
-
-moon.release =function(name)
-    local id = moon.queryservice(name)
-    if id == 0 then return end
-    moon.send("system", id, "release", moon.name())
-end
-
-moon.co_wait_exit = function(isquit)
-    if isquit == nil then isquit = true end
-    while true do
-        local num = 0
-        for _,_ in pairs(ref_services) do
-            num=num+1
-        end
-        if num ==0 then
-            break
-        else
-            moon.sleep(100)
-        end
-    end
-    if isquit then
-        moon.quit()
-    end
-end
-
-system_command.exit = function(sender, msg)
+system_command._service_exit = function(sender, msg)
     local data = msg:bytes()
     for k, v in pairs(session_watcher) do
         if v == sender then
@@ -551,14 +501,8 @@ system_command.exit = function(sender, msg)
     end
 end
 
-system_command.retain = function(_, msg)
-    local data = msg:bytes()
-    ref_services[data] = true
-end
-
-system_command.release = function(_, msg)
-    local data = msg:bytes()
-    ref_services[data] = nil
+moon.system = function(cmd, fn)
+    system_command[cmd] = fn
 end
 
 reg_protocol {

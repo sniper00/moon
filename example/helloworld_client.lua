@@ -33,23 +33,22 @@ local function session_read( fd )
     return data
 end
 
-moon.start(function()
-    moon.async(function()
-        local fd,err = socket.connect(HOST, PORT,moon.PTYPE_TEXT)
-        if not fd then
-            print(err)
-            return
-        end
+moon.async(function()
+    local fd,err = socket.connect(HOST, PORT,moon.PTYPE_TEXT)
+    if not fd then
+        print(err)
+        return
+    end
 
-        print(fd,"Please input:")
-        repeat
-            local input = io.read()
-            if input then
-                send(fd, input)
-                local rdata = session_read(fd)
-                print("recv", rdata)
-        end
-        until(not input)
-    end)
+    print(fd,"Please input:")
+    repeat
+        local input = io.read()
+        if input then
+            send(fd, input)
+            local rdata = session_read(fd)
+            print("recv", rdata)
+    end
+    until(not input)
 end)
+
 

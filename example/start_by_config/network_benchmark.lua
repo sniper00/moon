@@ -60,7 +60,7 @@ local function run_master()
         end
     end)
 
-    moon.destroy(function()
+    moon.shutdown(function()
         socket.close(listenfd)
     end)
 end

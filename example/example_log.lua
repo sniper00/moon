@@ -33,4 +33,4 @@ end
 -- log.LOG_LEVEL = log.LOG_INFO
 -- log.debug("this line will not print or log file")
 
-moon.abort()
+moon.exit(-1)

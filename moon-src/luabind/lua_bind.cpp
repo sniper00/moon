@@ -395,7 +395,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("wstate", &router::worker_info, router_);
     lua.set_function("set_loglevel", (void(moon::log::*)(std::string_view))&log::set_level, router_->logger());
     lua.set_function("get_loglevel", &log::get_level, router_->logger());
-    lua.set_function("abort", &server::stop, server_);
+    lua.set_function("exit", &server::stop, server_);
     lua.set_function("service_count", &server::service_count, server_);
     lua.set_function("now", [server_]() {return server_->now();});
     lua.set_function("adjtime", [server_](int64_t v){

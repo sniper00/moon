@@ -34,15 +34,14 @@ socket.wson("ping",function(fd, msg)
     socket.write_pong(fd,"my pong")
 end)
 
-local listenfd = 0
-moon.start(function()
-    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_WS)
-    socket.start(listenfd)
-    print("websocket server start ", HOST, PORT)
-    print("enter 'CTRL-C' stop server.")
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_WS)
+socket.start(listenfd)
+print("websocket server start ", HOST, PORT)
+print("enter 'CTRL-C' stop server.")
+
+moon.shutdown(function()
+    socket.close(listenfd)
+	moon.quit()
 end)
 
-moon.destroy(function()
-    socket.close(listenfd)
-end)
 

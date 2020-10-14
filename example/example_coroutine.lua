@@ -29,18 +29,16 @@ if conf.receiver then
     end)
 
 else
-    moon.start(function()
-        moon.async(function()
-            local receiver =  moon.new_service("lua", {
-                name = "example_coroutine",
-                file = "example_coroutine.lua",
-                receiver = true
-            })
+    moon.async(function()
+        local receiver =  moon.new_service("lua", {
+            name = "example_coroutine",
+            file = "example_coroutine.lua",
+            receiver = true
+        })
 
-            print(moon.name(), "call ", receiver, "command", "PING")
-            print(moon.co_call("lua", receiver, "PING", "Hello"))
-            moon.abort()
-        end)
+        print(moon.name(), "call ", receiver, "command", "PING")
+        print(moon.co_call("lua", receiver, "PING", "Hello"))
+        moon.exit(-1)
     end)
 end
 
