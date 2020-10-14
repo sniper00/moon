@@ -30,7 +30,7 @@ QQ交流群: 543833695
 
 ## 快速开始
 
-1. 框架基于`C++17`编写，需要安装相应的编译器，[不同平台安装支持C++17的编译器](https://github.com/sniper00/moon/wiki/build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+1. 框架基于`C++17`编写，需要安装相应的编译器，[不同平台安装支持C++17的编译器](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
 
 2. 获取源码
 ```
@@ -47,7 +47,7 @@ QQ交流群: 543833695
             ./build.sh
         ```
 
-    **如果失败，参考[详细编译步骤](https://github.com/sniper00/moon/wiki/build#%E7%BC%96%E8%AF%91)**。
+    **如果失败，参考[详细编译步骤](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
 
 4. 运行
 
