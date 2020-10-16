@@ -314,6 +314,7 @@ int main(int argc, char* argv[])
             server_->init(c->thread, c->log);
 
             router_->new_service("lua", moon::format(R"({"name": "bootstrap","file":"%s"})",c->bootstrap.data()), false, 0,  0, 0);
+            router_->set_unique_service("bootstrap", 0x01000001);
 
             server_->run();
         }
