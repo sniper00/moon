@@ -122,49 +122,40 @@ static int lua_string_hex(lua_State* L)
     return 1;
 }
 
-static int my_lua_print(lua_State *L) {
+static int console_print(lua_State *L) {
     moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
     auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
-    auto lv = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(3));
+    auto level = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(3));
+
     int n = lua_gettop(L);  /* number of arguments */
     int i;
-    lua_getglobal(L, "tostring");
-    {
-        buffer buf;
-        for (i = 1; i <= n; i++) {
-            const char* s;
-            size_t l;
-            lua_pushvalue(L, -1);  /* function to be called */
-            lua_pushvalue(L, i);   /* value to print */
-            lua_call(L, 1, 1);
-            s = lua_tolstring(L, -1, &l);  /* get result */
-            if (s == NULL)
-                goto PRINT_ERROR;
-            if (i > 1) buf.write_back("\t", 1);
-            buf.write_back(s, l);
-            lua_pop(L, 1);  /* pop result */
-        }
-        lua_pop(L, 1);  /* pop tostring */
-
-        lua_Debug ar;
-        if (lua_getstack(L, 1, &ar))
-        {
-            if (lua_getinfo(L, "Sl", &ar))
-            {
-                buf.write_back("\t(", 2);
-                if (ar.source != nullptr && ar.source[0] != '\0')
-                    buf.write_back(ar.source + 1, std::strlen(ar.source) - 1);
-                buf.write_back(":", 1);
-                auto line = std::to_string(ar.currentline);
-                buf.write_back(line.data(), line.size());
-                buf.write_back(")", 1);
-            }
-        }
-        logger->logstring(true, lv, std::string_view{ buf.data(), buf.size() }, serviceid);
-        return 0;
+    buffer buf;
+    for (i = 1; i <= n; i++) {  /* for each argument */
+        size_t l;
+        const char* s = luaL_tolstring(L, i, &l);  /* convert it to string */
+        if (i > 1)  /* not the first element? */
+            buf.write_back("\t", 1);  /* add a tab before it */
+        buf.write_back(s, l);  /* print it */
+        lua_pop(L, 1);  /* pop result */
     }
-PRINT_ERROR:
-    return luaL_error(L, "'tostring' must return a string to 'print'");
+
+    lua_Debug ar;
+    if (lua_getstack(L, 1, &ar))
+    {
+        if (lua_getinfo(L, "Sl", &ar))
+        {
+            buf.write_back("\t(", 2);
+            if (ar.source != nullptr && ar.source[0] != '\0')
+                buf.write_back(ar.source + 1, std::strlen(ar.source) - 1);
+            buf.write_back(":", 1);
+            auto line = std::to_string(ar.currentline);
+            buf.write_back(line.data(), line.size());
+            buf.write_back(")", 1);
+        }
+    }
+
+    logger->logstring(true, level, std::string_view{ buf.data(), buf.size() }, serviceid);
+    return 0;
 }
 
 static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t serviceid)
@@ -172,7 +163,7 @@ static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t servi
     lua_pushlightuserdata(lua.lua_state(), logger);
     lua_pushinteger(lua.lua_state(), serviceid);
     lua_pushinteger(lua.lua_state(), (int)moon::LogLevel::Info);
-    lua_pushcclosure(lua.lua_state(), my_lua_print, 3);
+    lua_pushcclosure(lua.lua_state(), console_print, 3);
     lua_setglobal(lua.lua_state(), "print");
     assert(lua_gettop(lua.lua_state()) == 0);
 }
@@ -279,7 +270,7 @@ const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
 {
     lua.set_function("LOGV", &moon::log::logstring, logger);
     register_lua_print(lua, logger, serviceid);
-    sol_extend_library(lua, my_lua_print, "error", [logger, serviceid](lua_State* L)->int {
+    sol_extend_library(lua, console_print, "error", [logger, serviceid](lua_State* L)->int {
         lua_pushlightuserdata(L, logger);
         lua_pushinteger(L, serviceid);
         lua_pushinteger(L, (int)moon::LogLevel::Error);
