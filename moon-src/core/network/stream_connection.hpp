@@ -40,20 +40,18 @@ namespace moon
 
             if (!delim_.empty())
             {
-                count_ = (n > 0 ? n : std::numeric_limits<size_t>::max());
-                read_until();
+                read_until((n > 0 ? n : std::numeric_limits<size_t>::max()));
             }
             else
             {
-                count_ = n;
-                read();
+                read(n);
             }
         }
 
     protected:
-        void read_until()
+        void read_until(size_t count)
         {
-            asio::async_read_until(socket_, moon::streambuf(response_->get_buffer(), count_), delim_,
+            asio::async_read_until(socket_, moon::streambuf(response_->get_buffer(), count), delim_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -66,11 +64,11 @@ namespace moon
             });
         }
 
-        void read()
+        void read(size_t count)
         {
-            std::size_t size = (response_->size() >= count_ ? 0 : (response_->size() - count_));
-            asio::async_read(socket_, moon::streambuf(response_->get_buffer(), count_), asio::transfer_exactly(size),
-                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
+            std::size_t size = (response_->size() >= count ? 0 : (count - response_->size()));
+            asio::async_read(socket_, moon::streambuf(response_->get_buffer(), count), asio::transfer_exactly(size),
+                    [this, self = shared_from_this(), count](const asio::error_code& e, std::size_t)
             {
                 if (e)
                 {
@@ -78,7 +76,7 @@ namespace moon
                     return;
                 }
                 recvtime_ = now();
-                response(count_, response_);
+                response(count, response_);
             });
         }
 
@@ -97,12 +95,12 @@ namespace moon
             {
                 if (e != asio::error::eof)
                 {
-                    response_->set_header("error");
+                    response_->set_header("SOCKET_ERROR");
                     response_->write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
                 }
                 else
                 {
-                    response_->set_header("eof");
+                    response_->set_header("EOF");
                 }
             }
 
@@ -122,18 +120,23 @@ namespace moon
             }
             auto buf = response_->get_buffer();
             assert(buf->size() >= count);
-            revert_ = (buf->size() - count) + delim_.size();
+            if (type == PTYPE_TEXT)
+            {
+                revert_ = (buf->size() - count) + delim_.size();
+            }
+            else
+            {
+                revert_ = 0;
+            }
             m->set_type(type);
             m->set_sender(fd());
             m->set_sessionid(sessionid_);
             sessionid_ = 0;
-            count_ = 0;
             buf->revert(revert_);
             handle_message(m);
         }
     protected:
         size_t revert_ = 0;
-        size_t count_ = 0;
         int32_t sessionid_ = 0;
         std::string delim_;
         message_ptr_t response_;
