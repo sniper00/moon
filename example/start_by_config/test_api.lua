@@ -1,17 +1,11 @@
 local moon = require("moon")
-local log = require("moon.log")
+
 local json = require("json")
 local seri = require("seri")
 local fs = require("fs")
 local test_assert = require("test_assert")
 
 local equal = test_assert.equal
-
-equal(type(moon.LOGV) ,"function")
-equal(log.LOG_ERROR , 1)
-equal(log.LOG_WARN ,2)
-equal(log.LOG_INFO , 3)
-equal(log.LOG_DEBUG , 4)
 
 equal(type(checkbool) , "function")
 equal(type(checkint) , "function")
@@ -32,15 +26,12 @@ equal(type(moon.send) , "function")
 equal(type(moon.set_cb) , "function")
 equal(type(moon.exit) , "function")
 
-local msg = moon.message
-equal(type(msg.sender) , "function")
-equal(type(msg.sessionid) , "function")
-equal(type(msg.receiver) , "function")
-equal(type(msg.header) , "function")
-equal(type(msg.bytes) , "function")
-equal(type(msg.size) , "function")
-equal(type(msg.cstr) , "function")
-equal(type(msg.buffer) , "function")
+local msg = require("message")
+equal(type(msg.decode) , "function")
+equal(type(msg.clone) , "function")
+equal(type(msg.release) , "function")
+equal(type(msg.redirect) , "function")
+
 
 equal(type(fs.create_directory) , "function")
 equal(type(fs.working_directory) , "function")

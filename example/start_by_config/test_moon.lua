@@ -1,5 +1,5 @@
 local moon = require("moon")
-local log = require("moon.log")
+
 
 local test_case =
 {
@@ -72,7 +72,7 @@ command.SUCCESS = function(name,sid)
 end
 
 command.FAILED = function(name, sid, dsp)
-    log.error("FAILED %s %s", tostring(name), tostring(dsp))
+    moon.error(string.format("FAILED %s %s", tostring(name), tostring(dsp)))
     moon.async(function ()
         moon.co_remove_service(sid)
         next_case()
@@ -89,8 +89,8 @@ local function docmd(header,...)
 end
 
 moon.dispatch('lua',function(msg,unpack)
-    local header = msg:header()
-    docmd(header, unpack(msg:cstr()))
+    local header, sz, len = moon.decode(msg, "HC")
+    docmd(header, unpack(sz, len))
 end)
 
 next_case()

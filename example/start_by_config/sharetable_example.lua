@@ -20,15 +20,13 @@ if conf.agent then
         print_r(data)
     end
 
-    moon.dispatch('lua',function(msg,p)
-        local sessionid = msg:sessionid()
-        local sender = msg:sender()
-        local buf = msg:buffer()
-        local cmd = seri.unpack_one(buf)
+    moon.dispatch('lua',function(msg)
+        local sender, sessionid, buf = moon.decode(msg, "SEB")
+        local cmd, sz, len = seri.unpack_one(buf)
         local f = command[cmd]
         if f then
             moon.async(function()
-                moon.response("lua", sender, sessionid, f(seri.unpack(msg:cstr())))
+                moon.response("lua", sender, sessionid, f(seri.unpack(sz, len)))
             end)
         else
             moon.error(moon.name(), "recv unknown cmd "..cmd)
@@ -59,7 +57,7 @@ else
 
     moon.async(function()
         io.writefile(file, content1)
-        sharetable.loadfile(file)
+        print(sharetable.loadfile(file))
 
         local agent =  moon.new_service(
             "lua",
@@ -72,7 +70,7 @@ else
 
         print(moon.co_call("lua", agent, "LOAD"))
         io.writefile(file, content2)
-        sharetable.loadfile(file)
+        print(sharetable.loadfile(file))
 
         print(moon.co_call("lua", agent, "UPDATE"))
     end)

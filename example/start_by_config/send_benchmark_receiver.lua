@@ -17,8 +17,7 @@ local function docmd(sender,header,...)
 end
 
 moon.dispatch('lua',function(msg,unpack)
-	local sender = msg:sender()
-	local header = msg:header()
-	docmd(sender,header, unpack(msg:cstr()))
+	local sender, header, p, n = moon.decode(msg, "SHC")
+	docmd(sender,header, unpack(p, n))
 end)
 

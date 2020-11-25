@@ -23,9 +23,8 @@ if conf.slave then
     print("conf:", conf.message)
 
     moon.dispatch('lua',function(msg,unpack)
-        local sender = msg:sender()
-        local header = msg:header()
-        docmd(sender,header, unpack(msg:cstr()))
+        local sender, header, sz, len = moon.decode(msg,"SHC")
+        docmd(sender,header, unpack(sz, len))
     end)
 
     if conf.auto_quit then

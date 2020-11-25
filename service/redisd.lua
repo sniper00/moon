@@ -9,7 +9,7 @@ local tbunpack = table.unpack
 
 local conf = ...
 
-local PTYPE_REDIS = 101
+local PTYPE_REDIS = 11
 
 moon.register_protocol({
     name = "redis",
@@ -122,7 +122,8 @@ if conf.name then
     socket.close(fd)
 
     moon.dispatch('redis',function(msg,unpack)
-        docmd(unpack(msg:header()),msg:sender(), msg:sessionid(), unpack(msg:cstr()))
+        local header, sender, sessionid, sz, len = moon.decode(msg, "HSEC")
+        docmd(unpack(header),sender,sessionid, unpack( sz, len))
     end)
 
     local function wait_all_send()

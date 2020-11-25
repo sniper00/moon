@@ -7,21 +7,21 @@ local function run_slave()
     local count = 0
     do
         socket.on("accept",function(fd, msg)
-            --print("accept ", fd, msg:bytes())
+            --print("accept ", fd, moon.decode(msg, "Z"))
         end)
 
         socket.on("message",function(fd, msg)
-            --tcpserver.send(fd, msg:bytes())
-            socket.write(fd, msg:bytes())
+            --tcpserver.send(fd, moon.decode(msg, "Z"))
+            socket.write(fd, moon.decode(msg, "Z"))
             count = count + 1
         end)
 
         socket.on("close",function(fd, msg)
-            --print("close ", fd, msg:bytes())
+            --print("close ", fd, moon.decode(msg, "Z"))
         end)
 
         socket.on("error",function(fd, msg)
-            --print("error ", fd, msg:bytes())
+            --print("error ", fd, moon.decode(msg, "Z"))
         end)
     end
 
