@@ -31,8 +31,8 @@ local function docmd(header,...)
 end
 
 moon.dispatch('lua',function(msg,unpack)
-    local header = msg:header()
-    docmd(header, unpack(msg:cstr()))
+    local header, p, n = moon.decode(msg, "HC")
+    docmd(header, unpack(p, n))
 end)
 
 receiver1 = moon.queryservice("send_benchmark_receiver1")

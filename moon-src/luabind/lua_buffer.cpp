@@ -169,7 +169,7 @@ static int prepare(lua_State* L)
     return 0;
 }
 
-static int hasflag(lua_State* L)
+static int has_flag(lua_State* L)
 {
     auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
     if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
@@ -177,6 +177,15 @@ static int hasflag(lua_State* L)
     bool res = buf->has_flag(flag);
     lua_pushboolean(L, res ? 1 : 0);
     return 1;
+}
+
+static int set_flag(lua_State* L)
+{
+    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
+    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto flag = static_cast<int>(luaL_checkinteger(L, 2));
+    buf->set_flag(flag);
+    return 0;
 }
 
 static int unsafe_delete(lua_State* L)
@@ -200,10 +209,10 @@ extern "C"
     int LUAMOD_API luaopen_buffer(lua_State* L)
     {
         luaL_Reg l[] = {
-            {"unsafe_new",unsafe_new},
-            {"delete",unsafe_delete },
-            { "clear",clear },
-            { "size",size },
+            { "unsafe_new", unsafe_new},
+            { "delete", unsafe_delete },
+            { "clear", clear },
+            { "size", size },
             { "substr", substr},
             { "str", str},
             { "cstr", cstr},
@@ -213,7 +222,8 @@ extern "C"
             { "seek", seek},
             { "commit", commit},
             { "prepare", prepare},
-            { "hasflag", hasflag},
+            { "has_flag", has_flag},
+            { "set_flag", set_flag},
             {NULL,NULL}
         };
         luaL_checkversion(L);

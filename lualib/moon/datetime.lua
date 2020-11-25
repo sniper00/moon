@@ -114,13 +114,22 @@ function datetime.past_day(time1, time2)
     end
 end
 
----生成当前time,某个整点的 utc time
+---根据time生成当天某个时刻的utc time
 ---@param time integer @utc时间,单位秒。
----@param hour integer @整点, 0-23
+---@param hour integer @0-23
+---@param min integer @0-59 可选
+---@param sec integer @0-59 可选
 ---@return integer
-function datetime.make_hourly_time(time, hour)
+function datetime.make_hourly_time(time, hour, min, sec)
     local t = _dailytime(time)
-    return t + SECONDS_ONE_HOUR*hour;
+    t = t + SECONDS_ONE_HOUR*hour
+    if min then
+        t = t + 60*min
+    end
+    if sec then
+        t = t + sec
+    end
+    return t
 end
 
 ---@param strtime string @ "2020/09/04 20:28:20"

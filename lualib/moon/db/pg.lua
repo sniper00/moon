@@ -134,19 +134,20 @@ local function receive_message(self)
     local t, err = socket.read(self.sock, 1)
     if not t then
         disconnect(self)
-        return socket_error, "receive_message: failed to get type: socket err " .. tostring(err)
+        return socket_error, "receive_message: failed to get type: " .. tostring(err)
     end
     local len
     len, err = socket.read(self.sock, 4)
     if not (len) then
         disconnect(self)
-        return socket_error, "receive_message: failed to get len: socket err" .. tostring(err)
+        return socket_error, "receive_message: failed to get len: " .. tostring(err)
     end
     len = decode_int(len)
     len = len - 4
     local msg
     msg, err = socket.read(self.sock, len)
     if not msg then
+        disconnect(self)
         return socket_error, err
     end
     return t, msg
@@ -186,41 +187,21 @@ local function send_startup_message(self)
 end
 
 local function parse_error(err_msg)
-    local severity, message, detail, position
-    local error_data = {}
-    local offset = 1
-    while offset <= #err_msg do
-        local t = err_msg:sub(offset, offset)
-        local str = err_msg:match("[^%z]+", offset + 1)
-        if not (str) then
-            break
-        end
-        offset = offset + (2 + #str)
-        do
-            local field = ERROR_TYPES[t]
-            if field then
-                error_data[field] = str
-            end
-        end
-        local _exp_0 = t
-        if ERROR_TYPES.severity == _exp_0 then
-            severity = str
-        elseif ERROR_TYPES.message == _exp_0 then
-            message = str
-        elseif ERROR_TYPES.position == _exp_0 then
-            position = str
-        elseif ERROR_TYPES.detail == _exp_0 then
-            detail = str
-        end
-    end
-    local msg = tostring(severity) .. ": " .. tostring(message)
-    if position then
-        msg = tostring(msg) .. " (" .. tostring(position) .. ")"
-    end
-    if detail then
-        msg = tostring(msg) .. "\n" .. tostring(detail)
-    end
-    return msg, error_data
+	local db_error = { }
+	local offset = 1
+	while offset <= #err_msg do
+		local t = err_msg:sub(offset, offset)
+		local str = err_msg:match("[^%z]+", offset + 1)
+		if not (str) then
+			break
+		end
+		offset = offset + (2 + #str)
+		local field = ERROR_TYPES[t]
+		if field then
+			db_error[field] = str
+		end
+	end
+    return db_error
 end
 
 local function check_auth(self)
@@ -230,7 +211,7 @@ local function check_auth(self)
     end
     local _exp_0 = t
     if MSG_TYPE.error == _exp_0 then
-        return nil, parse_error(msg)
+        return false, parse_error(msg)
     elseif MSG_TYPE.auth == _exp_0 then
         return true
     else
@@ -274,7 +255,7 @@ local function auth(self)
     if not (MSG_TYPE.auth == t) then
         disconnect(self)
         if MSG_TYPE.error == t then
-            return nil, parse_error(msg)
+            return false, parse_error(msg)
         end
         error("unexpected message during auth: " .. tostring(t))
     end
@@ -295,11 +276,11 @@ local function wait_until_ready(self)
     while true do
         local t, msg = receive_message(self)
         if t == socket_error then
-            return nil, msg
+            return t, msg
         end
         if MSG_TYPE.error == t then
             disconnect(self)
-            return nil, parse_error(msg)
+            return false, parse_error(msg)
         end
 		if MSG_TYPE.ready_for_query == t then
             break
@@ -315,7 +296,13 @@ pg.disconnect = disconnect
 
 pg.__index = pg
 
-pg.socket_error = socket_error
+pg.__gc = function(o)
+    if o.sock then
+        socket.close(o.sock)
+    end
+end
+
+pg.socket_errcode = -1
 
 ---@param timeout integer @毫秒
 ---@param opts table @{database = "", user = "", password = ""}
@@ -323,7 +310,7 @@ pg.socket_error = socket_error
 function pg.connect(opts)
     local sock, err = socket.connect(opts.host, opts.port, moon.PTYPE_TEXT, opts.connect_timeout)
     if not sock then
-        return socket_error, err
+        return {code= pg.socket_errcode, message = err}
     end
 
     local obj = table.deepcopy(opts)
@@ -335,20 +322,20 @@ function pg.connect(opts)
 
     success, err = auth(obj)
     if success == socket_error then
-        return socket_error, err
+        return {code= pg.socket_errcode, message = err}
     end
 
     if not success then
-        return nil, err
+        return err
     end
 
     success, err = wait_until_ready(obj)
     if success == socket_error then
-        return socket_error, err
+        return {code= pg.socket_errcode, message = err}
     end
 
     if not success then
-        return nil, err
+        return err
     end
 
     return setmetatable(obj, pg)
@@ -394,53 +381,41 @@ end
 local function parse_row_desc(row_desc)
     local num_fields = decode_short(row_desc:sub(1, 2))
     local offset = 3
-    local fields
-    do
-        local _accum_0 = {}
-        local _len_0 = 1
-        for _ = 1, num_fields do
-            local name = row_desc:match("[^%z]+", offset)
-            offset = offset + #name + 1
-            local data_type = decode_int(row_desc:sub(offset + 6, offset + 6 + 3))
-            -- data_type = PG_TYPES[data_type] or "string"
-            local format = decode_short(row_desc:sub(offset + 16, offset + 16 + 1))
-            assert(0 == format, "don't know how to handle format")
-            offset = offset + 18
-            local _value_0 = {
-                name,
-                data_type
-            }
-            _accum_0[_len_0] = _value_0
-            _len_0 = _len_0 + 1
-        end
-        fields = _accum_0
+    local fields = {}
+    for _ = 1, num_fields do
+        local name = row_desc:match("[^%z]+", offset)
+        offset = offset + #name + 1
+        local data_type = decode_int(row_desc:sub(offset + 6, offset + 9))
+        --data_type = PG_TYPES[data_type] or "string"
+        local format = decode_short(row_desc:sub(offset + 16, offset + 17))
+        assert(0 == format, "don't know how to handle format")
+        offset = offset + 18
+        local info = {
+            name,
+            data_type
+        }
+        table.insert(fields, info)
     end
     return fields
 end
 
-local function parse_data_row(data_row, fields)
-    local num_fields = decode_short(data_row:sub(1, 2))
+
+
+local function parse_row_data(data_row, fields)
+    local tupnfields = decode_short(data_row:sub(1, 2))
+    assert(tupnfields == #fields, 'unexpected field count in \"D\" message')
     local out = {}
     local offset = 3
-    for i = 1, num_fields do
-        local _continue_0
-        repeat
-            local field = fields[i]
-            if not (field) then
-                _continue_0 = true
-                break
+    for i = 1, tupnfields do
+        local field = fields[i]
+        local field_name, field_type = field[1], field[2]
+        local len = decode_int(data_row:sub(offset, offset + 3))
+        offset = offset + 4
+        if len < 0 then
+            if convert_null then
+                out[field_name] = NULL
             end
-            local field_name, field_type
-            field_name, field_type = field[1], field[2]
-            local len = decode_int(data_row:sub(offset, offset + 3))
-            offset = offset + 4
-            if len < 0 then
-                if convert_null then
-                    out[field_name] = NULL
-                end
-                _continue_0 = true
-                break
-            end
+        else
             local value = data_row:sub(offset, offset + len - 1)
             offset = offset + len
             local fn = PG_TYPES[field_type]
@@ -448,10 +423,6 @@ local function parse_data_row(data_row, fields)
                 value = fn(value)
             end
             out[field_name] = value
-            _continue_0 = true
-        until true
-        if not _continue_0 then
-            break
         end
     end
     return out
@@ -475,7 +446,6 @@ end
 local function format_query_result(row_desc, data_rows, command_complete)
     local command, affected_rows
     if command_complete then
-        --print(command_complete)
         command = command_complete:match("^%w+")
         affected_rows = tointeger(command_complete:match("%d+%z$"))
     end
@@ -486,7 +456,7 @@ local function format_query_result(row_desc, data_rows, command_complete)
         local fields = parse_row_desc(row_desc)
         local num_rows = #data_rows
         for i = 1, num_rows do
-            data_rows[i] = parse_data_row(data_rows[i], fields)
+            data_rows[i] = parse_row_data(data_rows[i], fields)
         end
         if affected_rows and command ~= "SELECT" then
             data_rows.affected_rows = affected_rows
@@ -502,15 +472,23 @@ local function format_query_result(row_desc, data_rows, command_complete)
     end
 end
 
-function pg.pack_query_buffer(msg)
-    local buf =  msg:buffer()
+function pg.pack_query_buffer(buf)
     bwrite(buf, "\0")
     local len = bsize(buf)
     bwritefront(buf, strpack(">I", len+4))
     bwritefront(buf, MSG_TYPE.query)
 end
 
----@param sql userdata|string @ cpp buffer pointer:sql string
+---@class pg_result
+---@field public data table @ table rows
+---@field public num_queries integer
+---@field public notifications integer
+---@field public errmsg string @ error message
+---@field public errdata table @ error detail info
+
+
+---@param sql userdata|string @ userdata cpp message pointer:sql string
+---@return pg_result
 function pg.query(self, sql)
     if type(sql) == "string" then
         send_message(self, MSG_TYPE.query, {sql, NULL})
@@ -523,7 +501,7 @@ function pg.query(self, sql)
     while true do
         local t, msg = receive_message(self)
         if t == socket_error then
-            return socket_error, msg
+            return {code= pg.socket_errcode, message = msg}
         end
         local _exp_0 = t
         if MSG_TYPE.data_row == _exp_0 then
@@ -560,9 +538,18 @@ function pg.query(self, sql)
         end
     end
     if err_msg then
-        return nil, parse_error(err_msg), result, num_queries, notifications
+        local db_error = parse_error(err_msg)
+        db_error.data = result
+        db_error.num_queries = num_queries
+        db_error.notifications = notifications
+        return db_error
     end
-    return result, num_queries, notifications
+
+    return {
+        data = result,
+        num_queries = num_queries,
+        notifications = notifications
+    }
 end
 
 return pg

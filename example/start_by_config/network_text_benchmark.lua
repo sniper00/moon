@@ -34,9 +34,8 @@ local function run_slave()
     end
 
     moon.dispatch('lua',function(msg,unpack)
-        local sender = msg:sender()
-        local sessionid = msg:sessionid()
-        docmd(sender,sessionid, unpack(msg:cstr()))
+        local sender, sessionid, sz, len = moon.decode(msg, "SEC")
+        docmd(sender,sessionid, unpack(sz, len))
     end)
 end
 

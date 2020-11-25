@@ -7,21 +7,21 @@ local PORT = 12345
 
 -------------------2 bytes len (big endian) protocol------------------------
 socket.on("accept",function(fd, msg)
-    print("accept ", fd, msg:bytes())
+    print("accept ", fd, moon.decode(msg, "Z"))
     socket.settimeout(fd, 10)
 end)
 
 socket.on("message",function(fd, msg)
     --echo message to client
-    socket.write(fd, msg:bytes())
+    socket.write(fd, moon.decode(msg, "Z"))
 end)
 
 socket.on("close",function(fd, msg)
-    print("close ", fd, msg:bytes())
+    print("close ", fd, moon.decode(msg, "Z"))
 end)
 
 socket.on("error",function(fd, msg)
-    print("error ", fd, msg:bytes())
+    print("error ", fd, moon.decode(msg, "Z"))
 end)
 
 local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)

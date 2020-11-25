@@ -47,7 +47,7 @@ mark_shared(lua_State *L) {
 				lua_sharestring(L, idx);
 				break;
 			default:
-				luaL_error(L, "Invalid type [%s]", lua_typename(L, t));
+				luaL_error(L, "Invalid type [%s]", lua_typename(L, tp));
 				break;
 			}
 		}

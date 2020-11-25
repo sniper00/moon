@@ -11,7 +11,7 @@ local listenfd = socket.listen(HOST,PORT,moon.PTYPE_SOCKET)
 socket.start(listenfd)
 
 socket.on("accept",function(fd, msg)
-    --print("accept ", fd, msg:bytes())
+    --print("accept ", fd, moon.decode(msg, "Z"))
 end)
 
 socket.on("message",function(fd, msg)
@@ -19,11 +19,11 @@ socket.on("message",function(fd, msg)
 end)
 
 socket.on("close",function(fd, msg)
-    --print("close ", fd, msg:bytes())
+    --print("close ", fd, moon.decode(msg, "Z"))
 end)
 
 socket.on("error",function(fd, msg)
-    --print("error ", fd, msg:bytes())
+    --print("error ", fd, moon.decode(msg, "Z"))
 end)
 
 ------------------------CLIENT----------------------------
