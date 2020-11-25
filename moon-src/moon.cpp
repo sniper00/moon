@@ -10,7 +10,7 @@
 #include "services/lua_service.h"
 
 extern "C" {
-#include "lua53/lstring.h"
+#include "lstring.h"
 }
 
 static std::weak_ptr<moon::server>  wk_server;
@@ -129,6 +129,7 @@ extern "C"
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
         REGISTER_CUSTOM_LIBRARY("json", luaopen_json);
         REGISTER_CUSTOM_LIBRARY("buffer", luaopen_buffer);
+        REGISTER_CUSTOM_LIBRARY("message", luaopen_message);
         //custom
         REGISTER_CUSTOM_LIBRARY("pb", luaopen_pb);
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);

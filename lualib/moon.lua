@@ -10,7 +10,8 @@ require("base.class")
 local core = require("mooncore")
 local json = require("json")
 local seri = require("seri")
--- local buffer = require("buffer")
+---@type message
+local message = require("message")
 
 local pairs = pairs
 local type = type
@@ -53,8 +54,36 @@ setmetatable(moon, {__index = core})
 moon.pack = pack
 moon.unpack = unpack
 
+---获取message相关信息
+---@param msg userdata @ message* lightuserdata
+---@param s string @ pattern string
+---'S' message:sender()
+---
+---'R' message:receiver()
+---
+---'E' message:sessionid()
+---
+---'H' message:header()
+---
+---'Z' message:bytes()
+---
+---'N' message:size()
+---
+---'B' message:buffer()
+moon.decode = message.decode
+
+local _decode = message.decode
+
 --export global variable
 local _g = _G
+
+---rewrite lua print
+_g["print"] = moon.info
+
+moon.DEBUG = function ()
+    return core.get_loglevel() == 4 -- LOG_DEBUG
+end
+
 moon.exports = {}
 setmetatable(
     moon.exports,
@@ -83,10 +112,6 @@ setmetatable(
         end
     }
 )
-
-moon.add_package_path = function(p)
-    package.path = package.path .. p
-end
 
 local sid_ = core.id()
 
@@ -132,10 +157,10 @@ moon.make_response = make_response
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
     if not p then
-        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, msg:sender()))
+        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, _decode(msg, "S")))
     end
 
-    local sessionid = msg:sessionid()
+    local sessionid = _decode(msg, "E")
     if sessionid > 0 and PTYPE ~= PTYPE_ERROR then
         session_watcher[sessionid] = nil
         local co = session_id_coroutine[sessionid]
@@ -143,7 +168,7 @@ local function _default_dispatch(msg, PTYPE)
             session_id_coroutine[sessionid] = nil
             --print(coroutine.status(co))
             if p.unpack then
-                coresume(co, p.unpack(msg:cstr()))
+                coresume(co, p.unpack(_decode(msg,"C")))
             else
                 coresume(co, msg)
             end
@@ -165,7 +190,7 @@ end
 
 core.set_cb('m', _default_dispatch)
 
----注册进程退出信号回调处理,注册此回调后, 除非调用moon.quit, 否则服务不会退出。
+---注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 否则服务不会退出。
 ---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
 ---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
 ---@param callback fun()
@@ -427,7 +452,7 @@ local reg_protocol = moon.register_protocol
 
 ---设置指定协议消息的消息处理函数
 ---@param PTYPE string
----@param cb fun(msg:message,ptype:table)
+---@param cb fun(msg:userdata,ptype:table)
 ---@return boolean
 function moon.dispatch(PTYPE, cb)
     local p = protocol[PTYPE]
@@ -469,10 +494,8 @@ reg_protocol {
         return ...
     end,
     unpack = moon.tostring,
-    dispatch = function(msg, unpack_fn)
-        local sessionid = msg:sessionid()
-        local content = msg:header()
-        local data = unpack_fn(msg:cstr())
+    dispatch = function(msg)
+        local sessionid, content, data = _decode(msg,"EHZ")
         if data and #data >0 then
             content = content..":"..data
         end
@@ -488,7 +511,7 @@ reg_protocol {
 local system_command = {}
 
 system_command._service_exit = function(sender, msg)
-    local data = msg:bytes()
+    local data = _decode(msg,"Z")
     for k, v in pairs(session_watcher) do
         if v == sender then
             local co = session_id_coroutine[k]
@@ -512,9 +535,8 @@ reg_protocol {
         return ...
     end,
     unpack = moon.tostring,
-    dispatch = function(msg, _)
-        local sender = msg:sender()
-        local header = msg:header()
+    dispatch = function(msg)
+        local sender, header = _decode(msg,"SH")
         local func = system_command[header]
         if func then
             func(sender, msg)
@@ -569,9 +591,8 @@ reg_protocol {
     pack = pack,
     unpack = unpack,
     dispatch = function(msg, unpack_fn)
-        local sender = msg:sender()
-        local sessionid = msg:sessionid()
-        local params = {unpack_fn(msg:cstr())}
+        local sender, sessionid, sz, len = _decode(msg,"SEC")
+        local params = {unpack_fn(sz, len)}
         local func = debug_command[params[1]]
         if func then
             func(sender, sessionid, table.unpack(params,2))
