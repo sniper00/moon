@@ -183,7 +183,7 @@ static lpb_State *default_lstate(lua_State *L) {
         lua_pop(L, 1);
     } else {
         lua_pop(L, 1);
-        LS = (lpb_State*)lua_newuserdata(L, sizeof(lpb_State));
+        LS = (lpb_State*)lua_newuserdatauv(L, sizeof(lpb_State), 0);
         memset(LS, 0, sizeof(lpb_State));
         LS->defs_index = LUA_NOREF;
         LS->hooks_index = LUA_NOREF;
@@ -779,7 +779,7 @@ static int Lpb_result(lua_State *L) {
 
 static int Lbuf_new(lua_State *L) {
     int i, top = lua_gettop(L);
-    pb_Buffer *buf = (pb_Buffer*)lua_newuserdata(L, sizeof(pb_Buffer));
+    pb_Buffer *buf = (pb_Buffer*)lua_newuserdatauv(L, sizeof(pb_Buffer), 0);
     pb_initbuffer(buf);
     luaL_setmetatable(L, PB_BUFFER);
     for (i = 1; i <= top; ++i)
@@ -795,7 +795,7 @@ static int Lbuf_delete(lua_State *L) {
 
 static int Lbuf_libcall(lua_State *L) {
     int i, top = lua_gettop(L);
-    pb_Buffer *buf = (pb_Buffer*)lua_newuserdata(L, sizeof(pb_Buffer));
+    pb_Buffer *buf = (pb_Buffer*)lua_newuserdatauv(L, sizeof(pb_Buffer), 0);
     pb_initbuffer(buf);
     luaL_setmetatable(L, PB_BUFFER);
     for (i = 2; i <= top; ++i)
@@ -1022,7 +1022,7 @@ static lpb_Slice *check_lslice(lua_State *L, int idx) {
 static int Lslice_new(lua_State *L) {
     lpb_Slice *s;
     lua_settop(L, 3);
-    s = (lpb_Slice*)lua_newuserdata(L, sizeof(lpb_Slice));
+    s = (lpb_Slice*)lua_newuserdatauv(L, sizeof(lpb_Slice), 0);
     lpb_initslice(L, 1, s, sizeof(lpb_Slice));
     luaL_setmetatable(L, PB_SLICE);
     return 1;
@@ -1031,7 +1031,7 @@ static int Lslice_new(lua_State *L) {
 static int Lslice_libcall(lua_State *L) {
     lpb_Slice *s;
     lua_settop(L, 4);
-    s = (lpb_Slice*)lua_newuserdata(L, sizeof(lpb_Slice));
+    s = (lpb_Slice*)lua_newuserdatauv(L, sizeof(lpb_Slice), 0);
     lpb_initslice(L, 2, s, sizeof(lpb_Slice));
     luaL_setmetatable(L, PB_SLICE);
     return 1;
@@ -1125,7 +1125,7 @@ static int Lslice_leave(lua_State *L) {
 }
 
 LUALIB_API int lpb_newslice(lua_State *L, const char *s, size_t len) {
-    pb_Slice *ls = (pb_Slice*)lua_newuserdata(L, sizeof(pb_Slice));
+    pb_Slice *ls = (pb_Slice*)lua_newuserdatauv(L, sizeof(pb_Slice), 0);
     *ls = pb_lslice(s, len);
     luaL_setmetatable(L, PB_SLICE);
     return 1;

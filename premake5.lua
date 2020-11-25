@@ -26,18 +26,18 @@ workspace "Server"
     filter { "system:macosx" }
         warnings "High"
 
-project "lua53"
+project "lua54"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
     kind "StaticLib"
     language "C"
-    includedirs {"./third/lua53"}
-    files { "./third/lua53/**.h", "./third/lua53/**.c"}
-    removefiles("./third/lua53/luac.c")
-    removefiles("./third/lua53/lua.c")
+    includedirs {"./third/lua54"}
+    files { "./third/lua54/**.h", "./third/lua54/**.c"}
+    removefiles("./third/lua54/luac.c")
+    removefiles("./third/lua54/lua.c")
     filter { "system:windows" }
-        disablewarnings { "4244","4324","4702","4310" }
+        disablewarnings { "4244","4324","4702","4310", "4701"}
         -- defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
@@ -55,10 +55,10 @@ project "moon"
 
     kind "ConsoleApp"
     language "C++"
-    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua53"}
+    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua54","./third/mimalloc"}
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
-        "lua53",
+        "lua54",
         "aoi",
         "crypt",
         "pb",
@@ -109,7 +109,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         targetdir "build/bin/%{cfg.buildcfg}"--目标文件目录
 
         kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib
-        includedirs {"./", "./third","./third/lua53"} --头文件搜索目录
+        includedirs {"./", "./third","./third/lua54"} --头文件搜索目录
         files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
         --targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
         language "C"
@@ -119,7 +119,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
             normaladdon()
         end
         filter { "system:windows" }
-            --links{"lua53"} -- windows 版需要链接 lua 库
+            --links{"lua54"} -- windows 版需要链接 lua 库
             --defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
             if type(winddowsaddon)=="function" then
                 winddowsaddon()
@@ -129,7 +129,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
                 linuxaddon()
             end
         filter {"system:macosx"}
-            -- links{"lua53"}
+            -- links{"lua54"}
             if type(macaddon)=="function" then
                 macaddon()
             end
@@ -159,5 +159,3 @@ add_lua_module("./third/sharetable", "sharetable")
 
 -------------------------clonefunc: for hotfix--------------------
 add_lua_module("./third/lclonefunc", "clonefunc")
-
---include("./lualib-src/mysql/premake5.lua")
