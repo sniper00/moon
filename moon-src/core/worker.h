@@ -79,7 +79,7 @@ namespace moon
             , int32_t sessionid
             , uint8_t type) const;
 
-        timer_t repeat(int32_t duration, int32_t times, uint32_t serviceid);
+        timer_t repeat(int64_t interval, int32_t times, uint32_t serviceid);
 
         void remove_timer(timer_t id);
     
