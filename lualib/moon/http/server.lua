@@ -297,6 +297,10 @@ function M.listen(host,port,timeout)
             end)--async
         end--while
     end)
+
+    setmetatable(M, {__gc = function()
+        socket.close(listenfd)
+    end})
 end
 
 function M.on( path, cb )
