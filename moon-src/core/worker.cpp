@@ -54,8 +54,6 @@ namespace moon
             return content;
             });
 
-        timer_.update(server_->now());
-
         socket_ = std::make_unique<moon::socket>(router_, this, io_ctx_);
 
         thread_ = std::thread([this]() {
@@ -333,10 +331,9 @@ namespace moon
         CONSOLE_DEBUG(server_->logger(), "send_prefab failed, can not find prepared data. prefabid %u", prefabid);
     }
 
-    timer_t worker::repeat(int32_t duration, int32_t times, uint32_t serviceid)
+    timer_t worker::repeat(int64_t interval, int32_t times, uint32_t serviceid)
     {
-        timer_.update(server_->now());
-        return timer_.repeat(duration, times, serviceid, this);
+        return timer_.repeat(server_->now(), interval, times, serviceid, this);
     }
 
     void worker::remove_timer(timer_t id)
