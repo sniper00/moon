@@ -25,7 +25,7 @@ lclone(lua_State *L) {
 	LClosure *cl = luaF_newLclosure(L, p->sizeupvalues);
 	luaF_initupvals(L, cl);
 	cl->p = p;
-	setclLvalue(L, L->top++, cl);
+	setclLvalue(L, &(L->top++)->val, cl);
 	lua_unlock(L);
 
 	return 1;
