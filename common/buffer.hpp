@@ -192,7 +192,7 @@ namespace moon
 
         ~base_buffer()
         {
-            clear();
+            allocator_.deallocate(data_, capacity_);
         }
 
         void init(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0)
@@ -273,19 +273,14 @@ namespace moon
                 break;
             case seek_origin::Current:
                 readpos_ += offset;
+                assert(readpos_ <= writepos_);
                 if (readpos_ > writepos_)
                 {
                     readpos_ = writepos_;
                 }
                 break;
-            case seek_origin::End:
-                readpos_ = writepos_ + offset;
-                if (readpos_ >= writepos_)
-                {
-                    readpos_ = writepos_;
-                }
-                break;
             default:
+                assert(false);
                 break;
             }
             return readpos_;
@@ -293,15 +288,9 @@ namespace moon
 
         void clear() noexcept
         {
-            if (nullptr != data_)
-            {
-                allocator_.deallocate(data_, capacity_);
-                data_ = nullptr;
-            }
+            assert(nullptr != data_);
             flag_ = 0;
-            capacity_ = 0;
-            readpos_ = 0;
-            writepos_ = 0;
+            writepos_ = readpos_ = headreserved_;
         }
 
         template<typename ValueType>
@@ -334,7 +323,7 @@ namespace moon
 
         void revert(size_t n) noexcept
         {
-            assert((writepos_ >= n)&& (writepos_ - n) >= readpos_);
+            assert(writepos_ >= (readpos_+n));
             if (writepos_ >= n)
             {
                 writepos_ -= n;
