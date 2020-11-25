@@ -293,7 +293,7 @@ static int lclose(lua_State *L)
 
 static int ltcp(lua_State *L)
 {
-    tcp_box* box = (tcp_box*)lua_newuserdata(L, sizeof(tcp_box));
+    tcp_box* box = (tcp_box*)lua_newuserdatauv(L, sizeof(tcp_box), 0);
     box->client = nullptr;
     box->timeout = 0;
     if (luaL_newmetatable(L, METANAME))//mt

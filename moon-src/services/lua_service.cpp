@@ -77,41 +77,47 @@ bool lua_service::init(std::string_view config)
         MOON_CHECK(!luafile.empty(), "lua service init failed: config does not provide lua file.");
         mem_limit = static_cast<size_t>(conf.get_value<int64_t>("memlimit"));
 
+        lua_.stop_gc();
+
         lua_.open_libraries();
+
+        lua_.change_gc_mode_generational(0, 0);
 
         lua_.add_package_loader(custom_package_loader);
 
         sol::table module = lua_.create_table();
         lua_bind lua_bind(module);
         lua_bind.bind_service(this)
-            .bind_log(logger(), id())
+            .bind_log(this)
             .bind_util()
             .bind_timer(this)
-            .bind_message()
             .bind_socket(this);
 
         lua_bind::registerlib(lua_.lua_state(), "mooncore", module);
 
         open_custom_libraries(lua_.lua_state());
 
-        sol::object json = lua_.require("json", luaopen_json, false);
-
         lua_.script(router_->get_env("CPATH"));
-
         lua_.script(router_->get_env("PATH"));
 
-        sol::load_result load_result = lua_.load_file(luafile);
-        if (!load_result.valid())
+        sol::load_result fx = lua_.load_file(luafile);
+        if (!fx.valid())
         {
-            auto errmsg = sol::stack::get<std::string>(load_result.lua_state(), -1);
-            MOON_CHECK(false, moon::format("lua_service::init load failed: %s.", errmsg.data()));
+            sol::error err = fx;
+            MOON_CHECK(false, moon::format("lua_service::init load failed: %s.", err.what()));
         }
-        sol::table tconfig = json.as<sol::table>().get<sol::function>("decode").call(config).get<sol::table>();
-        sol::protected_function_result call_result = load_result.call(tconfig);
-        if (!call_result.valid())
+        else
         {
-            sol::error err = call_result;
-            MOON_CHECK(false, moon::format("lua_service::init run failed: %s.", err.what()));
+            lua_json_decode(lua_.lua_state(), config.data(), config.size());//push table
+            sol::table param = sol::stack::get<sol::table>(lua_.lua_state(), -1);//save table in LUA_REGISTRYINDEX
+            lua_pop(lua_.lua_state(), 1);//pop table
+            sol::protected_function_result call_result = fx(param);
+
+            if (!call_result.valid())
+            {
+                sol::error err = call_result;
+                MOON_CHECK(false, moon::format("lua_service::init run failed: %s.", err.what()));
+            }
         }
 
         if (unique())
@@ -121,6 +127,8 @@ bool lua_service::init(std::string_view config)
 
         logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
         ok_ = true;
+
+        lua_.restart_gc();
     }
     catch (const std::exception &e)
     {
@@ -138,7 +146,7 @@ void lua_service::dispatch(message *msg)
 
     try
     {
-        auto result = dispatch_(msg, msg->type());
+        auto result = dispatch_((void*)msg, msg->type());
         if (!result.valid())
         {
             sol::error err = result;
