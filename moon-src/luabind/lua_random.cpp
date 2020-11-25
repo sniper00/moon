@@ -94,7 +94,8 @@ static int lrand_weight(lua_State *L)
         ++vi;
     }
     lua_pushinteger(L, *vi);
-    return 1;
+    lua_pushinteger(L, (vi - values.begin())+1);
+    return 2;
 }
 
 static int lrand_weight_some(lua_State *L)
@@ -111,7 +112,7 @@ static int lrand_weight_some(lua_State *L)
         return luaL_error(L, "lrand_weight_some values size != weights size");
     }
 
-    if (values.empty() || weights.empty())
+    if (values.empty() || weights.empty() || count <= 0 || values.size() < (size_t)count )
     {
         return 0;
     }
