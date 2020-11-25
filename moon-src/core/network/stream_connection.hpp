@@ -18,7 +18,7 @@ namespace moon
         void start(bool accepted) override
         {
             base_connection_t::start(accepted);
-            response_ = message::create(8192 - BUFFER_HEAD_RESERVED);
+            response_ = message::create(8192, 0);
         }
 
         void read(size_t n, std::string_view delim, int32_t sessionid) override
@@ -32,8 +32,8 @@ namespace moon
             buffer* buf = response_->get_buffer();
             std::size_t size = buf->size() + delim_.size();
             buf->commit(revert_);
-            revert_ = 0;
             buf->consume(size);
+            revert_ = 0;
 
             delim_ = delim;
             sessionid_ = sessionid;
@@ -108,7 +108,7 @@ namespace moon
             {
                 response(0, response_, PTYPE_ERROR);
             }
-            parent_->close(fd_, true);
+            parent_->close(fd_);
             parent_ = nullptr;
         }
 
@@ -120,19 +120,16 @@ namespace moon
             }
             auto buf = response_->get_buffer();
             assert(buf->size() >= count);
+            revert_ = 0;
             if (type == PTYPE_TEXT)
             {
                 revert_ = (buf->size() - count) + delim_.size();
-            }
-            else
-            {
-                revert_ = 0;
-            }
+            }   
+            buf->revert(revert_);
             m->set_type(type);
             m->set_sender(fd());
             m->set_sessionid(sessionid_);
             sessionid_ = 0;
-            buf->revert(revert_);
             handle_message(m);
         }
     protected:
