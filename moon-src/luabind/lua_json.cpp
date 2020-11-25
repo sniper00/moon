@@ -112,19 +112,31 @@ static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0)
     }
 }
 
-static inline size_t array_size(lua_State* L, int idx)
+static inline size_t array_size(lua_State* L, int index)
 {
-    if (lua_getmetatable(L, idx)) {
-        // [metatable]
-        lua_getfield(L, -1, "__jobject");
-        auto v = lua_isnoneornil(L, -1);
-        lua_pop(L, 2);
-        if (!v)
-        {
-            return 0;
-        }
+    int arr_size = (int)lua_rawlen(L, index);
+    if (arr_size == 0)
+    {
+        return arr_size;
     }
-    return lua_rawlen(L, idx);
+    lua_pushnil(L);
+    while (lua_next(L, index) != 0) {
+        if (lua_type(L, -2) == LUA_TNUMBER) 
+        {
+            if (lua_isinteger(L, -2)) 
+            {
+                lua_Integer x = lua_tointeger(L, -2);
+                if (x > 0 && x <= arr_size) 
+                {
+                    lua_pop(L, 1);
+                    continue;
+                }
+            }
+        }
+        lua_pop(L, 2);
+        return 0;
+    }
+    return arr_size;
 }
 
 template<typename Writer>
@@ -204,8 +216,8 @@ static int  encode(lua_State* L)
             return 0;
         }
         buffer = (moon::buffer*)lua_touserdata(L, 2);
-        lua_settop(L, 1);
     }
+    lua_settop(L, 1);
     encode_one(L, &writer, 1);
     if (nullptr != buffer)
     {
@@ -357,6 +369,23 @@ private:
     std::vector<int> stack_;
 };
 
+extern "C"
+{
+    int lua_json_decode(lua_State* L, const char* s, size_t len)
+    {
+        JsonReader reader;
+        StringNStream stream{ s, len };
+        LuaPushHandler handler{ L };
+        auto res = reader.Parse(stream, handler);
+        if (!res) {
+            lua_settop(L, 1);
+            lua_pushnil(L);
+            lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
+        }
+        return lua_gettop(L) - 1;
+    }
+}
+
 static int decode(lua_State* L)
 {
     size_t len = 0;
@@ -375,29 +404,8 @@ static int decode(lua_State* L)
     }
 
     lua_settop(L, 1);
-    JsonReader reader;
-    StringNStream stream{ str, len };
-    LuaPushHandler handler{ L };
-    auto res = reader.Parse(stream, handler);
-    if (!res) {
-        lua_settop(L, 1);
-        lua_pushnil(L);
-        lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
-    }
-    return lua_gettop(L) - 1;
-}
 
-static int newobject(lua_State* L)
-{
-    int n = (int)luaL_optinteger(L, 1, 7);
-    lua_createtable(L, 0, n);
-    if (luaL_newmetatable(L, "json_object_mt"))//mt
-    {
-        lua_pushboolean(L, 1);
-        lua_setfield(L, -2, "__jobject");//
-    }
-    lua_setmetatable(L, -2);// set userdata metatable
-    return 1;
+    return lua_json_decode(L, str, len);
 }
 
 extern "C"
@@ -408,7 +416,6 @@ extern "C"
             {"encode", encode},
             {"pretty_encode", pretty_encode},
             {"decode", decode},
-            {"newobject", newobject},
             {NULL,NULL}
         };
         luaL_checkversion(L);
