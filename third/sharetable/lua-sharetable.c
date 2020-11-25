@@ -47,7 +47,7 @@ mark_shared(lua_State *L) {
 				lua_sharestring(L, idx);
 				break;
 			default:
-				luaL_error(L, "Invalid type [%s]", lua_typename(L, tp));
+				luaL_error(L, "Invalid type [%s]", lua_typename(L, t));
 				break;
 			}
 		}
@@ -151,7 +151,7 @@ get_size(lua_State *L) {
 
 static int
 box_state(lua_State *L, lua_State *mL) {
-	struct state_ud *ud = (struct state_ud *)lua_newuserdata(L, sizeof(*ud));
+	struct state_ud *ud = (struct state_ud *)lua_newuserdatauv(L, sizeof(*ud), 0);
 	ud->L = mL;
 	if (luaL_newmetatable(L, "BOXMATRIXSTATE")) {
 		lua_pushvalue(L, -1);
