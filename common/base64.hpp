@@ -226,14 +226,22 @@ namespace moon
 
     template <class = void>
     std::string
-        base64_decode(std::string const &data)
+        base64_decode(char const* data,
+            std::size_t len)
     {
         std::string dest;
-        dest.resize(base64::decoded_size(data.size()));
+        dest.resize(base64::decoded_size(len));
         auto const result = base64::decode(
-            &dest[0], data.data(), data.size());
+            &dest[0], data, len);
         dest.resize(result.first);
         return dest;
+    }
+
+    template <class = void>
+    std::string
+        base64_decode(std::string const &data)
+    {
+        return base64_decode(data.data(), data.size());
     }
 }
 
