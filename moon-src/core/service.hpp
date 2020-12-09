@@ -102,9 +102,10 @@ namespace moon
         {
             try
             {
+                uint32_t receiver = m->receiver();
                 dispatch(m.get());
                 //redirect message
-                if (m->receiver() != id() && m->receiver() != 0 && !is_socket_message(m->type()))
+                if (m->receiver() != receiver)
                 {
                     MOON_ASSERT(!m->broadcast(), "can not redirect broadcast message");
                     if constexpr (std::is_rvalue_reference_v<decltype(m)>)
@@ -129,9 +130,6 @@ namespace moon
 
         virtual void dispatch(message* msg) = 0;
 
-        virtual void shutdown() = 0;
-
-        virtual void on_timer(uint32_t, bool) {};
     protected:
         void set_unique(bool v)
         {

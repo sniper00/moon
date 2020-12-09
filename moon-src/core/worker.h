@@ -95,8 +95,6 @@ namespace moon
 
         bool stoped() const;
     private:
-        void start();
-
         void update();
 
         void handle_one(service*& ser, message_ptr_t&& msg);
