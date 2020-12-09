@@ -85,9 +85,11 @@ namespace moon
             }
             state_.store(state::stopping, std::memory_order_release);
 
+            message msg;
+            msg.set_type(PTYPE_SHUTDOWN);
             for (auto& it : services_)
             {
-                it.second->shutdown();
+                it.second->dispatch(&msg);
             }
          });
     }
@@ -271,7 +273,12 @@ namespace moon
         if (auto s = find_service(serviceid); nullptr != s)
         {
             int64_t start_time = moon::time::microsecond();
-            s->on_timer(timerid, last);
+
+            message msg;
+            msg.set_type(PTYPE_TIMER);
+            msg.set_sender(timerid);
+            msg.set_receiver(last ? 1 : 0);
+            s->dispatch(&msg);
             int64_t cost_time = moon::time::microsecond() - start_time;
             s->add_cpu_cost(cost_time);
             cpu_cost_ += cost_time;

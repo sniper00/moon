@@ -22,11 +22,8 @@ namespace moon
     constexpr uint8_t PTYPE_ERROR = 5;
     constexpr uint8_t PTYPE_SOCKET_WS = 6; //websocket
     constexpr uint8_t PTYPE_DEBUG = 7;//
-
-    inline bool is_socket_message(uint8_t ptype)
-    {
-        return (ptype == PTYPE_SOCKET) || (ptype == PTYPE_SOCKET_WS);
-    }
+    constexpr uint8_t PTYPE_SHUTDOWN = 8;//
+    constexpr uint8_t PTYPE_TIMER = 9;//
 
     //network
     using message_size_t = uint16_t;
