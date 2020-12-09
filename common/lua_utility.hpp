@@ -73,6 +73,10 @@ namespace moon
         bool operator!=(const self_type& other) const {
             return pos_ != other.pos_;
         }
+
+        bool operator==(const self_type& other) const {
+            return pos_ == other.pos_;
+        }
     };
 
     template<typename ValueType>
