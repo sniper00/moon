@@ -80,17 +80,17 @@ lua_bind::~lua_bind()
 {
 }
 
-const lua_bind & lua_bind::bind_timer(lua_service* s) const
+const lua_bind& lua_bind::bind_timer(lua_service* s) const
 {
-    lua.set_function("repeated", [s](int32_t duration, int32_t times)
-    {
-        return s->get_worker()->repeat(duration, times, s->id());
-    });
+    lua.set_function("repeated", [s](int32_t interval, int32_t times)
+        {
+            return s->get_worker()->repeat(interval, times, s->id());
+        });
 
     lua.set_function("remove_timer", [s](moon::timer_t timerid)
-    {
-        s->get_worker()->remove_timer(timerid);
-    });
+        {
+            s->get_worker()->remove_timer(timerid);
+        });
     return *this;
 }
 
@@ -122,10 +122,9 @@ static int lua_string_hex(lua_State* L)
     return 1;
 }
 
-static int console_print(lua_State *L) {
-    moon::log* logger = (moon::log*)lua_touserdata(L, lua_upvalueindex(1));
-    auto serviceid = (uint32_t)lua_tointeger(L, lua_upvalueindex(2));
-    auto level = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(3));
+static int console_log(lua_State* L) {
+    lua_service* service = (lua_service*)lua_touserdata(L, lua_upvalueindex(1));
+    auto level = (moon::LogLevel)lua_tointeger(L, lua_upvalueindex(2));
 
     int n = lua_gettop(L);  /* number of arguments */
     int i;
@@ -154,18 +153,8 @@ static int console_print(lua_State *L) {
         }
     }
 
-    logger->logstring(true, level, std::string_view{ buf.data(), buf.size() }, serviceid);
+    service->logger()->logstring(true, level, std::string_view{ buf.data(), buf.size() }, service->id());
     return 0;
-}
-
-static void register_lua_print(sol::table& lua, moon::log* logger,uint32_t serviceid)
-{
-    lua_pushlightuserdata(lua.lua_state(), logger);
-    lua_pushinteger(lua.lua_state(), serviceid);
-    lua_pushinteger(lua.lua_state(), (int)moon::LogLevel::Info);
-    lua_pushcclosure(lua.lua_state(), console_print, 3);
-    lua_setglobal(lua.lua_state(), "print");
-    assert(lua_gettop(lua.lua_state()) == 0);
 }
 
 static void lua_extend_library(lua_State* L, lua_CFunction f, const char* gname, const char* name)
@@ -183,7 +172,7 @@ static void sol_extend_library(sol::table t, lua_CFunction f, const char* name, 
     t.push();//sol table
     int upvalue = 0;
     if (uv)
-    { 
+    {
         upvalue = uv(L);
     }
     lua_pushcclosure(L, f, upvalue);
@@ -192,7 +181,7 @@ static void sol_extend_library(sol::table t, lua_CFunction f, const char* name, 
     assert(lua_gettop(L) == 0);
 }
 
-const lua_bind & lua_bind::bind_util() const
+const lua_bind& lua_bind::bind_util() const
 {
     lua.set_function("second", time::second);
     lua.set_function("millsecond", time::millisecond);
@@ -205,7 +194,7 @@ const lua_bind & lua_bind::bind_util() const
         sha1::update(ctx, s.data(), s.size());
         sha1::finish(ctx, buf.data());
         return buf;
-    });
+        });
 
     lua.set_function("md5", [](std::string_view s) {
         uint8_t buf[md5::DIGEST_BYTES] = { 0 };
@@ -214,7 +203,7 @@ const lua_bind & lua_bind::bind_util() const
         md5::update(ctx, s.data(), s.size());
         md5::finish(ctx, buf);
 
-        std::string res(md5::DIGEST_BYTES*2,'\0');
+        std::string res(md5::DIGEST_BYTES * 2, '\0');
         for (size_t i = 0; i < 16; i++) {
             int t = buf[i];
             int a = t / 16;
@@ -223,16 +212,16 @@ const lua_bind & lua_bind::bind_util() const
             res[i * 2 + 1] = md5::HEX[b];
         }
         return res;
-    });
+        });
 
     lua.set_function("tostring", [](lua_State* L) {
         const char* data = (const char*)lua_touserdata(L, 1);
         size_t len = luaL_checkinteger(L, 2);
         lua_pushlstring(L, data, len);
         return 1;
-    });
+        });
 
-    lua.set_function("localtime",[](lua_State* L) {
+    lua.set_function("localtime", [](lua_State* L) {
         time_t t = luaL_checkinteger(L, 1);
         std::tm local_tm;
         time::localtime(&t, &local_tm);
@@ -246,16 +235,16 @@ const lua_bind & lua_bind::bind_util() const
         luaL_rawsetfield(L, -3, "weekday", lua_pushinteger(L, local_tm.tm_wday));
         luaL_rawsetfield(L, -3, "yearday", lua_pushinteger(L, local_tm.tm_yday));
         return 1;
-    });
+        });
 
     lua.set_function("dailytime", [](lua_State* L) {
         time_t t = luaL_checkinteger(L, 1);
         std::tm local_tm;
         time::localtime(&t, &local_tm);
-        auto t2 = time::make_time(local_tm.tm_year+ 1900, local_tm.tm_mon + 1, local_tm.tm_mday, 0, 0, 0);
+        auto t2 = time::make_time(local_tm.tm_year + 1900, local_tm.tm_mon + 1, local_tm.tm_mday, 0, 0, 0);
         lua_pushinteger(L, t2);
         return 1;
-    });
+        });
 
     lua.set("timezone", time::timezone());
 
@@ -266,99 +255,40 @@ const lua_bind & lua_bind::bind_util() const
     return *this;
 }
 
-const lua_bind & lua_bind::bind_log(moon::log* logger, uint32_t serviceid) const
+const lua_bind& lua_bind::bind_log(lua_service* service) const
 {
-    lua.set_function("LOGV", &moon::log::logstring, logger);
-    register_lua_print(lua, logger, serviceid);
-    sol_extend_library(lua, console_print, "error", [logger, serviceid](lua_State* L)->int {
-        lua_pushlightuserdata(L, logger);
-        lua_pushinteger(L, serviceid);
+    lua.set_function("set_loglevel", (void(moon::log::*)(std::string_view)) & log::set_level, service->logger());
+    lua.set_function("get_loglevel", &log::get_level, service->logger());
+
+    sol_extend_library(lua, console_log, "error", [service](lua_State* L)->int {
+        lua_pushlightuserdata(L, service);
         lua_pushinteger(L, (int)moon::LogLevel::Error);
-        return 3;
-    });
+        return 2;
+        });
+
+    sol_extend_library(lua, console_log, "warn", [service](lua_State* L)->int {
+        lua_pushlightuserdata(L, service);
+        lua_pushinteger(L, (int)moon::LogLevel::Warn);
+        return 2;
+        });
+
+    sol_extend_library(lua, console_log, "info", [service](lua_State* L)->int {
+        lua_pushlightuserdata(L, service);
+        lua_pushinteger(L, (int)moon::LogLevel::Info);
+        return 2;
+        });
+
+    sol_extend_library(lua, console_log, "debug", [service](lua_State* L)->int {
+        lua_pushlightuserdata(L, service);
+        lua_pushinteger(L, (int)moon::LogLevel::Debug);
+        return 2;
+        });
     return *this;
 }
 
-static int message_redirect(lua_State* L)
-{
-    int top = lua_gettop(L);
-    auto m = sol::stack::get<message*>(L, 1);
-    m->set_header(sol::stack::get<std::string_view>(L, 2));
-    m->set_receiver(sol::stack::get<uint32_t>(L, 3));
-    m->set_type(sol::stack::get<uint8_t>(L, 4));
-    if (top > 4)
-    {
-        m->set_sender(sol::stack::get<uint32_t>(L, 5));
-        m->set_sessionid(sol::stack::get<int32_t>(L, 6));
-    }
-    return 0;
-}
 
-static int message_tobuffer(lua_State* L)
-{
-    auto m = sol::stack::get<message*>(L, -1);
-    lua_pushlightuserdata(L, (void*)m->get_buffer());
-    return 1;
-}
 
-static int message_cstr(lua_State* L)
-{
-    auto m = sol::stack::get<message*>(L, 1);
-    int offset = 0;
-    if (lua_type(L, 2) == LUA_TNUMBER)
-    {
-        offset = static_cast<int>(lua_tointeger(L, 2));
-        if (offset > static_cast<int>(m->size()))
-        {
-            return luaL_error(L, "out of range");
-        }
-    }
-    lua_pushlightuserdata(L, (void*)(m->data() + offset));
-    lua_pushinteger(L, m->size() - offset);
-    return 2;
-};
 
-static int message_clone(lua_State* L)
-{
-    auto m = sol::stack::get<message*>(L, 1);
-    message* nm = new message((const buffer_ptr_t&)*m);
-    nm->set_broadcast(m->broadcast());
-    nm->set_header(m->header());
-    nm->set_receiver(m->receiver());
-    nm->set_sender(m->sender());
-    nm->set_sessionid(m->sessionid());
-    nm->set_type(m->type());
-    sol::stack::push(L, nm);
-    return 1;
-}
-
-static int message_release(lua_State* L)
-{
-    auto m = sol::stack::get<message*>(L, 1);
-    delete m;
-    return 0;
-}
-
-const lua_bind & lua_bind::bind_message() const
-{
-    lua.new_usertype<message>("message"
-        , sol::call_constructor, sol::no_constructor
-        , "sender", (&message::sender)
-        , "receiver", (&message::receiver)
-        , "sessionid", (&message::sessionid)
-        , "header", (&message::header)
-        , "bytes", (&message::bytes)
-        , "size", (&message::size)
-        , "substr", (&message::substr)
-        , "buffer", message_tobuffer
-        , "cstr", message_cstr
-        );
-
-    lua.set_function("redirect", message_redirect);
-    lua.set_function("clone_message", message_clone);
-    lua.set_function("release_message", message_release);
-    return *this;
-}
 
 const lua_bind& lua_bind::bind_service(lua_service* s) const
 {
@@ -374,7 +304,7 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("make_prefab", &worker::make_prefab, worker_);
     lua.set_function("send_prefab", [worker_, s](uint32_t receiver, uint32_t cacheid, const std::string_view& header, int32_t sessionid, uint8_t type) {
         worker_->send_prefab(s->id(), receiver, cacheid, header, sessionid, type);
-    });
+        });
     lua.set_function("send", &router::send, router_);
     lua.set_function("new_service", &router::new_service, router_);
     lua.set_function("remove_service", &router::remove_service, router_);
@@ -384,20 +314,18 @@ const lua_bind& lua_bind::bind_service(lua_service* s) const
     lua.set_function("set_env", &router::set_env, router_);
     lua.set_function("get_env", &router::get_env, router_);
     lua.set_function("wstate", &router::worker_info, router_);
-    lua.set_function("set_loglevel", (void(moon::log::*)(std::string_view))&log::set_level, router_->logger());
-    lua.set_function("get_loglevel", &log::get_level, router_->logger());
     lua.set_function("exit", &server::stop, server_);
     lua.set_function("service_count", &server::service_count, server_);
-    lua.set_function("now", [server_]() {return server_->now();});
-    lua.set_function("adjtime", [server_](int64_t v){
+    lua.set_function("now", [server_]() {return server_->now(); });
+    lua.set_function("adjtime", [server_](int64_t v) {
         bool ok = time::offset(v);
         server_->now(true);
         return ok;
-    });
+        });
     return *this;
 }
 
-const lua_bind & lua_bind::bind_socket(lua_service* s) const
+const lua_bind& lua_bind::bind_socket(lua_service* s) const
 {
     auto w = s->get_worker();
     auto& sock = w->socket();
@@ -405,17 +333,17 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     sol::table tb = lua.create();
 
     tb.set_function("try_open", &moon::socket::try_open, &sock);
-    tb.set_function("listen", [&sock,s](const std::string& host, uint16_t port, uint8_t type) {
+    tb.set_function("listen", [&sock, s](const std::string& host, uint16_t port, uint8_t type) {
         return sock.listen(host, port, s->id(), type);
-    });
+        });
 
-    tb.set_function("accept", &moon::socket::accept,&sock);
+    tb.set_function("accept", &moon::socket::accept, &sock);
     tb.set_function("connect", &moon::socket::connect, &sock);
     tb.set_function("read", &moon::socket::read, &sock);
     tb.set_function("write", &moon::socket::write, &sock);
     tb.set_function("write_with_flag", &moon::socket::write_with_flag, &sock);
     tb.set_function("write_message", &moon::socket::write_message, &sock);
-    tb.set_function("close", [&sock](uint32_t fd) {sock.close(fd);});
+    tb.set_function("close", &moon::socket::close, &sock);
     tb.set_function("settimeout", &moon::socket::settimeout, &sock);
     tb.set_function("setnodelay", &moon::socket::setnodelay, &sock);
     tb.set_function("set_enable_chunked", &moon::socket::set_enable_chunked, &sock);
@@ -428,14 +356,14 @@ const lua_bind & lua_bind::bind_socket(lua_service* s) const
     return *this;
 }
 
-void lua_bind::registerlib(lua_State * L, const char * name, lua_CFunction f)
+void lua_bind::registerlib(lua_State* L, const char* name, lua_CFunction f)
 {
     luaL_requiref(L, name, f, 0);
     lua_pop(L, 1); /* pop result*/
     assert(lua_gettop(L) == 0);
 }
 
-void lua_bind::registerlib(lua_State * L, const char * name, const sol::table& module)
+void lua_bind::registerlib(lua_State* L, const char* name, const sol::table& module)
 {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "loaded"); /* get 'package.loaded' */

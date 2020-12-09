@@ -74,11 +74,11 @@ socket.on("message",function(fd, msg)
 end)
 
 socket.on("close",function(fd, msg)
-    --print("close ", fd, msg:bytes())
+    --print("close ", fd, moon.decode(msg, "Z"))
 end)
 
 socket.on("error",function(fd, msg)
-    --print("error ", fd, msg:bytes())
+    --print("error ", fd, moon.decode(msg, "Z"))
 end)
 
 total = conf.client_num * conf.count

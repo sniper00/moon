@@ -21,9 +21,8 @@ public:
 
     const lua_bind& bind_util() const;
 
-    const lua_bind& bind_log(moon::log* logger, uint32_t serviceid = 0) const;
+    const lua_bind& bind_log(lua_service* service) const;
 
-    const lua_bind& bind_message() const;
 
     const lua_bind& bind_service(lua_service* s) const;
 
@@ -38,7 +37,7 @@ private:
 
 extern "C"
 {
-    int luaopen_json(lua_State* L);
+    int lua_json_decode(lua_State* L, const char*, size_t);
     int custom_package_loader(lua_State* L);
     void open_custom_libraries(lua_State* L);
 }

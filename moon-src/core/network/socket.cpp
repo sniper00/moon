@@ -100,7 +100,7 @@ void socket::accept(int fd, int32_t sessionid, uint32_t owner)
         {
             if (sessionid != 0)
             {
-                response(ctx->fd, ctx->owner, moon::format("socket::accept error %s(%d)", e.message().data(), e.value()), "error"sv, sessionid, PTYPE_ERROR);
+                response(ctx->fd, ctx->owner, moon::format("socket::accept error %s(%d)", e.message().data(), e.value()), "SOCKET_ERROR"sv, sessionid, PTYPE_ERROR);
             }
             else
             {
@@ -225,21 +225,19 @@ bool socket::write_with_flag(uint32_t fd, buffer_ptr_t data, int flag)
     return write(fd, std::move(data));
 }
 
-bool socket::write_message(uint32_t fd, message * m)
+bool socket::write_message(uint32_t fd, void * m)
 {
-    return write(fd, *m);
+    message* msg = (message*)m;
+    return write(fd, *msg);
 }
 
-bool socket::close(uint32_t fd, bool remove)
+bool socket::close(uint32_t fd)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
         iter->second->close();
-        if (remove)
-        {
-            connections_.erase(iter);
-            unlock_fd(fd);
-        }
+        connections_.erase(iter);
+        unlock_fd(fd);
         return true;
     }
 
@@ -250,11 +248,8 @@ bool socket::close(uint32_t fd, bool remove)
             iter->second->acceptor.cancel();
             iter->second->acceptor.close();
         }
-        if (remove)
-        {
-            acceptors_.erase(iter);
-            unlock_fd(fd);
-        }
+        acceptors_.erase(iter);
+        unlock_fd(fd);
         return true;
     }
     return false;
@@ -280,37 +275,26 @@ bool socket::setnodelay(uint32_t fd)
     return false;
 }
 
-bool socket::set_enable_chunked(uint32_t fd, std::string flag)
+bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
 {
-    moon::lower(flag);
-    moon::enable_chunked v = enable_chunked::none;
-    switch (moon::chash_string(flag))
+    int v = static_cast<int>(enable_chunked::none);
+    for (const auto& c : flag)
     {
-    case "none"_csh:
-    {
-        v = moon::enable_chunked::none;
-        break;
-    }
-    case "r"_csh:
-    {
-        v = moon::enable_chunked::receive;
-        break;
-    }
-    case "w"_csh:
-    {
-        v = moon::enable_chunked::send;
-        break;
-    }
-    case "wr"_csh:
-    case "rw"_csh:
-    {
-        v = moon::enable_chunked::both;
-        break;
-    }
-    default:
-        CONSOLE_WARN(router_->logger(),
-            "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w' 'wr' 'rw'.", flag.data());
-        return false;
+        switch (c)
+        {
+        case 'r':
+        case 'R':
+            v |= static_cast<int>(moon::enable_chunked::receive);
+            break;
+        case 'w':
+        case 'W':
+            v |= static_cast<int>(moon::enable_chunked::send);
+            break;
+        default:
+            CONSOLE_WARN(router_->logger(),
+                "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.", flag.data());
+            return false;
+        }
     }
 
     if (auto iter = connections_.find(fd); iter != connections_.end())
@@ -318,7 +302,7 @@ bool socket::set_enable_chunked(uint32_t fd, std::string flag)
         auto c = std::dynamic_pointer_cast<moon_connection>(iter->second);
         if (c)
         {
-            c->set_enable_chunked(v);
+            c->set_enable_chunked(static_cast<enable_chunked>(v));
             return true;
         }
     }

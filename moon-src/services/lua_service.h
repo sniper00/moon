@@ -18,15 +18,11 @@ public:
 
     ~lua_service();
 
-    void set_callback(char c, sol_function_t f);
+    void set_callback(sol_function_t f);
 private:
     bool init(std::string_view config) override;
 
     void dispatch(moon::message* msg) override;
-
-    void shutdown()  override;
-
-    void on_timer(uint32_t timerid, bool remove) override;
 
     static void* lalloc(void * ud, void *ptr, size_t osize, size_t nsize);
 public:
@@ -36,6 +32,4 @@ public:
 private:
     sol::state lua_;
     sol_function_t dispatch_;
-    sol_function_t shutdown_;
-    sol_function_t on_timer_;
 };

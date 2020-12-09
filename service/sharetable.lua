@@ -27,11 +27,11 @@ local function sharetable_service()
 		end
 	end
 
-	function sharetable.loadfile(source, sessionid, filename, ...)
+    function sharetable.loadfile(source, sessionid, filename, ...)
 		close_matrix(files[filename])
 		local m = core.matrix("@" .. filename, ...)
 		files[filename] = m
-		moon.response("lua", source, sessionid)
+		moon.response("lua", source, sessionid, true)
 	end
 
 	function sharetable.loadstring(source, sessionid, filename, datasource, ...)
@@ -103,12 +103,12 @@ local function sharetable_service()
 	local unpack = seri.unpack
 	local unpack_one = seri.unpack_one
 
-	moon.dispatch("lua",function(msg)
-        local buf = msg:buffer()
-		local cmd, offset = unpack_one(buf)
+    moon.dispatch("lua",function(msg)
+        local sender, sessionid, buf = moon.decode(msg, "SEB")
+        local cmd, sz, len = unpack_one(buf)
 		local fn = sharetable[cmd]
 		if fn then
-			fn(msg:sender(), msg:sessionid(), unpack(msg:cstr(offset)))
+			fn(sender, sessionid, unpack(sz, len))
 		end
 	end)
 
@@ -154,12 +154,12 @@ end
 
 function sharetable.loadfile(filename, ...)
 	local addr = sharetable_address()
-	moon.co_call( "lua", addr, "loadfile", filename, ...)
+	return moon.co_call( "lua", addr, "loadfile", filename, ...)
 end
 
 function sharetable.loadstring(filename, source, ...)
 	local addr = sharetable_address()
-	moon.co_call( "lua", addr, "loadstring", filename, source, ...)
+	return moon.co_call( "lua", addr, "loadstring", filename, source, ...)
 end
 
 local RECORD = {}
@@ -171,7 +171,7 @@ function sharetable.query(filename)
 		path = static_conf_index[filename]
 	end
 	assert(path)
-	local newptr = moon.co_call( "lua", addr, "query", path)
+	local newptr, err = moon.co_call( "lua", addr, "query", path)
 	if newptr then
 		local t = core.clone(newptr)
 		local map = RECORD[filename]
@@ -181,7 +181,8 @@ function sharetable.query(filename)
 		end
 		map[t] = true
 		return t
-	end
+    end
+    return newptr, err
 end
 
 local pairs = pairs
@@ -240,7 +241,7 @@ local function resolve_replace(replace_map)
         local f = match[tv]
         if f then
             record_map[v] = true
-            f(v)
+            return f(v)
         end
     end
 
@@ -252,7 +253,7 @@ local function resolve_replace(replace_map)
                 nv = getnv(mt)
                 debug.setmetatable(v, nv)
             else
-                match_value(mt)
+                return match_value(mt)
             end
         end
     end
@@ -269,7 +270,7 @@ local function resolve_replace(replace_map)
         for _,v in pairs(internal_types) do
             match_mt(v)
         end
-        match_mt(nil)
+        return match_mt(nil)
     end
 
 
@@ -306,7 +307,7 @@ local function resolve_replace(replace_map)
                 end
             end
         end
-        match_mt(t)
+        return match_mt(t)
     end
 
     local function match_userdata(u)
@@ -316,7 +317,7 @@ local function resolve_replace(replace_map)
             nv = getnv(uv)
             setuservalue(u, nv)
         end
-        match_mt(u)
+        return match_mt(u)
     end
 
     local function match_funcinfo(info)
@@ -356,7 +357,7 @@ local function resolve_replace(replace_map)
 
     local function match_function(f)
         local info = getinfo(f, "uf")
-        match_funcinfo(info)
+        return match_funcinfo(info)
     end
 
     local function match_thread(co, level)
@@ -368,13 +369,14 @@ local function resolve_replace(replace_map)
             match_value(v)
         end
 
+        local uplevel = co == coroutine.running() and 1 or 0
         level = level or 1
         while true do
             local info = getinfo(co, level, "uf")
             if not info then
                 break
             end
-            info.level = level
+            info.level = level + uplevel
             info.curco = co
             match_funcinfo(info)
             level = level + 1
@@ -387,6 +389,7 @@ local function resolve_replace(replace_map)
         record_map[match] = true
         record_map[RECORD] = true
         record_map[record_map] = true
+        record_map[replace_map] = true
         record_map[insert_replace] = true
         record_map[resolve_replace] = true
         assert(getinfo(co, 3, "f").func == sharetable.update)
@@ -424,7 +427,7 @@ function sharetable.update(...)
 	end
 
     if next(replace_map) then
-	   resolve_replace(replace_map)
+        resolve_replace(replace_map)
     end
 end
 
