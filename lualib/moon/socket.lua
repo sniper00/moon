@@ -116,11 +116,12 @@ local callbacks = table.new(0,6)
 --- websocket protocol wscallbacks
 local wscallbacks = table.new(0,6)
 
+local _decode = moon.decode
+
 moon.dispatch(
     "socket",
     function(msg)
-        local fd = msg:sender()
-        local sdt = msg:receiver()
+        local fd, sdt = _decode(msg, "SR")
         local f = callbacks[sdt]
         if f then
             f(fd, msg)
@@ -131,8 +132,7 @@ moon.dispatch(
 moon.dispatch(
     "websocket",
     function(msg)
-        local fd = msg:sender()
-        local sdt = msg:receiver()
+        local fd, sdt = _decode(msg, "SR")
         local f = wscallbacks[sdt]
         if f then
             f(fd, msg)

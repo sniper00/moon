@@ -55,14 +55,6 @@ function core.id()
     -- body
 end
 
----更改消息的接收者服务id,框架底层负责把消息转发。同时可以设置消息的header.
----@param header string
----@param receiver integer
----@param mtype integer
-function core.redirect(msg, header, receiver, mtype)
-    ignore_param(msg, header, receiver, mtype)
-end
-
 ---生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用有效。
 ---@overload fun(buf:string)
 ---@param buf userdata
@@ -119,88 +111,22 @@ end
 local message = {}
 ignore_param(message)
 
----获取消息发送者的serviceid
----@return integer
-function message:sender()
-    ignore_param(self)
-end
-
----获取responseid，用于send response模式
----@return integer
-function message:sessionid()
-    ignore_param(self)
-end
-
----获取消息接收者的serviceid
----@return integer
-function message:receiver()
-    ignore_param(self)
-end
-
----获取消息类型,用来区分消息协议
----local PTYPE_SYSTEM = 1 --框架内部消息
----local PTYPE_TEXT = 2 --字符串消息
----local PTYPE_LUA = 3 --lua_serialize编码的消息
----local PTYPE_SOCKET = 4 --网络消息
----local PTYPE_ERROR = 5 --错误消息
----local PTYPE_SOCKET_WS = 6--web socket 网络消息
----@return integer
-function message:type()
-    ignore_param(self)
-end
-
----获取消息的子类型，暂时只有PTYPE_SOCKET类型的消息用到
----local socket_connect = 1
----local socket_accept =2
----local socket_recv = 3
----local socket_close =4
----local socket_error = 5
----@return integer
-function message:subtype()
-    ignore_param(self)
-end
-
----获取消息header(string).消息头和消息数据分开存储，大多情况下只用解析header来转发消息，
----消息不用更改，方便用于广播数据。
----@return string
-function message:header()
-    ignore_param(self)
-end
-
----获取消息数据(string)
----@return string
-function message:bytes()
-    ignore_param(self)
-end
-
----获取消息数据长度(number)
----@return integer
-function message:size()
-    ignore_param(self)
-end
-
----对消息数据进行切片，返回从pos(从0开始)开始len个字节的数据(string)。len=-1
----从pos开始的所有数据。
----@param pos integer
----@param count integer
----@return string
-function message:substr(pos, count)
-    ignore_param(self, pos, count)
-end
-
----返回消息数据的lightuserdata指针(moon::buffer*)
+---clone message, but share buffer field
+---@param msg userdata @ message* lightuserdata
 ---@return userdata
-function message:buffer()
-    ignore_param(self)
+function message.clone(msg)
+    ignore_param(msg)
 end
 
----@param sender integer
----@param header string
----@param receiver integer
----@param sessionid integer
----@param mtype integer
-function message:resend(sender, header, receiver, sessionid, mtype)
-    ignore_param(self, sender, header, receiver, sessionid, mtype)
+---release clone message
+---@param msg userdata @ message* lightuserdata
+function message.release(msg)
+    ignore_param(msg)
+end
+
+---redirect a message to other service
+function message.redirect(header, receiver, mtype, sender, sessionid)
+    ignore_param(header, receiver, mtype, sender, sessionid)
 end
 
 ---@class fs

@@ -21,9 +21,8 @@ if conf.receiver then
     end
 
     moon.dispatch('lua',function(msg,unpack)
-        local sender = msg:sender()
-        local header = msg:header()
-        docmd(sender,header, unpack(msg:cstr()))
+        local sender, header, sz, len = moon.decode(msg, "SHC")
+        docmd(sender,header, unpack(sz, len))
     end)
 
 else
@@ -48,8 +47,8 @@ else
     moon.dispatch(
         "lua",
         function(msg, unpack)
-            local header = msg:header()
-            docmd(header, unpack(msg:cstr()))
+            local header, sz, len = moon.decode(msg, "HC")
+            docmd(header, unpack(sz, len))
         end
     )
 

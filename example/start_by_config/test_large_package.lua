@@ -19,12 +19,12 @@ socket.on("accept",function(fd)
 end)
 
 socket.on("message",function(_, msg)
-	test_assert.equal(msg:bytes(),data)
+	test_assert.equal(moon.decode(msg, "Z"),data)
 	test_assert.success()
 end)
 
 socket.on("error",function(_, msg)
-	test_assert.assert(false,msg:bytes())
+	test_assert.assert(false,moon.decode(msg, "Z"))
 end)
 
 moon.async(function()

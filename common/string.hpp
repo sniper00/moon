@@ -276,7 +276,7 @@ namespace moon
         return v;
     }
 
-    inline std::string_view trim_surrounding(std::string_view v)
+    inline std::string_view trim(std::string_view v)
     {
         const auto words_end(v.find_last_not_of(" \t\n\r"));
         if (words_end != std::string_view::npos) {
@@ -366,15 +366,18 @@ namespace moon
         return true;
     }
 
-    inline std::string hex_string(std::string_view s, std::string_view tok = "")
+    inline std::string hex_string(std::string_view text)
     {
-        std::stringstream ss;
-        ss << std::setiosflags(std::ios::uppercase) << std::hex;
-        for (auto c : s)
+        static constexpr char hex[] = "0123456789abcdef";
+        std::string res(text.size()*2, 0);
+        size_t i = 0;
+        for (auto c : text)
         {
-            ss << (int)(uint8_t)(c) << tok;
+            res[i * 2] = hex[c >> 4];
+            res[i * 2 + 1] = hex[c & 0xf];
+            ++i;
         }
-        return ss.str();
+        return res;
     }
 
     template<typename TString>

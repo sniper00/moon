@@ -10,13 +10,17 @@ require("base.class")
 local core = require("mooncore")
 local json = require("json")
 local seri = require("seri")
--- local buffer = require("buffer")
+---@type message
+local message = require("message")
 
 local pairs = pairs
 local type = type
+local error = error
+local assert = assert
 local setmetatable = setmetatable
 local tremove = table.remove
 local tointeger = math.tointeger
+local traceback = debug.traceback
 
 local jencode = json.encode
 
@@ -24,8 +28,11 @@ local co_create = coroutine.create
 local co_running = coroutine.running
 local co_yield = coroutine.yield
 local co_resume = coroutine.resume
+local co_close = coroutine.close
 
 local _send = core.send
+
+local _now = core.now
 
 local unpack = seri.unpack
 local pack = seri.pack
@@ -37,6 +44,8 @@ local PTYPE_SOCKET = 4
 local PTYPE_ERROR = 5
 local PTYPE_SOCKET_WS = 6
 local PTYPE_DEBUG = 7
+local PTYPE_SHUTDOWN = 8
+local PTYPE_TIMER = 9
 
 ---@class moon : core
 local moon = {
@@ -53,8 +62,36 @@ setmetatable(moon, {__index = core})
 moon.pack = pack
 moon.unpack = unpack
 
+---获取message相关信息
+---@param msg userdata @ message* lightuserdata
+---@param s string @ pattern string
+---'S' message:sender()
+---
+---'R' message:receiver()
+---
+---'E' message:sessionid()
+---
+---'H' message:header()
+---
+---'Z' message:bytes()
+---
+---'N' message:size()
+---
+---'B' message:buffer()
+moon.decode = message.decode
+
+local _decode = message.decode
+
 --export global variable
 local _g = _G
+
+---rewrite lua print
+_g["print"] = moon.info
+
+moon.DEBUG = function ()
+    return core.get_loglevel() == 4 -- LOG_DEBUG
+end
+
 moon.exports = {}
 setmetatable(
     moon.exports,
@@ -75,7 +112,7 @@ setmetatable(
         __newindex = function(_, name,value)
             if name:sub(1,4)~='sol.' then --ignore sol2 registed library
                 local msg = string.format('USE "moon.exports.%s = <value>" INSTEAD OF SET GLOBAL VARIABLE', name)
-                print(debug.traceback(msg, 2))
+                print(traceback(msg, 2))
                 print("")
             else
                 rawset(_g, name, value)
@@ -84,10 +121,6 @@ setmetatable(
     }
 )
 
-moon.add_package_path = function(p)
-    package.path = package.path .. p
-end
-
 local sid_ = core.id()
 
 local uuid = 0
@@ -95,10 +128,22 @@ local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
 
+local function remove_all_timer(t)
+    for k,_ in pairs(t) do
+        core.remove_timer(k)
+    end
+end
+
+local timer_cb = setmetatable({},{
+	__gc = remove_all_timer,
+})
+
 local function coresume(co, ...)
     local ok, err = co_resume(co, ...)
     if not ok then
-        error(debug.traceback(co, err))
+        err = traceback(co, err)
+        co_close(co)
+        error(err)
     end
     return ok, err
 end
@@ -132,10 +177,10 @@ moon.make_response = make_response
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
     if not p then
-        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, msg:sender()))
+        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, _decode(msg, "S")))
     end
 
-    local sessionid = msg:sessionid()
+    local sessionid = _decode(msg, "E")
     if sessionid > 0 and PTYPE ~= PTYPE_ERROR then
         session_watcher[sessionid] = nil
         local co = session_id_coroutine[sessionid]
@@ -143,7 +188,7 @@ local function _default_dispatch(msg, PTYPE)
             session_id_coroutine[sessionid] = nil
             --print(coroutine.status(co))
             if p.unpack then
-                coresume(co, p.unpack(msg:cstr()))
+                coresume(co, p.unpack(_decode(msg,"C")))
             else
                 coresume(co, msg)
             end
@@ -163,16 +208,8 @@ local function _default_dispatch(msg, PTYPE)
     end
 end
 
-core.set_cb('m', _default_dispatch)
+core.set_cb(_default_dispatch)
 
----注册进程退出信号回调处理,注册此回调后, 除非调用moon.quit, 否则服务不会退出。
----在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
----注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
----@param callback fun()
-function moon.shutdown(callback)
-    assert(callback)
-    core.set_cb('s', callback)
-end
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
 ---@param PTYPE string @协议类型
@@ -245,6 +282,18 @@ end
 
 ---使当前服务退出
 function moon.quit()
+    for _, co in pairs(session_id_coroutine) do
+		if type(co) == "thread" then
+			co_close(co)
+		end
+    end
+
+    for _, co in pairs(timer_cb) do
+        if type(co) == "thread" then
+			co_close(co)
+		end
+    end
+
     moon.remove_service(sid_)
 end
 
@@ -266,9 +315,11 @@ function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
 
+moon.now = _now
+
 ---获取服务器时间, 可以调用 moon.adjtime 偏移时间
 function moon.time()
-    return moon.now()//1000
+    return _now()//1000
 end
 
 -------------------------协程操作封装--------------------------
@@ -306,64 +357,6 @@ end
 ---返回运行中的协程个数,和协程池空闲的协程个数
 function moon.coroutine_num()
     return co_num, #co_pool
-end
-
---------------------------timer-------------
-local function remove_all_timer(t)
-    for k,_ in pairs(t) do
-        core.remove_timer(k)
-    end
-end
-
-local timer_cb = setmetatable({},{
-	__gc = remove_all_timer,
-})
-
----@param mills integer
----@param times integer
----@param fn function
----@return integer
-function moon.repeated(mills, times, fn)
-    local timerid = core.repeated(mills, times)
-    timer_cb[timerid] = fn
-    return timerid
-end
-
----@param timerid integer
-function moon.remove_timer(timerid)
-    timer_cb[timerid] = nil
-    core.remove_timer(timerid)
-end
-
-core.set_cb('t',
-    function(timerid, last)
-        local cb = timer_cb[timerid]
-        if cb then
-            cb(timerid, last)
-        end
-
-        if last then
-            timer_cb[timerid] = nil
-        end
-    end
-)
-
-local _repeated = moon.repeated
-
----async
----异步等待 mills 毫秒
----@param mills integer
----@return integer
-function moon.sleep(mills)
-    local co = co_running()
-    _repeated(
-        mills,
-        1,
-        function(tid)
-            coresume(co, tid)
-        end
-    )
-    return co_yield()
 end
 
 ------------------------------------------
@@ -427,7 +420,7 @@ local reg_protocol = moon.register_protocol
 
 ---设置指定协议消息的消息处理函数
 ---@param PTYPE string
----@param cb fun(msg:message,ptype:table)
+---@param cb fun(msg:userdata,ptype:table)
 ---@return boolean
 function moon.dispatch(PTYPE, cb)
     local p = protocol[PTYPE]
@@ -469,10 +462,8 @@ reg_protocol {
         return ...
     end,
     unpack = moon.tostring,
-    dispatch = function(msg, unpack_fn)
-        local sessionid = msg:sessionid()
-        local content = msg:header()
-        local data = unpack_fn(msg:cstr())
+    dispatch = function(msg)
+        local sessionid, content, data = _decode(msg,"EHZ")
         if data and #data >0 then
             content = content..":"..data
         end
@@ -488,7 +479,7 @@ reg_protocol {
 local system_command = {}
 
 system_command._service_exit = function(sender, msg)
-    local data = msg:bytes()
+    local data = _decode(msg,"Z")
     for k, v in pairs(session_watcher) do
         if v == sender then
             local co = session_id_coroutine[k]
@@ -512,9 +503,8 @@ reg_protocol {
         return ...
     end,
     unpack = moon.tostring,
-    dispatch = function(msg, _)
-        local sender = msg:sender()
-        local header = msg:header()
+    dispatch = function(msg)
+        local sender, header = _decode(msg,"SH")
         local func = system_command[header]
         if func then
             func(sender, msg)
@@ -539,6 +529,81 @@ reg_protocol{
         error("PTYPE_SOCKET_WS dispatch not implemented")
     end
 }
+
+local cb_shutdown
+
+reg_protocol {
+    name = "shutdown",
+    PTYPE = PTYPE_SHUTDOWN,
+    dispatch = function()
+        if cb_shutdown then
+            cb_shutdown()
+        else
+            local name = moon.name()
+            --- bootstrap or not unique service
+            if name == "bootstrap" or 0 == moon.queryservice(moon.name()) then
+                moon.quit()
+            end
+        end
+    end
+}
+
+---注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 否则服务不会退出。
+---在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
+---注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
+---@param callback fun()
+function moon.shutdown(callback)
+    cb_shutdown = callback
+end
+
+--------------------------timer-------------
+
+reg_protocol {
+    name = "timer",
+    PTYPE = PTYPE_TIMER,
+    dispatch = function(msg)
+        local timerid, last = _decode(msg, "SR")
+        local v = timer_cb[timerid]
+        local tp = type(v)
+        if tp == "function" then
+            v(timerid, last>0)
+        elseif tp == "thread" then
+            timer_cb[timerid] = nil
+            coresume(v, timerid)
+            return
+        end
+
+        if last>0 then
+            timer_cb[timerid] = nil
+        end
+    end
+}
+
+---@param mills integer
+---@param times integer
+---@param fn function
+---@return integer
+function moon.repeated(mills, times, fn)
+    local timerid = core.repeated(mills, times)
+    timer_cb[timerid] = fn
+    return timerid
+end
+
+---@param timerid integer
+function moon.remove_timer(timerid)
+    timer_cb[timerid] = nil
+    core.remove_timer(timerid)
+end
+
+---async
+---异步等待 mills 毫秒
+---@param mills integer
+---@return integer
+function moon.sleep(mills)
+    local timerid = core.repeated(mills, 1)
+    timer_cb[timerid] = co_running()
+    return co_yield()
+end
 
 --------------------------DEBUG----------------------------
 
@@ -569,9 +634,8 @@ reg_protocol {
     pack = pack,
     unpack = unpack,
     dispatch = function(msg, unpack_fn)
-        local sender = msg:sender()
-        local sessionid = msg:sessionid()
-        local params = {unpack_fn(msg:cstr())}
+        local sender, sessionid, sz, len = _decode(msg,"SEC")
+        local params = {unpack_fn(sz, len)}
         local func = debug_command[params[1]]
         if func then
             func(sender, sessionid, table.unpack(params,2))

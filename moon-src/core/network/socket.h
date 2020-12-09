@@ -58,15 +58,15 @@ namespace moon
 
         bool write_with_flag(uint32_t fd, buffer_ptr_t data, int flag);
 
-        bool write_message(uint32_t fd, message * msg);
+        bool write_message(uint32_t fd, void* msg);
 
-        bool close(uint32_t fd, bool remove = false);
+        bool close(uint32_t fd);
 
         bool settimeout(uint32_t fd, int v);
 
         bool setnodelay(uint32_t fd);
 
-        bool set_enable_chunked(uint32_t fd, std::string flag);
+        bool set_enable_chunked(uint32_t fd, std::string_view flag);
 
         bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
 
@@ -111,7 +111,7 @@ namespace moon
         auto s = find_service(serviceid);
         if (nullptr == s)
         {
-            close(m->sender(), true);
+            close(m->sender());
             return;
         }
         s->handle_message(std::forward<Message>(m));
