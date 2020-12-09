@@ -84,6 +84,11 @@ static int lrand_weight(lua_State *L)
     }
 
     int64_t sum = std::accumulate(weights.begin(), weights.end(), int64_t{ 0 });
+    if (sum == 0)
+    {
+        assert(false);
+        return 0;
+    }
 
     int64_t cutoff = moon::rand_range(int64_t{ 0 }, sum - 1);
     auto vi = values.begin();
@@ -111,7 +116,7 @@ static int lrand_weight_some(lua_State *L)
         return luaL_error(L, "lrand_weight_some values size != weights size");
     }
 
-    if (values.empty() || weights.empty())
+    if (values.empty() || weights.empty() || count <= 0 || values.size() < (size_t)count)
     {
         return 0;
     }
@@ -126,6 +131,12 @@ static int lrand_weight_some(lua_State *L)
     for (int64_t i = 0; i < count; ++i)
     {
         int64_t sum = std::accumulate(w.begin(), w.end(), int64_t{ 0 });
+        if (sum == 0)
+        {
+            lua_pop(L, 1);//pop table
+            assert(false);
+            return 0;
+        }
         int64_t cutoff = moon::rand_range(int64_t{ 0 }, sum - 1);
         auto idx = 0;
         while (cutoff > w[idx])

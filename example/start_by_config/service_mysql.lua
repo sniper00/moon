@@ -124,5 +124,6 @@ local function docmd(sender, sessionid, cmd, ...)
 end
 
 moon.dispatch('lua',function(msg,unpack)
-    docmd(msg:sender(), msg:sessionid(), unpack(msg:cstr()))
+    local sender, sessionid, sz, len = moon.decode(msg, "SEC")
+    docmd(sender, sessionid, unpack(sz, len))
 end)
