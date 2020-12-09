@@ -67,6 +67,11 @@ lua_service::~lua_service()
     logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
 }
 
+void lua_service::set_callback(sol_function_t f)
+{
+    dispatch_ = f;
+}
+
 bool lua_service::init(std::string_view config)
 {
     try
@@ -168,72 +173,3 @@ void lua_service::dispatch(message *msg)
     }
 }
 
-void lua_service::shutdown()
-{
-    if (!ok())
-        return;
-
-    try
-    {
-        if (shutdown_.valid())
-        {
-            auto result = shutdown_();
-            if (!result.valid())
-            {
-                sol::error err = result;
-                CONSOLE_ERROR(logger(), "%s", err.what());
-            }
-            return;
-        }
-        else if (unique())
-        {
-            return;
-        }
-    }
-    catch (const std::exception& e)
-    {
-        CONSOLE_ERROR(logger(), "lua_service::shutdown:\n%s\n", e.what());
-    }
-    quit();
-}
-
-void lua_service::on_timer(uint32_t timerid, bool remove)
-{
-    if (!ok())
-        return;
-    try
-    {
-        auto result = on_timer_(timerid, remove);
-        if (!result.valid())
-        {
-            sol::error err = result;
-            CONSOLE_ERROR(logger(), "%s", err.what());
-        }
-    }
-    catch (const std::exception &e)
-    {
-        CONSOLE_ERROR(logger(), "lua_service::on_timer:\n%s\n", e.what());
-    }
-}
-
-void lua_service::set_callback(char c, sol_function_t f)
-{
-    switch (c)
-    {
-        case 'm':
-        {
-            dispatch_ = f;
-            break;
-        }
-        case 's':
-        {
-            shutdown_ = f;
-            break;
-        }
-        case 't':
-        {
-            on_timer_ = f;
-            break;
-        }
-    }
-}
