@@ -282,15 +282,17 @@ end
 
 ---使当前服务退出
 function moon.quit()
-    for _, co in pairs(session_id_coroutine) do
+    for k, co in pairs(session_id_coroutine) do
 		if type(co) == "thread" then
-			co_close(co)
+            co_close(co)
+            session_id_coroutine[k] = false
 		end
     end
 
-    for _, co in pairs(timer_cb) do
+    for k, co in pairs(timer_cb) do
         if type(co) == "thread" then
-			co_close(co)
+            co_close(co)
+            timer_cb[k] = false
 		end
     end
 
