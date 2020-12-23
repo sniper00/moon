@@ -304,7 +304,6 @@ end
 
 pg.socket_errcode = -1
 
----@param timeout integer @毫秒
 ---@param opts table @{database = "", user = "", password = ""}
 ---@return pg
 function pg.connect(opts)
