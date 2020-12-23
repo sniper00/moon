@@ -13,17 +13,17 @@ namespace moon
         inline static int64_t start_millsecond = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         inline static int64_t offset_ = 0;
     public:
-        static int64_t second()
+        static std::time_t second()
         {
             return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
 
-        static int64_t millisecond()
+        static std::time_t millisecond()
         {
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
-        static int64_t microsecond()
+        static std::time_t microsecond()
         {
             return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
