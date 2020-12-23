@@ -2,8 +2,10 @@ local moon = require("moon")
 
 local status = coroutine.status
 local running = coroutine.running
-local tbinsert = table.insert
-local tbremove = table.remove
+
+local task_queue = { h = 1, t = 0 }
+
+local traceback = debug.traceback
 
 local M = {}
 
@@ -16,17 +18,30 @@ function M.new()
 end
 
 function M:run(fn, err_fn)
-    tbinsert(self.q, fn)
+    local t = task_queue.t + 1
+	task_queue.t = t
+	task_queue[t] = fn
     if not self.thread or status(self.thread)== "dead" then
         -- if self.thread and status(self.thread)== "dead" then
         --     print("..............................", self.thread )
         -- end
         moon.async(function()
             self.thread = running()
-            while #self.q >0 do
-                local fn_ = tbremove(self.q, 1)
-                local ok, errmsg = xpcall(fn_, debug.traceback)
-                --print(ok,errmsg,cc)
+            while true do
+                if task_queue.h > task_queue.t then
+                    -- queue is empty
+                    task_queue.h = 1
+                    task_queue.t = 0
+                    break
+                end
+
+                -- pop queue
+                local h = task_queue.h
+                local fn_ = task_queue[h]
+                task_queue[h] = nil
+                task_queue.h = h + 1
+
+                local ok, errmsg = xpcall(fn_, traceback)
                 if ok == false  then
                     if err_fn then
                         err_fn(errmsg)
