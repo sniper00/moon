@@ -40,7 +40,7 @@ namespace moon
 
         asio::steady_timer timer(io_context);
 
-        int64_t sleep_duration = 0;
+        std::time_t sleep_duration = 0;
         asio::error_code ignore;
         while (true)
         {
@@ -119,7 +119,7 @@ namespace moon
         return state_.load(std::memory_order_acquire);
     }
 
-    int64_t server::now(bool sync)
+    std::time_t server::now(bool sync)
     {
         if (sync)
         {

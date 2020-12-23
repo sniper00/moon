@@ -32,7 +32,7 @@ namespace moon
 
         state get_state();
 
-        int64_t now(bool sync = false);
+        std::time_t now(bool sync = false);
 
         uint32_t service_count();
 
@@ -47,7 +47,7 @@ namespace moon
         volatile int signalcode_ = 0;
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> next_ = 0;
-        int64_t now_ = 0;
+        std::time_t now_ = 0;
         log logger_;
         router router_;
         std::vector<std::unique_ptr<worker>> workers_;
