@@ -26,8 +26,8 @@ mark_shared(lua_State *L) {
 		int i;
 		for (i=0;i<2;i++) {
 			int idx = -i-1;
-			int tp = lua_type(L, idx);
-			switch (tp) {
+			int t = lua_type(L, idx);
+			switch (t) {
 			case LUA_TTABLE:
 				mark_shared(L);
 				break;
@@ -41,13 +41,14 @@ mark_shared(lua_State *L) {
 				} else if (!lua_iscfunction(L, idx)) {
 					LClosure *f = (LClosure *)lua_topointer(L, idx);
 					makeshared(f);
+					lua_sharefunction(L, idx);
 				}
 				break;
 			case LUA_TSTRING:
 				lua_sharestring(L, idx);
 				break;
 			default:
-				luaL_error(L, "Invalid type [%s]", lua_typename(L, tp));
+				luaL_error(L, "Invalid type [%s]", lua_typename(L, t));
 				break;
 			}
 		}
