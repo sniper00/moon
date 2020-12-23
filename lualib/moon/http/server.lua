@@ -1,6 +1,8 @@
 local moon = require("moon")
 local http = require("http")
 local seri = require("seri")
+---@type fs
+local fs = require("fs")
 local socket = require("moon.socket")
 
 local parse_request = http.parse_request
@@ -101,9 +103,20 @@ local http_status_msg = {
 
 }
 
+local mimes = {
+    [".css"] = "text/css",
+    [".htm"] = "text/html; charset=UTF-8",
+    [".html"] = "text/html; charset=UTF-8",
+    [".js"] = "application/x-javascript",
+    [".jpeg"] = "image/jpeg",
+    [".ico"] = "image/x-icon"
+}
+
 local http_response = {}
 
 http_response.__index = http_response
+
+local static_content
 
 function http_response.new()
     local o = {}
@@ -192,6 +205,25 @@ local traceback = debug.traceback
 local function request_handler(fd, request)
     local response = http_response.new()
     local conn_type = request.header["Connection"]
+
+    if request.path == "/" then
+        request.path = "/home.html"
+    end
+
+    if static_content then
+        local static_src = static_content[request.path]
+        if static_src then
+            response:write_header("Content-Type", static_src.mime)
+            response:write(static_src.bin)
+            if conn_type == "close" then
+                socket.write_then_close(fd, seri.concat(response:tb()))
+            else
+                socket.write(fd, seri.concat(response:tb()))
+            end
+            return
+        end
+    end
+
     local handler =  routers[request.path]
     if handler then
         local ok,err = xpcall(handler, traceback, request, response)
@@ -205,6 +237,7 @@ local function request_handler(fd, request)
         response:write_header("Content-Type","text/plain")
         response:write("404 Not Found")
     end
+
     if conn_type == "close" then
         socket.write_then_close(fd, seri.concat(response:tb()))
     else
@@ -305,6 +338,29 @@ end
 
 function M.on( path, cb )
     routers[path] = cb
+end
+
+function M.static(dir)
+    static_content = {}
+    dir = fs.abspath(dir)
+    local res = fs.listdir(dir, 100)
+    for _, v in ipairs(res) do
+        if not fs.isdir(v) then
+            local src = string.gsub(v, dir, "")
+            src = string.gsub(src, "\\","/")
+            if string.sub(src,1,1) ~= "/" then
+                src = "/"..src
+            end
+
+            local ext = fs.extension(src)
+            local mime = mimes[ext] or ext
+            static_content[src] = {
+                mime = mime,
+                bin = io.readfile(v)
+            }
+            --print("load static:", src)
+        end
+    end
 end
 
 return M

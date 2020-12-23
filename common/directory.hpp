@@ -2,7 +2,7 @@
 #include "platform_define.hpp"
 #include "common/string.hpp"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__clang__)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #else

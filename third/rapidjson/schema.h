@@ -63,9 +63,7 @@ RAPIDJSON_DIAG_OFF(weak-vtables)
 RAPIDJSON_DIAG_OFF(exit-time-destructors)
 RAPIDJSON_DIAG_OFF(c++98-compat-pedantic)
 RAPIDJSON_DIAG_OFF(variadic-macros)
-#endif
-
-#ifdef _MSC_VER
+#elif defined(_MSC_VER)
 RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
 #endif
 
@@ -411,7 +409,7 @@ public:
     Schema(SchemaDocumentType* schemaDocument, const PointerType& p, const ValueType& value, const ValueType& document, AllocatorType* allocator) :
         allocator_(allocator),
         uri_(schemaDocument->GetURI(), *allocator),
-        pointer_(p),
+        pointer_(p, allocator),
         typeless_(schemaDocument->GetTypeless()),
         enum_(),
         enumCount_(),
@@ -442,9 +440,9 @@ public:
         minLength_(0),
         maxLength_(~SizeType(0)),
         exclusiveMinimum_(false),
-        exclusiveMaximum_(false)
+        exclusiveMaximum_(false),
+        defaultValueLength_(0)
     {
-        typedef typename SchemaDocumentType::ValueType ValueType;
         typedef typename ValueType::ConstValueIterator ConstValueIterator;
         typedef typename ValueType::ConstMemberIterator ConstMemberIterator;
 
@@ -465,7 +463,7 @@ public:
                 enum_ = static_cast<uint64_t*>(allocator_->Malloc(sizeof(uint64_t) * v->Size()));
                 for (ConstValueIterator itr = v->Begin(); itr != v->End(); ++itr) {
                     typedef Hasher<EncodingType, MemoryPoolAllocator<> > EnumHasherType;
-                    char buffer[256 + 24];
+                    char buffer[256u + 24];
                     MemoryPoolAllocator<> hasherAllocator(buffer, sizeof(buffer));
                     EnumHasherType h(&hasherAllocator, 256);
                     itr->Accept(h);
@@ -637,6 +635,12 @@ public:
         if (const ValueType* v = GetMember(value, GetMultipleOfString()))
             if (v->IsNumber() && v->GetDouble() > 0.0)
                 multipleOf_.CopyFrom(*v, *allocator_);
+
+        // Default
+        if (const ValueType* v = GetMember(value, GetDefaultValueString()))
+            if (v->IsString())
+                defaultValueLength_ = v->GetStringLength();
+
     }
 
     ~Schema() {
@@ -894,7 +898,7 @@ public:
                 }
         }
 
-        SizeType index;
+        SizeType index  = 0;
         if (FindPropertyIndex(ValueType(str, len).Move(), &index)) {
             if (context.patternPropertiesSchemaCount > 0) {
                 context.patternPropertiesSchemas[context.patternPropertiesSchemaCount++] = properties_[index].schema;
@@ -938,7 +942,8 @@ public:
             context.error_handler.StartMissingProperties();
             for (SizeType index = 0; index < propertyCount_; index++)
                 if (properties_[index].required && !context.propertyExist[index])
-                    context.error_handler.AddMissingProperty(properties_[index].name);
+                    if (properties_[index].schema->defaultValueLength_ == 0 )
+                        context.error_handler.AddMissingProperty(properties_[index].name);
             if (context.error_handler.EndMissingProperties())
                 RAPIDJSON_INVALID_KEYWORD_RETURN(GetRequiredString());
         }
@@ -1048,6 +1053,7 @@ public:
     RAPIDJSON_STRING_(ExclusiveMinimum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'i', 'n', 'i', 'm', 'u', 'm')
     RAPIDJSON_STRING_(ExclusiveMaximum, 'e', 'x', 'c', 'l', 'u', 's', 'i', 'v', 'e', 'M', 'a', 'x', 'i', 'm', 'u', 'm')
     RAPIDJSON_STRING_(MultipleOf, 'm', 'u', 'l', 't', 'i', 'p', 'l', 'e', 'O', 'f')
+    RAPIDJSON_STRING_(DefaultValue, 'd', 'e', 'f', 'a', 'u', 'l', 't')
 
 #undef RAPIDJSON_STRING_
 
@@ -1142,12 +1148,15 @@ private:
 #elif RAPIDJSON_SCHEMA_USE_STDREGEX
     template <typename ValueType>
     RegexType* CreatePattern(const ValueType& value) {
-        if (value.IsString())
+        if (value.IsString()) {
+            RegexType *r = static_cast<RegexType*>(allocator_->Malloc(sizeof(RegexType)));
             try {
-                return new (allocator_->Malloc(sizeof(RegexType))) RegexType(value.GetString(), std::size_t(value.GetStringLength()), std::regex_constants::ECMAScript);
+                return new (r) RegexType(value.GetString(), std::size_t(value.GetStringLength()), std::regex_constants::ECMAScript);
             }
             catch (const std::regex_error&) {
+                AllocatorType::Free(r);
             }
+        }
         return 0;
     }
 
@@ -1428,6 +1437,8 @@ private:
     SValue multipleOf_;
     bool exclusiveMinimum_;
     bool exclusiveMaximum_;
+    
+    SizeType defaultValueLength_;
 };
 
 template<typename Stack, typename Ch>
@@ -1673,6 +1684,7 @@ private:
                                 if (const SchemaType* sc = remoteDocument->GetSchema(pointer)) {
                                     if (schema)
                                         *schema = sc;
+                                    new (schemaMap_.template Push<SchemaEntry>()) SchemaEntry(source, const_cast<SchemaType*>(sc), false, allocator_);
                                     return true;
                                 }
                             }
@@ -1860,7 +1872,12 @@ public:
 
     //! Gets the JSON pointer pointed to the invalid value.
     PointerType GetInvalidDocumentPointer() const {
-        return documentStack_.Empty() ? PointerType() : PointerType(documentStack_.template Bottom<Ch>(), documentStack_.GetSize() / sizeof(Ch));
+        if (documentStack_.Empty()) {
+            return PointerType();
+        }
+        else {
+            return PointerType(documentStack_.template Bottom<Ch>(), documentStack_.GetSize() / sizeof(Ch));
+        }
     }
 
     void NotMultipleOf(int64_t actual, const SValue& expected) {
