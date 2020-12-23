@@ -10,8 +10,8 @@ namespace moon
     {
         using time_point = std::chrono::time_point<std::chrono::steady_clock>;
         inline static time_point start_time_point_ = std::chrono::steady_clock::now();
-        inline static int64_t start_millsecond = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        inline static int64_t offset_ = 0;
+        inline static std::time_t start_millsecond = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        inline static std::time_t offset_ = 0;
     public:
         static std::time_t second()
         {
@@ -28,7 +28,7 @@ namespace moon
             return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
-        static bool offset(int64_t v)
+        static bool offset(std::time_t v)
         {
             if (v <= 0)
             {
@@ -38,14 +38,14 @@ namespace moon
             return true;
         }
 
-        static int64_t now()
+        static std::time_t now()
         {
             auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_point_);
             return start_millsecond + diff.count() + offset_;
         }
 
         //e. 2017-11-11 16:03:11.635
-        static size_t milltimestamp(int64_t t, char* buf, size_t len)
+        static size_t milltimestamp(std::time_t t, char* buf, size_t len)
         {
             if (len < 23)
             {
@@ -53,7 +53,7 @@ namespace moon
             }
 
             auto mill = t;
-            time_t now = mill / 1000;
+            std::time_t now = mill / 1000;
             std::tm m;
             moon::time::localtime(&now, &m);
             uint64_t ymd = (m.tm_year + 1900ULL) * moon::pow10(15)
@@ -74,7 +74,7 @@ namespace moon
             return n;
         }
 
-        static time_t make_time(int year, int month, int day, int hour, int min, int sec)
+        static std::time_t make_time(int year, int month, int day, int hour, int min, int sec)
         {
             assert(year >= 1900);
             assert(month > 0 && month <= 12);
@@ -172,9 +172,9 @@ namespace moon
     class datetime
     {
     public:
-        constexpr static time_t seconds_one_day = 86400;
+        constexpr static std::time_t seconds_one_day = 86400;
 
-        constexpr static time_t seconds_one_hour = 3600;
+        constexpr static std::time_t seconds_one_hour = 3600;
 
         datetime()
             :now_(time::second())
@@ -182,7 +182,7 @@ namespace moon
             init(now_);
         }
 
-        datetime(int64_t t)
+        datetime(std::time_t t)
             :now_(t)
         {
             init(now_);
@@ -234,23 +234,23 @@ namespace moon
             return (year_ % 4) == 0 && ((year_ % 100) != 0 || (year_ % 400) == 0);
         }
 
-        static int localday(time_t t)
+        static int localday(std::time_t t)
         {
             return static_cast<int>((t + time::timezone() * seconds_one_hour) / seconds_one_day);
         }
 
-        static int localday_off(int hour, int64_t second = 0)
+        static int localday_off(int hour, std::time_t second = 0)
         {
-            auto t = second + ((int64_t)24 - hour) * seconds_one_hour;
+            auto t = second + ((std::time_t)24 - hour) * seconds_one_hour;
             return static_cast<int>((t + time::timezone() * seconds_one_hour) / seconds_one_day);
         }
 
-        static bool is_same_day(time_t t1, time_t t2)
+        static bool is_same_day(std::time_t t1, std::time_t t2)
         {
             return localday(t1) == localday(t2);
         }
 
-        static bool is_same_week(time_t t1, time_t t2)
+        static bool is_same_week(std::time_t t1, std::time_t t2)
         {
             auto nday = past_day(t1, t2);
             int dow = datetime(t1).weekday();
@@ -259,7 +259,7 @@ namespace moon
             else return true;
         }
 
-        bool is_same_month(time_t t1, time_t t2)
+        bool is_same_month(std::time_t t1, std::time_t t2)
         {
             auto dt1 = datetime(t1);
             auto dt2 = datetime(t2);
@@ -271,14 +271,14 @@ namespace moon
         }
 
         //day diff (at 24:00)
-        static int past_day(time_t t1, time_t t2)
+        static int past_day(std::time_t t1, std::time_t t2)
         {
             int d1 = localday(t1);
             int d2 = localday(t2);
             return d1 > d2 ? (d1 - d2) : (d2 - d1);
         }
     private:
-        void init(time_t t)
+        void init(std::time_t t)
         {
             now_ = t;
 
