@@ -78,7 +78,7 @@ namespace moon
         concurrent_queue(const concurrent_queue& t) = delete;
         concurrent_queue& operator=(const concurrent_queue& t) = delete;
 
-        void set_max_size(size_t max_size) const
+        void set_max_size(size_t max_size)
         {
             max_size_ = max_size;
         }
