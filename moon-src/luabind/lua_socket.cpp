@@ -69,6 +69,10 @@ static int lsettimeout(lua_State *L)
     double v = lua_tonumber(L, 2);//sec
 
     box->asio_ctx->timeout = static_cast<size_t>(v * 1000);//millsec
+    if (box->asio_ctx->timeout == 0)
+    {
+        box->asio_ctx->timeout = 1;
+    }
     return 0;
 }
 
@@ -193,9 +197,10 @@ static int lreceive(lua_State *L)
 
     if (!client->isreading)
     {
+        client->isreading = true;
         if (read_line)
         {
-            client->isreading = true;
+
             asio::async_read_until(client->socket, client->buf, "\n",
                 [client](const asio::error_code& result_error, std::size_t result_n)
                 {
@@ -207,7 +212,6 @@ static int lreceive(lua_State *L)
         }
         else
         {
-            client->isreading = true;
             std::size_t size = (client->buf.size() >= readn ? 0 : (readn - client->buf.size()));
             asio::async_read(client->socket, client->buf, asio::transfer_exactly(size),
                 [client](const asio::error_code& result_error, std::size_t result_n)
@@ -220,7 +224,10 @@ static int lreceive(lua_State *L)
         }
     }
    
-    client->io_context->restart();
+    if (client->io_context->stopped())
+    {
+        client->io_context->restart();
+    }
     client->io_context->run_for(std::chrono::milliseconds(box->asio_ctx->timeout));
 
     //not timeout
