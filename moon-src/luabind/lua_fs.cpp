@@ -18,7 +18,7 @@ static auto listdir(const std::string& dir, sol::optional<int> depth)
     return sol::as_table(files);
 }
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__clang__)
 static fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
 {
     using namespace std::string_view_literals; // TRANSITION, VSO#571749
@@ -97,6 +97,8 @@ static fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
     }
     return (_Result);
 }
+
+
 #endif
 
 static sol::table bind_fs(sol::this_state L)
@@ -150,6 +152,19 @@ static sol::table bind_fs(sol::this_state L)
         return  fs::absolute(p).lexically_relative(directory::working_directory).string();
 #endif
     });
+
+    m.set_function("relpath", [](const std::string_view& path, const std::string_view& with) {
+#if defined(__GNUC__) && !defined(__clang__)
+        return  lexically_relative(fs::absolute(path), with).string();
+#else
+        return  fs::path(path).lexically_relative(with).string();
+#endif
+    });
+
+    m.set_function("abspath", [](const std::string_view& path) {
+        return  fs::absolute(path).string();
+    });
+
     return m;
 }
 
