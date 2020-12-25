@@ -146,7 +146,7 @@ static sol::table bind_fs(sol::this_state L)
     });
 
     m.set_function("relative_work_path", [](const std::string_view& p) {
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__clang__)
         return  lexically_relative(fs::absolute(p), directory::working_directory).string();
 #else
         return  fs::absolute(p).lexically_relative(directory::working_directory).string();
