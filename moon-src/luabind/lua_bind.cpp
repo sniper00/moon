@@ -286,10 +286,6 @@ const lua_bind& lua_bind::bind_log(lua_service* service) const
     return *this;
 }
 
-
-
-
-
 const lua_bind& lua_bind::bind_service(lua_service* s) const
 {
     auto router_ = s->get_router();
