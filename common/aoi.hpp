@@ -555,7 +555,7 @@ private:
         assert(std::find(node.markers.begin(), node.markers.end(), obj) != node.markers.end());
         for (const auto& w : node.watchers)
         {
-            if (w->handle == obj->handle) continue;
+            //if (w->handle == obj->handle) continue;
 
             auto rc = make_rect(w->x, w->y, w->w, w->h);
             if (!rc.contains(obj->x, obj->y))
