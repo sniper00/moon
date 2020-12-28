@@ -26,6 +26,10 @@ static int substr(lua_State* L)
     if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
     auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
     auto count = static_cast<size_t>(luaL_checkinteger(L, 3));
+    if (pos >= buf->size())
+    {
+        return luaL_error(L, "invalid buffer.substr position");
+    }
 
     std::string_view sw(buf->data(), buf->size());
     std::string_view sub = sw.substr(pos, count);
