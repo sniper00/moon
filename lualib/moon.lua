@@ -222,6 +222,11 @@ function moon.send(PTYPE, receiver, header, ...)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
+
+    if receiver == 0 then
+        error("moon send receiver == 0")
+    end
+
     header = header or ''
     _send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
     return true
@@ -239,6 +244,11 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
+
+    if receiver == 0 then
+        error("moon send receiver == 0")
+    end
+
     header = header or ''
     sessionid = sessionid or 0
     _send(sid_, receiver, data, header, sessionid, p.PTYPE)
@@ -388,6 +398,11 @@ function moon.co_call(PTYPE, receiver, ...)
     if not p then
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
+
+    if receiver == 0 then
+        error("moon co_call receiver == 0")
+    end
+
     local sessionid = make_response(receiver)
 	_send(sid_, receiver, p.pack(...), "", sessionid, p.PTYPE)
     return co_yield()
@@ -404,6 +419,11 @@ function moon.response(PTYPE, receiver, sessionid, ...)
     if not p then
         error("handle unknown message")
     end
+
+    if receiver == 0 then
+        error("moon response receiver == 0")
+    end
+
     _send(sid_, receiver, p.pack(...), '', sessionid, p.PTYPE)
 end
 
