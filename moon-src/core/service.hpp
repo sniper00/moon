@@ -114,7 +114,7 @@ namespace moon
                     }
                 }
             }
-            catch (std::exception& e)
+            catch (const std::exception& e)
             {
                 CONSOLE_ERROR(logger(), "service::handle_message exception: %s", e.what());
             }

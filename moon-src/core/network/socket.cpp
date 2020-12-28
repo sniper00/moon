@@ -72,7 +72,7 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
 
 void socket::accept(int fd, int32_t sessionid, uint32_t owner)
 {
-    MOON_CHECK(owner > 0, "socket::accept : invalid serviceid");
+    assert(owner > 0 && "socket::accept : invalid serviceid");
     auto iter = acceptors_.find(fd);
     if (iter == acceptors_.end())
     {
