@@ -142,34 +142,83 @@ bool lua_service::init(std::string_view config)
     return ok_;
 }
 
+static int traceback(lua_State* L) {
+    const char* msg = lua_tostring(L, 1);
+    if (msg)
+        luaL_traceback(L, L, msg, 1);
+    else {
+        lua_pushliteral(L, "(no error message)");
+    }
+    return 1;
+}
+
 void lua_service::dispatch(message *msg)
 {
     if (!ok())
         return;
 
-    MOON_ASSERT(dispatch_.valid(), "should initialize callbacks first.")
+    MOON_ASSERT(dispatch_.valid(), "should initialize callbacks first.");
+    lua_State* L = lua_.lua_state();
 
     try
     {
-        auto result = dispatch_((void*)msg, msg->type());
-        if (!result.valid())
+        int trace = 1;
+        int top = lua_gettop(L);
+        if (top == 0)
         {
-            sol::error err = result;
-            if (msg->sessionid() >= 0 || msg->receiver() == 0) //socket mesage receiver==0
-            {
-                logger()->logstring(true, moon::LogLevel::Error, moon::format("%s dispatch:\n%s", name().data(), err.what()), id());
-            }
-            else
-            {
-                msg->set_sessionid(-msg->sessionid());
-                router_->response(msg->sender(), "lua_service::dispatch "sv, err.what(), msg->sessionid(), PTYPE_ERROR);
-            }
+            lua_pushcfunction(L, traceback);
+            dispatch_.push();
+        }
+        else
+        {
+            assert(top == 2);
+        }
+        lua_pushvalue(L, 2);
+
+        lua_pushlightuserdata(L, msg);
+        lua_pushinteger(L, msg->type());
+
+        int r = lua_pcall(L, 2, 0, trace);
+        if (r == LUA_OK) {
+            return;
+        }
+
+        std::string error;
+
+        switch (r) {
+        case LUA_ERRRUN:
+            error = moon::format("dispatch %s error:\n%s", name().data(), lua_tostring(L, -1));
+            break;
+        case LUA_ERRMEM:
+            error = moon::format("dispatch %s memory error", name().data());
+            break;
+        case LUA_ERRERR:
+            error = moon::format("dispatch %s error in error", name().data());
+            break;
+        };
+
+        lua_pop(L, 1);
+
+        if (msg->sessionid() >= 0 || msg->receiver() == 0) //socket mesage receiver==0
+        {
+            logger()->logstring(true, moon::LogLevel::Error, error, id());
+        }
+        else
+        {
+            msg->set_sessionid(-msg->sessionid());
+            router_->response(msg->sender(), "dispatch "sv, error, msg->sessionid(), PTYPE_ERROR);
         }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
-        CONSOLE_ERROR(logger(), "lua_service::dispatch:\n%s\n", e.what());
-        quit();
+        luaL_traceback(L, L, e.what(), 1);
+        const char* trace = lua_tostring(L, -1);
+        if (nullptr == trace)
+        {
+            trace = "";
+        }
+        CONSOLE_ERROR(logger(), "dispatch:\n%s", trace);
+        lua_pop(L, 1);
     }
 }
 

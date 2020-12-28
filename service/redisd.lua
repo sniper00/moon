@@ -20,11 +20,12 @@ moon.register_protocol({
 })
 
 if conf.name then
-    local function connect(db_conf, auto)
+    local function connect(db_conf, auto_reconnect)
         local db, err
         repeat
             db, err = redis.connect(db_conf)
             if not db then
+                moon.error(err)
                 break
             end
 
@@ -32,18 +33,25 @@ if conf.name then
                 db = nil
             end
 
-            if not db and auto then
+            if not db and auto_reconnect then
                 moon.sleep(1000)
             end
-        until(not auto or db)
+        until(not auto_reconnect or db)
         return db, err
     end
 
-    local function exec_one(db, args , sender, sessionid, auto)
+    local function exec_one(db, args , sender, sessionid, auto_reconnect)
+
+        local reconnect_times = 1
+
+        if auto_reconnect then
+            reconnect_times = -1
+        end
+
         repeat
             local err,res
             if not db then
-                db, err = connect(conf, auto)
+                db, err = connect(conf, auto_reconnect)
                 if not db then
                     if sessionid == 0 then
                         moon.error(err)
@@ -58,19 +66,16 @@ if conf.name then
             res, err = db[cmd](db, tbunpack(args,2))
             if redis.socket_error == res then
                 db = nil
-                if auto then
-                    moon.error(err, "will reconnect...")
-                    moon.sleep(100)
-                else
-                    moon.error(err)
-                    moon.response("redis", sender, sessionid, false, err)
-                    return db, res
+                moon.error(err)
+                if reconnect_times == 0 then
+                    if sessionid ~= 0 then
+                        moon.response("redis", sender, sessionid, false, err)
+                    end
+                    return
                 end
             else
-                if sessionid == 0 then
-                    if not res then
-                        moon.error(err)
-                    end
+                if sessionid == 0 and not res then
+                    moon.error(err)
                 else
                     moon.response("redis", sender, sessionid, res, err)
                 end
@@ -88,28 +93,32 @@ if conf.name then
     end
 
     local function docmd(hash, sender, sessionid, ...)
-        hash = hash%db_pool_size
-        if hash == 0 then
-            hash = db_pool_size
-        end
 
+        hash = hash%db_pool_size + 1
         --print(moon.name(), "db hash", hash)
-
         local ctx = pool[hash]
         tbinsert(ctx.queue, {{...}, sender, sessionid})
         if ctx.running then
             return
         end
-
+        ctx.running = true
         moon.async(function()
-            ctx.running = true
             while #ctx.queue >0 do
                 ---args - sender - sessionid
                 local req = ctx.queue[1]
                 local iscall = req[3]~=0
-                local ok
-                ctx.db, ok = exec_one(ctx.db, req[1], req[2], req[3], not iscall)
-                if iscall or (ctx.db and ok) then
+                local ok,db = xpcall(exec_one, debug.traceback, ctx.db, req[1], req[2], req[3], not iscall)
+                if not ok then
+                    if ctx.db then
+                        ctx.db:disconnect()
+                        ctx.db = nil
+                    end
+                    ---print lua error
+                    moon.error(db)
+                else
+                    ctx.db = db
+                end
+                if iscall or db then
                     tbremove(ctx.queue,1)
                 end
             end
@@ -145,7 +154,7 @@ if conf.name then
         end
     end
 
-    moon.system("shutdown", function()
+    moon.system("wait_save", function()
         moon.async(function()
             wait_all_send()
             moon.quit()
