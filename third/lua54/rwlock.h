@@ -3,8 +3,8 @@
 
 /* read write lock */
 
-#ifdef _MSC_VER
-#include <Windows.h>
+#if defined(_MSC_VER)
+#include <synchapi.h>
 
 struct rwlock {
     SRWLOCK srw;
@@ -36,49 +36,49 @@ rwlock_wunlock(struct rwlock *lock) {
 }
 
 #else
+#include "atomic.h"
+
 struct rwlock {
-    int write;
-    int read;
+	ATOM_INT write;
+	ATOM_INT read;
 };
 
 static inline void
-rwlock_init(struct rwlock *lock) {
-    lock->write = 0;
-    lock->read = 0;
+rwlock_init(struct rwlock* lock) {
+	ATOM_INIT(&lock->write, 0);
+	ATOM_INIT(&lock->read, 0);
 }
 
 static inline void
-rwlock_rlock(struct rwlock *lock) {
-    for (;;) {
-        while (lock->write) {
-            __sync_synchronize();
-        }
-        __sync_add_and_fetch(&lock->read, 1);
-        if (lock->write) {
-            __sync_sub_and_fetch(&lock->read, 1);
-        }
-        else {
-            break;
-        }
-    }
+rwlock_rlock(struct rwlock* lock) {
+	for (;;) {
+		while (ATOM_LOAD(&lock->write)) {}
+		ATOM_FINC(&lock->read);
+		if (ATOM_LOAD(&lock->write)) {
+			ATOM_FDEC(&lock->read);
+		}
+		else {
+			break;
+		}
+	}
 }
 
 static inline void
-rwlock_wlock(struct rwlock *lock) {
-    while (__sync_lock_test_and_set(&lock->write, 1)) {}
-    while (lock->read) {
-        __sync_synchronize();
-    }
+rwlock_wlock(struct rwlock* lock) {
+	ATOM_INT clear;
+	ATOM_INIT(&clear, 0);
+	while (!ATOM_CAS(&lock->write, clear, 1)) {}
+	while (ATOM_LOAD(&lock->read)) {}
 }
 
 static inline void
-rwlock_wunlock(struct rwlock *lock) {
-    __sync_lock_release(&lock->write);
+rwlock_wunlock(struct rwlock* lock) {
+	ATOM_STORE(&lock->write, 0);
 }
 
 static inline void
-rwlock_runlock(struct rwlock *lock) {
-    __sync_sub_and_fetch(&lock->read, 1);
+rwlock_runlock(struct rwlock* lock) {
+	ATOM_FDEC(&lock->read);
 }
 #endif
 #endif
