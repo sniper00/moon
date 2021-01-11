@@ -164,7 +164,7 @@ local function request( method, baseaddress, path, content, header, keepalive)
 
     local host, port = parse_host(baseaddress, 80)
 
-    if not path or path=="" then
+    if not path or path== "" then
         path = "/"
     end
 
@@ -237,6 +237,8 @@ end
 function M.setproxy(host)
     proxyaddress = host
 end
+
+M.create_query_string = create_query_string
 
 function M.get(host, path, content, header, keepalive)
     return request("GET", host, path, content, header, keepalive)
