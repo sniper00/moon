@@ -217,7 +217,7 @@ core.set_cb(_default_dispatch)
 ---@param header string @message header
 ---@param vararg any
 ---@return boolean
-function moon.send(PTYPE, receiver, header, ...)
+function moon.send(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
@@ -227,8 +227,7 @@ function moon.send(PTYPE, receiver, header, ...)
         error("moon send receiver == 0")
     end
 
-    header = header or ''
-    _send(sid_, receiver, p.pack(...), header, 0, p.PTYPE)
+    _send(sid_, receiver, p.pack(...), "", 0, p.PTYPE)
     return true
 end
 
@@ -425,6 +424,15 @@ function moon.response(PTYPE, receiver, sessionid, ...)
     end
 
     _send(sid_, receiver, p.pack(...), '', sessionid, p.PTYPE)
+end
+
+function moon.wait()
+    return co_yield()
+end
+
+function moon.wakeup(session, ...)
+    local co = session_id_coroutine[session]
+    coresume(co, ...)
 end
 
 ------------------------------------
