@@ -310,7 +310,7 @@ function cluster.send(receiver_serverid, receiver_sname, ...)
         session = 0
     }
 
-    moon.send("cluster", cluster_address, "", "Request", header, ...)
+    moon.send("cluster", cluster_address, "Request", header, ...)
 end
 
 function cluster.call(receiver_serverid, receiver_sname, ...)
