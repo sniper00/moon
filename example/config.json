@@ -1,9 +1,9 @@
 [
     {
-        "sid": 1,
-        "name": "server_#sid",
+        "node": 1,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {
             "outer_host": "0.0.0.0",
@@ -11,59 +11,59 @@
         }
     },
     {
-        "sid": 2,
-        "name": "server_#sid",
+        "node": 2,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     }
     ,
     {
-        "sid": 3,
-        "name": "server_#sid",
+        "node": 3,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     },
     {
-        "sid": 4,
-        "name": "server_#sid",
+        "node": 4,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     },
     {
-        "sid": 5,
-        "name": "server_#sid",
+        "node": 5,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     },
     {
-        "sid": 6,
-        "name": "server_#sid",
+        "node": 6,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     },
     {
-        "sid": 7,
-        "name": "server_#sid",
+        "node": 7,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {}
     },
     {
-        "sid": 8,
-        "name": "server_#sid",
+        "node": 8,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {
             "cluster_host":"127.0.0.1",
@@ -71,10 +71,10 @@
         }
     },
     {
-        "sid": 9,
-        "name": "server_#sid",
+        "node": 9,
+        "name": "server_#node",
         "log_level": "DEBUG",
-        "log": "log/#sid-#date.log",
+        "log": "log/#node-#date.log",
         "bootstrap": "main.lua",
         "params": {
             "cluster_host":"127.0.0.1",
