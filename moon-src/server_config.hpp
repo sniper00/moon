@@ -13,7 +13,7 @@ namespace moon
 {
     struct server_config
     {
-        int32_t sid = 0;
+        int32_t node = 0;
         int32_t thread = 0;
         std::string loglevel;
         std::string name;
@@ -32,7 +32,7 @@ namespace moon
             return config_;
         }
 
-        bool parse(const std::string& config, int32_t sid)
+        bool parse(const std::string& config, int32_t node)
         {
             try
             {
@@ -46,8 +46,8 @@ namespace moon
                 for (auto&c : doc.GetArray())
                 {
                     server_config scfg;
-                    scfg.sid = rapidjson::get_value<int32_t>(&c, "sid", -1);//server id
-                    MOON_CHECK(-1 != scfg.sid, "Server config format error:must has sid");
+                    scfg.node = rapidjson::get_value<int32_t>(&c, "node", -1);//server id
+                    MOON_CHECK(-1 != scfg.node, "Server config format error:must has node id");
                     scfg.name = rapidjson::get_value<std::string>(&c, "name");//server name
                     MOON_CHECK(!scfg.name.empty(), "Server config format error:must has name");
                     scfg.thread = rapidjson::get_value<int32_t>(&c, "thread", std::thread::hardware_concurrency());
@@ -64,8 +64,8 @@ namespace moon
                         scfg.params = std::string(buffer.GetString(), buffer.GetSize());
                     }
 
-                    moon::replace(scfg.name, "#sid", std::to_string(scfg.sid));
-                    moon::replace(scfg.log, "#sid", std::to_string(scfg.sid));
+                    moon::replace(scfg.name, "#node", std::to_string(scfg.node));
+                    moon::replace(scfg.log, "#node", std::to_string(scfg.node));
 
                     if (scfg.log.find("#date") != std::string::npos)
                     {
@@ -77,9 +77,9 @@ namespace moon
                         moon::replace(scfg.log, "#date", buff);
                     }
 
-                    MOON_CHECK(data_.emplace(scfg.sid, scfg).second, moon::format("Server config format error:sid %d already exist.", scfg.sid));
+                    MOON_CHECK(data_.emplace(scfg.node, scfg).second, moon::format("Server config format error:node %d already exist.", scfg.node));
                 }
-                sid_ = sid;
+                node_ = node;
                 return true;
             }
             catch (std::exception& e)
@@ -98,9 +98,9 @@ namespace moon
             }
         }
 
-        server_config* find(int32_t sid)
+        server_config* find(int32_t node)
         {
-            auto iter = data_.find(sid);
+            auto iter = data_.find(node);
             if (iter != data_.end())
             {
                 return &iter->second;
@@ -110,7 +110,7 @@ namespace moon
 
         server_config* get_server_config()
         {
-            auto iter = data_.find(sid_);
+            auto iter = data_.find(node_);
             if (iter != data_.end())
             {
                 return &iter->second;
@@ -118,7 +118,7 @@ namespace moon
             return nullptr;
         }
     private:
-        int sid_ = 0;
+        int node_ = 0;
         std::string config_;
         std::unordered_map<int32_t, server_config> data_;
     };

@@ -18,7 +18,7 @@ moon.register_protocol(
     unpack = unpack
 })
 
-local SERVERID = math.tointeger(moon.get_env("SID"))
+local NODE = math.tointeger(moon.get_env("NODE"))
 
 local function cluster_service()
 
@@ -112,14 +112,14 @@ local function cluster_service()
                 local address = get_service_address(header.to_sname)
                 assert(address>0, tostring(header.to_sname))
                 local session = moon.make_response(address)
-                redirect(msg, "", address, moon.PTYPE_LUA, moon.sid(), -session)
+                redirect(msg, "", address, moon.PTYPE_LUA, moon.addr(), -session)
                 local res = {co_yield()}
                 header.session = -header.session
                 socket.write(fd, pack(header, table.unpack(res)))
             end)
         elseif header.session > 0 then --receive response message
             if remove_send_watch(fd, header.from_addr, header.session) then
-                redirect(msg, "", header.from_addr, moon.PTYPE_LUA, moon.sid(), header.session)
+                redirect(msg, "", header.from_addr, moon.PTYPE_LUA, moon.addr(), header.session)
             end
         else-- receive send message
             local address = get_service_address(header.to_sname)
@@ -158,8 +158,8 @@ local function cluster_service()
         print("socket error",fd, moon.decode(msg, "Z"))
     end)
 
-    local function connect(serverid)
-        local c = clusters[serverid]
+    local function connect(node)
+        local c = clusters[node]
         local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET)
         if not fd then
             moon.error(err)
@@ -177,7 +177,7 @@ local function cluster_service()
         ---@type cluster_header
         local header = unpack_one(moon.decode(msg, "B"))
 
-        local fd = clusters[header.to_server].fd
+        local fd = clusters[header.to_node].fd
 
         if fd and socket.write_message(fd, msg) then
             if header.session < 0 then
@@ -190,7 +190,7 @@ local function cluster_service()
         send_queue:run(function()
             local data = moon.decode(msg, "Z")
             if not fd then
-                fd = connect(header.to_server)
+                fd = connect(header.to_node)
             end
 
             if fd and socket.write(fd, data) then
@@ -198,10 +198,10 @@ local function cluster_service()
                     --记录mode-call消息，网络断开时，返回错误信息
                     add_send_watch(fd, header.from_addr, -header.session)
                 end
-                clusters[header.to_server].fd = fd
+                clusters[header.to_node].fd = fd
             else
                 fd = nil
-                clusters[header.to_server].fd = false
+                clusters[header.to_node].fd = false
             end
 
             if not fd then
@@ -237,14 +237,14 @@ local function cluster_service()
         for _,c in ipairs(js) do
             local host,port = find_host_port(c.params)
             if host and port then
-                clusters[c.sid]={host = host, port = port, fd = false}
+                clusters[c.node]={host = host, port = port, fd = false}
             end
         end
     end
 
     load_config()
 
-    if not clusters[SERVERID] then
+    if not clusters[NODE] then
         print("unconfig cluster node:".. moon.name())
         return false
     end
@@ -289,31 +289,31 @@ local cluster = {}
 local cluster_address
 
 ---@class cluster_header
----@field public to_server integer @ 接收者服务器ID
+---@field public to_node integer @ 接收者服务器ID
 ---@field public to_sname string @ 接收者服务name
----@field public from_server integer @ 发送者服务器ID
+---@field public from_node integer @ 发送者服务器ID
 ---@field public from_addr integer @ 发送者服务ID
 ---@field public session integer @ 协程session
 
 
-function cluster.send(receiver_serverid, receiver_sname, ...)
+function cluster.send(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
         assert(cluster_address>0)
     end
 
     local header = {
-        to_server = receiver_serverid,
+        to_node = receiver_node,
         to_sname = receiver_sname,
-        from_server = SERVERID,
-        from_addr = moon.sid(),
+        from_node = NODE,
+        from_addr = moon.addr(),
         session = 0
     }
 
     moon.send("cluster", cluster_address, "Request", header, ...)
 end
 
-function cluster.call(receiver_serverid, receiver_sname, ...)
+function cluster.call(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
         assert(cluster_address>0)
@@ -322,10 +322,10 @@ function cluster.call(receiver_serverid, receiver_sname, ...)
     local sessionid = moon.make_response(cluster_address)
 
     local header = {
-        to_server = receiver_serverid,
+        to_node = receiver_node,
         to_sname = receiver_sname,
-        from_server = SERVERID,
-        from_addr = moon.sid(),
+        from_node = NODE,
+        from_addr = moon.addr(),
         session = -sessionid
     }
 

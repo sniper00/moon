@@ -27,16 +27,10 @@ socket.on("error",function(_, msg)
 	test_assert.assert(false,moon.decode(msg, "Z"))
 end)
 
-moon.async(function()
-	moon.sleep(10)
-	local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET)
-	test_assert.assert(fd>0,"connect server failed")
-	socket.set_enable_chunked(fd,"rw")
-	socket.write(fd, data)
-end)
-
-
-
+local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET)
+test_assert.assert(fd>0,"connect server failed")
+socket.set_enable_chunked(fd,"rw")
+socket.write(fd, data)
 
 
 

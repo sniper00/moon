@@ -243,6 +243,18 @@ int main(int argc, char* argv[])
                 }
             }
 
+            std::string argvs = "[";
+            for (int i = 1; i < argc; ++i)
+            {
+                bool lastarg = i == (argc - 1);
+                std::string v = moon::format(R"("%s")", argv[i]);
+                moon::replace(v, "\\", "/");
+                argvs.append(v);
+                if (!lastarg)
+                    argvs.append(",");
+            }
+            argvs.append("]");
+
             std::shared_ptr<server> server_ = std::make_shared<server>();
             wk_server = server_;
 
@@ -288,8 +300,7 @@ int main(int argc, char* argv[])
                 fs::path p(bootstrap);
                 std::string filename = p.filename().string();
                 fs::current_path(fs::absolute(p).parent_path());
-                directory::working_directory = fs::current_path();
-                MOON_CHECK(smgr.parse(moon::format("[{\"sid\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), sid),"pase config failed");
+                MOON_CHECK(smgr.parse(moon::format("[{\"node\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), sid),"pase config failed");
             }
             else
             {
@@ -297,17 +308,19 @@ int main(int argc, char* argv[])
                     , moon::format("can not found config file: '%s'.", conf.data()).data());
                 MOON_CHECK(smgr.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
                 fs::current_path(fs::absolute(fs::path(conf)).parent_path());
-                directory::working_directory = fs::current_path();
             }
+
+            directory::working_directory = fs::current_path();
 
             auto c = smgr.find(sid);
             MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
 
-            router_->set_env("SID", std::to_string(c->sid));
+            router_->set_env("NODE", std::to_string(c->node));
             router_->set_env("SERVER_NAME", c->name);
             router_->set_env("THREAD_NUM", std::to_string(c->thread));
             router_->set_env("CONFIG", smgr.config());
             router_->set_env("PARAMS", c->params);
+            router_->set_env("ARGV", argvs);
 
             server_->logger()->set_level(c->loglevel);
             server_->logger()->set_enable_console(enable_console);
