@@ -121,7 +121,7 @@ setmetatable(
     }
 )
 
-local sid_ = core.id()
+local addr_ = core.id()
 
 local uuid = 0
 local session_id_coroutine = {}
@@ -227,7 +227,7 @@ function moon.send(PTYPE, receiver, ...)
         error("moon send receiver == 0")
     end
 
-    _send(sid_, receiver, p.pack(...), "", 0, p.PTYPE)
+    _send(addr_, receiver, p.pack(...), "", 0, p.PTYPE)
     return true
 end
 
@@ -250,14 +250,14 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
 
     header = header or ''
     sessionid = sessionid or 0
-    _send(sid_, receiver, data, header, sessionid, p.PTYPE)
+    _send(addr_, receiver, data, header, sessionid, p.PTYPE)
 	return true
 end
 
 ---获取当前的服务id
 ---@return integer
-function moon.sid()
-    return sid_
+function moon.addr()
+    return addr_
 end
 
 ---async 创建一个新的服务
@@ -271,41 +271,42 @@ function moon.new_service(stype, config, unique, workerid)
     workerid = workerid or 0
     config = jencode(config)
     local sessionid = make_response()
-    core.new_service(stype, config, unique, workerid, sid_, sessionid)
+    core.new_service(stype, config, unique, workerid, addr_, sessionid)
     return tointeger(co_yield())
 end
 
 ---异步移除指定的服务
----@param sid integer @服务id
+---@param addr integer @服务id
 ---@param iswait boolean @可选，为true时可以 使用协程等待移除结果
 ---@return string
-function moon.remove_service(sid, iswait)
+function moon.remove_service(addr, iswait)
     if iswait then
         local sessionid = make_response()
-        core.remove_service(sid,sid_,sessionid)
+        core.remove_service(addr, addr_,sessionid)
         return co_yield()
     else
-        core.remove_service(sid,0,0)
+        core.remove_service(addr,0,0)
     end
 end
 
 ---使当前服务退出
 function moon.quit()
+    local running = co_running()
     for k, co in pairs(session_id_coroutine) do
-		if type(co) == "thread" then
+		if type(co) == "thread" and co ~= running then
             co_close(co)
             session_id_coroutine[k] = false
 		end
     end
 
     for k, co in pairs(timer_cb) do
-        if type(co) == "thread" then
+        if type(co) == "thread" and co ~= running then
             co_close(co)
             timer_cb[k] = false
 		end
     end
 
-    moon.remove_service(sid_)
+    moon.remove_service(addr_)
 end
 
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
@@ -383,7 +384,7 @@ end
 ---@return string
 function moon.co_runcmd(command)
     local sessionid = make_response()
-    core.runcmd(moon.sid(), command, sessionid)
+    core.runcmd(moon.addr(), command, sessionid)
     return co_yield()
 end
 
@@ -403,7 +404,7 @@ function moon.co_call(PTYPE, receiver, ...)
     end
 
     local sessionid = make_response(receiver)
-	_send(sid_, receiver, p.pack(...), "", sessionid, p.PTYPE)
+	_send(addr_, receiver, p.pack(...), "", sessionid, p.PTYPE)
     return co_yield()
 end
 
@@ -423,7 +424,7 @@ function moon.response(PTYPE, receiver, sessionid, ...)
         error("moon response receiver == 0")
     end
 
-    _send(sid_, receiver, p.pack(...), '', sessionid, p.PTYPE)
+    _send(addr_, receiver, p.pack(...), '', sessionid, p.PTYPE)
 end
 
 function moon.wait()
