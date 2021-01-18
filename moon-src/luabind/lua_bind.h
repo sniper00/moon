@@ -23,7 +23,6 @@ public:
 
     const lua_bind& bind_log(lua_service* service) const;
 
-
     const lua_bind& bind_service(lua_service* s) const;
 
     const lua_bind& bind_socket(lua_service* s)const;

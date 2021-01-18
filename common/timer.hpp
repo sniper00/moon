@@ -116,19 +116,15 @@ namespace moon
             if (auto iter = timers_.find(id); iter != timers_.end())
             {
                 auto& ctx = iter->second;
-                if (ctx.interval_ == 0)//removed
+                if (ctx.interval_ != 0)//alive
                 {
-                    return;
-                }
-                bool continued = ctx.continued();
-                if (continued)
-                {
-                    tickers_.emplace(now + ctx.interval_, id);
-                }
-                ctx.policy_(id, !continued);
-                if (continued)
-                {
-                    return;
+                    bool continued = ctx.continued();
+                    ctx.policy_(id, !continued);
+                    if (ctx.interval_!=0 && continued)//may remove timer in callback
+                    {
+                        tickers_.emplace(now + ctx.interval_, id);
+                        return;
+                    }
                 }
                 timers_.erase(id);
             }

@@ -10,19 +10,19 @@ if conf.receiver then
         moon.send('lua', sender,'WORLD', ...)
     end
 
-    local function docmd(sender,header,...)
+    local function docmd(sender,cmd,...)
         -- body
-        local f = command[header]
+        local f = command[cmd]
         if f then
             f(sender,...)
         else
-            error(string.format("Unknown command %s", tostring(header)))
+            error(string.format("Unknown command %s", tostring(cmd)))
         end
     end
 
     moon.dispatch('lua',function(msg,unpack)
-        local sender, header, sz, len = moon.decode(msg, "SHC")
-        docmd(sender,header, unpack(sz, len))
+        local sender, sz, len = moon.decode(msg, "SC")
+        docmd(sender, unpack(sz, len))
     end)
 
 else
@@ -35,20 +35,20 @@ else
         test_assert.success()
     end
 
-    local function docmd(header, ...)
-        local f = command[header]
+    local function docmd(cmd, ...)
+        local f = command[cmd]
         if f then
             f(...)
         else
-            error(string.format("Unknown command %s", tostring(header)))
+            error(string.format("Unknown command %s", tostring(cmd)))
         end
     end
 
     moon.dispatch(
         "lua",
         function(msg, unpack)
-            local header, sz, len = moon.decode(msg, "HC")
-            docmd(header, unpack(sz, len))
+            local sz, len = moon.decode(msg, "C")
+            docmd(unpack(sz, len))
         end
     )
 

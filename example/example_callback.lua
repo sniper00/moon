@@ -23,8 +23,8 @@ if conf.receiver then
     end
 
     moon.dispatch('lua',function(msg,unpack)
-        local sender, header, p, n = moon.decode(msg,"SHC")
-        docmd(sender,header, unpack(p, n))
+        local sender, p, n = moon.decode(msg,"SC")
+        docmd(sender, unpack(p, n))
     end)
 
     print("callback example: service receiver start")
@@ -48,8 +48,8 @@ else
     end
 
     moon.dispatch('lua',function(msg,unpack)
-        local header, sz, len = moon.decode(msg,"HC")
-        docmd(header, unpack(sz, len))
+        local sz, len = moon.decode(msg,"C")
+        docmd(unpack(sz, len))
     end)
 
     print("callback example: service sender start")

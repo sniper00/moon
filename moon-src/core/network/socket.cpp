@@ -132,7 +132,9 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
             asio::connect(c->socket(), endpoints);
             c->fd(uuid());
             connections_.emplace(c->fd(), c);
-            c->start(false);
+            asio::post(ioc_, [c]() {
+                c->start(false);
+             });
             return c->fd();
         }
         else

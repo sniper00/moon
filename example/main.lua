@@ -11,7 +11,7 @@ moon.set_env("PATH", string.format("package.path='%s'..package.path", path))
 
 local params = json.decode(moon.get_env("PARAMS"))
 
-local sid = math.tointeger(moon.get_env("SID"))
+local sid = math.tointeger(moon.get_env("NODE"))
 
 local services
 
