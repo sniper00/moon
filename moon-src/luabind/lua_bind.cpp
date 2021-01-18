@@ -225,8 +225,8 @@ const lua_bind& lua_bind::bind_util() const
         time_t t = luaL_checkinteger(L, 1);
         std::tm local_tm;
         time::localtime(&t, &local_tm);
-        lua_createtable(L, 0, 8);
-        luaL_rawsetfield(L, -3, "yeay", lua_pushinteger(L, (lua_Integer)local_tm.tm_year + 1900));
+        lua_createtable(L, 0, 9);
+        luaL_rawsetfield(L, -3, "year", lua_pushinteger(L, (lua_Integer)local_tm.tm_year + 1900));
         luaL_rawsetfield(L, -3, "month", lua_pushinteger(L, (lua_Integer)local_tm.tm_mon + 1));
         luaL_rawsetfield(L, -3, "day", lua_pushinteger(L, local_tm.tm_mday));
         luaL_rawsetfield(L, -3, "hour", lua_pushinteger(L, local_tm.tm_hour));
@@ -234,15 +234,7 @@ const lua_bind& lua_bind::bind_util() const
         luaL_rawsetfield(L, -3, "sec", lua_pushinteger(L, local_tm.tm_sec));
         luaL_rawsetfield(L, -3, "weekday", lua_pushinteger(L, local_tm.tm_wday));
         luaL_rawsetfield(L, -3, "yearday", lua_pushinteger(L, local_tm.tm_yday));
-        return 1;
-        });
-
-    lua.set_function("dailytime", [](lua_State* L) {
-        time_t t = luaL_checkinteger(L, 1);
-        std::tm local_tm;
-        time::localtime(&t, &local_tm);
-        auto t2 = time::make_time(local_tm.tm_year + 1900, local_tm.tm_mon + 1, local_tm.tm_mday, 0, 0, 0);
-        lua_pushinteger(L, t2);
+        luaL_rawsetfield(L, -3, "isdst", lua_pushboolean(L, local_tm.tm_isdst));
         return 1;
         });
 

@@ -1,43 +1,49 @@
 local moon = require("moon")
 
 ---@class tm
-local tm = {
-    yeay = 0,
-    month = 0,
-    day = 0,
-    hour = 0,
-    min = 0,
-    sec = 0,
-    weekday = 0,
-    yearday = 0
-}
+---@field public year integer
+---@field public month integer
+---@field public day integer
+---@field public hour integer
+---@field public min integer
+---@field public sec integer
+---@field public weekday integer
+---@field public yearday integer
+---@field public isdst integer
 
 local _time = moon.time
+
 local timezone = moon.timezone
 
 ---@type fun():tm
 local _localtime = moon.localtime
 
----@type fun(integer)
-local _dailytime = moon.dailytime
-
 local SECONDS_ONE_DAY = 86400
 local SECONDS_ONE_HOUR = 3600
+local SECONDS_ONE_MINUTE = 60
+
+local isdst = _localtime(moon.time()).isdst
 
 ---@class datetime
 local datetime = {}
 
+datetime.SECONDS_ONE_DAY = SECONDS_ONE_DAY
+datetime.SECONDS_ONE_HOUR = SECONDS_ONE_HOUR
+datetime.SECONDS_ONE_MINUTE = SECONDS_ONE_MINUTE
+
 ---@param time integer @utc时间,单位秒
 ---@return tm
-function datetime.localtime(time)
-    return _localtime(time)
-end
+datetime.localtime = _localtime
 
 ---生成一个time时间所在天,0点时刻的utc time
 ---@param time integer @utc时间,单位秒
 ---@return integer
 function datetime.dailytime(time)
-    return _dailytime(time)
+    local tm = _localtime(time)
+    tm.hour = 0
+    tm.min = 0
+    tm.sec = 0
+    return os.time(tm)
 end
 
 ---获取utc时间总共经过多少天,常用于跨天判断
@@ -56,7 +62,7 @@ local localday = datetime.localday
 ---@param time integer @utc时间,单位秒
 ---@return boolean
 function datetime.is_leap_year(time)
-    local y = _localtime(time).yeay
+    local y = _localtime(time).year
     return (y % 4) == 0 and ((y % 100) ~= 0 or (y % 400) == 0);
 end
 
@@ -121,7 +127,7 @@ end
 ---@param sec integer @0-59 可选
 ---@return integer
 function datetime.make_hourly_time(time, hour, min, sec)
-    local t = _dailytime(time)
+    local t = datetime.dailytime(time)
     t = t + SECONDS_ONE_HOUR*hour
     if min then
         t = t + 60*min
@@ -137,6 +143,7 @@ end
 function datetime.parse(strtime)
     local rep = "return {year=%1,month=%2,day=%3,hour=%4,min=%5,sec=%6}"
     local res = string.gsub(strtime, "(%d+)[/-](%d+)[/-](%d+) (%d+):(%d+):(%d+)", rep)
+    assert(res, "parse time format invalid "..strtime)
     return load(res)()
 end
 

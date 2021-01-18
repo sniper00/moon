@@ -76,7 +76,7 @@ else
     end)
 
     moon.shutdown(function()
-        moon.send("system", moon.queryservice("sharetable"), "shutdown")
+        moon.raw_send("system", moon.queryservice("sharetable"), "shutdown")
     end)
 end
 

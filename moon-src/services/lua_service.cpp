@@ -199,7 +199,7 @@ void lua_service::dispatch(message *msg)
 
         lua_pop(L, 1);
 
-        if (msg->sessionid() >= 0 || msg->receiver() == 0) //socket mesage receiver==0
+        if (msg->sessionid() >= 0)
         {
             logger()->logstring(true, moon::LogLevel::Error, error, id());
         }
