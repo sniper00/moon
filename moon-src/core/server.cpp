@@ -5,7 +5,6 @@ namespace moon
 {
     server::~server()
     {
-        stop(-1);
         wait();
     }
 
@@ -44,8 +43,14 @@ namespace moon
         asio::error_code ignore;
         while (true)
         {
+            if (signalcode_ < 0 )
+            {
+                exit(signalcode_);
+                return;
+            }
+
             state old = state::ready;
-            if (signalcode_ && state_.compare_exchange_strong(old
+            if (signalcode_>0 && state_.compare_exchange_strong(old
                 , state::stopping
                 , std::memory_order_acquire))
             {
@@ -133,7 +138,7 @@ namespace moon
         return now_;
     }
 
-    uint32_t server::service_count()
+    uint32_t server::service_count() const
     {
         uint32_t res = 0;
         for (const auto& w : workers_)
@@ -147,7 +152,7 @@ namespace moon
     {
         uint32_t  n = next_.fetch_add(1);
         std::vector<uint32_t> free_worker;
-        for (auto& w : workers_)
+        for (const auto& w : workers_)
         {
             if (w->shared())
             {

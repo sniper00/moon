@@ -34,7 +34,7 @@ namespace moon
 
         std::time_t now(bool sync = false);
 
-        uint32_t service_count();
+        uint32_t service_count() const;
 
         worker* next_worker();
 
