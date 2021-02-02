@@ -599,3 +599,26 @@ function table.count(t)
 	end
 	return n
 end
+
+---t must ordered
+function table.search_bound(t, value, comp)
+	local count = #t
+	if count == 0 then
+		return 1
+	end
+	local pos, step, first
+	first = 1
+	while count > 0 do
+		pos = first
+		step = count//2
+		pos = pos + step
+		if comp(t[pos], value) then
+			pos = pos + 1
+			first = pos
+			count = count - (step+1)
+		else
+			count = step
+		end
+	end
+	return first
+end

@@ -78,6 +78,8 @@ moon.unpack = unpack
 ---'N' message:size()
 ---
 ---'B' message:buffer()
+---
+---'C' message:buffer():data() message:buffer():size()
 moon.decode = message.decode
 
 local _decode = message.decode
@@ -392,7 +394,7 @@ end
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
 ---@param vararg any @发送的数据
----@return any|bool,string @如果没有错误, 返回调用结果。如果发生错误第一个参数是false,后面是错误信息。
+---@return any|boolean,string @如果没有错误, 返回调用结果。如果发生错误第一个参数是false,后面是错误信息。
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
