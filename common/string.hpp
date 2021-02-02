@@ -91,7 +91,7 @@ namespace moon
 
     inline size_t uint64_to_str(uint64_t value, char *dst)
     {
-        static const char digits[] =
+        static constexpr char digits[] =
             "0001020304050607080910111213141516171819"
             "2021222324252627282930313233343536373839"
             "4041424344454647484950515253545556575859"
@@ -120,7 +120,7 @@ namespace moon
 
     inline size_t uint64_to_hexstr(uint64_t value, char *dst, size_t fillzero = 0)
     {
-        static const char digits[] =
+        static constexpr char digits[] =
             "000102030405060708090A0B0C0D0E0F"
             "101112131415161718191A1B1C1D1E1F"
             "202122232425262728292A2B2C2D2E2F"
