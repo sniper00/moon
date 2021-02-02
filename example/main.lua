@@ -202,7 +202,7 @@ moon.async(function()
         local threadid = conf.threadid or 0
         local addr = moon.new_service(service_type, conf, unique, threadid)
         if 0 == addr then
-            moon.exit(-100)
+            moon.exit(-1)
             return
         end
         table.insert(addrs, addr)

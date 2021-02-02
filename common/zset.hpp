@@ -84,7 +84,7 @@ namespace moon
 
         uint32_t rank(int64_t key)
         {
-            sort();
+            prepare();
             auto iter = index_.find(key);
             if (iter != index_.end())
             {
@@ -93,7 +93,7 @@ namespace moon
             return 0;
         }
 
-        void sort()
+        void prepare()
         {
             if (!ordered_)
             {

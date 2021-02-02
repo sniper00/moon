@@ -23,14 +23,14 @@ static int lupdate(lua_State* L)
     return 0;
 }
 
-static int lsort(lua_State* L)
+static int lprepare(lua_State* L)
 {
     zset_proxy* proxy = (zset_proxy*)lua_touserdata(L, 1);
     if (nullptr == proxy || nullptr == proxy->zset)
     {
         return luaL_error(L, "invalid lua-zset pointer");
     }
-    proxy->zset->sort();
+    proxy->zset->prepare();
     return 0;
 }
 
@@ -54,7 +54,7 @@ static int lkey(lua_State* L)
         return luaL_error(L, "invalid lua-zset pointer");
     }
     uint32_t rank = (uint32_t)luaL_checkinteger(L, 2);
-    proxy->zset->sort();
+    proxy->zset->prepare();
     auto iter = proxy->zset->start(rank);
     if (iter == proxy->zset->end())
     {
@@ -137,7 +137,7 @@ static int lrange(lua_State* L)
     {
         return 0;
     }
-    proxy->zset->sort();
+    proxy->zset->prepare();
     auto iter = proxy->zset->start(start);
     if (iter == proxy->zset->end())
     {
@@ -174,7 +174,7 @@ static int lcreate(lua_State* L)
     {
         luaL_Reg l[] = {
             { "update", lupdate },
-            { "sort",lsort },
+            { "prepare",lprepare },
             { "has", lhas},
             { "rank", lrank},
             { "key", lkey},
