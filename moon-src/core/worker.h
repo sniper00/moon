@@ -12,7 +12,7 @@ namespace moon
 
     class worker
     {
-        using queue_t = concurrent_queue<message_ptr_t, moon::spin_lock, std::vector>;
+        using queue_t = concurrent_queue<message_ptr_t, std::mutex, std::vector>;
 
         using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
 

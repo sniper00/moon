@@ -22,7 +22,6 @@ namespace moon
 
     class log
     {
-        static constexpr int MAX_LOG_LEN = 8 * 1024;
     public:
         log()
             :state_(state::init)
@@ -258,7 +257,7 @@ namespace moon
         std::atomic<LogLevel> level_;
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
-        shared_pointer_pool<buffer, 1000, spin_lock> buffer_cache_;
+        shared_pointer_pool<buffer, 1000, std::mutex> buffer_cache_;
         using queue_t = concurrent_queue<std::shared_ptr<buffer>, std::mutex, std::vector, true>;
         queue_t log_queue_;
     };
