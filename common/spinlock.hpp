@@ -3,6 +3,8 @@
 #include <thread>
 #include "noncopyable.hpp"
 
+//https://probablydance.com/2019/12/30/measuring-mutexes-spinlocks-and-how-bad-the-linux-scheduler-really-is/
+
 namespace moon
 {
     class spin_lock : public moon::noncopyable
