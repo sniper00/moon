@@ -27,12 +27,12 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     switch (dwCtrlType)
     {
     case CTRL_C_EVENT:
-        svr->stop(-1);
+        svr->stop(100+ dwCtrlType);
         return TRUE;
     case CTRL_CLOSE_EVENT:
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
-        svr->stop(dwCtrlType);
+        svr->stop(100 + dwCtrlType);
         while (svr->get_state() != moon::state::stopped)
         {
             std::this_thread::yield();
@@ -196,9 +196,9 @@ int main(int argc, char* argv[])
         {
             directory::working_directory = directory::current_directory();
 
-            std::string conf = "config.json";//default config
-            int32_t sid = 1;//default start server 1
-            bool enable_console = true;
+            bool enable_console = true;//enable console log
+            int32_t node = 1;//default start server 1
+            std::string conf = "config.json";//default config filename
             std::string bootstrap;
 
             for (int i = 1; i < argc; ++i)
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
                 }
                 else if ((v == "-r"sv || v == "--run"sv) && !lastarg)
                 {
-                    sid = moon::string_convert<int32_t>(argv[++i]);
+                    node = moon::string_convert<int32_t>(argv[++i]);
                 }
                 else if ((v == "-f"sv || v == "--file"sv) && !lastarg)
                 {
@@ -301,20 +301,20 @@ int main(int argc, char* argv[])
                 fs::path p(bootstrap);
                 std::string filename = p.filename().string();
                 fs::current_path(fs::absolute(p).parent_path());
-                MOON_CHECK(smgr.parse(moon::format("[{\"node\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), sid),"pase config failed");
+                MOON_CHECK(smgr.parse(moon::format("[{\"node\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), node),"pase config failed");
             }
             else
             {
                 MOON_CHECK(directory::exists(conf)
                     , moon::format("can not found config file: '%s'.", conf.data()).data());
-                MOON_CHECK(smgr.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), sid), "failed");
+                MOON_CHECK(smgr.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), node), "failed");
                 fs::current_path(fs::absolute(fs::path(conf)).parent_path());
             }
 
             directory::working_directory = fs::current_path();
 
-            auto c = smgr.find(sid);
-            MOON_CHECK(nullptr != c, moon::format("config for sid=%d not found.", sid));
+            auto c = smgr.find(node);
+            MOON_CHECK(nullptr != c, moon::format("config for node=%d not found.", node));
 
             router_->set_env("NODE", std::to_string(c->node));
             router_->set_env("SERVER_NAME", c->name);

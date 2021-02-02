@@ -20,6 +20,7 @@ namespace moon
 
     worker::~worker()
     {
+        wait();
     }
 
     std::string worker::info()
