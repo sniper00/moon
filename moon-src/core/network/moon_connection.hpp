@@ -7,9 +7,8 @@ namespace moon
     class moon_connection : public base_connection
     {
     public:
-        static constexpr message_size_t MASK_CONTINUED = 0x8000;
-        static constexpr message_size_t MASK_SIZE = 0x7FFF;
-        static constexpr message_size_t MAX_MSG_FRAME_SIZE = MAX_NET_MSG_SIZE - sizeof(message_size_t);
+        static constexpr message_size_t MASK_CONTINUED = 1<<(sizeof(message_size_t)*8-1);
+        static constexpr message_size_t MAX_CHUNK_SIZE = MASK_CONTINUED ^ std::numeric_limits<message_size_t>::max();
 
         using base_connection_t = base_connection;
 
@@ -36,7 +35,7 @@ namespace moon
         {
             if (!data->has_flag(buffer_flag::pack_size))
             {
-                if (data->size() > MAX_MSG_FRAME_SIZE)
+                if (data->size() > MAX_CHUNK_SIZE)
                 {
                     bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::send)) != 0;
                     if (!enable)
@@ -70,10 +69,10 @@ namespace moon
             do
             {
                 message_size_t  size = 0, header = 0;
-                if (n > MAX_NET_MSG_SIZE)
+                if (n > MAX_CHUNK_SIZE)
                 {
-                    header = size = MAX_NET_MSG_SIZE;
-                    header |= MASK_CONTINUED;
+                    size = MAX_CHUNK_SIZE;
+                    header = (MASK_CONTINUED | MAX_CHUNK_SIZE);
                 }
                 else
                 {
@@ -107,31 +106,31 @@ namespace moon
                 net2host(header_);
 
                 bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::receive)) != 0;
-                bool continued = false;
+                bool fin = true;
                 if (enable)
                 {
                     //check is continued message
-                    continued = ((header_ & MASK_CONTINUED) != 0);
-                    if (continued)
+                    fin = ((header_ & MASK_CONTINUED) == 0);
+                    if (!fin)
                     {
-                        header_ &= MASK_SIZE;
+                        header_ &= MAX_CHUNK_SIZE;
                     }
                 }
 
-                if (header_ > MAX_NET_MSG_SIZE)
+                if (header_ > MAX_CHUNK_SIZE)
                 {
                     error(make_error_code(moon::error::read_message_too_big));
                     return;
                 }
-                read_body(header_, continued);
+                read_body(header_, fin);
             });
         }
 
-        void read_body(message_size_t size, bool continued)
+        void read_body(message_size_t size, bool fin)
         {
             if (nullptr == buf_)
             {
-                buf_ = message::create_buffer(continued ? 5 * size : size);
+                buf_ = message::create_buffer(fin ? size: 5 * size);
             }
             else
             {
@@ -139,7 +138,7 @@ namespace moon
             }
 
             asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
-                    [this, self = shared_from_this(), continued](const asio::error_code& e, std::size_t bytes_transferred)
+                    [this, self = shared_from_this(), fin](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
                 {
@@ -154,7 +153,7 @@ namespace moon
                 }
 
                 buf_->commit(static_cast<int>(bytes_transferred));
-                if (!continued)
+                if (fin)
                 {
                     auto m = message::create(std::move(buf_));
                     m->set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));

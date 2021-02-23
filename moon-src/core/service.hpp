@@ -75,11 +75,6 @@ namespace moon
             log_ = l;
         }
 
-        bool is_start() const
-        {
-            return start_;
-        }
-
         bool ok() const
         {
             return ok_;
@@ -146,7 +141,6 @@ namespace moon
             cpu_cost_ += v;
         }
     protected:
-        bool start_ = false;
         bool ok_ = false;
         bool unique_ = false;
         uint32_t id_ = 0;
