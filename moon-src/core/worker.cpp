@@ -379,7 +379,7 @@ namespace moon
          });
     }
 
-    void worker::handle_one(service*& ser, message_ptr_t&& msg)
+    void worker::handle_one(service*& s, message_ptr_t&& msg)
     {
         uint32_t sender = msg->sender();
         uint32_t receiver = msg->receiver();
@@ -387,25 +387,23 @@ namespace moon
         {
             for (auto& it : services_)
             {
-                auto& s = it.second;
-
-                if (!s->unique() && msg->type() == PTYPE_SYSTEM)
+                if (!it.second->unique() && msg->type() == PTYPE_SYSTEM)
                 {
                     continue;
                 }
 
-                if (s->ok() && s->id() != sender)
+                if (it.second->ok() && it.second->id() != sender)
                 {
-                    s->handle_message(std::forward<message_ptr_t>(msg));
+                    it.second->handle_message(std::forward<message_ptr_t>(msg));
                 }
             }
             return;
         }
 
-        if (nullptr == ser || ser->id() != receiver)
+        if (nullptr == s || s->id() != receiver)
         {
-            ser = find_service(receiver);
-            if (nullptr == ser)
+            s = find_service(receiver);
+            if (nullptr == s || !s->ok())
             {
                 if (sender != 0)
                 {
@@ -423,9 +421,9 @@ namespace moon
         }
 
         int64_t start_time = moon::time::microsecond();
-        ser->handle_message(std::forward<message_ptr_t>(msg));
+        s->handle_message(std::forward<message_ptr_t>(msg));
         int64_t cost_time = moon::time::microsecond() - start_time;
-        ser->add_cpu_cost(cost_time);
+        s->add_cpu_cost(cost_time);
         cpu_cost_ += cost_time;
         if (cost_time > 100000)
         {

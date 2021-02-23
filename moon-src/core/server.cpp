@@ -45,8 +45,7 @@ namespace moon
         {
             if (signalcode_ < 0 )
             {
-                exit(signalcode_);
-                return;
+                break;
             }
 
             state old = state::ready;
