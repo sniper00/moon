@@ -27,7 +27,6 @@ namespace moon
 
     //network
     using message_size_t = uint16_t;
-    constexpr message_size_t MAX_NET_MSG_SIZE = 0x7FFF;
 
     constexpr  std::string_view STR_LF = "\n"sv;
     constexpr  std::string_view STR_CRLF = "\r\n"sv;
