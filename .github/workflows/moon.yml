@@ -10,27 +10,33 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5 && ./premake5 gmake
+        run: chmod +x premake5 && ./premake5 gmake config=release
       - name: build
         run: make -j2
+      - name: test
+        run: ./moon -c example/config -r 1
 
   linux-clang:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5 && ./premake5 gmake --cc=clang
+        run: chmod +x premake5 && ./premake5 gmake --cc=clang config=release
       - name: build
         run: make -j2
+      - name: test
+        run: ./moon -c example/config -r 1
 
   macos-clang:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang
+        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang config=release
       - name: build
         run: make -j2
+      - name: test
+        run: ./moon -c example/config -r 1
 
   windows-vs2019:
     runs-on: windows-latest
@@ -42,3 +48,5 @@ jobs:
         uses: microsoft/setup-msbuild@v1
       - name: build
         run: msbuild /m Server.sln /p:configuration="release"
+      - name: test
+        run: .\moon.exe -c example/config -r 1
