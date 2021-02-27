@@ -12,7 +12,7 @@ jobs:
       - name: configure
         run: chmod +x premake5 && ./premake5 gmake config=release
       - name: build
-        run: make -j2
+        run: make -j2 config=release
       - name: test
         run: chmod +x moon && ./moon -c example/config.json -r 1
 
@@ -21,9 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5 && ./premake5 gmake --cc=clang config=release
+        run: chmod +x premake5 && ./premake5 gmake --cc=clang
       - name: build
-        run: make -j2
+        run: make -j2 config=release
       - name: test
         run: chmod +x moon && ./moon -c example/config.json -r 1
 
@@ -32,9 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang config=release
+        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang
       - name: build
-        run: make -j2
+        run: make -j2 config=release
       - name: test
         run: chmod +x moon && ./moon -c example/config.json -r 1
 
