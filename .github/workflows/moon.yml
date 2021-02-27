@@ -14,7 +14,7 @@ jobs:
       - name: build
         run: make -j2
       - name: test
-        run: ./moon -c example/config -r 1
+        run: chmod +x moon && ./moon -c example/config.json -r 1
 
   linux-clang:
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
       - name: build
         run: make -j2
       - name: test
-        run: ./moon -c example/config -r 1
+        run: chmod +x moon && ./moon -c example/config.json -r 1
 
   macos-clang:
     runs-on: macos-latest
@@ -36,7 +36,7 @@ jobs:
       - name: build
         run: make -j2
       - name: test
-        run: ./moon -c example/config -r 1
+        run: chmod +x moon && ./moon -c example/config.json -r 1
 
   windows-vs2019:
     runs-on: windows-latest
@@ -49,4 +49,4 @@ jobs:
       - name: build
         run: msbuild /m Server.sln /p:configuration="release"
       - name: test
-        run: .\moon.exe -c example/config -r 1
+        run: .\moon.exe -c example/config.json -r 1
