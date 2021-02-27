@@ -38,5 +38,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: configure
         run: .\premake5.exe vs2019
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v1
       - name: build
-        run: msbuild Server.sln /p:configuration="release"
+        run: msbuild /m Server.sln /p:configuration="release"
