@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake && ./premake gmake
+        run: chmod +x premake5 && ./premake5 gmake
       - name: build
         run: make -j2
 
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake && ./premake gmake --cc=clang
+        run: chmod +x premake5 && ./premake5 gmake --cc=clang
       - name: build
         run: make -j2
 
@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake && ./premake gmake --cc=clang
+        run: chmod +x premake5 && ./premake5 gmake --cc=clang
       - name: build
         run: make -j2
 
@@ -36,5 +36,5 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-      - name: configure
+      - name: build
         run: build.bat
