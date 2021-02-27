@@ -1,3 +1,7 @@
+# Current building status
+
+[![CI](https://github.com/sniper00/moon/actions/workflows/moon.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/moon.yml)
+
 # Moon Game Framework
 moon 是一个轻量级的游戏服务器框架，底层采用C++编写，逻辑层主要采用Lua。框架使用多线程和多LuaVM(lua service)的模式，
 把不同的游戏服务器模块(通常是一个进程)，尽量集中到一个进程中，简化开发和维护难度。一个lua service可以表示一个游戏服务器模块，它们之间通过消息队列互相通信(大部分相情况下只是传递一个数据指针)，通常比进程间IO通信高效，也不需要维护复杂的网络链接。
