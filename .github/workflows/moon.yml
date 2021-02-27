@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: configure
-        run: chmod +x premake5 && ./premake5 gmake --cc=clang
+        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang
       - name: build
         run: make -j2
 
