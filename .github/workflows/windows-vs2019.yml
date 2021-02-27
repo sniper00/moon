@@ -1,5 +1,5 @@
 # workflow name
-name: CI
+name: windows-vs2019
 
 # Run this workflow every time a new commit pushed to your repository
 on: [push, pull_request]
