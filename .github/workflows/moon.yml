@@ -36,5 +36,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: configure
+        run: premake5.exe vs2019
       - name: build
-        run: build.bat
+        run: msbuild Server.sln /p:configuration="release"
