@@ -1,6 +1,12 @@
 # Current building status
 
-[![CI](https://github.com/sniper00/moon/actions/workflows/moon.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/moon.yml)
+[![linux-gcc](https://github.com/sniper00/moon/actions/workflows/linux-gcc.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/linux-gcc.yml)
+
+[![linux-clang](https://github.com/sniper00/moon/actions/workflows/linux-clang.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/linux-clang.yml)
+
+[![macos-clang](https://github.com/sniper00/moon/actions/workflows/macosx-clang.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/macosx-clang.yml)
+
+[![windows-vs2019](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml)
 
 # Moon Game Framework
 moon 是一个轻量级的游戏服务器框架，底层采用C++编写，逻辑层主要采用Lua。框架使用多线程和多LuaVM(lua service)的模式，
