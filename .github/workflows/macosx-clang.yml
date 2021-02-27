@@ -1,0 +1,17 @@
+# workflow name
+name: CI
+
+# Run this workflow every time a new commit pushed to your repository
+on: [push, pull_request]
+
+jobs:
+  macos-clang:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: configure
+        run: chmod +x premake5-macosx && ./premake5-macosx gmake --cc=clang
+      - name: build
+        run: make -j2 config=release
+      - name: test
+        run: chmod +x moon && ./moon -c example/config.json -r 1
