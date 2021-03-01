@@ -1,4 +1,5 @@
 ---@class core
+---@field public timezone integer @当前时区
 local core = {}
 
 --------------------FOR EMMYLUA HINT---------------------
@@ -6,7 +7,7 @@ local core = {}
 --- for luacheck warn: unused params
 local ignore_param = print
 
-core = {}
+
 
 ---Remove a timer.<br>
 ---@param timerid integer
@@ -63,6 +64,13 @@ function core.make_prefab(buf)
 end
 
 ---根据缓存id发送缓存消息
+---@param sender integer
+---@param receiver integer
+function core.send(sender, receiver, ...)
+    ignore_param(sender, receiver)
+end
+
+---根据缓存id发送缓存消息
 ---@param receiver integer
 ---@param prefabid integer
 ---@param header string
@@ -102,8 +110,52 @@ function core.service_count()
     -- body
 end
 
+--- get this service's cpu cost time
+---@return integer
+function core.cpu()
+    -- body
+end
+
+
+--- use for query framework info
+---@param sender integer @ 
+---@param cmd string
+---@param sessionid integer @ 
+---@return string
+function core.runcmd(sender, cmd, sessionid)
+    ignore_param(sender, cmd, sessionid)
+end
+
+--- convert char* to lua string
+---@param sz userdata @ lightuserdata char*
+---@param len integer
+---@return string
+function core.tostring(sz, len)
+    ignore_param(sz, len)
+end
+
+--- set lua callback
+---@param fn fun(msg:userdata,ptype:interger)
+function core.set_cb(fn)
+end
+
+--- get log level
+---@return integer
+function core.get_loglevel()
+end
+
+--- print info level log
+function core.info(...)
+    ignore_param(...)
+end
+
 --- print error level log
 function core.error(...)
+    ignore_param(...)
+end
+
+--- print debug level log
+function core.debug(...)
     ignore_param(...)
 end
 
@@ -127,6 +179,10 @@ end
 ---redirect a message to other service
 function message.redirect(header, receiver, mtype, sender, sessionid)
     ignore_param(header, receiver, mtype, sender, sessionid)
+end
+
+function message.decode(msg, pattern)
+    ignore_param(msg, pattern)
 end
 
 ---@class fs
@@ -217,8 +273,8 @@ function asio.listen(host, port, protocol)
 end
 
 ---send data to fd, data string or userdata moon.buffer*
----@overload fun(fd:integer, data:string)
----@overload fun(fd:integer, data:userdata)
+---@param fd integer
+---@param data string|userdata
 ---@return boolean
 function asio.write(fd, data)
     ignore_param(fd, data)
@@ -229,6 +285,14 @@ end
 ---@return boolean
 function asio.write_message(fd, m)
     ignore_param(fd, m)
+end
+
+---@param fd integer
+---@param data string|userdata
+---@param flag integer
+---@return boolean
+function asio.write_with_flag(fd, data, flag)
+    ignore_param(fd, data, flag)
 end
 
 ---@param fd integer
@@ -254,6 +318,12 @@ end
 
 ---@param fd integer
 function asio.close(fd)
+    ignore_param(fd)
+end
+
+---@param fd integer
+---@return string @ format ip:port
+function asio.getaddress(fd)
     ignore_param(fd)
 end
 
