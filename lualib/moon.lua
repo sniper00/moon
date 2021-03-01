@@ -62,9 +62,8 @@ setmetatable(moon, {__index = core})
 moon.pack = pack
 moon.unpack = unpack
 
+---@type fun(msg:userdata, pattern:string) @ msg: message* lightuserdata
 ---获取message相关信息
----@param msg userdata @ message* lightuserdata
----@param s string @ pattern string
 ---'S' message:sender()
 ---
 ---'R' message:receiver()
@@ -216,8 +215,6 @@ core.set_cb(_default_dispatch)
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
----@param header string @message header
----@param vararg any
 ---@return boolean
 function moon.send(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
@@ -393,7 +390,6 @@ end
 ---RPC形式调用，发送消息附带一个responseid，对方收到后把responseid发送回来，必须调用moon.response应答.
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
----@param vararg any @发送的数据
 ---@return any|boolean,string @如果没有错误, 返回调用结果。如果发生错误第一个参数是false,后面是错误信息。
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
@@ -414,7 +410,6 @@ end
 ---@param PTYPE string @协议类型
 ---@param receiver integer  @接收者服务id
 ---@param sessionid integer
----@param vararg any @返回的数据
 function moon.response(PTYPE, receiver, sessionid, ...)
     if sessionid == 0 then return end
     local p = protocol[PTYPE]
