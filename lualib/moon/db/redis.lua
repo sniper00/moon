@@ -4,9 +4,16 @@ local moon = require "moon"
 local seri = require("seri")
 local socket = require "moon.socket"
 
+local tostring = tostring
+local tonumber = tonumber
 local table = table
 local string = string
 local assert = assert
+local setmetatable = setmetatable
+local ipairs = ipairs
+local type = type
+local select = select
+local pairs = pairs
 
 local readline = socket.readline
 local read = socket.read
@@ -117,14 +124,21 @@ local function compose_message(cmd, msg)
 	local lines = {}
 
 	if t == "table" then
-		lines[1] = count_cache[#msg+1]
+		local n = msg.n or #msg
+		lines[1] = count_cache[n+1]
 		lines[2] = command_cache[cmd]
 		local idx = 3
-		for _,v in ipairs(msg) do
-			v= tostring(v)
-			lines[idx] = header_cache[#v]
-			lines[idx+1] = v
-			idx = idx + 2
+		for i = 1, n do
+			local v = msg[i]
+			if v == nil then
+				lines[idx] = "\r\n$-1"
+				idx = idx + 1
+			else
+				v= tostring(v)
+				lines[idx] = header_cache[#v]
+				lines[idx+1] = v
+				idx = idx + 2
+			end
 		end
 		lines[idx] = "\r\n"
 	else
@@ -184,7 +198,7 @@ setmetatable(command, { __index = function(t,k)
 		if type(v) == "table" then
 			return request(self[1], compose_message(cmd, v), read_response)
 		else
-			return request(self[1], compose_message(cmd, {v, ...}), read_response)
+			return request(self[1], compose_message(cmd, table.pack(v, ...)), read_response)
 		end
 	end
 	t[k] = f
@@ -201,7 +215,7 @@ function command:exists(key)
 end
 
 function command:sismember(key, value)
-	return request(self[1], compose_message ("SISMEMBER", {key, value}), read_boolean)
+	return request(self[1], compose_message ("SISMEMBER", table.pack(key, value)), read_boolean)
 end
 
 local function compose_table(lines, msg)
@@ -244,7 +258,7 @@ function command:pipeline(ops,resp)
 	end
 end
 
--- watch mode
+--- watch mode
 
 local watch = {}
 
@@ -316,18 +330,18 @@ function watch:message()
 	local so = self.__sock
 	while true do
 		local ok, ret = read_response(so)
-		local type , channel, data , data2 = ret[1], ret[2], ret[3], ret[4]
-		if type == "message" then
+		local ttype , channel, data , data2 = ret[1], ret[2], ret[3], ret[4]
+		if ttype == "message" then
 			return data, channel
-		elseif type == "pmessage" then
+		elseif ttype == "pmessage" then
 			return data2, data, channel
-		elseif type == "subscribe" then
+		elseif ttype == "subscribe" then
 			self.__subscribe[channel] = true
-		elseif type == "psubscribe" then
+		elseif ttype == "psubscribe" then
 			self.__psubscribe[channel] = true
-		elseif type == "unsubscribe" then
+		elseif ttype == "unsubscribe" then
 			self.__subscribe[channel] = nil
-		elseif type == "punsubscribe" then
+		elseif ttype == "punsubscribe" then
 			self.__psubscribe[channel] = nil
 		end
 	end

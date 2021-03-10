@@ -18,6 +18,7 @@ namespace rapidjson
         template<typename ValueType>
         inline ValueType get_value(json_value_pointer value, const ValueType& dv = ValueType())
         {
+            (void)dv;
             using value_type = std::decay_t<ValueType>;
             if constexpr (std::is_same_v<value_type, bool>)
             {
@@ -80,9 +81,9 @@ namespace rapidjson
     inline ValueType get_value(json_value_pointer value, std::string_view path, const ValueType& dv = ValueType())
     {
         auto vecs = moon::split<std::string_view>(path, ".");
-        for (auto& v : vecs)
+        for (const auto& v : vecs)
         {
-            auto iter = value->FindMember(std::string{ v }.data());
+            auto iter = value->FindMember(rapidjson::Value{ v.data(), static_cast<SizeType>(v.size()) });
             if (iter != value->MemberEnd())
             {
                 value = &iter->value;
