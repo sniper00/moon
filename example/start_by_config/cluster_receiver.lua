@@ -65,3 +65,8 @@ moon.dispatch('lua',function(msg,unpack)
     docmd(sender, sessionid, unpack(sz, len))
 end)
 
+moon.async(function()
+    moon.sleep(10)
+    print(moon.co_call("lua", moon.queryservice("cluster"), "Start"))
+end)
+
