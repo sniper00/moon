@@ -394,7 +394,7 @@ namespace moon
 
                 if (it.second->ok() && it.second->id() != sender)
                 {
-                    it.second->handle_message(std::forward<message_ptr_t>(msg));
+                    it.second->handle_message(std::move(msg));
                 }
             }
             return;
@@ -421,7 +421,7 @@ namespace moon
         }
 
         int64_t start_time = moon::time::microsecond();
-        s->handle_message(std::forward<message_ptr_t>(msg));
+        s->handle_message(std::move(msg));
         int64_t cost_time = moon::time::microsecond() - start_time;
         s->add_cpu_cost(cost_time);
         cpu_cost_ += cost_time;
