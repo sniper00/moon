@@ -10,6 +10,7 @@ end)
 
 local args = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}
 moon.async(function()
+    print(moon.co_call("lua", moon.queryservice("cluster"), "Start"))
     while true do
         local ret ,err = cluster.call(8, 'cluster_receiver', "ACCUM", table.unpack(args))
         if not ret then
