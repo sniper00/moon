@@ -5,18 +5,7 @@ local conf = ...
 
 local pack = seri.pack
 local packs = seri.packs
-local unpack = seri.unpack
 local co_yield = coroutine.yield
-
-local PTYPE_CLUSTER = 20
-
-moon.register_protocol(
-{
-    name = "cluster",
-    PTYPE = PTYPE_CLUSTER,
-    pack = pack,
-    unpack = unpack
-})
 
 local NODE = math.tointeger(moon.get_env("NODE"))
 
@@ -69,17 +58,25 @@ local function cluster_service()
     end
 
     moon.async(function()
-        for _,senders in pairs(send_watch) do
-            for key, t in pairs(senders) do
-                if moon.time() - t > 10 then
-                    local sender = key&0xFFFFFFFF
-                    local sessionid = (key>>32)
-                    moon.response("lua", sender, -sessionid, packs(false, "timeout"))
-                    senders[key] = nil
+        while true do
+            moon.sleep(5000)
+            for _,senders in pairs(send_watch) do
+                for key, t in pairs(senders) do
+                    if moon.time() - t > 10 then
+                        local sender = key&0xFFFFFFFF
+                        local sessionid = (key>>32)
+                        moon.response("lua", sender, -sessionid, packs(false, "timeout"))
+                        senders[key] = nil
+                    end
+                end
+            end
+
+            for _, v in pairs(clusters) do
+                if v.fd then
+                    socket.write(v.fd, pack({ping = true}))
                 end
             end
         end
-        moon.sleep(5000)
     end)
 
     local services_address = {}
@@ -106,6 +103,12 @@ local function cluster_service()
         local buf = moon.decode(msg, "B")
         ---@type cluster_header
         local header = unpack_one(buf, true)
+        if header.ping then
+            socket.write(fd, pack({pong = true}))
+            return
+        elseif header.pong then
+            return
+        end
 
         if header.session < 0 then -- receive call message
             moon.async(function ()
@@ -160,7 +163,7 @@ local function cluster_service()
 
     local function connect(node)
         local c = clusters[node]
-        local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET)
+        local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET, 1000)
         if not fd then
             moon.error(err)
             return
@@ -173,43 +176,63 @@ local function cluster_service()
 
     local send_queue = require("moon.queue").new()
 
+    function command.Start()
+        if conf.host and conf.port then
+            if not clusters[NODE] then
+                print("unconfig cluster node:".. moon.name())
+                return false
+            end
+            local host, port = conf.host, conf.port
+            local listenfd = socket.listen(host, port,moon.PTYPE_SOCKET)
+            socket.start(listenfd)
+            print(strfmt("cluster run at %s %d", host, port))
+            setmetatable(clusters, {__gc=function()
+                socket.close(listenfd)
+            end})
+        end
+        return true
+    end
+
     function command.Request(msg)
         ---@type cluster_header
         local header = unpack_one(moon.decode(msg, "B"))
 
-        local fd = clusters[header.to_node].fd
+        local c = clusters[header.to_node]
+        if not c then
+            moon.response("lua", header.from_addr, header.session, false, "target not run cluster")
+            return
+        end
 
-        if fd and socket.write_message(fd, msg) then
+        if c.fd and socket.write_message(c.fd, msg) then
             if header.session < 0 then
                 --记录mode-call消息，网络断开时，返回错误信息
-                add_send_watch(fd, header.from_addr, -header.session)
+                add_send_watch(c.fd, header.from_addr, -header.session)
             end
             return
         end
 
+        local data = moon.decode(msg, "Z")
+
         send_queue:run(function()
-            local data = moon.decode(msg, "Z")
-            if not fd then
-                fd = connect(header.to_node)
+            if not c.fd then
+                c.fd = connect(header.to_node)
             end
 
-            if fd and socket.write(fd, data) then
+            if c.fd and socket.write(c.fd, data) then
                 if header.session < 0 then
                     --记录mode-call消息，网络断开时，返回错误信息
-                    add_send_watch(fd, header.from_addr, -header.session)
+                    add_send_watch(c.fd, header.from_addr, -header.session)
                 end
-                clusters[header.to_node].fd = fd
             else
-                fd = nil
-                clusters[header.to_node].fd = false
+                c.fd = false
             end
 
-            if not fd then
+            if not c.fd then
                 if header.session == 0 then
                     moon.error("not connected cluster")
                 else
-                    --CASE1:此时与 cluster 连接断开, mode-call, 直接返回错误信息
-                    moon.response("lua", header.from_addr, header.session, false, "disconnect")
+                    --CASE1:connect failed, mode-call, 返回错误信息
+                    moon.response("lua", header.from_addr, header.session, false, "connect failed")
                 end
             end
         end)
@@ -234,22 +257,26 @@ local function cluster_service()
 
         local content = moon.get_env("CONFIG")
         local js = json.decode(content)
+        local max_cluster_node = 0
         for _,c in ipairs(js) do
             local host,port = find_host_port(c.params)
             if host and port then
-                clusters[c.node]={host = host, port = port, fd = false}
+                if c.node > max_cluster_node then
+                    max_cluster_node = c.node
+                end
+
+                if not clusters[c.node] then
+                    clusters[c.node]={host = host, port = port, fd = false}
+                end
             end
         end
+
+        moon.set_env("MAX_CLUSTER_NODE", tostring(max_cluster_node))
     end
 
     load_config()
 
-    if not clusters[NODE] then
-        print("unconfig cluster node:".. moon.name())
-        return false
-    end
-
-    moon.dispatch("cluster",function(msg)
+    moon.dispatch("lua",function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd = unpack_one(buf, true)
         local fn = command[cmd]
@@ -271,13 +298,9 @@ local function cluster_service()
         end
     end)
 
-    local listenfd = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET)
-    socket.start(listenfd)
-    print(strfmt("cluster run at %s %d", conf.host, conf.port))
-
-    setmetatable(clusters, {__gc=function()
-        socket.close(listenfd)
-    end})
+    moon.shutdown(function()
+        moon.quit()
+    end)
 end
 
 if conf and conf.name then
@@ -310,7 +333,7 @@ function cluster.send(receiver_node, receiver_sname, ...)
         session = 0
     }
 
-    moon.send("cluster", cluster_address, "Request", header, ...)
+    moon.send("lua", cluster_address, "Request", header, ...)
 end
 
 function cluster.call(receiver_node, receiver_sname, ...)
@@ -329,7 +352,7 @@ function cluster.call(receiver_node, receiver_sname, ...)
         session = -sessionid
     }
 
-    moon.raw_send("cluster", cluster_address, "", pack("Request", header, ...))
+    moon.raw_send("lua", cluster_address, "", pack("Request", header, ...))
     return co_yield()
 end
 
