@@ -86,7 +86,7 @@ namespace moon
         worker* w = server_->get_worker(id);
         MOON_CHECK(nullptr!= w
             , moon::format("invalid message receiver serviceid %X", m->receiver()).data());
-        w->send(std::forward<message_ptr_t>(m));
+        w->send(std::move(m));
     }
 
     void router::send(uint32_t sender
