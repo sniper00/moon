@@ -57,28 +57,6 @@ local function cluster_service()
         return true
     end
 
-    moon.async(function()
-        while true do
-            moon.sleep(5000)
-            for _,senders in pairs(send_watch) do
-                for key, t in pairs(senders) do
-                    if moon.time() - t > 10 then
-                        local sender = key&0xFFFFFFFF
-                        local sessionid = (key>>32)
-                        moon.response("lua", sender, -sessionid, packs(false, "timeout"))
-                        senders[key] = nil
-                    end
-                end
-            end
-
-            for _, v in pairs(clusters) do
-                if v.fd then
-                    socket.write(v.fd, pack({ping = true}))
-                end
-            end
-        end
-    end)
-
     local services_address = {}
     local function get_service_address(sname)
         local addr = services_address[sname]
@@ -92,10 +70,12 @@ local function cluster_service()
 
     socket.on("connect",function(fd, msg)
         print("connect", fd, moon.decode(msg, "Z"))
+        socket.set_enable_chunked(fd,"wr")
     end)
 
     socket.on("accept",function(fd, msg)
         socket.settimeout(fd, 180)
+        socket.set_enable_chunked(fd,"wr")
         print("accept", fd, moon.decode(msg, "Z"))
     end)
 
@@ -144,7 +124,7 @@ local function cluster_service()
                 local sender = key&0xFFFFFFFF
                 local sessionid = (key>>32)
                 print("close response", sender, sessionid)
-                moon.response("lua", sender, -sessionid, packs(false, "disconnect"))
+                moon.response("lua", sender, -sessionid, false, "cluster:socket disconnect")
             end
         end
         send_watch[fd] = nil
@@ -275,6 +255,28 @@ local function cluster_service()
     end
 
     load_config()
+
+    moon.async(function()
+        while true do
+            moon.sleep(5000)
+            for _,senders in pairs(send_watch) do
+                for key, t in pairs(senders) do
+                    if moon.time() - t > 10 then
+                        local sender = key&0xFFFFFFFF
+                        local sessionid = (key>>32)
+                        moon.response("lua", sender, -sessionid, false, "cluster:socket read timeout")
+                        senders[key] = nil
+                    end
+                end
+            end
+
+            for _, v in pairs(clusters) do
+                if v.fd then
+                    socket.write(v.fd, pack({ping = true}))
+                end
+            end
+        end
+    end)
 
     moon.dispatch("lua",function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
