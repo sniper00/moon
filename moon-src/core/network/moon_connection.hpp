@@ -40,7 +40,9 @@ namespace moon
                     bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::send)) != 0;
                     if (!enable)
                     {
-                        error(make_error_code(moon::error::write_message_too_big));
+                        asio::post(socket_.get_executor() , [this, self= shared_from_this()]() {
+                            error(make_error_code(moon::error::write_message_too_big));
+                        });
                         return false;
                     }
                     data->set_flag(buffer_flag::chunked);
