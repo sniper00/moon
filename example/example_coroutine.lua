@@ -5,10 +5,14 @@ if conf.receiver then
     local command = {}
 
     command.PING = function(sender,sessionid, ...)
-        print(moon.name(), "recv ", sender, "command", "PING")
-        print(moon.name(), "send to", sender, "command", "PONG")
+        print(moon.name, "recv ", sender, "command", "PING")
+        print(moon.name, "send to", sender, "command", "PONG")
         -- 把sessionid发送回去，发送方resume对应的协程
         moon.response("lua",sender,sessionid,'PONG', ...)
+    end
+
+    command.TEST = function(sender,sessionid)
+        moon.response("lua", sender, sessionid)
     end
 
     local function docmd(sender,sessionid,cmd,...)
@@ -35,8 +39,15 @@ else
             receiver = true
         })
 
-        print(moon.name(), "call ", receiver, "command", "PING")
+        print(moon.name, "call ", receiver, "command", "PING")
         print(moon.co_call("lua", receiver, "PING", "Hello"))
+
+        local bt = os.clock()
+        for i=1,100000 do
+            moon.co_call("lua", receiver, "TEST")
+        end
+        print(os.clock() - bt)
+
         moon.exit(-1)
     end)
 end
