@@ -75,7 +75,7 @@ namespace moon
             }
 
             /// Returns query keys with percent-decoded values.
-            static case_insensitive_multimap parse(const std::string &query_string) noexcept {
+            static case_insensitive_multimap parse(std::string_view query_string) noexcept {
                 case_insensitive_multimap result;
 
                 if (query_string.empty())

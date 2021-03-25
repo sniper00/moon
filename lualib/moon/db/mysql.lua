@@ -6,7 +6,7 @@
 
 -- protocol detail: https://mariadb.com/kb/en/clientserver-protocol/
 
-local moon = require("moon")
+local crypt = require("crypt")
 local socketchannel = require("moon.db.socketchannel")
 
 socketchannel.__index = socketchannel
@@ -20,7 +20,7 @@ local strchar = string.char
 local strrep = string.rep
 local strunpack = string.unpack
 local strpack = string.pack
-local sha1 = moon.sha1
+local sha1 = crypt.sha1
 local setmetatable = setmetatable
 local error = error
 local tonumber = tonumber

@@ -18,6 +18,7 @@ local insert = table.insert
 
 local strpack = string.pack
 local strunpack = string.unpack
+local strsub = string.sub
 
 local type = type
 local assert = assert
@@ -131,26 +132,21 @@ local function receive_message(self)
     if not self.sock then
         return socket_error,"not connect"
     end
-    local t, err = socket.read(self.sock, 1)
-    if not t then
+    local header, err, content
+    ---header: 1byte type + 4byte len
+    header, err = socket.read(self.sock, 5)
+    if not header then
         disconnect(self)
-        return socket_error, "receive_message: failed to get type: " .. tostring(err)
+        return socket_error, "receive_message: failed to get header: " .. tostring(err)
     end
-    local len
-    len, err = socket.read(self.sock, 4)
-    if not (len) then
-        disconnect(self)
-        return socket_error, "receive_message: failed to get len: " .. tostring(err)
-    end
-    len = decode_int(len)
-    len = len - 4
-    local msg
-    msg, err = socket.read(self.sock, len)
-    if not msg then
+    local t = strsub(header, 1, 1)
+    local len = strunpack(">i", header, 2) - 4
+    content, err = socket.read(self.sock, len)
+    if not content then
         disconnect(self)
         return socket_error, err
     end
-    return t, msg
+    return t, content
 end
 
 local function send_message(self, t, data)
@@ -446,7 +442,7 @@ local function format_query_result(row_desc, data_rows, command_complete)
     local command, affected_rows
     if command_complete then
         command = command_complete:match("^%w+")
-        affected_rows = tointeger(command_complete:match("%d+%z$"))
+        affected_rows = tointeger(command_complete:match("(%d+)%z$"))
     end
     if row_desc then
         if not (data_rows) then
@@ -489,12 +485,14 @@ end
 ---@param sql userdata|string @ userdata cpp message pointer:sql string
 ---@return pg_result
 function pg.query(self, sql)
+    local sqlstr = ""
     if type(sql) == "string" then
         send_message(self, MSG_TYPE.query, {sql, NULL})
     else
+        sqlstr = moon.decode(sql, "Z")
         socket.write_message(self.sock, sql)
     end
-    local row_desc, data_rows, command_complete, err_msg
+    local row_desc, data_rows, err_msg
     local result, notifications
     local num_queries = 0
     while true do
@@ -511,8 +509,19 @@ function pg.query(self, sql)
         elseif MSG_TYPE.error == _exp_0 then
             err_msg = msg
         elseif MSG_TYPE.command_complete == _exp_0 then
-            command_complete = msg
-            local next_result = format_query_result(row_desc, data_rows, command_complete)
+            local ok, next_result = xpcall(format_query_result, debug.traceback,  row_desc, data_rows, msg)
+            if not ok then
+                moon.error(sqlstr, #data_rows)
+                moon.error(next_result)
+                local time = moon.time()
+                for i,rrr in ipairs(data_rows) do
+                    io.writefile("pgerr.sql"..time.."_"..i, sqlstr)
+                    io.writefile("pgerr.err"..time.."_"..i, next_result)
+                    io.writefile("pgerr.data"..time.."_"..i, rrr)
+                end
+                assert(false,"pgerr")
+            end
+            -- local next_result = format_query_result(row_desc, data_rows, command_complete)
             num_queries = num_queries + 1
             if num_queries == 1 then
                 result = next_result
@@ -526,7 +535,6 @@ function pg.query(self, sql)
             end
             row_desc = nil
             data_rows = nil
-            -- command_complete = nil
         elseif MSG_TYPE.ready_for_query == _exp_0 then
             break
         elseif MSG_TYPE.notification == _exp_0 then
@@ -534,6 +542,8 @@ function pg.query(self, sql)
                 notifications = {}
             end
             insert(notifications, parse_notification(msg))
+        else
+            moon.warn("pg recv",t, msg)
         end
     end
     if err_msg then

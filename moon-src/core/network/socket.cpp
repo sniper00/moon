@@ -70,7 +70,7 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
     }
 }
 
-void socket::accept(int fd, int32_t sessionid, uint32_t owner)
+void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
 {
     assert(owner > 0 && "socket::accept : invalid serviceid");
     auto iter = acceptors_.find(fd);
@@ -208,23 +208,15 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim,
     });
 }
 
-bool socket::write(uint32_t fd, buffer_ptr_t data)
+bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
 {
     auto iter = connections_.find(fd);
     if (iter == connections_.end())
     {
         return false;
     }
+    data->set_flag(flag);
     return iter->second->send(std::move(data));
-}
-
-bool socket::write_with_flag(uint32_t fd, buffer_ptr_t data, int flag)
-{
-    MOON_ASSERT(
-        flag > 0 && flag < static_cast<int>(buffer_flag::buffer_flag_max),
-        "socket::write_with_flag flag invalid");
-    data->set_flag(static_cast<buffer_flag>(flag));
-    return write(fd, std::move(data));
 }
 
 bool socket::write_message(uint32_t fd, void * m)

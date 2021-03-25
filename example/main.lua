@@ -1,13 +1,16 @@
-
 -- define lua module search dir
-local path = "../lualib/?.lua;../service/?.lua;start_by_config/?.lua;"
+local path = table.concat({
+    "../lualib/?.lua",
+    "../service/?.lua",
+    "start_by_config/?.lua;"
+},";")
 
-package.path = path .. package.path
+package.path = path.. ";"
 
 local moon = require("moon")
 local json = require("json")
 
-moon.set_env("PATH", string.format("package.path='%s'..package.path", path))
+moon.set_env("PATH", string.format("package.path='%s'", package.path))
 
 local params = json.decode(moon.get_env("PARAMS"))
 

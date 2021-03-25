@@ -1,177 +1,218 @@
+#include "lua.hpp"
 #include "common/directory.hpp"
-#include "sol/sol.hpp"
+#include "common/lua_utility.hpp"
 
 using namespace moon;
 
-static auto listdir(const std::string& dir, sol::optional<int> depth)
+static int lfs_listdir(lua_State* L)
 {
-    int n = 0;
-    if (depth)
-    {
-        n = depth.value();
-    }
-    std::vector<std::string> files;
-    directory::traverse_folder(dir, n, [&files](const fs::path& path, bool)->bool {
-        files.emplace_back(path.string());
+    std::string_view dir = luaL_check_stringview(L, 1);
+    int depth = (int)luaL_optinteger(L, 2, 0);
+    luaL_optstring(L, 3, "");
+    int idx = 0;
+    lua_createtable(L, 32, 0);
+    directory::traverse_folder(dir, depth, [L, &idx](const fs::path& path, bool)->bool {
+        if (idx == 0)
+        {
+            
+        }
+        std::string v = path.string();
+        lua_pushlstring(L, v.data(), v.size());
+        lua_rawseti(L, -2, ++idx);
         return true;
-    });
-    return sol::as_table(files);
+        });
+    return 1;
 }
 
-#if defined(__GNUC__) && !defined(__clang__)
-static fs::path lexically_relative(const fs::path& p, const fs::path& _Base)
+static int lfs_isdir(lua_State* L)
 {
-    using namespace std::string_view_literals; // TRANSITION, VSO#571749
-    constexpr std::wstring_view _Dot = L"."sv;
-    constexpr std::wstring_view _Dot_dot = L".."sv;
-    fs::path _Result;
-    if (p.root_name() != _Base.root_name()
-        || p.is_absolute() != _Base.is_absolute()
-        || (!p.has_root_directory() && _Base.has_root_directory()))
+    try
     {
-        return (_Result);
+        std::string_view dir = luaL_check_stringview(L, 1);
+        bool res = fs::is_directory(dir);
+        lua_pushboolean(L, res ? 1 : 0);
+        return 1;
     }
-
-    const fs::path::iterator _This_end = p.end();
-    const fs::path::iterator _Base_begin = _Base.begin();
-    const fs::path::iterator _Base_end = _Base.end();
-
-    auto _Mismatched = std::mismatch(p.begin(), _This_end, _Base_begin, _Base_end);
-    fs::path::iterator& _A_iter = _Mismatched.first;
-    fs::path::iterator& _B_iter = _Mismatched.second;
-
-    if (_A_iter == _This_end && _B_iter == _Base_end)
+    catch (std::exception& e)
     {
-        _Result = _Dot;
-        return (_Result);
+        return luaL_error(L, "fs.isdir %s", e.what());
     }
+}
 
-    {	// Skip root-name and root-directory elements, N4727 30.11.7.5 [fs.path.itr]/4.1, 4.2
-        ptrdiff_t _B_dist = std::distance(_Base_begin, _B_iter);
-
-        const ptrdiff_t _Base_root_dist = static_cast<ptrdiff_t>(_Base.has_root_name())
-            + static_cast<ptrdiff_t>(_Base.has_root_directory());
-
-        while (_B_dist < _Base_root_dist)
-        {
-            ++_B_iter;
-            ++_B_dist;
-        }
-    }
-
-    ptrdiff_t _Num = 0;
-
-    for (; _B_iter != _Base_end; ++_B_iter)
+static int lfs_join(lua_State* L)
+{
+    try
     {
-        const fs::path& _Elem = *_B_iter;
+        fs::path dir1 = fs::path{ luaL_check_stringview(L, 1) };
+        fs::path dir2 = fs::path{ luaL_check_stringview(L, 1) };
+        dir1 += dir2;
+        std::string s = dir1.string();
+        lua_pushlstring(L, s.data(), s.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.join %s", e.what());
+    }
+}
 
-        if (_Elem.empty())
-        {	// skip empty element, N4727 30.11.7.5 [fs.path.itr]/4.4
-        }
-        else if (_Elem == _Dot)
-        {	// skip filename elements that are dot, N4727 30.11.7.4.11 [fs.path.gen]/4.2
-        }
-        else if (_Elem == _Dot_dot)
-        {
-            --_Num;
-        }
+static int lfs_exists(lua_State* L)
+{
+    try
+    {
+        bool res = fs::exists(luaL_check_stringview(L, 1));
+        lua_pushboolean(L, res ? 1 : 0);
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.exists %s", e.what());
+    }
+}
+
+static int lfs_mkdir(lua_State* L)
+{
+    try
+    {
+        bool res = fs::create_directories(luaL_check_stringview(L, 1));
+        lua_pushboolean(L, res ? 1 : 0);
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.mkdir %s", e.what());
+    }
+}
+
+static int lfs_remove(lua_State* L)
+{
+    try
+    {
+        bool res = false;
+        if (lua_isnoneornil(L, 2))
+            res = fs::remove(luaL_check_stringview(L, 1));
         else
-        {
-            ++_Num;
-        }
+            res = fs::remove_all(luaL_check_stringview(L, 1));
+        lua_pushboolean(L, res ? 1 : 0);
+        return 1;
     }
-
-    if (_Num < 0)
+    catch (std::exception& e)
     {
-        return (_Result);
+        return luaL_error(L, "fs.remove %s", e.what());
     }
-
-    for (; _Num > 0; --_Num)
-    {
-        _Result /= _Dot_dot;
-    }
-
-    for (; _A_iter != _This_end; ++_A_iter)
-    {
-        _Result /= *_A_iter;
-    }
-    return (_Result);
 }
 
-
-#endif
-
-static sol::table bind_fs(sol::this_state L)
+static int lfs_cwd(lua_State* L)
 {
-    sol::state_view lua(L);
-    sol::table m = lua.create_table();
-    m.set_function("listdir", listdir);
+    try
+    {
+        std::string s = directory::working_directory.string();
+        lua_pushlstring(L, s.data(), s.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.cwd %s", e.what());
+    }
+}
 
-    m.set_function("isdir", [](const std::string_view& s) {
-        return fs::is_directory(s);
-    });
+static int lfs_split(lua_State* L)
+{
+    try
+    {
+        fs::path dir = fs::absolute(luaL_check_stringview(L, 1));
+        std::string dirname = dir.parent_path().string();
+        lua_pushlstring(L, dirname.data(), dirname.size());
+        std::string basename = dir.filename().string();
+        lua_pushlstring(L, basename.data(), basename.size());
+        return 2;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.split %s", e.what());
+    }
+}
 
-    m.set_function("join", [](const std::string_view& p1, const std::string_view& p2) {
-        fs::path p(p1);
-        p += fs::path(p2);
-        return p.string();
-    });
+static int lfs_ext(lua_State* L)
+{
+    try
+    {
+        fs::path dir = fs::absolute(luaL_check_stringview(L, 1));
+        std::string ext = dir.extension().string();
+        lua_pushlstring(L, ext.data(), ext.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.split %s", e.what());
+    }
+}
 
-    m.set_function("exists", directory::exists);
-    m.set_function("create_directory", directory::create_directory);
-    m.set_function("remove", directory::remove);
-    m.set_function("remove_all", directory::remove_all);
-    m.set_function("working_directory", []() {
-        return directory::working_directory.string();
-    });
-    m.set_function("parent_path", [](const std::string_view& s) {
-        return fs::absolute(fs::path(s)).parent_path().string();
-    });
+static int lfs_root(lua_State* L)
+{
+    try
+    {
+        fs::path dir = fs::absolute(luaL_check_stringview(L, 1));
+        std::string s = dir.root_path().string();
+        lua_pushlstring(L, s.data(), s.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.root %s", e.what());
+    }
+}
 
-    m.set_function("filename", [](const std::string_view& s) {
-        return fs::path(s).filename().string();
-    });
+static int lfs_stem(lua_State* L)
+{
+    try
+    {
+        fs::path dir = fs::path(luaL_check_stringview(L, 1));
+        std::string s = dir.stem().string();
+        lua_pushlstring(L, s.data(), s.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.stem %s", e.what());
+    }
+}
 
-    m.set_function("extension", [](const std::string_view& s) {
-        return fs::path(s).extension().string();
-    });
-
-    m.set_function("root_path", [](const std::string_view& s) {
-        return fs::path(s).root_path().string();
-    });
-
-    //filename_without_extension
-    m.set_function("stem", [](const std::string_view& s) {
-        return fs::path(s).stem().string();
-    });
-
-    m.set_function("relative_work_path", [](const std::string_view& p) {
-#if defined(__GNUC__) && !defined(__clang__)
-        return  lexically_relative(fs::absolute(p), directory::working_directory).string();
-#else
-        return  fs::absolute(p).lexically_relative(directory::working_directory).string();
-#endif
-    });
-
-    m.set_function("relpath", [](const std::string_view& path, const std::string_view& with) {
-#if defined(__GNUC__) && !defined(__clang__)
-        return  lexically_relative(fs::absolute(path), with).string();
-#else
-        return  fs::path(path).lexically_relative(with).string();
-#endif
-    });
-
-    m.set_function("abspath", [](const std::string_view& path) {
-        return  fs::absolute(path).string();
-    });
-
-    return m;
+static int lfs_abspath(lua_State* L)
+{
+    try
+    {
+        fs::path dir = fs::absolute(luaL_check_stringview(L, 1));
+        std::string s = dir.string();
+        lua_pushlstring(L, s.data(), s.size());
+        return 1;
+    }
+    catch (std::exception& e)
+    {
+        return luaL_error(L, "fs.abspath %s", e.what());
+    }
 }
 
 extern "C"
 {
     int LUAMOD_API luaopen_fs(lua_State* L)
     {
-        return sol::stack::call_lua(L, 1, bind_fs);
+        luaL_Reg l[] = {
+            { "listdir", lfs_listdir},
+            { "isdir", lfs_isdir },
+            { "join", lfs_join },
+            { "exists", lfs_exists },
+            { "mkdir", lfs_mkdir},
+            { "remove", lfs_remove},
+            { "cwd", lfs_cwd},
+            { "split", lfs_split},
+            { "ext", lfs_ext},
+            { "root", lfs_root},
+            { "stem", lfs_stem},
+            { "abspath", lfs_abspath},
+            {NULL,NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
     }
 }

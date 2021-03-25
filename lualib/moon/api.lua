@@ -4,10 +4,52 @@ local core = {}
 
 --------------------FOR EMMYLUA HINT---------------------
 
---- for luacheck warn: unused params
-local ignore_param = print
+--- ignore warning: unused params
+local ignore_param = function (...) end
 
+---service's name
+core.name = ""
 
+---service's id
+core.id = 0
+
+---timezone
+core.timezone = 0
+
+---return system microsecond.
+---@return integer
+function core.microseconds()
+    -- body
+end
+
+---string's md5.
+---@param data string
+---@return string
+function core.md5(data)
+end
+
+---convert c-string(char* and size) to lua-string
+---@param sz userdata @ lightuserdata char*
+---@param len integer
+---@return string
+function core.tostring(sz, len)
+    ignore_param(sz, len)
+end
+
+---get tm
+---@param t integer@ utc time
+---@return tm
+function core.localtime(t)
+    ignore_param(t)
+end
+
+---create a timer
+---@param interval integer
+---@param times integer
+---@return integer @timer id
+function core.repeated(interval, times)
+    ignore_param(interval, times)
+end
 
 ---Remove a timer.<br>
 ---@param timerid integer
@@ -15,62 +57,35 @@ function core.remove_timer(timerid)
     ignore_param(timerid)
 end
 
----Return system second.<br>
+--- print console log
+function core.log(loglv,...)
+    ignore_param(loglv, ...)
+end
+
+--- set log level
 ---@return integer
-function core.second()
-    -- body
+function core.set_loglevel()
 end
 
----Return system millsecond.<br>
+--- get log level
 ---@return integer
-function core.millsecond()
-    -- body
+function core.get_loglevel()
 end
 
----Return system microsecond.<br>
+--- get this service's cpu cost time
 ---@return integer
-function core.microsecond()
+function core.cpu()
     -- body
 end
 
----推进时间 server time(millsecond)
----@param milliseconds integer
-function core.adjtime(milliseconds)
-    ignore_param(milliseconds)
+---make a prefab message
+---@param data string|userdata
+---@return integer @prefab id
+function core.make_prefab(data)
+    ignore_param(data)
 end
 
----Thread sleep millsecond.<br>
----@param milliseconds integer
-function core.sleep(milliseconds)
-    ignore_param(milliseconds)
-end
-
----@return string
-function core.name()
-    -- body
-end
-
----返回当前service id
----@return integer
-function core.id()
-    -- body
-end
-
----生成缓存消息,返回缓存id(number),用于广播，减少数据拷贝。缓存消息只在当前调用有效。
----@overload fun(buf:string)
----@param buf userdata
-function core.make_prefab(buf)
-    ignore_param(buf)
-end
-
----根据缓存id发送缓存消息
----@param sender integer
----@param receiver integer
-function core.send(sender, receiver, ...)
-    ignore_param(sender, receiver)
-end
-
----根据缓存id发送缓存消息
+---send prefab message
 ---@param receiver integer
 ---@param prefabid integer
 ---@param header string
@@ -78,6 +93,35 @@ end
 ---@param type integer
 function core.send_prefab(receiver, prefabid, header, sessionid, type)
     ignore_param(receiver, prefabid, header, sessionid, type)
+end
+
+---向目标服务发送消息
+---@param sender integer
+---@param receiver integer
+---@param data string|userdata
+---@param header string
+---@param sessionid integer
+function core.send(sender, receiver, data, header, sessionid)
+    ignore_param(sender, receiver)
+end
+
+--- remove a service
+function core.kill(addr, sessionid)
+    ignore_param(addr, sessionid)
+end
+
+--- use for query framework info
+---@param sender integer @
+---@param cmd string
+---@param sessionid integer @
+---@return string
+function core.runcmd(sender, cmd, sessionid)
+    ignore_param(sender, cmd, sessionid)
+end
+
+--- 根据服务名字查询服务ID
+function core.queryservice()
+    ignore_param(name)
 end
 
 ---@param key string
@@ -92,10 +136,34 @@ function core.get_env(key)
     ignore_param(key)
 end
 
----使服务进程退出
+---get worker thread info
+---@return string
+function core.wsate(workerid)
+    ignore_param(workerid)
+end
+
+---发送进程退出信号
 ---@param exitcode integer
 function core.exit(exitcode)
     ignore_param(exitcode)
+end
+
+--- get total services's count()
+---@return integer
+function core.size()
+    -- body
+end
+
+---推进时间 server time(millsecond)
+---@param milliseconds integer
+function core.adjtime(milliseconds)
+    ignore_param(milliseconds)
+end
+
+--- set lua callback
+---@param fn fun(msg:userdata,ptype:integer)
+function core.callback(fn)
+
 end
 
 --- get server time(milliseconds)
@@ -104,85 +172,44 @@ function core.now()
     -- body
 end
 
---- get total services's count()
----@return integer
-function core.service_count()
-    -- body
+---获取message相关信息
+---'S' message:sender()
+---
+---'R' message:receiver()
+---
+---'E' message:sessionid()
+---
+---'H' message:header()
+---
+---'Z' message:bytes()
+---
+---'N' message:size()
+---
+---'B' message:buffer()
+---
+---'C' message:buffer():data() message:buffer():size()
+---@param msg userdata @message* lightuserdata
+---@param pattern string
+function core.decode(msg, pattern)
+    ignore_param(msg, pattern)
 end
-
---- get this service's cpu cost time
----@return integer
-function core.cpu()
-    -- body
-end
-
-
---- use for query framework info
----@param sender integer @ 
----@param cmd string
----@param sessionid integer @ 
----@return string
-function core.runcmd(sender, cmd, sessionid)
-    ignore_param(sender, cmd, sessionid)
-end
-
---- convert char* to lua string
----@param sz userdata @ lightuserdata char*
----@param len integer
----@return string
-function core.tostring(sz, len)
-    ignore_param(sz, len)
-end
-
---- set lua callback
----@param fn fun(msg:userdata,ptype:interger)
-function core.set_cb(fn)
-end
-
---- get log level
----@return integer
-function core.get_loglevel()
-end
-
---- print info level log
-function core.info(...)
-    ignore_param(...)
-end
-
---- print error level log
-function core.error(...)
-    ignore_param(...)
-end
-
---- print debug level log
-function core.debug(...)
-    ignore_param(...)
-end
-
----@class message
-local message = {}
-ignore_param(message)
 
 ---clone message, but share buffer field
 ---@param msg userdata @ message* lightuserdata
 ---@return userdata
-function message.clone(msg)
+function core.clone(msg)
     ignore_param(msg)
 end
 
 ---release clone message
 ---@param msg userdata @ message* lightuserdata
-function message.release(msg)
+function core.release(msg)
     ignore_param(msg)
 end
 
 ---redirect a message to other service
-function message.redirect(header, receiver, mtype, sender, sessionid)
+function core.redirect(header, receiver, mtype, sender, sessionid)
     ignore_param(header, receiver, mtype, sender, sessionid)
-end
-
-function message.decode(msg, pattern)
-    ignore_param(msg, pattern)
 end
 
 ---@class fs
@@ -211,46 +238,36 @@ function fs.exists(dir)
 end
 
 ---@param dir string
-function fs.create_directory(dir)
+function fs.mkdir(dir)
     ignore_param(dir)
 end
 
 ---@param fp string
-function fs.remove(fp)
+---@param all boolean
+function fs.remove(fp, all)
     ignore_param(fp)
 end
 
----@param dir string
-function fs.remove_all(dir)
-    ignore_param(dir)
-end
-
 ---@return string
-function fs.working_directory()
+function fs.cwd()
     -- body
 end
 
 ---@param fp string
----@return string
-function fs.parent_path(fp)
+---@return string,string @ 返回dirname, basename
+function fs.split(fp)
     ignore_param(fp)
 end
 
 ---@param fp string
 ---@return string
-function fs.filename(fp)
+function fs.ext(fp)
     ignore_param(fp)
 end
 
 ---@param fp string
 ---@return string
-function fs.extension(fp)
-    ignore_param(fp)
-end
-
----@param fp string
----@return string
-function fs.root_path(fp)
+function fs.root(fp)
     ignore_param(fp)
 end
 
@@ -260,9 +277,21 @@ function fs.stem(fp)
     ignore_param(fp)
 end
 
+---@param fp string
+---@return string
+function fs.abspath(fp)
+    ignore_param(fp)
+end
+
 ---@class asio
 local asio = {}
 ignore_param(asio)
+
+---@param host string
+---@param port integer
+function asio.try_open(host, port)
+    ignore_param(host, port)
+end
 
 ---param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
 ---@param host string
@@ -275,24 +304,17 @@ end
 ---send data to fd, data string or userdata moon.buffer*
 ---@param fd integer
 ---@param data string|userdata
+---@param flag integer|nil
 ---@return boolean
-function asio.write(fd, data)
+function asio.write(fd, data, flag)
     ignore_param(fd, data)
 end
 
 ---@param fd integer
----@param m message
+---@param m lightuserdata @ message*
 ---@return boolean
 function asio.write_message(fd, m)
     ignore_param(fd, m)
-end
-
----@param fd integer
----@param data string|userdata
----@param flag integer
----@return boolean
-function asio.write_with_flag(fd, data, flag)
-    ignore_param(fd, data, flag)
 end
 
 ---@param fd integer
