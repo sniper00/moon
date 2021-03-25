@@ -378,11 +378,11 @@ extern "C"
         LuaPushHandler handler{ L };
         auto res = reader.Parse(stream, handler);
         if (!res) {
-            lua_settop(L, 1);
             lua_pushnil(L);
             lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
+            return 2;
         }
-        return lua_gettop(L) - 1;
+        return 1;
     }
 }
 

@@ -1,54 +1,116 @@
-#include "sol/sol.hpp"
+#include "lua.hpp"
 #include "common/http_util.hpp"
+#include "common/lua_utility.hpp"
 
 using namespace moon;
 
-static sol::table bind_http(sol::this_state L)
+static int lhttp_parse_request(lua_State* L)
 {
-    sol::state_view lua(L);
-    sol::table module = lua.create_table();
+    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view method;
+    std::string_view path;
+    std::string_view query_string;
+    std::string_view version;
+    http::case_insensitive_multimap_view header;
+    bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
+    lua_pushboolean(L, ok ? 1 : 0);
+    lua_pushlstring(L, method.data(), method.size());
+    lua_pushlstring(L, path.data(), path.size());
+    lua_pushlstring(L, query_string.data(), query_string.size());
+    lua_pushlstring(L, version.data(), version.size());
+    lua_createtable(L, 0, (int)header.size());
+    for (const auto& v : header)
+    {
+        lua_pushlstring(L, v.first.data(), v.first.size());
+        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_rawset(L, -3);
+    }
+    return 6;
+}
 
-    module.set_function("parse_request", [](std::string_view data) {
-        std::string_view method;
-        std::string_view path;
-        std::string_view query_string;
-        std::string_view version;
-        http::case_insensitive_multimap_view header;
-        bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
-        return std::make_tuple(ok, method, path, query_string, version, sol::as_table(header));
-    });
+static int lhttp_parse_response(lua_State* L)
+{
+    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view version;
+    std::string_view status_code;
+    http::case_insensitive_multimap_view header;
+    bool ok = http::response_parser::parse(data, version, status_code, header);
+    lua_pushboolean(L, ok ? 1 : 0);
+    lua_pushlstring(L, version.data(), version.size());
+    lua_pushlstring(L, status_code.data(), status_code.size());
+    lua_createtable(L, 0, (int)header.size());
+    for (const auto& v : header)
+    {
+        lua_pushlstring(L, v.first.data(), v.first.size());
+        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_rawset(L, -3);
+    }
+    return 4;
+}
 
-    module.set_function("parse_response", [](std::string_view data) {
-        std::string_view version;
-        std::string_view status_code;
-        http::case_insensitive_multimap_view header;
-        bool ok = http::response_parser::parse(data, version, status_code, header);
-        return std::make_tuple(ok, version, status_code, sol::as_table(header));
-    });
+static int lhttp_parse_query_string(lua_State* L)
+{
+    std::string_view data = luaL_check_stringview(L, 1);
+    http::case_insensitive_multimap cim = http::query_string::parse(data);
+    lua_createtable(L, 0, (int)cim.size());
+    for (const auto& v : cim)
+    {
+        lua_pushlstring(L, v.first.data(), v.first.size());
+        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_rawset(L, -3);
+    }
+    return 1;
+}
 
-    module.set_function("parse_query_string", [](const std::string &data) {
-        return sol::as_table(http::query_string::parse(data));
-    });
+static int lhttp_create_query_string(lua_State* L)
+{
+    luaL_checktype(L, -1, LUA_TTABLE);
+    http::case_insensitive_multimap cim;
+    lua_pushnil(L);
+    while (lua_next(L, -2))
+    {
+        size_t keylen;
+        const char* key = lua_tolstring(L, -2, &keylen);
+        size_t valuelen;
+        const char* value = lua_tolstring(L, -1, &valuelen);
+        cim.emplace(std::string_view{ key, keylen }, std::string_view{ value, valuelen });
+        lua_pop(L, 1);
+    }
+    std::string s = http::query_string::create(cim);
+    lua_pushlstring(L, s.data(), s.size());
+    return 1;
+}
 
-    module.set_function("create_query_string", [](sol::as_table_t<http::case_insensitive_multimap> src) {
-        return http::query_string::create(src.value());
-    });
+static int lhttp_urlencode(lua_State* L)
+{
+    std::string_view data = luaL_check_stringview(L, 1);
+    std::string s = http::percent::encode(data);
+    lua_pushlstring(L, s.data(), s.size());
+    return 1;
+}
 
-    module.set_function("urlencode", [](std::string_view src) {
-        return http::percent::encode(std::string{ src });
-    });
-
-    module.set_function("urldecode", [](std::string_view src) {
-        return http::percent::decode(std::string{ src });
-    });
-
-    return module;
+static int lhttp_urldecode(lua_State* L)
+{
+    std::string_view data = luaL_check_stringview(L, 1);
+    std::string s = http::percent::decode(data);
+    lua_pushlstring(L, s.data(), s.size());
+    return 1;
 }
 
 extern "C"
 {
     int LUAMOD_API luaopen_http(lua_State *L)
     {
-        return sol::stack::call_lua(L, 1, bind_http);
+        luaL_Reg l[] = {
+                  { "parse_request", lhttp_parse_request},
+                  { "parse_response", lhttp_parse_response },
+                  { "create_query_string", lhttp_create_query_string },
+                  { "parse_query_string", lhttp_parse_query_string},
+                  { "urlencode", lhttp_urlencode },
+                  { "urldecode", lhttp_urldecode},
+                  {NULL,NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
     }
 }

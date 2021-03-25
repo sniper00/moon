@@ -95,7 +95,7 @@ if conf.name then
     local function docmd(hash, sender, sessionid, ...)
 
         hash = hash%db_pool_size + 1
-        --print(moon.name(), "db hash", hash)
+        --print(moon.name, "db hash", hash)
         local ctx = pool[hash]
         tbinsert(ctx.queue, {{...}, sender, sessionid})
         if ctx.running then

@@ -116,7 +116,7 @@ local function sharetable_service()
         local conf_files = {}
         local list = fs.listdir(conf.dir)
         for _,file in ipairs(list) do
-            if not fs.isdir(file) and fs.extension(file) == ".lua" then
+            if not fs.isdir(file) and fs.ext(file) == ".lua" then
                 sharetable.loadfile(0,0,file)
 				conf_files[fs.stem(file)] = file
             end

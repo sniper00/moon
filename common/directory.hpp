@@ -22,7 +22,8 @@ namespace moon
                 return;
             }
 
-            if (!fs::exists(path))
+            std::error_code ec;
+            if (!fs::exists(path, ec))
             {
                 return;
             }
@@ -31,11 +32,11 @@ namespace moon
 
             for (auto&p : fs::directory_iterator(path))
             {
-                if (!handler(p.path(), fs::is_directory(p)))
+                if (!handler(p.path(), fs::is_directory(p, ec)))
                 {
                     break;
                 }
-                if (fs::is_directory(p))
+                if (fs::is_directory(p, ec))
                 {
                     traverse_folder_imp(p.path(), depth, std::forward<THandler>(handler));
                 }
@@ -73,7 +74,7 @@ namespace moon
 
         //THandler bool(const fs::path& path,bool dir)
         template<typename THandler>
-        static void traverse_folder(const std::string& dir, int depth, THandler&&handler)
+        static void traverse_folder(const std::string_view& dir, int depth, THandler&&handler)
         {
             traverse_folder_imp(fs::absolute(dir), depth, std::forward<THandler>(handler));
         }

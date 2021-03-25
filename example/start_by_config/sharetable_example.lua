@@ -29,7 +29,7 @@ if conf.agent then
                 moon.response("lua", sender, sessionid, f(seri.unpack(sz, len)))
             end)
         else
-            moon.error(moon.name(), "recv unknown cmd "..cmd)
+            moon.error(moon.name, "recv unknown cmd "..cmd)
         end
     end)
 else

@@ -7,8 +7,6 @@
 #include "common/lua_utility.hpp"
 #include "common/utils.hpp"
 
-#define METANAME "lrandom"
-
 //[min,max]
 static int lrand_range(lua_State *L)
 {
