@@ -15,27 +15,23 @@ equal(type(checktable) , "function")
 equal(type(class) , "function")
 equal(type(iskindof) , "function")
 
-equal(type(moon.name) , "function")
-equal(type(moon.id) , "function")
+equal(type(moon.name) , "string")
+equal(type(moon.id) , "number")
 equal(type(moon.send_prefab) , "function")
 equal(type(moon.make_prefab) , "function")
-equal(type(moon.broadcast) , "function")
 equal(type(moon.queryservice) , "function")
 equal(type(moon.new_service) , "function")
 equal(type(moon.send) , "function")
-equal(type(moon.set_cb) , "function")
 equal(type(moon.exit) , "function")
 
-local msg = require("message")
-equal(type(msg.decode) , "function")
-equal(type(msg.clone) , "function")
-equal(type(msg.release) , "function")
-equal(type(msg.redirect) , "function")
+equal(type(moon.decode) , "function")
+equal(type(moon.clone) , "function")
+equal(type(moon.release) , "function")
+equal(type(moon.redirect) , "function")
 
-
-equal(type(fs.create_directory) , "function")
-equal(type(fs.working_directory) , "function")
-print(fs.working_directory())
+equal(type(fs.mkdir) , "function")
+equal(type(fs.cwd) , "function")
+print(fs.cwd())
 equal(type(fs.exists) , "function")
 equal(type(fs.listdir) , "function")
 
@@ -45,26 +41,18 @@ equal(type(socket.accept) , "function")
 equal(type(socket.connect) , "function")
 equal(type(socket.read) , "function")
 equal(type(socket.write) , "function")
-equal(type(socket.write_with_flag) , "function")
 equal(type(socket.write_message) , "function")
 equal(type(socket.close) , "function")
 equal(type(socket.settimeout) , "function")
 equal(type(socket.setnodelay) , "function")
 equal(type(socket.set_enable_chunked) , "function")
 
-equal(type(moon.millsecond) , "function")
+equal(type(moon.microseconds) , "function")
 
-local timer = moon
-equal(type(timer.remove_timer) , "function")
-equal(type(timer.repeated) , "function")
+equal(type(moon.remove_timer) , "function")
+equal(type(moon.repeated) , "function")
 
-equal(type(moon.millsecond) , "function")
-equal(type(string.hash) , "function")
-equal(type(string.hex) , "function")
-equal(type(table.new) , "function")
 
-local nt = table.new(10,1)
-nt[1] = 10
 
 print("now server time")
 moon.adjtime(1000*1000)--forward 1000s
@@ -170,6 +158,24 @@ do
 	assert(buffer.read(buf,1) == "b")
 
 	buffer.delete(buf)
+end
+
+do
+	local zset = require("zset")
+	local rank = zset.new(3)
+	rank:update(4,1,4)
+	rank:update(3,1,3)
+	rank:update(2,1,2)
+	rank:update(1,1,1)
+	assert(rank:rank(1)==1)
+	assert(rank:rank(2)==2)
+	assert(rank:rank(3)==3)
+	assert(rank:rank(4)==0)
+	assert(rank:size() == 3)
+	local res = rank:range(1,4)
+	assert(#res==3)
+	rank:clear()
+	assert(not rank:range(1,4))
 end
 
 moon.async(function()

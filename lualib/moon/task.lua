@@ -21,6 +21,9 @@ function _M.wait_all(fnlist)
     for i,fn in ipairs(fnlist) do
         moon.async(function ()
             res[i] = {xpcall(fn, traceback)}
+            if res[i][1] then
+                table.remove(res[i], 1)
+            end
             n=n-1
             if costatus(co) == "suspended" then
                 coresume(co)

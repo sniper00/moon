@@ -24,17 +24,17 @@ socket.on("connect",function(fd,msg)
     n = n + 1
     if n == client_num then
         for k,v in pairs(connects) do
-            time_count[k] = moon.millsecond()
+            time_count[k] = moon.now()
             socket.write(k,send_data)
         end
-        start_time = moon.millsecond()
+        start_time = moon.now()
         print("start....")
     end
 end)
 
 socket.on("message",function(fd, msg)
     count = count + 1
-    local now = moon.millsecond()
+    local now = moon.now()
     local diff = now - time_count[fd]
     local v = result[diff]
     if not v then
@@ -55,7 +55,7 @@ socket.on("message",function(fd, msg)
 
     if count == total then
         print("total ",count)
-        local qps = total*1000/(moon.millsecond()-start_time)
+        local qps = total*1000/(moon.now()-start_time)
         local keys = {}
         for k,_ in pairs(result) do
             table.insert( keys, k)

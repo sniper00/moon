@@ -34,6 +34,7 @@ namespace moon
 
     enum class buffer_flag :uint8_t
     {
+        none = 0,
         pack_size = 1 << 0,
         close = 1 << 1,
         chunked = 1 << 2,

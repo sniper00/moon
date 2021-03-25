@@ -7,8 +7,8 @@ if conf.receiver then
     local command = {}
 
     command.PING = function(sender, ...)
-        print(moon.name(), "recv ", sender, "command", "PING")
-        print(moon.name(), "send to", sender, "command", "PONG")
+        print(moon.name, "recv ", sender, "command", "PING")
+        print(moon.name, "send to", sender, "command", "PONG")
         moon.send('lua', sender,'PONG', ...)
     end
 
@@ -34,7 +34,7 @@ else
 
     command.PONG = function(...)
         print(...)
-        print(moon.name(), "recv ", "command", "PING")
+        print(moon.name, "recv ", "command", "PING")
         moon.exit(-1)
     end
 
@@ -61,7 +61,7 @@ else
             receiver = true
         })
 
-        print(moon.name(), "send to", receiver, "command", "PING")
+        print(moon.name, "send to", receiver, "command", "PING")
         moon.send('lua', receiver,"PING","Hello")
     end)
 end

@@ -1,10 +1,11 @@
 #pragma once
+#include <string_view>
+#include "lua.hpp"
 
 #define luaL_rawsetfield(L, tbindex, kname, valueexp)\
     lua_pushliteral(L, kname);\
     (valueexp);\
     lua_rawset(L, tbindex);\
-
 
 namespace moon
 {
@@ -26,6 +27,42 @@ namespace moon
         }
     };
 
+    inline std::string_view luaL_check_stringview(lua_State* L, int index)
+    {
+        size_t size;
+        const char* sz = luaL_checklstring(L, index, &size);
+        return std::string_view{ sz, size };
+    }
+
+    inline bool luaL_checkboolean(lua_State* L, int index)
+    {
+        if (!lua_isboolean(L, index))
+        {
+            luaL_typeerror(L, index, lua_typename(L, LUA_TBOOLEAN));
+        }
+        return lua_toboolean(L, index);
+    }
+
+    inline int require_cmodule(lua_State* L) 
+    {
+        const char* name = luaL_checkstring(L, 1);
+        lua_CFunction f = (lua_CFunction)lua_touserdata(L, 2);
+        luaL_requiref(L, name, f, 0);
+        return 0;
+    }
+
+    inline bool requiref(lua_State* L, const char* name, lua_CFunction f)
+    {
+        lua_pushcfunction(L, require_cmodule);
+        lua_pushstring(L, name);
+        lua_pushlightuserdata(L, (void*)f);
+        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+            lua_pop(L, 1);
+            return true;
+        }
+        return false;
+    }
+  
     template<class LuaArrayView>
     class lua_array_view_iterator
     {

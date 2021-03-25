@@ -622,3 +622,20 @@ function table.search_bound(t, value, comp)
 	end
 	return first
 end
+
+function table.shuffle(t)
+	local n = #t
+	if n <= 0 then
+		return t
+	end
+    local tab = {}
+    local index = 1
+    while n > 0 do
+        local tmp = math.random(1, n)
+        tab[index] = t[tmp]
+        table.remove(t, tmp)
+        index = index + 1
+		n = #t
+    end
+    return tab
+end

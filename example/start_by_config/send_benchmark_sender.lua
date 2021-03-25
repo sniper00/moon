@@ -16,7 +16,7 @@ local command = {}
 command.TEST = function()
     counter = counter + 1
     if counter == ncount*4 then
-        print("cost ",moon.millsecond() - sttime)
+        print("cost ",moon.now() - sttime)
         counter = 0
     end
 end
@@ -41,7 +41,7 @@ receiver3 = moon.queryservice("send_benchmark_receiver3")
 receiver4 = moon.queryservice("send_benchmark_receiver4")
 
 moon.repeated(1000, -1, function()
-    sttime = moon.millsecond()
+    sttime = moon.now()
     for _=1,ncount do
         moon.send('lua', receiver1,"TEST","123456789")
         moon.send('lua', receiver2,"TEST","123456789")

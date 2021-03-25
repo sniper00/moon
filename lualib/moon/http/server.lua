@@ -228,9 +228,12 @@ local function request_handler(fd, request)
     if handler then
         local ok,err = xpcall(handler, traceback, request, response)
         if not ok then
+            if M.error then
+                M.error(err)
+            end
             response.status_code = 500
             response:write_header("Content-Type","text/plain")
-            response:write(tostring(err))
+            response:write("Server Internal Error")
         end
     else
         response.status_code = 404
@@ -309,7 +312,7 @@ function M.listen(host,port,timeout)
     timeout = timeout or 0
     moon.async(function()
         while true do
-            local fd,err = socket.accept(listenfd, moon.id())
+            local fd,err = socket.accept(listenfd, moon.id)
             if not fd then
                 print("httpserver accept",err)
                 return
@@ -351,8 +354,7 @@ function M.static(dir)
             if string.sub(src,1,1) ~= "/" then
                 src = "/"..src
             end
-
-            local ext = fs.extension(src)
+            local ext = fs.ext(src)
             local mime = mimes[ext] or ext
             static_content[src] = {
                 mime = mime,

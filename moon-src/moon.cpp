@@ -4,8 +4,8 @@
 #include "common/string.hpp"
 #include "common/time.hpp"
 #include "common/file.hpp"
+#include "common/lua_utility.hpp"
 #include "server.h"
-#include "luabind/lua_bind.h"
 #include "server_config.hpp"
 #include "services/lua_service.h"
 
@@ -113,7 +113,7 @@ void usage(void) {
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\
             int lua_c_fn(lua_State* L);\
 \
-            lua_bind::registerlib(L, name, lua_c_fn);\
+            moon::requiref(L, name, lua_c_fn);\
 
 
 extern "C"
@@ -124,45 +124,25 @@ extern "C"
 #ifdef LUA_CACHELIB
         REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
 #endif
+        REGISTER_CUSTOM_LIBRARY("mooncore", luaopen_moon);
+        REGISTER_CUSTOM_LIBRARY("asio", luaopen_asio);
         REGISTER_CUSTOM_LIBRARY("fs", luaopen_fs);
         REGISTER_CUSTOM_LIBRARY("http", luaopen_http);
         REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
         REGISTER_CUSTOM_LIBRARY("json", luaopen_json);
         REGISTER_CUSTOM_LIBRARY("buffer", luaopen_buffer);
-        REGISTER_CUSTOM_LIBRARY("message", luaopen_message);
+        REGISTER_CUSTOM_LIBRARY("sharetable.core", luaopen_sharetable_core);
+        REGISTER_CUSTOM_LIBRARY("socket.core", luaopen_socket_core);
+
         //custom
         REGISTER_CUSTOM_LIBRARY("pb", luaopen_pb);
+        REGISTER_CUSTOM_LIBRARY("pb.unsafe", luaopen_pb_unsafe);
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);
         REGISTER_CUSTOM_LIBRARY("aoi", luaopen_aoi);
         REGISTER_CUSTOM_LIBRARY("clonefunc", luaopen_clonefunc);
         REGISTER_CUSTOM_LIBRARY("random", luaopen_random);
         REGISTER_CUSTOM_LIBRARY("zset", luaopen_zset);
-    }
 
-    int luaopen_sharetable_core(lua_State* L);
-    int luaopen_socket_core(lua_State* L);
-    int luaopen_pb_unsafe(lua_State* L);
-
-    //if register lua c module, name like a.b.c, use this
-    int custom_package_loader(lua_State* L)
-    {
-        typedef std::unordered_map<std::string_view, lua_CFunction> pkg_map;
-        static const pkg_map pkgs{
-            { "sharetable.core", luaopen_sharetable_core },
-            { "socket.core", luaopen_socket_core },
-            { "pb.unsafe", luaopen_pb_unsafe }
-        };
-
-        std::string_view path = sol::stack::get<std::string_view>(L, 1);
-        if (auto iter = pkgs.find(path); iter != pkgs.end())
-        {
-            sol::stack::push(L, iter->second);
-        }
-        else
-        {
-            sol::stack::push(L, moon::format("Can not find module %s!", std::string(path).data()));
-        }
-        return 1;
     }
 }
 
