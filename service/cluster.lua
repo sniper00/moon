@@ -13,8 +13,6 @@ local function cluster_service()
 
     local json = require("json")
     local buffer = require("buffer")
-    ---@type message
-    local message = require("message")
     local socket = require("moon.socket")
 
     local print = print
@@ -26,7 +24,7 @@ local function cluster_service()
     local queryservice = moon.queryservice
     local wfront = buffer.write_front
 
-    local redirect = message.redirect
+    local redirect = moon.redirect
 
     local clusters = {}
 
@@ -159,7 +157,7 @@ local function cluster_service()
     function command.Start()
         if conf.host and conf.port then
             if not clusters[NODE] then
-                print("unconfig cluster node:".. moon.name())
+                print("unconfig cluster node:".. moon.name)
                 return false
             end
             local host, port = conf.host, conf.port
@@ -237,21 +235,20 @@ local function cluster_service()
 
         local content = moon.get_env("CONFIG")
         local js = json.decode(content)
-        local max_cluster_node = 0
+        local game_list = {}
         for _,c in ipairs(js) do
             local host,port = find_host_port(c.params)
             if host and port then
-                if c.node > max_cluster_node then
-                    max_cluster_node = c.node
-                end
-
                 if not clusters[c.node] then
                     clusters[c.node]={host = host, port = port, fd = false}
                 end
             end
+            if c.params and c.params.server_game then
+                table.insert(game_list, c.node)
+            end
         end
-
-        moon.set_env("MAX_CLUSTER_NODE", tostring(max_cluster_node))
+        -- moon.set_env("MAX_CLUSTER_NODE", tostring(max_cluster_node))
+        moon.set_env("GAME_NODE_LIST", json.encode(game_list))
     end
 
     load_config()
@@ -296,7 +293,7 @@ local function cluster_service()
                 end
             end)
         else
-            moon.error(moon.name(), "recv unknown cmd "..tostring(cmd))
+            moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
     end)
 

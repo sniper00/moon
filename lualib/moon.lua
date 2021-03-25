@@ -10,8 +10,6 @@ require("base.class")
 local core = require("mooncore")
 local json = require("json")
 local seri = require("seri")
----@type message
-local message = require("message")
 
 local pairs = pairs
 local type = type
@@ -31,8 +29,13 @@ local co_resume = coroutine.resume
 local co_close = coroutine.close
 
 local _send = core.send
-
 local _now = core.now
+local _addr = core.id
+local _remove_timer = core.remove_timer
+local _repeated = core.repeated
+local _newservice = core.new_service
+local _queryservice = core.queryservice
+local _decode = core.decode
 
 local unpack = seri.unpack
 local pack = seri.pack
@@ -47,41 +50,28 @@ local PTYPE_DEBUG = 7
 local PTYPE_SHUTDOWN = 8
 local PTYPE_TIMER = 9
 
----@class moon : core
-local moon = {
-    PTYPE_TEXT = PTYPE_TEXT,
-    PTYPE_LUA = PTYPE_LUA,
-    PTYPE_SOCKET = PTYPE_SOCKET,
-    PTYPE_SOCKET_WS = PTYPE_SOCKET_WS
-}
+local LOG_ERROR = 1
+local LOG_WARN = 2
+local LOG_INFO = 3
+local LOG_DEBUG = 4
 
-setmetatable(moon, {__index = core})
+---@class moon : core
+local moon =  core
+
+moon.PTYPE_TEXT = PTYPE_TEXT
+moon.PTYPE_LUA = PTYPE_LUA
+moon.PTYPE_SOCKET = PTYPE_SOCKET
+moon.PTYPE_SOCKET_WS = PTYPE_SOCKET_WS
 
 --moon.codecache = require("codecache")
 
+moon.error = function(...) core.log(LOG_ERROR,...) end
+moon.warn = function(...) core.log(LOG_WARN,...) end
+moon.info = function(...) core.log(LOG_INFO,...) end
+moon.debug = function(...) core.log(LOG_DEBUG,...) end
+
 moon.pack = pack
 moon.unpack = unpack
-
----@type fun(msg:userdata, pattern:string) @ msg: message* lightuserdata
----获取message相关信息
----'S' message:sender()
----
----'R' message:receiver()
----
----'E' message:sessionid()
----
----'H' message:header()
----
----'Z' message:bytes()
----
----'N' message:size()
----
----'B' message:buffer()
----
----'C' message:buffer():data() message:buffer():size()
-moon.decode = message.decode
-
-local _decode = message.decode
 
 --export global variable
 local _g = _G
@@ -121,8 +111,6 @@ setmetatable(
         end
     }
 )
-
-local addr_ = core.id()
 
 local uuid = 0
 local session_id_coroutine = {}
@@ -198,18 +186,18 @@ local function _default_dispatch(msg, PTYPE)
         end
 
         if co ~= false then
-            error(string.format( "%s: response [%u] can not find co.",moon.name(), sessionid))
+            error(string.format( "%s: response [%u] can not find co.",moon.name, sessionid))
         end
 	else
         if not p.dispatch then
-			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name(), p.PTYPE))
+			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name, p.PTYPE))
 			return
         end
         p.dispatch(msg, p.unpack)
     end
 end
 
-core.set_cb(_default_dispatch)
+core.callback(_default_dispatch)
 
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
@@ -222,11 +210,7 @@ function moon.send(PTYPE, receiver, ...)
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
 
-    if receiver == 0 then
-        error("moon send receiver == 0")
-    end
-
-    _send(addr_, receiver, p.pack(...), "", 0, p.PTYPE)
+    _send(receiver, p.pack(...), "", 0, p.PTYPE)
     return true
 end
 
@@ -243,20 +227,16 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
 
-    if receiver == 0 then
-        error("moon send receiver == 0")
-    end
-
     header = header or ''
     sessionid = sessionid or 0
-    _send(addr_, receiver, data, header, sessionid, p.PTYPE)
+    _send(receiver, data, header, sessionid, p.PTYPE)
 	return true
 end
 
 ---获取当前的服务id
 ---@return integer
 function moon.addr()
-    return addr_
+    return _addr
 end
 
 ---async 创建一个新的服务
@@ -270,7 +250,7 @@ function moon.new_service(stype, config, unique, workerid)
     workerid = workerid or 0
     config = jencode(config)
     local sessionid = make_response()
-    core.new_service(stype, config, unique, workerid, addr_, sessionid)
+    _newservice(stype, config, unique, workerid, sessionid)
     return tointeger(co_yield())
 end
 
@@ -281,10 +261,10 @@ end
 function moon.remove_service(addr, iswait)
     if iswait then
         local sessionid = make_response()
-        core.remove_service(addr, addr_,sessionid)
+        core.kill(addr, sessionid)
         return co_yield()
     else
-        core.remove_service(addr,0,0)
+        core.kill(addr, 0)
     end
 end
 
@@ -305,7 +285,7 @@ function moon.quit()
 		end
     end
 
-    moon.remove_service(addr_)
+    moon.remove_service(_addr)
 end
 
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
@@ -313,7 +293,7 @@ end
 ---@return integer @ 0 表示服务不存在
 function moon.queryservice(name)
 	if type(name)=='string' then
-		return core.queryservice(name)
+		return _queryservice(name)
 	end
 	return name
 end
@@ -325,8 +305,6 @@ end
 function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
-
-moon.now = _now
 
 ---获取服务器时间, 可以调用 moon.adjtime 偏移时间
 function moon.time()
@@ -383,7 +361,7 @@ end
 ---@return string
 function moon.co_runcmd(command)
     local sessionid = make_response()
-    core.runcmd(moon.addr(), command, sessionid)
+    core.runcmd(command, sessionid)
     return co_yield()
 end
 
@@ -402,7 +380,7 @@ function moon.co_call(PTYPE, receiver, ...)
     end
 
     local sessionid = make_response(receiver)
-	_send(addr_, receiver, p.pack(...), "", sessionid, p.PTYPE)
+	_send(receiver, p.pack(...), "", sessionid, p.PTYPE)
     return co_yield()
 end
 
@@ -421,7 +399,7 @@ function moon.response(PTYPE, receiver, sessionid, ...)
         error("moon response receiver == 0")
     end
 
-    _send(addr_, receiver, p.pack(...), '', sessionid, p.PTYPE)
+    _send(receiver, p.pack(...), '', sessionid, p.PTYPE)
 end
 
 function moon.wait()
@@ -567,9 +545,9 @@ reg_protocol {
         if cb_shutdown then
             cb_shutdown()
         else
-            local name = moon.name()
+            local name = moon.name
             --- bootstrap or not unique service
-            if name == "bootstrap" or 0 == moon.queryservice(moon.name()) then
+            if name == "bootstrap" or 0 == moon.queryservice(moon.name) then
                 moon.quit()
             end
         end
@@ -612,7 +590,7 @@ reg_protocol {
 ---@param fn function
 ---@return integer
 function moon.repeated(mills, times, fn)
-    local timerid = core.repeated(mills, times)
+    local timerid = _repeated(mills, times)
     timer_cb[timerid] = fn
     return timerid
 end
@@ -620,7 +598,7 @@ end
 ---@param timerid integer
 function moon.remove_timer(timerid)
     timer_cb[timerid] = nil
-    core.remove_timer(timerid)
+    _remove_timer(timerid)
 end
 
 ---async
@@ -628,7 +606,7 @@ end
 ---@param mills integer
 ---@return integer
 function moon.sleep(mills)
-    local timerid = core.repeated(mills, 1)
+    local timerid = _repeated(mills, 1)
     timer_cb[timerid] = co_running()
     return co_yield()
 end
@@ -652,7 +630,7 @@ end
 
 debug_command.state = function(sender, sessionid)
     local running_num, free_num = moon.coroutine_num()
-    local s = string.format("%s co-running %d co-free %d cpu:%d",moon.name(), running_num,free_num, moon.cpu())
+    local s = string.format("co-running %d co-free %d cpu:%d", running_num,free_num, moon.cpu())
     moon.response("debug",sender,sessionid, s)
 end
 

@@ -40,3 +40,18 @@ for i=1,10000 do
 end
 
 print_r(res)
+
+res={}
+for i=1,100000 do
+	local v = random.rand_weight({1,2},{100,100})
+	if res[v] then
+		res[v] = res[v]+1
+	else
+		res[v] = 1
+	end
+end
+
+print_r(res)
+
+print((res[1]/100000 - res[2]/100000))
+assert(math.abs(res[1]/100000 - res[2]/100000)<0.01)

@@ -40,7 +40,7 @@ namespace moon
     {
         //register commands
 
-        commands_.try_emplace("services", [this](const std::vector<std::string>& params) {
+        commands_.emplace("services"sv, [this](const std::vector<std::string_view>& params) {
             (void)params;
             std::string content;
             content.append("[");
@@ -298,7 +298,7 @@ namespace moon
     void worker::runcmd(uint32_t sender, const std::string& cmd, int32_t sessionid)
     {
         asio::post(io_ctx_, [this, sender, cmd, sessionid] {
-            auto params = moon::split<std::string>(cmd, ".");
+            auto params = moon::split<std::string_view>(cmd, ".");
 
             switch (moon::chash_string(params[0]))
             {
@@ -314,9 +314,9 @@ namespace moon
             });
     }
 
-    uint32_t worker::make_prefab(const moon::buffer_ptr_t& buf)
+    uint32_t worker::make_prefab(moon::buffer_ptr_t buf)
     {
-        auto iter = prefabs_.emplace(uuid(), buf);
+        auto iter = prefabs_.emplace(uuid(), std::move(buf));
         if (iter.second)
         {
             return iter.first->first;

@@ -3,18 +3,15 @@ local moon = require("moon")
 ---@type asio
 local core = require("asio")
 
-local setmetatable = setmetatable
 local tointeger = math.tointeger
 local yield = coroutine.yield
 local make_response = moon.make_response
-local id = moon.id()
-
-core.__index = core
+local id = moon.addr()
 
 local accept = core.accept
 local connect = core.connect
 local read = core.read
-local write_with_flag = core.write_with_flag
+local write = core.write
 
 local flag_close = 2
 local flag_ws_text = 16
@@ -22,9 +19,7 @@ local flag_ws_ping = 32
 local flag_ws_pong = 64
 
 ---@class socket : asio
-local socket = {}
-
-setmetatable(socket,core)
+local socket = core
 
 --- async
 function socket.accept(listenfd, serviceid)
@@ -84,20 +79,20 @@ function socket.readline(fd, delim, limit)
 end
 
 function socket.write_then_close(fd, data)
-    write_with_flag(fd ,data, flag_close)
+    write(fd ,data, flag_close)
 end
 
 --- only for websocket
 function socket.write_text(fd, data)
-    write_with_flag(fd ,data, flag_ws_text)
+    write(fd ,data, flag_ws_text)
 end
 
 function socket.write_ping(fd, data)
-    write_with_flag(fd ,data, flag_ws_ping)
+    write(fd ,data, flag_ws_ping)
 end
 
 function socket.write_pong(fd, data)
-    write_with_flag(fd ,data, flag_ws_pong)
+    write(fd ,data, flag_ws_pong)
 end
 
 local socket_data_type = {
@@ -111,10 +106,10 @@ local socket_data_type = {
 }
 
 --- tow bytes len protocol callbacks
-local callbacks = table.new(0,6)
+local callbacks = {}
 
 --- websocket protocol wscallbacks
-local wscallbacks = table.new(0,6)
+local wscallbacks = {}
 
 local _decode = moon.decode
 

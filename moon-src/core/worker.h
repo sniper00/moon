@@ -14,7 +14,7 @@ namespace moon
     {
         using queue_t = concurrent_queue<message_ptr_t, std::mutex, std::vector>;
 
-        using command_hander_t = std::function<std::string(const std::vector<std::string>&)>;
+        using command_hander_t = std::function<std::string(const std::vector<std::string_view>&)>;
 
         using asio_work_t = asio::executor_work_guard<asio::io_context::executor_type>;
 
@@ -70,7 +70,7 @@ namespace moon
 
         void runcmd(uint32_t sender, const std::string& cmd, int32_t sessionid);
 
-        uint32_t make_prefab(const moon::buffer_ptr_t & buf);
+        uint32_t make_prefab(moon::buffer_ptr_t buf);
 
         void send_prefab(uint32_t sender
             , uint32_t receiver
@@ -123,7 +123,7 @@ namespace moon
         std::unique_ptr<moon::socket> socket_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
         std::unordered_map<uint32_t, moon::buffer_ptr_t> prefabs_;
-        std::unordered_map<std::string, command_hander_t> commands_;
+        std::unordered_map<std::string_view, command_hander_t> commands_;
     };
 };
 
