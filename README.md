@@ -21,8 +21,7 @@ QQ交流群: 543833695
 ## 依赖
 
 - [asio](https://github.com/chriskohlhoff/asio)
-- [lua云风修改版](https://github.com/cloudwu/skynet/tree/master/3rd/lua) 
-- [sol2](https://github.com/ThePhD/sol2)(A C++ library binding to Lua)
+- [lua](https://github.com/cloudwu/skynet/tree/master/3rd/lua)
 - [rapidjson](https://github.com/Tencent/rapidjson)
 
 ## 快速开始
