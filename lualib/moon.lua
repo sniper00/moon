@@ -161,7 +161,7 @@ end
 
 moon.make_response = make_response
 
----@param msg message
+---@param msg lightuserdata @message*
 ---@param PTYPE string
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]
