@@ -206,12 +206,9 @@ local function request_handler(fd, request)
     local response = http_response.new()
     local conn_type = request.header["Connection"]
 
-    if request.path == "/" then
-        request.path = "/home.html"
-    end
-
     if static_content then
-        local static_src = static_content[request.path]
+        local request_path = request.path
+        local static_src = static_content[request_path]
         if static_src then
             response:write_header("Content-Type", static_src.mime)
             response:write(static_src.bin)
@@ -238,7 +235,7 @@ local function request_handler(fd, request)
     else
         response.status_code = 404
         response:write_header("Content-Type","text/plain")
-        response:write("404 Not Found")
+        response:write(string.format("Cannot %s %s", request.method, request.path))
     end
 
     if conn_type == "close" then
@@ -348,20 +345,36 @@ function M.static(dir)
     dir = fs.abspath(dir)
     local res = fs.listdir(dir, 100)
     for _, v in ipairs(res) do
+        local src = string.gsub(v, dir, "")
+        src = string.gsub(src, "\\","/")
+        if string.sub(src,1,1) ~= "/" then
+            src = "/"..src
+        end
+
         if not fs.isdir(v) then
-            local src = string.gsub(v, dir, "")
-            src = string.gsub(src, "\\","/")
-            if string.sub(src,1,1) ~= "/" then
-                src = "/"..src
-            end
             local ext = fs.ext(src)
             local mime = mimes[ext] or ext
             static_content[src] = {
                 mime = mime,
                 bin = io.readfile(v)
             }
-            --print("load static:", src)
+        else
+            local index_html = fs.join(v,"index.html")
+            if fs.exists(index_html) then
+                static_content[src] = {
+                    mime = mimes[".html"],
+                    bin = io.readfile(index_html)
+                }
+            end
         end
+        --print("load static:", src)
+    end
+
+    if fs.exists(fs.join(dir,"index.html")) then
+        static_content["/"] = {
+            mime = mimes[".html"],
+            bin = io.readfile(fs.join(dir,"index.html"))
+        }
     end
 end
 
