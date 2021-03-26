@@ -44,8 +44,8 @@ static int lfs_join(lua_State* L)
     try
     {
         fs::path dir1 = fs::path{ luaL_check_stringview(L, 1) };
-        fs::path dir2 = fs::path{ luaL_check_stringview(L, 1) };
-        dir1 += dir2;
+        fs::path dir2 = fs::path{ luaL_check_stringview(L, 2) };
+        dir1 /= dir2;
         std::string s = dir1.string();
         lua_pushlstring(L, s.data(), s.size());
         return 1;
