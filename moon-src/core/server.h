@@ -1,15 +1,35 @@
 #pragma once
 #include "config.hpp"
 #include "common/log.hpp"
-#include "common/time.hpp"
-#include "router.h"
+#include "common/timer.hpp"
+#include "common/concurrent_map.hpp"
 #include "worker.h"
 
 namespace moon
 {
-    class  server final
+    class server
     {
+        class timer_expire_policy
+        {
+        public:
+            timer_expire_policy() = default;
+
+            timer_expire_policy(uint32_t serviceid, uint32_t timerid, server* srv)
+                :serviceid_(serviceid), timerid_(timerid), server_(srv) {}
+
+            void operator()()
+            {
+                server_->on_timer(serviceid_, timerid_);
+            }
+        private:
+            uint32_t serviceid_;
+            uint32_t timerid_;
+            server* server_;
+        };
+
     public:
+        using register_func = service_ptr_t(*)();
+
         server() = default;
 
         ~server();
@@ -20,17 +40,15 @@ namespace moon
 
         server(server&&) = delete;
 
-        void init(int worker_num, const std::string& logpath);
+        void init(int worker_num, const std::string& logfile);
 
         void run();
 
         void stop(int signalcode);
 
-        log* logger();
+        log* logger() const;
 
-        router* get_router();
-
-        state get_state();
+        state get_state() const;
 
         std::time_t now(bool sync = false);
 
@@ -38,18 +56,51 @@ namespace moon
 
         worker* next_worker();
 
-        worker* get_worker(uint32_t workerid) const;
+        worker* get_worker(uint32_t workerid, uint32_t serviceid = 0) const;
 
-        std::vector<std::unique_ptr<worker>>& get_workers();
+        void timeout(int64_t interval, uint32_t serviceid, uint32_t timerid);
+
+        void new_service(std::string service_type, std::string config, bool unique, int32_t workerid, uint32_t creatorid, int32_t sessionid);
+
+        void remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid);
+
+        void scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid);
+
+        bool send_message(message_ptr_t&& msg) const;
+
+        bool send(uint32_t sender, uint32_t receiver, buffer_ptr_t buf, std::string_view header, int32_t sessionid, uint8_t type) const;
+
+        void broadcast(uint32_t sender, const buffer_ptr_t& buf, std::string_view header, uint8_t type) const;
+
+        bool register_service(const std::string& type, register_func func);
+
+        service_ptr_t make_service(const std::string& type);
+
+        std::string get_env(const std::string& name) const;
+
+        void set_env(std::string name, std::string value);
+
+        uint32_t get_unique_service(const std::string& name) const;
+
+        bool set_unique_service(std::string name, uint32_t v);
+
+        void response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT);
+
+        std::string worker_info(uint32_t workerid);
     private:
+        void on_timer(uint32_t serviceid, uint32_t timerid);
+
         void wait();
     private:
         volatile int signalcode_ = 0;
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> next_ = 0;
         std::time_t now_ = 0;
-        log logger_;
-        router router_;
+        mutable log logger_;
+        base_timer<timer_expire_policy> timer_;
+        std::unordered_map<std::string, register_func > regservices_;
+        concurrent_map<std::string, std::string, rwlock> env_;
+        concurrent_map<std::string, uint32_t, rwlock> unique_services_;
         std::vector<std::unique_ptr<worker>> workers_;
     };
 };

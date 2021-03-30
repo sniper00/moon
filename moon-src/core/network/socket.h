@@ -7,7 +7,6 @@
 
 namespace moon
 {
-    class router;
     class worker;
     class service;
     class base_connection;
@@ -38,7 +37,7 @@ namespace moon
 
         static constexpr size_t max_socket_num = 0xFFFF;
 
-        socket(router* r, worker* w, asio::io_context& ioctx);
+        socket(server* s, worker* w, asio::io_context& ioctx);
 
         socket(const socket&) = delete;
 
@@ -92,7 +91,7 @@ namespace moon
         void timeout();
     private:
         std::atomic<uint32_t> uuid_ = 0;
-        router* router_;
+        server* server_;
         worker* worker_;
         asio::io_context& ioc_;
         asio::steady_timer timer_;
@@ -112,6 +111,6 @@ namespace moon
             close(m->sender());
             return;
         }
-        s->handle_message(std::forward<Message>(m));
+        moon::handle_message(s, std::forward<Message>(m));
     }
 }

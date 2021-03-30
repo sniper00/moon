@@ -177,7 +177,7 @@ local function cluster_service()
 
         local c = clusters[header.to_node]
         if not c then
-            moon.response("lua", header.from_addr, header.session, false, "target not run cluster")
+            moon.response("lua", header.from_addr, header.session, false, "target not run cluster:"..tostring(header.to_node))
             return
         end
 

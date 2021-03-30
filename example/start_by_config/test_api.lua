@@ -49,8 +49,7 @@ equal(type(socket.set_enable_chunked) , "function")
 
 equal(type(moon.microseconds) , "function")
 
-equal(type(moon.remove_timer) , "function")
-equal(type(moon.repeated) , "function")
+equal(type(moon.timeout) , "function")
 
 
 
@@ -90,36 +89,6 @@ equal(iskindof(c, "Child"),true)
 equal(iskindof(c, "Base"),true)
 equal(iskindof(c, "ChildB"),false)
 equal(iskindof(cb, "ChildB"),true)
-
-local tmr = moon
-
-local ncount = 0
-tmr.repeated(
-	10,
-	1,
-	function()
-		ncount = ncount + 1
-		equal(ncount,1)
-    end
-)
-local ntimes = 0
---example 一个超时10次的计时器 第二个参数是执行次数
-tmr.repeated(
-    10,
-    10,
-    function()
-        ntimes = ntimes + 1
-		test_assert.less_equal(ntimes,10)
-    end
-)
-
-tmr.repeated(1,100,function()
-	local t1 = tmr.repeated(1000,-1,function()
-		test_assert.assert(false)
-	end)
-	tmr.remove_timer(t1)
-end
-)
 
 moon.set_env("env_example","haha")
 equal(moon.get_env("env_example"),"haha")
@@ -179,6 +148,15 @@ do
 end
 
 moon.async(function()
+	local ncount = 0
+	moon.timeout(
+		10,
+		function()
+			ncount = ncount + 1
+			equal(ncount,1)
+		end
+	)
+
 	local co1 = moon.async(function()
 		moon.sleep(100)
 	end)
@@ -195,6 +173,7 @@ moon.async(function()
 		moon.sleep(100)
 	end)
 	local running,free = moon.coroutine_num()
+	print(running,free)
 	test_assert.equal(free, 0)
 	test_assert.equal(running, 3)
 

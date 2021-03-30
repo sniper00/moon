@@ -7,9 +7,12 @@ local PORT = 6379
 local function run_example()
 
     local n = 0
-    local timerid = moon.repeated(1000,-1,function ()
-        print("per sec ",n)
-        n = 0
+    moon.async(function()
+        while true do
+            moon.sleep(1000)
+            print("per sec ",n)
+            n = 0
+        end
     end)
 
     moon.async(function()

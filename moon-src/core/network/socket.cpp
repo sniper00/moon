@@ -4,7 +4,6 @@
 #include "common/hash.hpp"
 #include "worker.h"
 #include "server.h"
-#include "router.h"
 
 #include "network/moon_connection.hpp"
 #include "network/stream_connection.hpp"
@@ -12,8 +11,8 @@
 
 using namespace moon;
 
-socket::socket(router * r, worker* w, asio::io_context & ioctx)
-    : router_(r)
+socket::socket(server* s, worker* w, asio::io_context & ioctx)
+    : server_(s)
     , worker_(w)
     , ioc_(ioctx)
     , timer_(ioctx)
@@ -39,7 +38,7 @@ bool socket::try_open(const std::string& host, uint16_t port)
     }
     catch (asio::system_error& e)
     {
-        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
     }
 }
@@ -65,7 +64,7 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
     }
     catch (asio::system_error& e)
     {
-        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return 0;
     }
 }
@@ -86,7 +85,7 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
         return;
     }
 
-    worker* w = router_->get_server()->get_worker(router_->worker_id(owner));
+    worker* w = server_->get_worker(0, owner);
     auto c = w->socket().make_connection(owner, ctx->type);
 
     ctx->acceptor.async_accept(c->socket(), [this, ctx, c, w, sessionid, owner](const asio::error_code& e)
@@ -106,7 +105,7 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
             {
                 if (e != asio::error::operation_aborted)
                 {
-                    CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                    CONSOLE_WARN(server_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
                 }
             }
         }
@@ -146,7 +145,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
                 connect_timer->async_wait([this, c, owner, sessionid, host, port, connect_timer](const asio::error_code & e) {
                     if (e)
                     {
-                        CONSOLE_ERROR(router_->logger(), "connect %s:%d timer error %s", host.data(), port, e.message().data());
+                        CONSOLE_ERROR(server_->logger(), "connect %s:%d timer error %s", host.data(), port, e.message().data());
                         return;
                     }
                     if (c->fd() == 0)
@@ -181,7 +180,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
     {
         if (sessionid == 0)
         {
-            CONSOLE_WARN(router_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
+            CONSOLE_WARN(server_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
         }
         else
         {
@@ -285,7 +284,7 @@ bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
             v |= static_cast<int>(moon::enable_chunked::send);
             break;
         default:
-            CONSOLE_WARN(router_->logger(),
+            CONSOLE_WARN(server_->logger(),
                 "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.", flag.data());
             return false;
         }
@@ -365,7 +364,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
         MOON_ASSERT(false, "Unknown socket protocol");
         break;
     }
-    connection->logger(router_->logger());
+    connection->logger(server_->logger());
     return connection;
 }
 

@@ -41,9 +41,13 @@ command.COUNTER = function(t)
     end
 end
 
-moon.repeated(1000,-1,function(arg1, arg2, arg3)
-    print(tcount)
+moon.async(function()
+    while true do
+        moon.sleep(1000)
+        print(count)
+    end
 end)
+
 
 local function docmd(sender,sessionid, CMD,...)
     local f = command[CMD]
