@@ -340,7 +340,7 @@ function M.on( path, cb )
     routers[path] = cb
 end
 
-function M.static(dir)
+function M.static(dir, showdebug)
     static_content = {}
     dir = fs.abspath(dir)
     local res = fs.listdir(dir, 100)
@@ -358,6 +358,9 @@ function M.static(dir)
                 mime = mime,
                 bin = io.readfile(v)
             }
+            if showdebug then
+                print("load static file:", src)
+            end
         else
             local index_html = fs.join(v,"index.html")
             if fs.exists(index_html) then
@@ -365,9 +368,13 @@ function M.static(dir)
                     mime = mimes[".html"],
                     bin = io.readfile(index_html)
                 }
+                static_content[src.."/"] = static_content[src]
+                if showdebug then
+                    print("load static index:", src)
+                    print("load static index:", src.."/")
+                end
             end
         end
-        --print("load static:", src)
     end
 
     if fs.exists(fs.join(dir,"index.html")) then
