@@ -227,16 +227,14 @@ int main(int argc, char* argv[])
             std::shared_ptr<server> server_ = std::make_shared<server>();
             wk_server = server_;
 
-            auto router_ = server_->get_router();
-
-            router_->register_service("lua", []()->service_ptr_t {
+            server_->register_service("lua", []()->service_ptr_t {
                 return std::make_unique<lua_service>();
                 });
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-            router_->set_env("LUA_CPATH_EXT", "/?.dll;");
+            server_->set_env("LUA_CPATH_EXT", "/?.dll;");
 #else
-            router_->set_env("LUA_CPATH_EXT", "/?.so;");
+            server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
             moon::server_config_manger smgr;
@@ -255,10 +253,10 @@ int main(int argc, char* argv[])
                 auto clibdir = directory::find(searchdir, "clib");
                 moon::replace(clibdir, "\\", "/");
 
-                router_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
+                server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
                 if (!clibdir.empty())
                 {
-                    router_->set_env("CPATH", moon::format("package.path='%s/%s'..package.path", clibdir.data(), router_->get_env("LUA_CPATH_EXT").data()));
+                    server_->set_env("CPATH", moon::format("package.path='%s/%s'..package.path", clibdir.data(), server_->get_env("LUA_CPATH_EXT").data()));
                 }
 
                 printf("use clib search path: %s\n", clibdir.data());
@@ -284,19 +282,19 @@ int main(int argc, char* argv[])
             auto c = smgr.find(node);
             MOON_CHECK(nullptr != c, moon::format("config for node=%d not found.", node));
 
-            router_->set_env("NODE", std::to_string(c->node));
-            router_->set_env("SERVER_NAME", c->name);
-            router_->set_env("THREAD_NUM", std::to_string(c->thread));
-            router_->set_env("CONFIG", smgr.config());
-            router_->set_env("PARAMS", c->params);
+            server_->set_env("NODE", std::to_string(c->node));
+            server_->set_env("SERVER_NAME", c->name);
+            server_->set_env("THREAD_NUM", std::to_string(c->thread));
+            server_->set_env("CONFIG", smgr.config());
+            server_->set_env("PARAMS", c->params);
 
             server_->logger()->set_level(c->loglevel);
             server_->logger()->set_enable_console(enable_console);
 
             server_->init(c->thread, c->log);
 
-            router_->new_service("lua", moon::format(R"({"name": "bootstrap","file":"%s"})",c->bootstrap.data()), false, 0,  0, 0);
-            router_->set_unique_service("bootstrap", 0x01000001);
+            server_->new_service("lua", moon::format(R"({"name": "bootstrap","file":"%s"})",c->bootstrap.data()), false, 0,  0, 0);
+            server_->set_unique_service("bootstrap", 0x01000001);
 
             server_->run();
         }

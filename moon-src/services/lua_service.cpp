@@ -105,9 +105,9 @@ bool lua_service::init(std::string_view config)
         lua_pushlightuserdata(L, &worker_->socket());
         lua_setfield(L, LUA_REGISTRYINDEX, LASIO_GLOBAL);
 
-        int r = luaL_dostring(L, router_->get_env("CPATH").data());
-        MOON_CHECK(r == LUA_OK, moon::format("CPATH %s", lua_tostring(L, -1)));
-        r = luaL_dostring(L, router_->get_env("PATH").data());
+        //int r = luaL_dostring(L, server_->get_env("CPATH").data());
+        //MOON_CHECK(r == LUA_OK, moon::format("CPATH %s", lua_tostring(L, -1)));
+        int r = luaL_dostring(L, server_->get_env("PATH").data());
         MOON_CHECK(r == LUA_OK, moon::format("PATH %s", lua_tostring(L, -1)));
 
         open_custom_libraries(L);
@@ -125,7 +125,7 @@ bool lua_service::init(std::string_view config)
 
         if (unique())
         {
-            MOON_CHECK(router_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
+            MOON_CHECK(server_->set_unique_service(name(), id()), moon::format("lua service init failed: unique service name %s repeated.", name().data()).data());
         }
 
         logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
@@ -190,7 +190,7 @@ void lua_service::dispatch(message *msg)
         else
         {
             msg->set_sessionid(-msg->sessionid());
-            router_->response(msg->sender(), "dispatch "sv, error, msg->sessionid(), PTYPE_ERROR);
+            server_->response(msg->sender(), "dispatch "sv, error, msg->sessionid(), PTYPE_ERROR);
         }
     }
     catch (const std::exception& e)
