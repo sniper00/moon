@@ -24,13 +24,6 @@ local function run_slave()
             --print("error ", fd, moon.decode(msg, "Z"))
         end)
     end
-
-    -- moon.repeated(1000,-1,function()
-    --     if count> 0 then
-    --         print(count, "per sec")
-    --         count = 0
-    --     end
-    -- end)
 end
 
 

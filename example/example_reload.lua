@@ -25,7 +25,7 @@ end)
 
 if not conf.new then
     print("10 seconds later hot fix")
-    moon.repeated(10000,1,function (  )
+    moon.timeout(10000, function (  )
         print("Hot Fix Result",reload.reload("reload_before", "reload_after"))
     end)
 end

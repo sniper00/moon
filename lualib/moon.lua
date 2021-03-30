@@ -31,11 +31,11 @@ local co_close = coroutine.close
 local _send = core.send
 local _now = core.now
 local _addr = core.id
-local _remove_timer = core.remove_timer
-local _repeated = core.repeated
+local _timeout = core.timeout
 local _newservice = core.new_service
 local _queryservice = core.queryservice
 local _decode = core.decode
+local _scan_services = core.scan_services
 
 local unpack = seri.unpack
 local pack = seri.pack
@@ -117,15 +117,7 @@ local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
 
-local function remove_all_timer(t)
-    for k,_ in pairs(t) do
-        core.remove_timer(k)
-    end
-end
-
-local timer_cb = setmetatable({},{
-	__gc = remove_all_timer,
-})
+local timer_routine = {}
 
 local function coresume(co, ...)
     local ok, err = co_resume(co, ...)
@@ -278,10 +270,10 @@ function moon.quit()
 		end
     end
 
-    for k, co in pairs(timer_cb) do
+    for k, co in pairs(timer_routine) do
         if type(co) == "thread" and co ~= running then
             co_close(co)
-            timer_cb[k] = false
+            timer_routine[k] = false
 		end
     end
 
@@ -357,11 +349,10 @@ function moon.co_remove_service(serviceid)
     return moon.remove_service(serviceid, true)
 end
 
----@param command string
 ---@return string
-function moon.co_runcmd(command)
+function moon.scan_services(workerid)
     local sessionid = make_response()
-    core.runcmd(command, sessionid)
+    _scan_services(workerid, sessionid)
     return co_yield()
 end
 
@@ -563,42 +554,37 @@ function moon.shutdown(callback)
 end
 
 --------------------------timer-------------
+local timer_session = 0
 
 reg_protocol {
     name = "timer",
     PTYPE = PTYPE_TIMER,
     dispatch = function(msg)
-        local timerid, last = _decode(msg, "SR")
-        local v = timer_cb[timerid]
-        local tp = type(v)
-        if tp == "function" then
-            v(timerid, last>0)
-        elseif tp == "thread" then
-            timer_cb[timerid] = nil
+        local timerid = _decode(msg, "S")
+        local v = timer_routine[timerid]
+        timer_routine[timerid] = nil
+        if type(v) == "thread" then
             coresume(v, timerid)
-            return
-        end
-
-        if last>0 then
-            timer_cb[timerid] = nil
+        elseif v then
+            v()
         end
     end
 }
 
----@param mills integer
----@param times integer
----@param fn function
----@return integer
-function moon.repeated(mills, times, fn)
-    local timerid = _repeated(mills, times)
-    timer_cb[timerid] = fn
-    return timerid
+---@param timerid integer @
+function moon.remove_timer(timerid)
+    timer_routine[timerid] = false
 end
 
----@param timerid integer
-function moon.remove_timer(timerid)
-    timer_cb[timerid] = nil
-    _remove_timer(timerid)
+function moon.timeout(mills, fn)
+    timer_session = timer_session + 1
+    if timer_session == 0xFFFFFFFF then
+        timer_session = 1
+    end
+    assert(not timer_routine[timer_session])
+    _timeout(mills, timer_session)
+    timer_routine[timer_session] = fn
+    return timer_session
 end
 
 ---async
@@ -606,8 +592,13 @@ end
 ---@param mills integer
 ---@return integer
 function moon.sleep(mills)
-    local timerid = _repeated(mills, 1)
-    timer_cb[timerid] = co_running()
+    timer_session = timer_session + 1
+    if timer_session == 0xFFFFFFFF then
+        timer_session = 1
+    end
+    assert(not timer_routine[timer_session])
+    _timeout(mills, timer_session)
+    timer_routine[timer_session] = co_running()
     return co_yield()
 end
 
