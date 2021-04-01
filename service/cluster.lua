@@ -177,7 +177,7 @@ local function cluster_service()
 
         local c = clusters[header.to_node]
         if not c then
-            moon.response("lua", header.from_addr, header.session, false, "target not run cluster:"..tostring(header.to_node))
+            moon.response("lua", header.from_addr, header.session, false, "target not run cluster")
             return
         end
 
@@ -235,20 +235,21 @@ local function cluster_service()
 
         local content = moon.get_env("CONFIG")
         local js = json.decode(content)
-        local game_list = {}
+        local max_cluster_node = 0
         for _,c in ipairs(js) do
             local host,port = find_host_port(c.params)
             if host and port then
+                if c.node > max_cluster_node then
+                    max_cluster_node = c.node
+                end
+
                 if not clusters[c.node] then
                     clusters[c.node]={host = host, port = port, fd = false}
                 end
             end
-            if c.params and c.params.server_game then
-                table.insert(game_list, c.node)
-            end
         end
-        -- moon.set_env("MAX_CLUSTER_NODE", tostring(max_cluster_node))
-        moon.set_env("GAME_NODE_LIST", json.encode(game_list))
+
+        moon.set_env("MAX_CLUSTER_NODE", tostring(max_cluster_node))
     end
 
     load_config()
