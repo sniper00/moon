@@ -5,8 +5,9 @@
 #include "common/time.hpp"
 #include "common/file.hpp"
 #include "common/lua_utility.hpp"
+#include "rapidjson/document.h"
+#include "common/rapidjson_helper.hpp"
 #include "server.h"
-#include "server_config.hpp"
 #include "services/lua_service.h"
 
 extern "C" {
@@ -96,20 +97,6 @@ static void register_signal(int argc, char* argv[])
 #endif
 }
 
-void usage(void) {
-    std::cout << "Usage:\n";
-    std::cout << "        moon [-c filename] [-r server-id] [-f lua-filename]\n";
-    std::cout << "The options are:\n";
-    std::cout << "        -c          set configuration file (default: config.json). will change current working directory to configuration file's path.\n";
-    std::cout << "        -r          set server id to run (default: 1).\n";
-    std::cout << "        -f          run a lua file. will change current working directory to lua file's path.\n";
-    std::cout << "Examples:\n";
-    std::cout << "        moon -c config.json\n";
-    std::cout << "        moon -c config.json -r 1\n";
-    std::cout << "        moon -r 1\n";
-    std::cout << "        moon -f aoi_example.lua\n";
-}
-
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\
             int lua_c_fn(lua_State* L);\
 \
@@ -160,6 +147,13 @@ void print_mem_stats()
 }
 #endif
 
+static void usage(void) {
+    std::cout << "Usage:\n";
+    std::cout << "        moon [script [args]]\n";
+    std::cout << "Examples:\n";
+    std::cout << "        moon main.lua  hello\n";
+}
+
 int main(int argc, char* argv[])
 {
     using namespace moon;
@@ -171,138 +165,124 @@ int main(int argc, char* argv[])
 #ifdef LUA_CACHELIB
     luaL_initcodecache();
 #endif
+    try
     {
-        try
+        uint32_t thread_count = std::thread::hardware_concurrency();
+        bool enable_console = true;
+        std::string logfile;
+        std::string bootstrap;
+        std::string loglevel;
+
+        int argn = 1;
+        if (argc <= argn)
         {
-            directory::working_directory = directory::current_directory();
+            usage();
+            return -1;
+        }
+        bootstrap = argv[argn++];
 
-            bool enable_console = true;//enable console log
-            int32_t node = 1;//default start server 1
-            std::string conf = "config.json";//default config filename
-            std::string bootstrap;
+        if (fs::path(bootstrap).extension() != ".lua")
+        {
+            usage();
+            return -1;
+        }
 
-            for (int i = 1; i < argc; ++i)
+        std::string arg = "return {";
+        for (int i = argn; i < argc; ++i)
+        {
+            arg.append("'");
+            arg.append(argv[i]);
+            arg.append("',");
+        }
+        arg.append("}");
+
+        if(file::read_all(bootstrap, std::ios::in).substr(0, 11) == "---__init__")
+        {
+            std::unique_ptr<lua_State, moon::state_deleter> lua_{ luaL_newstate() };
+            lua_State* L = lua_.get();
+            luaL_openlibs(L);
+            lua_pushboolean(L, true);
+            lua_setglobal(L, "__init__");
+
+            lua_pushcfunction(L, traceback);
+            assert(lua_gettop(L) == 1);
+
+            int r = luaL_loadfile(L, bootstrap.data());
+            MOON_CHECK(r == LUA_OK, moon::format("loadfile %s", lua_tostring(L, -1)));
+
+            r = luaL_dostring(L, arg.data());
+            MOON_CHECK(r == LUA_OK, moon::format("%s", lua_tostring(L, -1)));
+            r = lua_pcall(L, 1, 1, 1);
+            MOON_CHECK(r == LUA_OK, moon::format("%s", lua_tostring(L, -1)));
+            MOON_CHECK(lua_type(L, -1) == LUA_TTABLE, "init must return conf table");
+            lua_pushnil(L);
+            while (lua_next(L, -2))
             {
-                bool lastarg = i == (argc - 1);
-                std::string_view v{ argv[i] };
-                if ((v == "-h"sv || v == "--help"sv) && !lastarg)
-                {
-                    usage();
-                    return -1;
-                }
-                else if ((v == "-c"sv || v == "--config"sv) && !lastarg)
-                {
-                    conf = argv[++i];
-                    if (!fs::exists(conf))
-                    {
-                        usage();
-                        return -1;
-                    }
-                }
-                else if ((v == "-r"sv || v == "--run"sv) && !lastarg)
-                {
-                    node = moon::string_convert<int32_t>(argv[++i]);
-                }
-                else if ((v == "-f"sv || v == "--file"sv) && !lastarg)
-                {
-                    bootstrap = argv[++i];
-                    if (fs::path(bootstrap).extension() != ".lua")
-                    {
-                        std::cout << "service file must be a lua script.\n";
-                        usage();
-                        return -1;
-                    }
-                }
-                else if (v == "--hide"sv)
-                {
-                    enable_console = false;
-                }
-                else
-                {
-                    usage();
-                    return -1;
-                }
+                std::string key = lua_tostring(L, -2);
+                if (key == "thread")
+                    thread_count = (uint32_t)luaL_checkinteger(L, -1);
+                else if (key == "logfile")
+                    logfile = luaL_check_stringview(L, -1);
+                else if (key == "memlimit")
+                    loglevel = luaL_check_stringview(L, -1);
+                else if (key == "enable_console")
+                    enable_console = lua_toboolean(L, -1);
+                else if (key == "loglevel")
+                    loglevel = luaL_check_stringview(L, -1);
+                lua_pop(L, 1);
             }
+        }
 
-            std::shared_ptr<server> server_ = std::make_shared<server>();
-            wk_server = server_;
+        std::shared_ptr<server> server_ = std::make_shared<server>();
+        wk_server = server_;
 
-            server_->register_service("lua", []()->service_ptr_t {
-                return std::make_unique<lua_service>();
-                });
+        server_->register_service("lua", []()->service_ptr_t {
+            return std::make_unique<lua_service>();
+            });
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-            server_->set_env("LUA_CPATH_EXT", "/?.dll;");
+        server_->set_env("LUA_CPATH_EXT", "/?.dll;");
 #else
-            server_->set_env("LUA_CPATH_EXT", "/?.so;");
+        server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
-            moon::server_config_manger smgr;
-
-            if (!bootstrap.empty())
-            {
-                std::string searchdir = directory::module_path().string();
-                searchdir += ";";
-                searchdir += directory::working_directory.string();
-
-                auto lualibdir = directory::find(searchdir, "moon.lua");
-                MOON_CHECK(!lualibdir.empty(), "can not found moon 'lualib' path.");
-                lualibdir = fs::path(lualibdir).parent_path().string();
-                moon::replace(lualibdir, "\\", "/");
-
-                auto clibdir = directory::find(searchdir, "clib");
-                moon::replace(clibdir, "\\", "/");
-
-                server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
-                if (!clibdir.empty())
-                {
-                    server_->set_env("CPATH", moon::format("package.path='%s/%s'..package.path", clibdir.data(), server_->get_env("LUA_CPATH_EXT").data()));
-                }
-
-                printf("use clib search path: %s\n", clibdir.data());
-                printf("use lualib search path: %s\n", lualibdir.data());
-
-                moon::replace(bootstrap, "\\", "/");
-
-                fs::path p(bootstrap);
-                std::string filename = p.filename().string();
-                fs::current_path(fs::absolute(p).parent_path());
-                MOON_CHECK(smgr.parse(moon::format("[{\"node\":1,\"name\":\"bootstrap\",\"bootstrap\":\"%s\"}]", filename.data()), node),"pase config failed");
-            }
-            else
-            {
-                MOON_CHECK(directory::exists(conf)
-                    , moon::format("can not found config file: '%s'.", conf.data()).data());
-                MOON_CHECK(smgr.parse(moon::file::read_all(conf, std::ios::binary | std::ios::in), node), "failed");
-                fs::current_path(fs::absolute(fs::path(conf)).parent_path());
-            }
-
-            directory::working_directory = fs::current_path();
-
-            auto c = smgr.find(node);
-            MOON_CHECK(nullptr != c, moon::format("config for node=%d not found.", node));
-
-            server_->set_env("NODE", std::to_string(c->node));
-            server_->set_env("SERVER_NAME", c->name);
-            server_->set_env("THREAD_NUM", std::to_string(c->thread));
-            server_->set_env("CONFIG", smgr.config());
-            server_->set_env("PARAMS", c->params);
-
-            server_->logger()->set_level(c->loglevel);
-            server_->logger()->set_enable_console(enable_console);
-
-            server_->init(c->thread, c->log);
-
-            server_->new_service("lua", moon::format(R"({"name": "bootstrap","file":"%s"})",c->bootstrap.data()), false, 0,  0, 0);
-            server_->set_unique_service("bootstrap", 0x01000001);
-
-            server_->run();
-        }
-        catch (std::exception& e)
         {
-            printf("ERROR:%s\n", e.what());
+            auto p = fs::current_path();
+            p /= "lualib";
+            if (!fs::exists(p))
+            {
+                p = directory::module_path();
+                p /= "lualib";
+            }
+            std::string lualibdir = p.string();
+            moon::replace(lualibdir, "\\", "/");
+            server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
         }
+
+        fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());
+        directory::working_directory = fs::current_path();
+
+        server_->set_env("ARG", arg);
+        server_->set_env("THREAD_NUM", std::to_string(thread_count));
+
+        server_->logger()->set_enable_console(enable_console);
+        server_->logger()->set_level(loglevel);
+
+        server_->init(thread_count, logfile);
+
+        service_conf conf;
+        conf.name = "bootstrap";
+        conf.source = fs::path(bootstrap).filename().string();
+        server_->new_service("lua", conf, 0, 0);
+        server_->set_unique_service("bootstrap", 0x01000001);
+
+        server_->run();
     }
+    catch (std::exception& e)
+    {
+        printf("ERROR:%s\n", e.what());
+    }
+
     print_mem_stats();
     return 0;
 }

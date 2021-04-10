@@ -84,7 +84,7 @@ namespace moon
             return v;
         }
     public:
-        virtual bool init(std::string_view) = 0;
+        virtual bool init(const service_conf& conf) = 0;
 
         virtual void dispatch(message* msg) = 0;
 

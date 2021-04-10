@@ -57,7 +57,7 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
         ctx->acceptor.bind(endpoint);
         ctx->acceptor.listen(std::numeric_limits<int>::max());
 
-        auto id = uuid();
+        auto id = server_->nextfd();
         ctx->fd = id;
         acceptors_.emplace(id, ctx);
         return id;
@@ -92,7 +92,7 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
     {
         if (!e)
         {
-            c->fd(w->socket().uuid());
+            c->fd(server_->nextfd());
             w->socket().add_connection(this, ctx, c, sessionid);
         }
         else
@@ -129,7 +129,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
         if (0 == sessionid)
         {
             asio::connect(c->socket(), endpoints);
-            c->fd(uuid());
+            c->fd(server_->nextfd());
             connections_.emplace(c->fd(), c);
             asio::post(ioc_, [c]() {
                 c->start(false);
@@ -161,7 +161,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
             {
                 if (!e)
                 {
-                    c->fd(uuid());
+                    c->fd(server_->nextfd());
                     connections_.emplace(c->fd(), c);
                     c->start(false);
                     response(0, owner, std::to_string(c->fd()), std::string_view{}, sessionid, PTYPE_TEXT);
@@ -230,7 +230,7 @@ bool socket::close(uint32_t fd)
     {
         iter->second->close();
         connections_.erase(iter);
-        unlock_fd(fd);
+        server_->unlock_fd(fd);
         return true;
     }
 
@@ -242,10 +242,27 @@ bool socket::close(uint32_t fd)
             iter->second->acceptor.close();
         }
         acceptors_.erase(iter);
-        unlock_fd(fd);
+        server_->unlock_fd(fd);
         return true;
     }
     return false;
+}
+
+void socket::close_all()
+{
+    for (auto& c : connections_)
+    {
+        c.second->close();
+    }
+
+    for (auto& ac : acceptors_)
+    {
+        if (ac.second->acceptor.is_open())
+        {
+            ac.second->acceptor.cancel();
+            ac.second->acceptor.close();
+        }
+    }
 }
 
 bool socket::settimeout(uint32_t fd, int v)
@@ -312,12 +329,6 @@ bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t
     return false;
 }
 
-size_t moon::socket::socket_num()
-{
-    std::unique_lock lck(lock_);
-    return fd_watcher_.size();
-}
-
 std::string moon::socket::getaddress(uint32_t fd)
 {
 	if (auto iter = connections_.find(fd); iter != connections_.end())
@@ -325,19 +336,6 @@ std::string moon::socket::getaddress(uint32_t fd)
 		return iter->second->address();
 	}
 	return std::string();
-}
-
-uint32_t socket::uuid()
-{
-    uint32_t res = 0;
-    do
-    {
-        res = uuid_.fetch_add(1);
-        res %= max_socket_num;
-        ++res;
-        res |= (worker_->id() << 16);
-    } while (!try_lock_fd(res));
-    return res;
 }
 
 connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
@@ -381,19 +379,6 @@ void socket::response(uint32_t sender, uint32_t receiver, std::string_view data,
     response_->set_type(type);
 
     handle_message(receiver, response_);
-}
-
-bool socket::try_lock_fd(uint32_t fd)
-{
-    std::unique_lock lck(lock_);
-    return fd_watcher_.emplace(fd).second;
-}
-
-void socket::unlock_fd(uint32_t fd)
-{
-    std::unique_lock lck(lock_);
-    size_t count = fd_watcher_.erase(fd);
-    MOON_CHECK(count == 1, "socket fd erase failed!");
 }
 
 void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid)

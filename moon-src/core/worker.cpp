@@ -22,18 +22,6 @@ namespace moon
         wait();
     }
 
-    std::string worker::info()
-    {
-        auto response = moon::format(
-            R"({"cpu":%lld,"socket_num":%zu,"mqsize":%d})",
-            cpu_cost_,
-            socket_->socket_num(),
-            mqsize_.load()
-        );
-        cpu_cost_ = 0;
-        return response;
-    }
-
     void worker::run()
     {
         socket_ = std::make_unique<moon::socket>(server_, this, io_ctx_);
@@ -42,6 +30,7 @@ namespace moon
             state_.store(state::ready, std::memory_order_release);
             CONSOLE_INFO(server_->logger(), "WORKER-%u START", workerid_);
             io_ctx_.run();
+            socket_->close_all();
             services_.clear();
             CONSOLE_INFO(server_->logger(), "WORKER-%u STOP", workerid_);
             });
@@ -99,9 +88,9 @@ namespace moon
         return res;
     }
 
-    void worker::add_service(std::string service_type, std::string config, bool unique, uint32_t creatorid, int32_t sessionid)
+    void worker::add_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
     {
-        asio::post(io_ctx_, [this, service_type = std::move(service_type), config = std::move(config), unique, creatorid, sessionid](){
+        asio::post(io_ctx_, [this, service_type = std::move(service_type), conf = std::move(conf), creatorid, sessionid](){
             do
             {
                 if (state_.load(std::memory_order_acquire) != state::ready)
@@ -134,10 +123,10 @@ namespace moon
                     moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
                 s->set_id(serviceid);
                 s->logger(server_->logger());
-                s->set_unique(unique);
+                s->set_unique(conf.unique);
                 s->set_server_context(server_, this);
 
-                if (!s->init(config))
+                if (!s->init(conf))
                 {
                     break;
                 }
@@ -306,7 +295,7 @@ namespace moon
             s = find_service(receiver);
             if (nullptr == s || !s->ok())
             {
-                if (sender != 0)
+                if (sender != 0 && msg->type()!=PTYPE_TIMER)
                 {
                     std::string hexdata = moon::hex_string({ msg->data(),msg->size() });
                     std::string str = moon::format("[%08X] attempt send to dead service [%08X]: %s."

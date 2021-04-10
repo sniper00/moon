@@ -15,15 +15,15 @@ namespace moon
         wait();
     }
 
-    void server::init(int worker_num, const std::string& logfile)
+    void server::init(uint32_t worker_num, const std::string& logfile)
     {
-        worker_num = (worker_num <= 0) ? 1 : worker_num;
+        worker_num = (worker_num == 0) ? 1 : worker_num;
 
         logger_.init(logfile);
 
         CONSOLE_INFO(logger(), "INIT with %d workers.", worker_num);
 
-        for (int i = 0; i != worker_num; i++)
+        for (uint32_t i = 0; i != worker_num; i++)
         {
             workers_.emplace_back(std::make_unique<worker>(this,  i + 1));
         }
@@ -180,9 +180,9 @@ namespace moon
         return workers_[workerid].get();
     }
 
-    void server::timeout(int64_t interval, uint32_t serviceid, uint32_t timerid)
+    uint32_t server::timeout(int64_t interval, uint32_t serviceid)
     {
-        return timer_.add(now_+ interval, serviceid, timerid, this);
+        return timer_.add(now_+ interval, serviceid, this);
     }
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)
@@ -194,9 +194,9 @@ namespace moon
         send_message(std::move(msg));
     }
 
-    void server::new_service(std::string service_type, std::string config, bool unique, int32_t workerid, uint32_t creatorid, int32_t sessionid)
+    void server::new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
     {
-        worker* w = get_worker(workerid);
+        worker* w = get_worker(conf.threadid);
         if (nullptr != w)
         {
             w->shared(false);
@@ -205,7 +205,7 @@ namespace moon
         {
             w = next_worker();
         }
-        w->add_service(std::move(service_type), std::move(config), unique, creatorid, sessionid);
+        w->add_service(std::move(service_type), std::move(conf), creatorid, sessionid);
     }
 
     void server::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid)
@@ -344,7 +344,7 @@ namespace moon
             if (get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
                 CONSOLE_DEBUG(logger()
-                    , "router response %s:%s"
+                    , "server::response %s:%s"
                     , std::string(header).data()
                     , std::string(content).data());
             }
@@ -360,13 +360,56 @@ namespace moon
         send_message(std::move(m));
     }
 
-    std::string server::worker_info(uint32_t workerid)
+    std::string server::info()
     {
-        worker* w = get_worker(workerid);
-        if (nullptr == w)
+        std::string req;
+        req.append("[\n");
+        req.append(moon::format(R"({"id":0, "socket":%zu, "timer":%zu})",
+            socket_num(),
+            timer_.size()
+        ));
+        for (auto& w : workers_)
         {
-            return std::string{};
+            req.append(",\n");
+            auto v = moon::format(R"({"id":%u, "cpu":%lld, "mqsize":%d, "service":%u})",
+                w->id(),
+                w->cpu_cost_,
+                w->mqsize_.load(),
+                w->count_.load()
+            );
+            w->cpu_cost_ = 0;
+            req.append(v);
         }
-        return w->info();
+        req.append("]");
+        return req;
+    }
+
+    uint32_t server::nextfd()
+    {
+        uint32_t fd = 0;
+        do
+        {
+            fd = fd_seq_.fetch_add(1);
+        } while (fd==0 || !try_lock_fd(fd));
+        return fd;
+    }
+
+    bool server::try_lock_fd(uint32_t fd)
+    {
+        std::unique_lock lck(fd_lock_);
+        return fd_watcher_.emplace(fd).second;
+    }
+
+    void server::unlock_fd(uint32_t fd)
+    {
+        std::unique_lock lck(fd_lock_);
+        size_t count = fd_watcher_.erase(fd);
+        MOON_CHECK(count == 1, "socket fd erase failed!");
+    }
+
+    size_t server::socket_num()
+    {
+        std::unique_lock lck(fd_lock_);
+        return fd_watcher_.size();
     }
 }
