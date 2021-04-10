@@ -56,8 +56,9 @@ function core.log(loglv,...)
 end
 
 --- set log level
+---@param lv string @DEBUG, INFO, WARN, ERROR
 ---@return integer
-function core.set_loglevel()
+function core.set_loglevel(lv)
 end
 
 --- get log level
