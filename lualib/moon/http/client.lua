@@ -23,7 +23,9 @@ local function read_chunked(fd)
 
     while true do
         local data, err = socket.readline(fd, "\r\n")
-        assert(data,err)
+        if not data then
+            return {socket_error = err}
+        end
         local length = tonumber(data,"16")
         if not length then
             error("Invalid response body")
@@ -35,10 +37,14 @@ local function read_chunked(fd)
 
         if length >0 then
             data, err = socket.read(fd, length)
-            assert(data,err)
+            if not data then
+                return {socket_error = err}
+            end
             tbinsert( chunkdata, data )
             data, err = socket.readline(fd, "\r\n")
-            assert(data,err)
+            if not data then
+                return {socket_error = err}
+            end
         elseif length <0 then
             error("Invalid response body")
         end
@@ -46,7 +52,7 @@ local function read_chunked(fd)
 
     local  data, err = socket.readline(fd, "\r\n")
     if not data then
-        return false,err
+        return {socket_error = err}
     end
 
     return chunkdata
@@ -54,7 +60,9 @@ end
 
 local function response_handler(fd)
     local data, err = socket.readline(fd, "\r\n\r\n")
-    assert(data,err)
+    if not data then
+        return {socket_error = err}
+    end
 
     --print("raw data",data)
     local ok, version, status_code, header = parse_response(data)
@@ -77,23 +85,26 @@ local function response_handler(fd)
     if content_length then
         content_length = tonumber(content_length)
         if not content_length then
-            error("content-length is not number")
+            moon.warn("content-length is not number")
+            return response
         end
 
         if content_length >0 then
             --print("Content-Length",content_length)
             data, err = socket.read(fd, content_length)
-            assert(data,err)
+            if not data then
+                return {socket_error = err}
+            end
             response.content = data
         end
     elseif header["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd)
-        if not chunkdata then
-            error("Invalid response body")
+        if chunkdata.socket_error then
+            return chunkdata
         end
         response.content = tbconcat( chunkdata )
     else
-        error ("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
+        moon.warn("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
     end
     return response
 end
@@ -114,46 +125,61 @@ local timeout  = 0
 
 local proxyaddress = nil
 
-local pool = {}
+local keep_alive_host = {}
 
-local max_connection_num = 10
+local max_pool_num = 10
 
 local function do_request(baseaddress, keepalive, req)
 
-    local fd
-    local err
-    local fdpool = pool[baseaddress]
-    if not fdpool then
-        fdpool = {}
-        pool[baseaddress] = fdpool
+::TRY_AGAIN::
+    local fd, err
+    local pool = keep_alive_host[baseaddress]
+    if not pool then
+        pool = {}
+        keep_alive_host[baseaddress] = pool
+    elseif #pool >0 then
+        fd = table.remove(pool)
     end
 
-    if #fdpool == 0 then
+    if not fd then
         local host, port = parse_host(baseaddress, 80)
         fd, err = socket.connect(host, port,  moon.PTYPE_TEXT, timeout)
         if not fd then
             return false ,err
         end
         socket.settimeout(fd, timeout//1000)
-    else
-        fd = table.remove(fdpool)
     end
 
-    socket.write(fd, seri.concat(req))
+    if not socket.write(fd, seri.concat(req)) then
+        fd = nil
+        goto TRY_AGAIN
+    end
 
     local ok , response = pcall(response_handler, fd)
+    if not ok then
+        socket.close(fd)
+        return false, response
+    end
 
-    if not ok and #fdpool>0 then
-        --request socket error remove all pool fd
-        pool[baseaddress] = {}
+    if response.socket_error then
+        socket.close(fd)
+        fd = nil
+        if tostring(response.socket_error):find("timeout") then
+            return false, "read timeout"
+        end
+        goto TRY_AGAIN
     end
 
     if not keepalive then
         socket.close(fd)
     else
-        if ok and keepalive then
-            if #fdpool < max_connection_num then
-                table.insert(fdpool, fd)
+        if response.header["connection"] == "close" then
+            socket.close(fd)
+        else
+            if #pool < max_pool_num then
+                table.insert(pool, fd)
+            else
+                socket.close(fd)
             end
         end
     end
@@ -178,7 +204,7 @@ local function request( method, baseaddress, path, content, header, keepalive)
     tbinsert( cache, path )
     tbinsert( cache, " HTTP/1.1\r\n" )
     tbinsert( cache, "Host: " )
-    tbinsert( cache, host )
+    tbinsert( cache, baseaddress )
     tbinsert( cache, "\r\n")
 
     if header then
