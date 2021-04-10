@@ -233,16 +233,13 @@ end
 
 ---async 创建一个新的服务
 ---@param stype string @服务类型，根据所注册的服务类型，可选有 'lua'
----@param config table @服务的启动配置，数据类型table, 可以用来向服务传递参数
----@param unique boolean @default false, 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
----@param workerid integer @default 0 ,在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
+---@param config table @服务的启动配置，{name="a",file="file"}, 可以用来向服务传递额外参数
+---                    unique 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
+---                    threadid 在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
 ---@return integer @返回服务id
-function moon.new_service(stype, config, unique, workerid)
-    unique = unique or false
-    workerid = workerid or 0
-    config = jencode(config)
+function moon.new_service(stype, config)
     local sessionid = make_response()
-    _newservice(stype, config, unique, workerid, sessionid)
+    _newservice(stype, sessionid, config)
     return tointeger(co_yield())
 end
 
@@ -554,7 +551,6 @@ function moon.shutdown(callback)
 end
 
 --------------------------timer-------------
-local timer_session = 0
 
 reg_protocol {
     name = "timer",
@@ -563,6 +559,9 @@ reg_protocol {
         local timerid = _decode(msg, "S")
         local v = timer_routine[timerid]
         timer_routine[timerid] = nil
+        if not v then
+            return
+        end
         if type(v) == "thread" then
             coresume(v, timerid)
         elseif v then
@@ -577,12 +576,7 @@ function moon.remove_timer(timerid)
 end
 
 function moon.timeout(mills, fn)
-    timer_session = timer_session + 1
-    if timer_session == 0xFFFFFFFF then
-        timer_session = 1
-    end
-    assert(not timer_routine[timer_session])
-    _timeout(mills, timer_session)
+    local timer_session = _timeout(mills)
     timer_routine[timer_session] = fn
     return timer_session
 end
@@ -592,12 +586,7 @@ end
 ---@param mills integer
 ---@return integer
 function moon.sleep(mills)
-    timer_session = timer_session + 1
-    if timer_session == 0xFFFFFFFF then
-        timer_session = 1
-    end
-    assert(not timer_routine[timer_session])
-    _timeout(mills, timer_session)
+    local timer_session = _timeout(mills)
     timer_routine[timer_session] = co_running()
     return co_yield()
 end

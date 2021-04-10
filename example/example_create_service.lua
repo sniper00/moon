@@ -2,7 +2,7 @@ local moon = require("moon")
 
 local conf = ...
 
-if conf.slave then
+if conf and conf.slave then
     local command = {}
 
     command.QUIT = function ()
@@ -27,7 +27,7 @@ if conf.slave then
         docmd(sender, unpack(sz, len))
     end)
 
-    if conf.auto_quit then
+    if conf and conf.auto_quit then
         print("auto quit, bye bye")
         -- 使服务退出
         moon.quit()

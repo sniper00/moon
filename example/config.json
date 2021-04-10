@@ -1,84 +1,12 @@
 [
     {
-        "node": 1,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {
-            "outer_host": "0.0.0.0",
-            "outer_port": 12345
-        }
-    },
-    {
-        "node": 2,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    }
-    ,
-    {
-        "node": 3,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
-        "node": 4,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
-        "node": 5,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
-        "node": 6,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
-        "node": 7,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {}
-    },
-    {
         "node": 8,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {
-            "cluster_host":"127.0.0.1",
-            "cluster_port":42345
-        }
+        "host":"127.0.0.1",
+        "port":42345
     },
     {
         "node": 9,
-        "name": "server_#node",
-        "log_level": "DEBUG",
-        "log": "log/#node-#date.log",
-        "bootstrap": "main.lua",
-        "params": {
-            "cluster_host":"127.0.0.1",
-            "cluster_port":42346
-        }
+        "host":"127.0.0.1",
+        "port":42346
     }
 ]

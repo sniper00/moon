@@ -3,10 +3,8 @@
 #include "server.h"
 #include "worker.h"
 #include "common/hash.hpp"
+#include "common/lua_utility.hpp"
 #include "rapidjson/document.h"
-#include "service_config.hpp"
-#include "server_config.hpp"
-
 
 #ifdef MOON_ENABLE_MIMALLOC
 #include "mimalloc.h"
@@ -22,16 +20,6 @@ extern "C"
 {
     int lua_json_decode(lua_State* L, const char*, size_t);
     void open_custom_libraries(lua_State* L);
-}
-
-static int traceback(lua_State* L) {
-    const char* msg = lua_tostring(L, 1);
-    if (msg)
-        luaL_traceback(L, L, msg, 1);
-    else {
-        lua_pushliteral(L, "(no error message)");
-    }
-    return 1;
 }
 
 void *lua_service::lalloc(void *ud, void *ptr, size_t osize, size_t nsize)
@@ -84,15 +72,12 @@ lua_service::~lua_service()
     logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
 }
 
-bool lua_service::init(std::string_view config)
+bool lua_service::init(const moon::service_conf& conf)
 {
     try
     {
-        service_config_parser<lua_service> conf;
-        MOON_CHECK(conf.parse(this, config), "lua service init failed: parse config failed.");
-        auto luafile = conf.get_value<std::string>("file");
-        MOON_CHECK(!luafile.empty(), "lua service init failed: config does not provide lua file.");
-        mem_limit = static_cast<size_t>(conf.get_value<int64_t>("memlimit"));
+        mem_limit = conf.memlimit;
+        name_ = conf.name;
 
         lua_State* L = lua_.get();
         lua_gc(L, LUA_GCSTOP, 0);
@@ -105,20 +90,24 @@ bool lua_service::init(std::string_view config)
         lua_pushlightuserdata(L, &worker_->socket());
         lua_setfield(L, LUA_REGISTRYINDEX, LASIO_GLOBAL);
 
-        //int r = luaL_dostring(L, server_->get_env("CPATH").data());
-        //MOON_CHECK(r == LUA_OK, moon::format("CPATH %s", lua_tostring(L, -1)));
         int r = luaL_dostring(L, server_->get_env("PATH").data());
         MOON_CHECK(r == LUA_OK, moon::format("PATH %s", lua_tostring(L, -1)));
-
+        
         open_custom_libraries(L);
         lua_pushcfunction(L, traceback);
         assert(lua_gettop(L) == 1);
 
-        r = luaL_loadfile(L, luafile.data());
+        r = luaL_loadfile(L, conf.source.data());
         MOON_CHECK(r == LUA_OK, moon::format("loadfile %s", lua_tostring(L, -1)));
-        lua_json_decode(L, config.data(), config.size());//push table
-        assert(lua_type(L, -1) == LUA_TTABLE);
-        r = lua_pcall(L, 1, 0, 1);
+
+        int nargs = (conf.params.empty()?0:1);
+        if (nargs > 0)
+        {
+            r = luaL_dostring(L, conf.params.data());
+            MOON_CHECK(r == LUA_OK, moon::format("params %s", lua_tostring(L, -1)));
+        }
+
+        r = lua_pcall(L, nargs, 0, 1);
         MOON_CHECK(r == LUA_OK, moon::format("run %s", lua_tostring(L, -1)));
 
         lua_settop(L, 0);
@@ -134,7 +123,7 @@ bool lua_service::init(std::string_view config)
     }
     catch (const std::exception &e)
     {
-        CONSOLE_ERROR(logger(), "lua_service::init config:\n%s. \n%s.", config.data(), e.what());
+        CONSOLE_ERROR(logger(), "lua_service::init error:\n%s.", e.what());
     }
     return ok_;
 }

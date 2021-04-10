@@ -11,11 +11,9 @@ local test_case =
     {
         name = "test_network",
         file = "start_by_config/test_network.lua",
-        network = {
-            type = "listen",
-            ip = "127.0.0.1",
-            port =  "30001"
-        }
+        type = "listen",
+        ip = "127.0.0.1",
+        port =  "30001"
     },
     {
         name = "test_send_sender",
@@ -35,11 +33,9 @@ local test_case =
     {
         name = "test_large_package",
         file = "start_by_config/test_large_package.lua",
-        network = {
-            ip = "127.0.0.1",
-            port =  "30002",
-            frame_flag= "rw"
-        }
+        ip = "127.0.0.1",
+        port =  "30002",
+        frame_flag= "rw"
     }
     ,
     {

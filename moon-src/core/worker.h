@@ -16,7 +16,7 @@ namespace moon
 
         using asio_work_type = asio::executor_work_guard<asio::io_context::executor_type>;
     public:
-        static constexpr uint16_t max_uuid = 0xFFFF;
+        static constexpr uint32_t max_uuid = 0xFFFFFF;
 
         friend class server;
 
@@ -38,7 +38,7 @@ namespace moon
 
         uint32_t uuid();
 
-        void add_service(std::string service_type, std::string config, bool unique, uint32_t creatorid, int32_t sessionid);
+        void add_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid);
 
         void send(message_ptr_t&& msg);
 
@@ -51,8 +51,6 @@ namespace moon
         void send_prefab(uint32_t sender, uint32_t receiver, uint32_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const;
 
         moon::socket& socket() { return *socket_; }
-
-        std::string info();
     private:
         void run();
 
