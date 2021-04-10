@@ -51,7 +51,7 @@ namespace moon
             {
                 std::error_code ec;
                 auto parent_path = fs::path(logfile).parent_path();
-                if (!fs::exists(parent_path, ec))
+                if (!parent_path.empty() && !fs::exists(parent_path, ec))
                 {
                     fs::create_directories(parent_path, ec);
                     MOON_CHECK(!ec, ec.message().data());
