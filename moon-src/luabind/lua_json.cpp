@@ -17,8 +17,6 @@
 #include "rapidjson/reader.h"
 #include "rapidjson/error/en.h"
 
-#include "common/buffer.hpp"
-
 static constexpr int max_depth = 64;
 
 using StreamBuf = rapidjson::StringBuffer;
@@ -64,10 +62,10 @@ namespace rapidjson
 using StringNStream = rapidjson::StringNStream;
 
 template<typename Writer>
-static void encode_table(lua_State* L, Writer* writer, int idx, int depth);
+static void encode_table(lua_State* L, Writer* writer, int idx, int depth, bool empty_as_array);
 
 template<typename Writer>
-static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0)
+static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0, bool empty_as_array = true)
 {
     int t = lua_type(L, idx);
     switch (t)
@@ -99,7 +97,7 @@ static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0)
     }
     case LUA_TTABLE:
     {
-        encode_table(L, writer, idx, depth + 1);
+        encode_table(L, writer, idx, depth + 1, empty_as_array);
         return;
     }
     case LUA_TNIL:
@@ -140,7 +138,7 @@ static inline size_t array_size(lua_State* L, int index)
 }
 
 template<typename Writer>
-static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
+static void encode_table(lua_State* L, Writer* writer, int idx, int depth, bool empty_as_array)
 {
     if (depth > max_depth)
         luaL_error(L, "nested too depth");
@@ -157,17 +155,23 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
         for (size_t i = 1; i <= size; i++)
         {
             lua_rawgeti(L, idx, i);
-            encode_one(L, writer, -1, depth);
+            encode_one(L, writer, -1, depth, empty_as_array);
             lua_pop(L, 1);
         }
         writer->EndArray();
     }
     else
     {
-        writer->StartObject();
+        bool empty = true;
         lua_pushnil(L);
         while (lua_next(L, -2))
         {
+            if (empty)
+            {
+                writer->StartObject();
+                empty = false;
+            }
+
             int key_type = lua_type(L, -2);
             switch (key_type)
             {
@@ -176,7 +180,7 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
                 size_t len = 0;
                 const char* key = lua_tolstring(L, -2, &len);
                 writer->Key(key, static_cast<rapidjson::SizeType>(len));
-                encode_one(L, writer, -1, depth);
+                encode_one(L, writer, -1, depth, empty_as_array);
                 break;
             }
             case LUA_TNUMBER:
@@ -189,7 +193,7 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
                     luaL_error(L, "json encode: int key to_chars failed.");
                 }
                 writer->Key(tmp, static_cast<rapidjson::SizeType>(res.ptr - tmp), true);
-                encode_one(L, writer, -1, depth);
+                encode_one(L, writer, -1, depth, empty_as_array);
                 break;
             }
             default:
@@ -198,44 +202,47 @@ static void encode_table(lua_State* L, Writer* writer, int idx, int depth)
             }
             lua_pop(L, 1);
         }
-        writer->EndObject();
+
+        if (!empty)
+        {
+            writer->EndObject();
+        }
+        else
+        {
+            if (empty_as_array)
+            {
+                writer->StartArray();
+                writer->EndArray();
+            }
+            else
+            {
+                writer->StartObject();
+                writer->EndObject();
+            }
+        }
     }
 }
 
 static int  encode(lua_State* L)
 {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    bool empty_as_array = (bool)luaL_opt(L, lua_toboolean, 2, true);
+    lua_settop(L, 1);
     StreamBuf stream;
     JsonWriter writer(stream);
-
-    moon::buffer* buffer = nullptr;
-    if (lua_gettop(L) == 2)
-    {
-        if (lua_type(L, 2) != LUA_TLIGHTUSERDATA)
-        {
-            luaL_error(L, "json encode param 2 only access lightuserdata(moon::buffer*)");
-            return 0;
-        }
-        buffer = (moon::buffer*)lua_touserdata(L, 2);
-    }
-    lua_settop(L, 1);
-    encode_one(L, &writer, 1);
-    if (nullptr != buffer)
-    {
-        buffer->write_back(stream.GetString(), stream.GetSize());
-        return 0;
-    }
-    else
-    {
-        lua_pushlstring(L, stream.GetString(), stream.GetSize());
-        return 1;
-    }
+    encode_one(L, &writer, 1, 0, empty_as_array);
+    lua_pushlstring(L, stream.GetString(), stream.GetSize());
+    return 1;
 }
 
 static int  pretty_encode(lua_State* L)
 {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    bool empty_as_array = (bool)luaL_opt(L, lua_toboolean, 2, true);
+    lua_settop(L, 1);
     StreamBuf stream;
     JsonPrettyWriter writer(stream);
-    encode_one(L, &writer, -1);
+    encode_one(L, &writer, 1, 0, empty_as_array);
     lua_pushlstring(L, stream.GetString(), stream.GetSize());
     return 1;
 }
@@ -369,21 +376,18 @@ private:
     std::vector<int> stack_;
 };
 
-extern "C"
+static int lua_json_decode(lua_State* L, const char* s, size_t len)
 {
-    int lua_json_decode(lua_State* L, const char* s, size_t len)
-    {
-        JsonReader reader;
-        StringNStream stream{ s, len };
-        LuaPushHandler handler{ L };
-        auto res = reader.Parse(stream, handler);
-        if (!res) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
-            return 2;
-        }
-        return 1;
+    JsonReader reader;
+    StringNStream stream{ s, len };
+    LuaPushHandler handler{ L };
+    auto res = reader.Parse(stream, handler);
+    if (!res) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
+        return 2;
     }
+    return 1;
 }
 
 static int decode(lua_State* L)
