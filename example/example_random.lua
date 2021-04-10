@@ -55,3 +55,12 @@ print_r(res)
 
 print((res[1]/100000 - res[2]/100000))
 assert(math.abs(res[1]/100000 - res[2]/100000)<0.01)
+
+local succcount = 0
+for i=1,100000 do
+	if  random.randf_percent(0.8) then
+		succcount = succcount + 1
+	end
+end
+
+print(succcount/100000)
