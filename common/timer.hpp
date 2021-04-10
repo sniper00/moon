@@ -3,6 +3,7 @@
 #include <functional>
 #include <cassert>
 #include <map>
+#include <unordered_set>
 
 namespace moon
 {
@@ -28,20 +29,20 @@ namespace moon
                 expire_policy_type v;
                 {
                     std::lock_guard lock{ lock_ };
-                    auto iter = timers_.begin();
-                    if (iter == timers_.end())
+                    if (auto iter = timers_.begin(); iter == timers_.end())
                     {
                         break;
                     }
-
-                    auto t = iter->first;
-
-                    if (t > now)
+                    else
                     {
-                        break;
+                        auto t = iter->first;
+                        if (t > now)
+                        {
+                            break;
+                        }
+                        v = std::move(iter->second);
+                        timers_.erase(iter);
                     }
-                    v = std::move(iter->second);
-                    timers_.erase(iter);
                 }
                 v();
             } while (true);
@@ -59,10 +60,11 @@ namespace moon
         }
 
         template<typename... Args>
-        void add(time_t expiretime, Args&&... args)
+        uint32_t add(time_t expiretime, Args&&... args)
         {
             std::lock_guard lock{ lock_ };
-            timers_.emplace(expiretime, expire_policy_type{std::forward<Args>(args)... });
+            timers_.emplace(expiretime, expire_policy_type{ ++timerid_, std::forward<Args>(args)... });
+            return timerid_;
         }
 
         size_t size() const
@@ -71,8 +73,9 @@ namespace moon
         }
     private:
         bool stop_ = false;
-        std::multimap<int64_t, expire_policy_type> timers_;
+        uint32_t timerid_ = 0;
         std::mutex lock_;
+        std::multimap<int64_t, expire_policy_type> timers_;
     };
 
     class default_expire_policy
