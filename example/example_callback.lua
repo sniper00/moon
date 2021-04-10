@@ -2,7 +2,7 @@ local moon = require("moon")
 
 local conf = ...
 
-if conf.receiver then
+if conf and conf.receiver then
     -----------------------------THIS IS RECEIVER SERVICE-------------------
     local command = {}
 

@@ -35,8 +35,6 @@ namespace moon
     public:
         friend class base_connection;
 
-        static constexpr size_t max_socket_num = 0xFFFF;
-
         socket(server* s, worker* w, asio::io_context& ioctx);
 
         socket(const socket&) = delete;
@@ -59,6 +57,8 @@ namespace moon
 
         bool close(uint32_t fd);
 
+        void close_all();
+
         bool settimeout(uint32_t fd, int v);
 
         bool setnodelay(uint32_t fd);
@@ -67,19 +67,11 @@ namespace moon
 
         bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
 
-        size_t socket_num();
-
 		std::string getaddress(uint32_t fd);
     private:
-        uint32_t uuid();
-
         connection_ptr_t make_connection(uint32_t serviceid, uint8_t type);
 
         void response(uint32_t sender, uint32_t receiver, std::string_view data, std::string_view header, int32_t sessionid, uint8_t type);
-
-        bool try_lock_fd(uint32_t fd);
-
-        void unlock_fd(uint32_t fd);
 
         void add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid);
 
@@ -90,16 +82,13 @@ namespace moon
 
         void timeout();
     private:
-        std::atomic<uint32_t> uuid_ = 0;
         server* server_;
         worker* worker_;
         asio::io_context& ioc_;
         asio::steady_timer timer_;
         message_ptr_t  response_;
-        mutable rwlock lock_;
         std::unordered_map<uint32_t, acceptor_context_ptr_t> acceptors_;
         std::unordered_map<uint32_t, connection_ptr_t> connections_;
-        std::unordered_set<uint32_t> fd_watcher_;
     };
 
     template<typename Message>

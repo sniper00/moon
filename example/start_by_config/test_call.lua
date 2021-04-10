@@ -2,7 +2,7 @@ local moon = require("moon")
 local test_assert = require("test_assert")
 local conf = ...
 
-if conf.receiver then
+if conf and conf.receiver then
     local command = {}
 
     command.ADD =  function(a,b)
@@ -55,7 +55,7 @@ else
                     name = "test_call_receiver",
                     file = "start_by_config/test_call.lua",
                     receiver = true
-                },false,0,true
+                }
             )
 
             print(moon.co_call("lua", receiverid, "SUB", 1000, 2000))

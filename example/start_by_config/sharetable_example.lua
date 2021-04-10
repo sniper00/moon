@@ -2,7 +2,7 @@ local moon = require("moon")
 local seri = require("seri")
 local sharetable = require("sharetable")
 
-local conf = ...
+local conf = ... or {}
 
 local file = "sharetable_data.lua"
 

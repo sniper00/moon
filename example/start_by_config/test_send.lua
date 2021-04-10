@@ -3,7 +3,7 @@ local test_assert = require("test_assert")
 
 local conf = ...
 
-if conf.receiver then
+if conf and conf.receiver then
     local command = {}
 
     command.HELLO = function(sender, ...)

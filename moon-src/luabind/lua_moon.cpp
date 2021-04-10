@@ -26,7 +26,7 @@ static void* get_ptr(lua_State* L, const char* key) {
     return v;
 }
 
-moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
+static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
 {
     int t = lua_type(L, index);
     switch (t)
@@ -116,11 +116,10 @@ static int lmoon_timeout(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     int32_t interval = (int32_t)luaL_checkinteger(L, 1);
-    uint32_t timerid = (uint32_t)luaL_checkinteger(L, 2);
-    S->get_server()->timeout(interval, S->id(), timerid);
-    return 0;
+    uint32_t timerid = S->get_server()->timeout(interval, S->id());
+    lua_pushinteger(L, timerid);
+    return 1;
 }
-
 
 static int lmoon_log(lua_State* L)
 {
@@ -207,7 +206,7 @@ static int lmoon_send(lua_State* L)
     if (receiver == 0)
         return luaL_error(L, "moon.send 'receiver' must >0");
     if (type == PTYPE_UNKNOWN)
-        return luaL_error(L, "invalid message type");
+        return luaL_error(L, "moon.send invalid message type");
 
     buffer_ptr_t buf = moon_to_buffer(L, 2);
     std::string_view header = luaL_check_stringview(L, 3);
@@ -217,15 +216,86 @@ static int lmoon_send(lua_State* L)
     return 0;
 }
 
+static void table_tostring(std::string& res, lua_State* L, int index)
+{
+    if (index < 0) {
+        index = lua_gettop(L) + index + 1;
+    }
+
+    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    res.append("{");
+    lua_pushnil(L);
+    while (lua_next(L, index))
+    {
+        res.append(lua_tostring(L, -2));
+        res.append("=");
+        switch (lua_type(L, -1))
+        {
+        case LUA_TNUMBER:
+        {
+            if (lua_isinteger(L, -1))
+                res.append(std::to_string(lua_tointeger(L, -1)));
+            else
+                res.append(std::to_string(lua_tonumber(L, -1)));
+            break;
+        }
+        case LUA_TBOOLEAN:
+        {
+            res.append(lua_toboolean(L, -1) ? "true" : "false");
+            break;
+        }
+        case LUA_TSTRING:
+        {
+            res.append("'");
+            res.append(luaL_check_stringview(L, -1));
+            res.append("'");
+            break;
+        }
+        case LUA_TTABLE:
+        {
+            table_tostring(res, L, -1);
+            break;
+        }
+        default:
+            res.append("false");
+            break;
+        }
+        res.append(",");
+        lua_pop(L, 1);
+    }
+    res.append("}");
+}
+
 static int lmoon_new_service(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     std::string_view type = luaL_check_stringview(L, 1);
-    std::string_view conf = luaL_check_stringview(L, 2);
-    bool isunique = luaL_checkboolean(L, 3);
-    int32_t workerid = (int32_t)luaL_checkinteger(L, 4);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
-    S->get_server()->new_service(std::string{ type },std::string{ conf }, isunique, workerid, S->id(), sessionid);
+    int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    service_conf conf;
+
+    lua_pushnil(L);
+    while (lua_next(L,3))
+    {
+        std::string key = lua_tostring(L, -2);
+        if (key == "name")
+            conf.name = lua_tostring(L, -1);
+        else if (key == "file")
+            conf.source = luaL_check_stringview(L, -1);
+        else if (key == "memlimit")
+            conf.memlimit = luaL_checkinteger(L, -1);
+        else if (key == "unique")
+            conf.unique = lua_toboolean(L, -1);
+        else if (key == "threadid")
+            conf.threadid = (uint32_t)luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
+
+    conf.params.append("return ");
+    table_tostring(conf.params, L, 3);
+
+    S->get_server()->new_service(std::string{ type }, conf, S->id(), sessionid);
     return 0;
 }
 
@@ -278,11 +348,10 @@ static int lmoon_getenv(lua_State* L)
     return 1;
 }
 
-static int lmoon_wstate(lua_State* L)
+static int lmoon_server_info(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    int32_t workerid = (int32_t)luaL_checkinteger(L, 1);
-    std::string info = S->get_server()->worker_info(workerid);
+    std::string info = S->get_server()->info();
     lua_pushlstring(L, info.data(), info.size());
     return 1;
 }
@@ -415,7 +484,7 @@ static int message_clone(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message clone param 1 need userdata");
+        return luaL_error(L, "message clone param need lightuserdata(message*)");
     }
     message* nm = new message((const buffer_ptr_t&)*m);
     nm->set_broadcast(m->broadcast());
@@ -433,7 +502,7 @@ static int message_release(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message release param 1 need userdata");
+        return luaL_error(L, "message release param need lightuserdata(message*)");
     }
     delete m;
     return 0;
@@ -445,7 +514,7 @@ static int message_redirect(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message clone param 1 need userdata");
+        return luaL_error(L, "message clone param need lightuserdata(message*)");
     }
     size_t len = 0;
     const char* sz = luaL_checklstring(L, 2, &len);
@@ -483,7 +552,7 @@ extern "C"
             { "queryservice", lmoon_queryservice},
             { "set_env", lmoon_setenv},
             { "get_env", lmoon_getenv},
-            { "wstate", lmoon_wstate},
+            { "server_info", lmoon_server_info},
             { "exit", lmoon_exit},
             { "size", lmoon_size},
             { "now", lmoon_now},
