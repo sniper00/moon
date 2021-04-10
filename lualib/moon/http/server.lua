@@ -294,7 +294,7 @@ local function session_handler(fd)
         end
         request.content = tbconcat( chunkdata )
     elseif method:upper()~="GET" then
-        error("Unsupport transfer-encoding: "..tostring(header["transfer-encoding"]))
+        moon.warn("Unsupport transfer-encoding: "..tostring(header["transfer-encoding"]))
     end
     request_handler(fd, request)
 end
