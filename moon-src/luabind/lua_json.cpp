@@ -384,7 +384,7 @@ static int lua_json_decode(lua_State* L, const char* s, size_t len)
     auto res = reader.Parse(stream, handler);
     if (!res) {
         lua_pushnil(L);
-        lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), res.Offset());
+        lua_pushfstring(L, "%s (%d)", rapidjson::GetParseError_En(res.Code()), (int)res.Offset());
         return 2;
     }
     return 1;
