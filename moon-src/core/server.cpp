@@ -1,7 +1,6 @@
 #include "server.h"
 #include "worker.h"
 #include "message.hpp"
-#include "common/hash.hpp"
 
 namespace moon
 {
@@ -371,7 +370,7 @@ namespace moon
         for (auto& w : workers_)
         {
             req.append(",\n");
-            auto v = moon::format(R"({"id":%u, "cpu":%lld, "mqsize":%d, "service":%u})",
+            auto v = moon::format(R"({"id":%u, "cpu":%lld, "mqsize":%u, "service":%u})",
                 w->id(),
                 w->cpu_cost_,
                 w->mqsize_.load(),
