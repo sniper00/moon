@@ -3,9 +3,8 @@
 #include "common/string.hpp"
 #include "common/hash.hpp"
 #include "message.hpp"
-#include "common/log.hpp"
-#include "server.h"
 #include "service.hpp"
+#include "server.h"
 
 namespace moon
 {
@@ -79,15 +78,6 @@ namespace moon
         return (state_.load(std::memory_order_acquire) == state::stopped);
     }
 
-    uint32_t worker::uuid()
-    {
-        auto res = uuid_++;
-        res %= max_uuid;
-        ++res;
-        res |= id() << WORKER_ID_SHIFT;
-        return res;
-    }
-
     void worker::add_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
     {
         asio::post(io_ctx_, [this, service_type = std::move(service_type), conf = std::move(conf), creatorid, sessionid](){
@@ -102,14 +92,20 @@ namespace moon
                 uint32_t serviceid = 0;
                 do
                 {
-                    if (counter >= worker::max_uuid)
+                    if (counter >= worker::MAX_SERVICE)
                     {
                         serviceid = 0;
                         CONSOLE_ERROR(server_->logger()
-                            , "new service failed: can not get more service id. worker[%d] service num[%u].", id(), services_.size());
+                            , "new service failed: can not get more service id. worker[%u] service num[%zu].", id(), services_.size());
                         break;
                     }
-                    serviceid = uuid();
+
+                    ++nextid_;
+                    if (nextid_ == MAX_SERVICE)
+                    {
+                        nextid_ = 1;
+                    }
+                    serviceid = nextid_ | (id() << WORKER_ID_SHIFT);
                     ++counter;
                 } while (services_.find(serviceid) != services_.end());
 
@@ -239,9 +235,10 @@ namespace moon
         return nullptr;
     }
 
-    uint32_t worker::make_prefab(moon::buffer_ptr_t buf)
+    intptr_t worker::make_prefab(moon::buffer_ptr_t buf)
     {
-        auto iter = prefabs_.emplace(uuid(), std::move(buf));
+        intptr_t  prefabid = (intptr_t)(buf.get());
+        auto iter = prefabs_.emplace(prefabid, std::move(buf));
         if (iter.second)
         {
             return iter.first->first;
@@ -249,14 +246,14 @@ namespace moon
         return 0;
     }
 
-    void worker::send_prefab(uint32_t sender, uint32_t receiver, uint32_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const
+    bool worker::send_prefab(uint32_t sender, uint32_t receiver, intptr_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const
     {
         if (auto iter = prefabs_.find(prefabid); iter != prefabs_.end())
         {
             server_->send(sender, receiver, iter->second, header, sessionid, type);
-            return;
+            return true;
         }
-        CONSOLE_DEBUG(server_->logger(), "send_prefab failed, can not find prepared data. prefabid %u", prefabid);
+        return false;
     }
 
     void worker::shared(bool v)

@@ -180,7 +180,9 @@ static int lmoon_cpu(lua_State* L)
 static int lmoon_make_prefab(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    uint32_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
+    intptr_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
+    if (id == 0)
+        return luaL_error(L, "moon.make_prefab failed");
     lua_pushinteger(L, id);
     return 1;
 }
@@ -189,12 +191,19 @@ static int lmoon_send_prefab(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t prefabid = (uint32_t)luaL_checkinteger(L, 2);
+    intptr_t prefabid = (intptr_t)luaL_checkinteger(L, 2);
     std::string_view header = luaL_check_stringview(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
     int8_t type = (int8_t)luaL_checkinteger(L, 5);
-    S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type);
-    return 0;
+    bool ok = S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type);
+    if (!ok)
+    {
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, moon::format("send_prefab failed, can not find prepared data. prefabid %" PRId64, prefabid).data());
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 static int lmoon_send(lua_State* L)
@@ -729,6 +738,44 @@ static int lasio_address(lua_State* L)
     return 1;
 }
 
+static int lasio_write2(lua_State* L)
+{
+    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto data = moon_to_buffer(L, 2);
+    if (!data->has_flag(buffer_flag::pack_size))
+    {
+        int len = (int)data->size();
+        moon::host2net(len);
+        data->write_front(&len, 1);
+        data->set_flag(buffer_flag::pack_size);
+    }
+    bool ok = S->write(fd, std::move(data));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
+static int lasio_write_message2(lua_State* L)
+{
+    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    moon::message* m = (moon::message*)lua_touserdata(L, 2);
+    if (nullptr == m)
+    {
+        return luaL_error(L, "asio.write_message param 'message' invalid");
+    }
+    if (!m->get_buffer()->has_flag(buffer_flag::pack_size))
+    {
+        int len = (int)m->size();
+        moon::host2net(len);
+        m->get_buffer()->write_front(&len, 1);
+        m->get_buffer()->set_flag(buffer_flag::pack_size);
+    }
+    bool ok = S->write(fd, *m);
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_asio(lua_State* L)
@@ -748,6 +795,8 @@ extern "C"
             { "set_enable_chunked", lasio_set_enable_chunked},
             { "set_send_queue_limit", lasio_set_send_queue_limit},
             { "getaddress", lasio_address},
+            { "write2", lasio_write2},
+            { "write_message2", lasio_write_message2},
             {NULL,NULL}
         };
 
