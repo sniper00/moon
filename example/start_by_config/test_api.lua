@@ -59,7 +59,6 @@ print("after offset, now server time")
 
 print("*********************api test ok**********************")
 
-moon.make_prefab(nil)
 moon.make_prefab("123")
 moon.make_prefab(seri.pack("1",2,3,{a=1,b=2},nil))
 
