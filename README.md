@@ -49,9 +49,9 @@ QQ交流群: 543833695
 
 ```shell
 # 运行 echo server
-./moon -f example/helloworld.lua
+./moon example/helloworld.lua
 # 另启动一个终端运行 client(协程socket编写的客户端)
-./moon -f example/helloworld_client.lua
+./moon example/helloworld_client.lua
 # 输入任意字符
 ```
 
