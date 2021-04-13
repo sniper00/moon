@@ -40,15 +40,19 @@ receiver2 = moon.queryservice("send_benchmark_receiver2")
 receiver3 = moon.queryservice("send_benchmark_receiver3")
 receiver4 = moon.queryservice("send_benchmark_receiver4")
 
-moon.repeated(1000, -1, function()
-    sttime = moon.now()
-    for _=1,ncount do
-        moon.send('lua', receiver1,"TEST","123456789")
-        moon.send('lua', receiver2,"TEST","123456789")
-        moon.send('lua', receiver3,"TEST","123456789")
-        moon.send('lua', receiver4,"TEST","123456789")
+moon.async(function()
+    while true do
+        moon.sleep(1000)
+        sttime = moon.now()
+        for _=1,ncount do
+            moon.send('lua', receiver1,"TEST","123456789")
+            moon.send('lua', receiver2,"TEST","123456789")
+            moon.send('lua', receiver3,"TEST","123456789")
+            moon.send('lua', receiver4,"TEST","123456789")
+        end
     end
 end)
+
 
 
 

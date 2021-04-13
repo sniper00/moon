@@ -3,9 +3,12 @@ local cluster = require("cluster")
 
 local counter = 0
 
-local timerid = moon.repeated(1000,-1,function( _ )
-    print("per sec ",counter)
-    counter=0
+moon.async(function()
+    while true do
+        moon.sleep(1000)
+        print("per sec ",counter)
+        counter=0
+    end
 end)
 
 local args = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}

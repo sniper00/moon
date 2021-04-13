@@ -125,7 +125,7 @@ static int lua53_rawgetp(lua_State *L, int idx, const void *p)
 #define lpb_state(LS)    ((LS)->state)
 #define lpb_name(LS,s)   pb_name(lpb_state(LS), (s), &(LS)->cache)
 
-static pb_State *global_state = NULL;
+static const pb_State *global_state = NULL;
 static const char state_name[] = PB_STATE;
 
 enum lpb_Int64Mode { LPB_NUMBER, LPB_STRING, LPB_HEXSTRING };
@@ -164,7 +164,7 @@ static void lpb_pushhooktable(lua_State *L, lpb_State *LS)
 static int Lpb_delete(lua_State *L) {
     lpb_State *LS = (lpb_State*)luaL_testudata(L, 1, PB_STATE);
     if (LS != NULL) {
-        pb_State *GS = global_state;
+        const pb_State *GS = global_state;
         pb_free(&LS->local);
         if (&LS->local == GS)
             global_state = NULL;
@@ -1024,6 +1024,7 @@ static int Lslice_new(lua_State *L) {
     lua_settop(L, 3);
     s = (lpb_Slice*)lua_newuserdatauv(L, sizeof(lpb_Slice), 0);
     lpb_initslice(L, 1, s, sizeof(lpb_Slice));
+    if (s->curr.p == NULL) s->curr = pb_lslice("", 0);
     luaL_setmetatable(L, PB_SLICE);
     return 1;
 }
@@ -1909,5 +1910,5 @@ PB_NS_END
 
 /* cc: flags+='-O3 -ggdb -pedantic -std=c90 -Wall -Wextra --coverage'
  * maccc: flags+='-ggdb -shared -undefined dynamic_lookup' output='pb.so'
- * win32cc: flags+='-s -mdll -DLUA_BUILD_AS_DLL ' output='pb.dll' libs+='-llua53' */
+ * win32cc: flags+='-s -mdll -DLUA_BUILD_AS_DLL ' output='pb.dll' libs+='-llua54' */
 

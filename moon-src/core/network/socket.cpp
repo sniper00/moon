@@ -4,7 +4,6 @@
 #include "common/hash.hpp"
 #include "worker.h"
 #include "server.h"
-#include "router.h"
 
 #include "network/moon_connection.hpp"
 #include "network/stream_connection.hpp"
@@ -12,8 +11,8 @@
 
 using namespace moon;
 
-socket::socket(router * r, worker* w, asio::io_context & ioctx)
-    : router_(r)
+socket::socket(server* s, worker* w, asio::io_context & ioctx)
+    : server_(s)
     , worker_(w)
     , ioc_(ioctx)
     , timer_(ioctx)
@@ -39,7 +38,7 @@ bool socket::try_open(const std::string& host, uint16_t port)
     }
     catch (asio::system_error& e)
     {
-        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
     }
 }
@@ -58,14 +57,14 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
         ctx->acceptor.bind(endpoint);
         ctx->acceptor.listen(std::numeric_limits<int>::max());
 
-        auto id = uuid();
+        auto id = server_->nextfd();
         ctx->fd = id;
         acceptors_.emplace(id, ctx);
         return id;
     }
     catch (asio::system_error& e)
     {
-        CONSOLE_ERROR(router_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return 0;
     }
 }
@@ -86,14 +85,14 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
         return;
     }
 
-    worker* w = router_->get_server()->get_worker(router_->worker_id(owner));
+    worker* w = server_->get_worker(0, owner);
     auto c = w->socket().make_connection(owner, ctx->type);
 
     ctx->acceptor.async_accept(c->socket(), [this, ctx, c, w, sessionid, owner](const asio::error_code& e)
     {
         if (!e)
         {
-            c->fd(w->socket().uuid());
+            c->fd(server_->nextfd());
             w->socket().add_connection(this, ctx, c, sessionid);
         }
         else
@@ -106,7 +105,7 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
             {
                 if (e != asio::error::operation_aborted)
                 {
-                    CONSOLE_WARN(router_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                    CONSOLE_WARN(server_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
                 }
             }
         }
@@ -130,7 +129,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
         if (0 == sessionid)
         {
             asio::connect(c->socket(), endpoints);
-            c->fd(uuid());
+            c->fd(server_->nextfd());
             connections_.emplace(c->fd(), c);
             asio::post(ioc_, [c]() {
                 c->start(false);
@@ -146,7 +145,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
                 connect_timer->async_wait([this, c, owner, sessionid, host, port, connect_timer](const asio::error_code & e) {
                     if (e)
                     {
-                        CONSOLE_ERROR(router_->logger(), "connect %s:%d timer error %s", host.data(), port, e.message().data());
+                        CONSOLE_ERROR(server_->logger(), "connect %s:%d timer error %s", host.data(), port, e.message().data());
                         return;
                     }
                     if (c->fd() == 0)
@@ -162,7 +161,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
             {
                 if (!e)
                 {
-                    c->fd(uuid());
+                    c->fd(server_->nextfd());
                     connections_.emplace(c->fd(), c);
                     c->start(false);
                     response(0, owner, std::to_string(c->fd()), std::string_view{}, sessionid, PTYPE_TEXT);
@@ -181,7 +180,7 @@ int socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint
     {
         if (sessionid == 0)
         {
-            CONSOLE_WARN(router_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
+            CONSOLE_WARN(server_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
         }
         else
         {
@@ -231,7 +230,7 @@ bool socket::close(uint32_t fd)
     {
         iter->second->close();
         connections_.erase(iter);
-        unlock_fd(fd);
+        server_->unlock_fd(fd);
         return true;
     }
 
@@ -243,10 +242,27 @@ bool socket::close(uint32_t fd)
             iter->second->acceptor.close();
         }
         acceptors_.erase(iter);
-        unlock_fd(fd);
+        server_->unlock_fd(fd);
         return true;
     }
     return false;
+}
+
+void socket::close_all()
+{
+    for (auto& c : connections_)
+    {
+        c.second->close();
+    }
+
+    for (auto& ac : acceptors_)
+    {
+        if (ac.second->acceptor.is_open())
+        {
+            ac.second->acceptor.cancel();
+            ac.second->acceptor.close();
+        }
+    }
 }
 
 bool socket::settimeout(uint32_t fd, int v)
@@ -285,7 +301,7 @@ bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
             v |= static_cast<int>(moon::enable_chunked::send);
             break;
         default:
-            CONSOLE_WARN(router_->logger(),
+            CONSOLE_WARN(server_->logger(),
                 "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.", flag.data());
             return false;
         }
@@ -313,12 +329,6 @@ bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t
     return false;
 }
 
-size_t moon::socket::socket_num()
-{
-    std::unique_lock lck(lock_);
-    return fd_watcher_.size();
-}
-
 std::string moon::socket::getaddress(uint32_t fd)
 {
 	if (auto iter = connections_.find(fd); iter != connections_.end())
@@ -326,19 +336,6 @@ std::string moon::socket::getaddress(uint32_t fd)
 		return iter->second->address();
 	}
 	return std::string();
-}
-
-uint32_t socket::uuid()
-{
-    uint32_t res = 0;
-    do
-    {
-        res = uuid_.fetch_add(1);
-        res %= max_socket_num;
-        ++res;
-        res |= (worker_->id() << 16);
-    } while (!try_lock_fd(res));
-    return res;
 }
 
 connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
@@ -365,7 +362,7 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
         MOON_ASSERT(false, "Unknown socket protocol");
         break;
     }
-    connection->logger(router_->logger());
+    connection->logger(server_->logger());
     return connection;
 }
 
@@ -382,19 +379,6 @@ void socket::response(uint32_t sender, uint32_t receiver, std::string_view data,
     response_->set_type(type);
 
     handle_message(receiver, response_);
-}
-
-bool socket::try_lock_fd(uint32_t fd)
-{
-    std::unique_lock lck(lock_);
-    return fd_watcher_.emplace(fd).second;
-}
-
-void socket::unlock_fd(uint32_t fd)
-{
-    std::unique_lock lck(lock_);
-    size_t count = fd_watcher_.erase(fd);
-    MOON_CHECK(count == 1, "socket fd erase failed!");
 }
 
 void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid)

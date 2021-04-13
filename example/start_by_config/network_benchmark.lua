@@ -1,7 +1,7 @@
 local moon = require("moon")
 local socket = require("moon.socket")
 
-local conf = ...
+local conf = ... or {}
 
 local function run_slave()
     local count = 0
@@ -24,13 +24,6 @@ local function run_slave()
             --print("error ", fd, moon.decode(msg, "Z"))
         end)
     end
-
-    -- moon.repeated(1000,-1,function()
-    --     if count> 0 then
-    --         print(count, "per sec")
-    --         count = 0
-    --     end
-    -- end)
 end
 
 
@@ -66,7 +59,7 @@ local function run_master()
 end
 
 if conf.master then
-    run_master(conf)
+    run_master()
 else
     run_slave()
 end
