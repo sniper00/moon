@@ -9,7 +9,7 @@
 [![windows-vs2019](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml)
 
 # Moon
-Moon is a lightweight game server framework implement with multithread and multi-LuaVM. One thread may have 1-N LuaVM, they use message queue communication. Here are many features aimes game server development:
+Moon is a lightweight game server framework implement with multithread and multi-LuaVM. One thread may have 1-N LuaVM, they use message queue communication. Here are many features aim game server development:
 
 - Cross-platform (Windows, Linux, MacOS)
 - Optimized networking
