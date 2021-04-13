@@ -53,7 +53,7 @@ Moon is a lightweight game server framework implement with multithread and multi
 ``` 
 
 3. Build
-    - windows 双击运行 `build.bat`。
+    - windows run `build.bat`。
     - linux:
         ```shell
             chmod +x build.sh
