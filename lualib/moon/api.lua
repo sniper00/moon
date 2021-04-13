@@ -44,17 +44,10 @@ function core.localtime(t)
 end
 
 ---create a timer
----@param interval integer
----@param times integer
+---@param interval integer @ms
 ---@return integer @timer id
-function core.repeated(interval, times)
-    ignore_param(interval, times)
-end
-
----Remove a timer.<br>
----@param timerid integer
-function core.remove_timer(timerid)
-    ignore_param(timerid)
+function core.timeout(interval)
+    ignore_param(interval)
 end
 
 --- print console log
@@ -63,8 +56,9 @@ function core.log(loglv,...)
 end
 
 --- set log level
+---@param lv string @DEBUG, INFO, WARN, ERROR
 ---@return integer
-function core.set_loglevel()
+function core.set_loglevel(lv)
 end
 
 --- get log level

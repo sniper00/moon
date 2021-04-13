@@ -1,14 +1,12 @@
 #pragma once
 #include "config.hpp"
 #include "common/log.hpp"
-#include "router.h"
 
 namespace moon
 {
     class log;
-    class server;
-    class router;
     class worker;
+    class server;
 
     class service
     {
@@ -38,21 +36,15 @@ namespace moon
             name_ = name;
         }
 
-        void set_server_context(server * s, router * r, worker * w)
+        void set_server_context(server * s, worker * w)
         {
             server_ = s;
-            router_ = r;
             worker_ = w;
         }
 
         server* get_server() const
         {
             return server_;
-        }
-
-        router* get_router() const
-        {
-            return router_;
         }
 
         worker* get_worker() const
@@ -91,37 +83,8 @@ namespace moon
             cpu_cost_ = 0;
             return v;
         }
-
-        template<typename Message>
-        void handle_message(Message&& m)
-        {
-            try
-            {
-                uint32_t receiver = m->receiver();
-                dispatch(m.get());
-                //redirect message
-                if (m->receiver() != receiver)
-                {
-                    MOON_ASSERT(!m->broadcast(), "can not redirect broadcast message");
-                    if constexpr (std::is_rvalue_reference_v<decltype(m)>)
-                    {
-                        router_->send_message(std::forward<message_ptr_t>(m));
-                    }
-                }
-            }
-            catch (const std::exception& e)
-            {
-                CONSOLE_ERROR(logger(), "service::handle_message exception: %s", e.what());
-            }
-        }
-
-        void quit()
-        {
-            ok_ = false;
-            router_->remove_service(id_, 0, 0);
-        }
     public:
-        virtual bool init(std::string_view) = 0;
+        virtual bool init(const service_conf& conf) = 0;
 
         virtual void dispatch(message* msg) = 0;
 
@@ -146,10 +109,33 @@ namespace moon
         uint32_t id_ = 0;
         log* log_ = nullptr;
         server* server_ = nullptr;
-        router* router_ = nullptr;
         worker* worker_ = nullptr;
         int64_t cpu_cost_ = 0;//us
         std::string   name_;
     };
+
+    template<typename Service, typename Message>
+    inline void handle_message(Service&& s, Message&& m)
+    {
+        try
+        {
+            uint32_t receiver = m->receiver();
+            s->dispatch(m.get());
+            //redirect message
+            if (m->receiver() != receiver)
+            {
+                MOON_ASSERT(!m->broadcast(), "can not redirect broadcast message");
+                if constexpr (std::is_rvalue_reference_v<decltype(m)>)
+                {
+                    s->get_server()->send_message(std::forward<message_ptr_t>(m));
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+            CONSOLE_ERROR(s->logger(), "service::handle_message exception: %s", e.what());
+        }
+    }
+
 }
 

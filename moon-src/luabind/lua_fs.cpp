@@ -144,7 +144,7 @@ static int lfs_ext(lua_State* L)
     }
     catch (std::exception& e)
     {
-        return luaL_error(L, "fs.split %s", e.what());
+        return luaL_error(L, "fs.ext %s", e.what());
     }
 }
 

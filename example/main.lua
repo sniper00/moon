@@ -1,3 +1,14 @@
+---__init__
+if _G["__init__"] then
+    local arg = ...
+    return {
+        thread = 16,
+        enable_console = true,
+        logfile = string.format("log/moon-%s-%s.log", arg[1], os.date("%Y-%m-%d-%H-%M-%S")),
+        loglevel = "DEBUG",
+    }
+end
+
 -- define lua module search dir
 local path = table.concat({
     "../lualib/?.lua",
@@ -8,13 +19,12 @@ local path = table.concat({
 package.path = path.. ";"
 
 local moon = require("moon")
-local json = require("json")
 
 moon.set_env("PATH", string.format("package.path='%s'", package.path))
 
-local params = json.decode(moon.get_env("PARAMS"))
+local arg = load(moon.get_env("ARG"))()
 
-local sid = math.tointeger(moon.get_env("NODE"))
+local sid = math.tointeger(arg[1])
 
 local services
 
@@ -77,6 +87,7 @@ switch[3] = function ()
 end
 
 switch[4] = function ()
+
     services = {
         {
             unique = true,
@@ -160,10 +171,20 @@ switch[8] = function ()
     services = {
         {
             unique = true,
+            name = "cluster_etc",
+            file = "start_by_config/cluster_etc.lua",
+            host = "127.0.0.1",
+            port = 40001,
+            config = "config.json"
+        },
+        {
+            unique = true,
             name = "cluster",
             file = "../service/cluster.lua",
-            host = params.cluster_host,
-            port = params.cluster_port
+            host = "127.0.0.1",
+            port = 42345,
+            etc_host = "127.0.0.1:40001",
+            etc_path = "/cluster"
         },
         {
             unique = true,
@@ -179,8 +200,10 @@ switch[9] = function ()
             unique = true,
             name = "cluster",
             file = "../service/cluster.lua",
-            host = params.cluster_host,
-            port = params.cluster_port
+            host = "127.0.0.1",
+            port = 42346,
+            etc_host = "127.0.0.1:40001",
+            etc_path = "/cluster"
         },
         {
             unique = true,
@@ -201,9 +224,7 @@ local addrs = {}
 moon.async(function()
     for _, conf in ipairs(services) do
         local service_type = conf.service_type or "lua"
-        local unique = conf.unique or false
-        local threadid = conf.threadid or 0
-        local addr = moon.new_service(service_type, conf, unique, threadid)
+        local addr = moon.new_service(service_type, conf)
         if 0 == addr then
             moon.exit(-1)
             return

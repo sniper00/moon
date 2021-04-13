@@ -3,29 +3,14 @@
 #include <functional>
 #include <cassert>
 #include <map>
-#include <unordered_map>
+#include <unordered_set>
 
 namespace moon
 {
-    using timer_t = uint32_t;
-
     template<typename ExpirePolicy>
     class base_timer
     {
         using expire_policy_type = ExpirePolicy;
-        struct context
-        {
-        public:
-            template<typename ...Args>
-            context(int32_t times, int64_t interval, Args&&... args)
-                :times_(times), interval_(interval), policy_(std::forward<Args>(args)...) {}
-
-            bool continued() noexcept { return (times_ < 0) || ((--times_) > 0); }
-
-            int32_t	times_;
-            int64_t interval_;
-            expire_policy_type policy_;
-        };
     public:
         base_timer() = default;
 
@@ -41,24 +26,26 @@ namespace moon
 
             do
             {
-                auto iter = tickers_.begin();
-                if (iter == tickers_.end())
+                expire_policy_type v;
                 {
-                    break;
+                    std::lock_guard lock{ lock_ };
+                    if (auto iter = timers_.begin(); iter == timers_.end())
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        auto t = iter->first;
+                        if (t > now)
+                        {
+                            break;
+                        }
+                        v = std::move(iter->second);
+                        timers_.erase(iter);
+                    }
                 }
-
-                auto t = iter->first;
-
-                if (t > now)
-                {
-                    break;
-                }
-
-                auto id = iter->second;
-                tickers_.erase(iter);
-                expired(t, id);
+                v();
             } while (true);
-
             return;
         }
 
@@ -73,84 +60,37 @@ namespace moon
         }
 
         template<typename... Args>
-        timer_t repeat(int64_t now, int64_t interval, int32_t times, Args&&... args)
+        uint32_t add(time_t expiretime, Args&&... args)
         {
-            if (interval <= 0)
-            {
-                interval = 1;
-            }
-
-            timer_t id = create_timerid();
-            tickers_.emplace(now + interval, id);
-            timers_.emplace(id, context{ times, interval, std::forward<Args>(args)... });
-            return id;
-        }
-
-        void remove(timer_t timerid)
-        {
-            if (auto iter = timers_.find(timerid); iter != timers_.end())
-            {
-                iter->second.interval_ = 0;
-            }
+            std::lock_guard lock{ lock_ };
+            timers_.emplace(expiretime, expire_policy_type{ ++timerid_, std::forward<Args>(args)... });
+            return timerid_;
         }
 
         size_t size() const
         {
             return timers_.size();
         }
-
-    private:
-        timer_t create_timerid()
-        {
-            do
-            {
-                ++uuid_;
-                if (uuid_ == 0 || uuid_ == std::numeric_limits<uint32_t>::max())
-                    uuid_ = 1;
-            } while (timers_.find(uuid_) != timers_.end());
-            return uuid_;
-        }
-
-        void expired(int64_t now, timer_t id)
-        {
-            if (auto iter = timers_.find(id); iter != timers_.end())
-            {
-                auto& ctx = iter->second;
-                if (ctx.interval_ != 0)//alive
-                {
-                    bool continued = ctx.continued();
-                    ctx.policy_(id, !continued);
-                    if (ctx.interval_!=0 && continued)//may remove timer in callback
-                    {
-                        tickers_.emplace(now + ctx.interval_, id);
-                        return;
-                    }
-                }
-                timers_.erase(id);
-            }
-        }
     private:
         bool stop_ = false;
-        uint32_t uuid_ = 0;
-        std::multimap<int64_t, uint32_t> tickers_;
-        std::unordered_map<uint32_t, context> timers_;
+        uint32_t timerid_ = 0;
+        std::mutex lock_;
+        std::multimap<int64_t, expire_policy_type> timers_;
     };
 
     class default_expire_policy
     {
     public:
-        using handler_type = std::function<void(timer_t)>;
+        using handler_type = std::function<void()>;
 
         default_expire_policy(handler_type handler)
             :handler_(std::move(handler))
         {
         }
 
-        void  operator()(timer_t id, bool last)
+        void  operator()()
         {
-            (void)last;
-            assert(handler_);
-            handler_(id);
+            handler_();
         }
     private:
         handler_type handler_;

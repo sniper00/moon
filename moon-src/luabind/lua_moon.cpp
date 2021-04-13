@@ -26,7 +26,7 @@ static void* get_ptr(lua_State* L, const char* key) {
     return v;
 }
 
-moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
+static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
 {
     int t = lua_type(L, index);
     switch (t)
@@ -112,22 +112,13 @@ static int lmoon_localtime(lua_State* L)
     return 1;
 }
 
-static int lmoon_timer_repeated(lua_State* L)
+static int lmoon_timeout(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     int32_t interval = (int32_t)luaL_checkinteger(L, 1);
-    int32_t times = (int32_t)luaL_checkinteger(L, 2);
-    moon::timer_t timerid = S->get_worker()->repeat(interval, times, S->id());
+    uint32_t timerid = S->get_server()->timeout(interval, S->id());
     lua_pushinteger(L, timerid);
     return 1;
-}
-
-static int lmoon_timer_remove(lua_State* L)
-{
-    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    moon::timer_t id = (moon::timer_t)luaL_checkinteger(L, 1);
-    S->get_worker()->remove_timer(id);
-    return 0;
 }
 
 static int lmoon_log(lua_State* L)
@@ -189,7 +180,9 @@ static int lmoon_cpu(lua_State* L)
 static int lmoon_make_prefab(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    uint32_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
+    intptr_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
+    if (id == 0)
+        return luaL_error(L, "moon.make_prefab failed");
     lua_pushinteger(L, id);
     return 1;
 }
@@ -198,37 +191,120 @@ static int lmoon_send_prefab(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t prefabid = (uint32_t)luaL_checkinteger(L, 2);
+    intptr_t prefabid = (intptr_t)luaL_checkinteger(L, 2);
     std::string_view header = luaL_check_stringview(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
     int8_t type = (int8_t)luaL_checkinteger(L, 5);
-    S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type);
-    return 0;
+    bool ok = S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type);
+    if (!ok)
+    {
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, moon::format("send_prefab failed, can not find prepared data. prefabid %" PRId64, prefabid).data());
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 static int lmoon_send(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
+    int8_t type = (int8_t)luaL_checkinteger(L, 5);
+
     if (receiver == 0)
         return luaL_error(L, "moon.send 'receiver' must >0");
+    if (type == PTYPE_UNKNOWN)
+        return luaL_error(L, "moon.send invalid message type");
+
     buffer_ptr_t buf = moon_to_buffer(L, 2);
     std::string_view header = luaL_check_stringview(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
-    int8_t type = (int8_t)luaL_checkinteger(L, 5);
-    S->get_router()->send(S->id(), receiver, std::move(buf), header, sessionid, type);
+
+    S->get_server()->send(S->id(), receiver, std::move(buf), header, sessionid, type);
     return 0;
+}
+
+static void table_tostring(std::string& res, lua_State* L, int index)
+{
+    if (index < 0) {
+        index = lua_gettop(L) + index + 1;
+    }
+
+    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    res.append("{");
+    lua_pushnil(L);
+    while (lua_next(L, index))
+    {
+        res.append(lua_tostring(L, -2));
+        res.append("=");
+        switch (lua_type(L, -1))
+        {
+        case LUA_TNUMBER:
+        {
+            if (lua_isinteger(L, -1))
+                res.append(std::to_string(lua_tointeger(L, -1)));
+            else
+                res.append(std::to_string(lua_tonumber(L, -1)));
+            break;
+        }
+        case LUA_TBOOLEAN:
+        {
+            res.append(lua_toboolean(L, -1) ? "true" : "false");
+            break;
+        }
+        case LUA_TSTRING:
+        {
+            res.append("'");
+            res.append(luaL_check_stringview(L, -1));
+            res.append("'");
+            break;
+        }
+        case LUA_TTABLE:
+        {
+            table_tostring(res, L, -1);
+            break;
+        }
+        default:
+            res.append("false");
+            break;
+        }
+        res.append(",");
+        lua_pop(L, 1);
+    }
+    res.append("}");
 }
 
 static int lmoon_new_service(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     std::string_view type = luaL_check_stringview(L, 1);
-    std::string_view conf = luaL_check_stringview(L, 2);
-    bool isunique = luaL_checkboolean(L, 3);
-    int32_t workerid = (int32_t)luaL_checkinteger(L, 4);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
-    S->get_router()->new_service(std::string{ type },std::string{ conf }, isunique, workerid, S->id(), sessionid);
+    int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    service_conf conf;
+
+    lua_pushnil(L);
+    while (lua_next(L,3))
+    {
+        std::string key = lua_tostring(L, -2);
+        if (key == "name")
+            conf.name = lua_tostring(L, -1);
+        else if (key == "file")
+            conf.source = luaL_check_stringview(L, -1);
+        else if (key == "memlimit")
+            conf.memlimit = luaL_checkinteger(L, -1);
+        else if (key == "unique")
+            conf.unique = lua_toboolean(L, -1);
+        else if (key == "threadid")
+            conf.threadid = (uint32_t)luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
+
+    conf.params.append("return ");
+    table_tostring(conf.params, L, 3);
+
+    S->get_server()->new_service(std::string{ type }, conf, S->id(), sessionid);
     return 0;
 }
 
@@ -237,16 +313,20 @@ static int lmoon_kill(lua_State* L)
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     uint32_t serviceid = (uint32_t)luaL_checkinteger(L, 1);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
-    S->get_router()->remove_service(serviceid, S->id(), sessionid);
+    if (S->id() == serviceid)
+    {
+        S->ok(false);
+    }
+    S->get_server()->remove_service(serviceid, S->id(), sessionid);
     return 0;
 }
 
-static int lmoon_runcmd(lua_State* L)
+static int lmoon_scan_services(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    std::string_view cmd = luaL_check_stringview(L, 1);
+    uint32_t workerid = (uint32_t)luaL_checkinteger(L, 1);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
-    S->get_router()->runcmd(S->id(), std::string{ cmd }, sessionid);
+    S->get_server()->scan_services(S->id(), workerid, sessionid);
     return 0;
 }
 
@@ -254,7 +334,7 @@ static int lmoon_queryservice(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     std::string_view name = luaL_check_stringview(L, 1);
-    uint32_t id = S->get_router()->get_unique_service(std::string{ name });
+    uint32_t id = S->get_server()->get_unique_service(std::string{ name });
     lua_pushinteger(L, id);
     return 1;
 }
@@ -264,7 +344,7 @@ static int lmoon_setenv(lua_State* L)
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     std::string_view name = luaL_check_stringview(L, 1);
     std::string_view value = luaL_check_stringview(L, 2);
-    S->get_router()->set_env(std::string{ name }, std::string{ value });
+    S->get_server()->set_env(std::string{ name }, std::string{ value });
     return 0;
 }
 
@@ -272,16 +352,15 @@ static int lmoon_getenv(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     std::string_view name = luaL_check_stringview(L, 1);
-    std::string value = S->get_router()->get_env(std::string{ name });
+    std::string value = S->get_server()->get_env(std::string{ name });
     lua_pushlstring(L, value.data(), value.size());
     return 1;
 }
 
-static int lmoon_wstate(lua_State* L)
+static int lmoon_server_info(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    int32_t workerid = (int32_t)luaL_checkinteger(L, 1);
-    std::string info = S->get_router()->worker_info(workerid);
+    std::string info = S->get_server()->info();
     lua_pushlstring(L, info.data(), info.size());
     return 1;
 }
@@ -414,7 +493,7 @@ static int message_clone(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message clone param 1 need userdata");
+        return luaL_error(L, "message clone param need lightuserdata(message*)");
     }
     message* nm = new message((const buffer_ptr_t&)*m);
     nm->set_broadcast(m->broadcast());
@@ -432,7 +511,7 @@ static int message_release(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message release param 1 need userdata");
+        return luaL_error(L, "message release param need lightuserdata(message*)");
     }
     delete m;
     return 0;
@@ -444,7 +523,7 @@ static int message_redirect(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
     {
-        return luaL_error(L, "message clone param 1 need userdata");
+        return luaL_error(L, "message clone param need lightuserdata(message*)");
     }
     size_t len = 0;
     const char* sz = luaL_checklstring(L, 2, &len);
@@ -468,8 +547,7 @@ extern "C"
             { "md5", lmoon_md5 },
             { "tostring", lmoon_tostring },
             { "localtime", lmoon_localtime },
-            { "repeated", lmoon_timer_repeated},
-            { "remove_timer", lmoon_timer_remove},
+            { "timeout", lmoon_timeout},
             { "log", lmoon_log},
             { "set_loglevel", lmoon_set_loglevel},
             { "get_loglevel", lmoon_get_loglevel},
@@ -479,11 +557,11 @@ extern "C"
             { "send", lmoon_send},
             { "new_service", lmoon_new_service},
             { "kill", lmoon_kill},
-            { "runcmd", lmoon_runcmd},
+            { "scan_services", lmoon_scan_services},
             { "queryservice", lmoon_queryservice},
             { "set_env", lmoon_setenv},
             { "get_env", lmoon_getenv},
-            { "wstate", lmoon_wstate},
+            { "server_info", lmoon_server_info},
             { "exit", lmoon_exit},
             { "size", lmoon_size},
             { "now", lmoon_now},
@@ -660,6 +738,44 @@ static int lasio_address(lua_State* L)
     return 1;
 }
 
+static int lasio_write2(lua_State* L)
+{
+    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto data = moon_to_buffer(L, 2);
+    if (!data->has_flag(buffer_flag::pack_size))
+    {
+        int len = (int)data->size();
+        moon::host2net(len);
+        data->write_front(&len, 1);
+        data->set_flag(buffer_flag::pack_size);
+    }
+    bool ok = S->write(fd, std::move(data));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
+static int lasio_write_message2(lua_State* L)
+{
+    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    moon::message* m = (moon::message*)lua_touserdata(L, 2);
+    if (nullptr == m)
+    {
+        return luaL_error(L, "asio.write_message param 'message' invalid");
+    }
+    if (!m->get_buffer()->has_flag(buffer_flag::pack_size))
+    {
+        int len = (int)m->size();
+        moon::host2net(len);
+        m->get_buffer()->write_front(&len, 1);
+        m->get_buffer()->set_flag(buffer_flag::pack_size);
+    }
+    bool ok = S->write(fd, *m);
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_asio(lua_State* L)
@@ -679,6 +795,8 @@ extern "C"
             { "set_enable_chunked", lasio_set_enable_chunked},
             { "set_send_queue_limit", lasio_set_send_queue_limit},
             { "getaddress", lasio_address},
+            { "write2", lasio_write2},
+            { "write_message2", lasio_write_message2},
             {NULL,NULL}
         };
 

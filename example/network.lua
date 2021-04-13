@@ -2,7 +2,7 @@ local moon = require("moon")
 
 local socket = require("moon.socket")
 
-local conf = ...
+local conf = ... or {}
 
 local HOST = conf.host or "127.0.0.1"
 local PORT = conf.port or 12345

@@ -31,7 +31,10 @@ moon.async(function()
     end
 end)
 
-moon.repeated(1000,-1, function()
-    print(count)
-    count = 0
+moon.async(function()
+    while true do
+        moon.sleep(1000)
+        print(count)
+        count = 0
+    end
 end)

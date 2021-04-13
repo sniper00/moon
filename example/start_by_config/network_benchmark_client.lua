@@ -1,7 +1,7 @@
 local moon = require("moon")
 local socket = require("moon.socket")
 
-local conf = ...
+local conf = ... or {}
 
 local total,count,client_num,send_count
 
@@ -52,9 +52,7 @@ socket.on("message",function(fd, msg)
     end
     socket.close(fd)
     --print(fd,connects[fd],count,total)
-
     if count == total then
-        print("total ",count)
         local qps = total*1000/(moon.now()-start_time)
         local keys = {}
         for k,_ in pairs(result) do
@@ -82,6 +80,7 @@ socket.on("error",function(fd, msg)
 end)
 
 total = conf.client_num * conf.count
+print(total)
 client_num = conf.client_num
 send_count = conf.count
 

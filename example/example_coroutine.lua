@@ -1,7 +1,7 @@
 local moon = require("moon")
 local conf = ...
 
-if conf.receiver then
+if conf and conf.receiver then
     local command = {}
 
     command.PING = function(sender,sessionid, ...)
@@ -41,12 +41,6 @@ else
 
         print(moon.name, "call ", receiver, "command", "PING")
         print(moon.co_call("lua", receiver, "PING", "Hello"))
-
-        local bt = os.clock()
-        for i=1,100000 do
-            moon.co_call("lua", receiver, "TEST")
-        end
-        print(os.clock() - bt)
 
         moon.exit(-1)
     end)

@@ -2,6 +2,8 @@
 #include "lua.hpp"
 #include "common/log.hpp"
 #include "common/buffer.hpp"
+#include "common/lua_utility.hpp"
+#include "config.hpp"
 #include "service.hpp"
 
 #define LMOON_GLOBAL "LMOON_GLOBAL"
@@ -9,17 +11,13 @@
 
 class lua_service :public moon::service
 {
-    struct state_deleter {
-        void operator()(lua_State* L) const {
-            lua_close(L);
-        }
-    };
 public:
     lua_service();
 
     ~lua_service();
+
 private:
-    bool init(std::string_view config) override;
+    bool init(const moon::service_conf& conf) override;
 
     void dispatch(moon::message* msg) override;
 
@@ -29,5 +27,5 @@ public:
     size_t mem_limit = 0;
     size_t mem_report = 8 * 1024 * 1024;
 private:
-    std::unique_ptr<lua_State, state_deleter> lua_;
+    std::unique_ptr<lua_State, moon::state_deleter> lua_;
 };

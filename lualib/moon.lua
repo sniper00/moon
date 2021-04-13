@@ -31,11 +31,11 @@ local co_close = coroutine.close
 local _send = core.send
 local _now = core.now
 local _addr = core.id
-local _remove_timer = core.remove_timer
-local _repeated = core.repeated
+local _timeout = core.timeout
 local _newservice = core.new_service
 local _queryservice = core.queryservice
 local _decode = core.decode
+local _scan_services = core.scan_services
 
 local unpack = seri.unpack
 local pack = seri.pack
@@ -117,15 +117,7 @@ local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
 
-local function remove_all_timer(t)
-    for k,_ in pairs(t) do
-        core.remove_timer(k)
-    end
-end
-
-local timer_cb = setmetatable({},{
-	__gc = remove_all_timer,
-})
+local timer_routine = {}
 
 local function coresume(co, ...)
     local ok, err = co_resume(co, ...)
@@ -241,16 +233,13 @@ end
 
 ---async 创建一个新的服务
 ---@param stype string @服务类型，根据所注册的服务类型，可选有 'lua'
----@param config table @服务的启动配置，数据类型table, 可以用来向服务传递参数
----@param unique boolean @default false, 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
----@param workerid integer @default 0 ,在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
+---@param config table @服务的启动配置，{name="a",file="file"}, 可以用来向服务传递额外参数
+---                    unique 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
+---                    threadid 在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
 ---@return integer @返回服务id
-function moon.new_service(stype, config, unique, workerid)
-    unique = unique or false
-    workerid = workerid or 0
-    config = jencode(config)
+function moon.new_service(stype, config)
     local sessionid = make_response()
-    _newservice(stype, config, unique, workerid, sessionid)
+    _newservice(stype, sessionid, config)
     return tointeger(co_yield())
 end
 
@@ -278,10 +267,10 @@ function moon.quit()
 		end
     end
 
-    for k, co in pairs(timer_cb) do
+    for k, co in pairs(timer_routine) do
         if type(co) == "thread" and co ~= running then
             co_close(co)
-            timer_cb[k] = false
+            timer_routine[k] = false
 		end
     end
 
@@ -357,11 +346,10 @@ function moon.co_remove_service(serviceid)
     return moon.remove_service(serviceid, true)
 end
 
----@param command string
 ---@return string
-function moon.co_runcmd(command)
+function moon.scan_services(workerid)
     local sessionid = make_response()
-    core.runcmd(command, sessionid)
+    _scan_services(workerid, sessionid)
     return co_yield()
 end
 
@@ -568,37 +556,29 @@ reg_protocol {
     name = "timer",
     PTYPE = PTYPE_TIMER,
     dispatch = function(msg)
-        local timerid, last = _decode(msg, "SR")
-        local v = timer_cb[timerid]
-        local tp = type(v)
-        if tp == "function" then
-            v(timerid, last>0)
-        elseif tp == "thread" then
-            timer_cb[timerid] = nil
-            coresume(v, timerid)
+        local timerid = _decode(msg, "S")
+        local v = timer_routine[timerid]
+        timer_routine[timerid] = nil
+        if not v then
             return
         end
-
-        if last>0 then
-            timer_cb[timerid] = nil
+        if type(v) == "thread" then
+            coresume(v, timerid)
+        elseif v then
+            v()
         end
     end
 }
 
----@param mills integer
----@param times integer
----@param fn function
----@return integer
-function moon.repeated(mills, times, fn)
-    local timerid = _repeated(mills, times)
-    timer_cb[timerid] = fn
-    return timerid
+---@param timerid integer @
+function moon.remove_timer(timerid)
+    timer_routine[timerid] = false
 end
 
----@param timerid integer
-function moon.remove_timer(timerid)
-    timer_cb[timerid] = nil
-    _remove_timer(timerid)
+function moon.timeout(mills, fn)
+    local timer_session = _timeout(mills)
+    timer_routine[timer_session] = fn
+    return timer_session
 end
 
 ---async
@@ -606,8 +586,8 @@ end
 ---@param mills integer
 ---@return integer
 function moon.sleep(mills)
-    local timerid = _repeated(mills, 1)
-    timer_cb[timerid] = co_running()
+    local timer_session = _timeout(mills)
+    timer_routine[timer_session] = co_running()
     return co_yield()
 end
 

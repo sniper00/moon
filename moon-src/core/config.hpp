@@ -64,6 +64,15 @@ namespace moon
         both = 3,
     };
 
+    struct service_conf
+    {
+        bool unique = false;
+        uint32_t threadid = 0;
+        size_t memlimit = 0;
+        std::string name;
+        std::string source;
+        std::string params;
+    };
 }
 
 

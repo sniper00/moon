@@ -4,13 +4,14 @@
 #include <lstate.h>
 #include <lobject.h>
 #include <lfunc.h>
+#include <lgc.h>
 
 static int
 lclone(lua_State *L) {
 	if (!lua_isfunction(L, 1) || lua_iscfunction(L,1))
 		return luaL_error(L, "Need lua function");
 	const LClosure *c = lua_topointer(L,1);
-	int n = luaL_optinteger(L, 2, 0);
+	int n = (int)luaL_optinteger(L, 2, 0);
 	if (n < 0 || n > c->p->sizep)
 		return 0;
 	luaL_checkstack(L, 1, NULL);
@@ -25,7 +26,7 @@ lclone(lua_State *L) {
 	LClosure *cl = luaF_newLclosure(L, p->sizeupvalues);
 	luaF_initupvals(L, cl);
 	cl->p = p;
-	setclLvalue(L, &(L->top++)->val, cl);
+	setclLvalue2s(L, L->top++, cl);
 	lua_unlock(L);
 
 	return 1;
