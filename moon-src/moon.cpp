@@ -146,7 +146,7 @@ void print_mem_stats()
 
 static void usage(void) {
     std::cout << "Usage:\n";
-    std::cout << "        moon [script [args]]\n";
+    std::cout << "        moon script [args]\n";
     std::cout << "Examples:\n";
     std::cout << "        moon main.lua  hello\n";
 }
