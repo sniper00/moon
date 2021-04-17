@@ -110,7 +110,7 @@ namespace moon
         {
             if ((0 != timeout_) && (0 != recvtime_) && (now - recvtime_ > timeout_))
             {
-                asio::post(socket_.get_executor(), [this]() {
+                asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                     error(make_error_code(moon::error::read_timeout));
                 });
                 return;
