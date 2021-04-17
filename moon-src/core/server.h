@@ -107,7 +107,6 @@ namespace moon
     private:
         volatile int signalcode_ = 0;
         std::atomic<state> state_ = state::unknown;
-        std::atomic<uint32_t> next_ = 0;
         std::atomic<uint32_t> fd_seq_ = 1;
         std::time_t now_ = 0;
         mutable log logger_;
