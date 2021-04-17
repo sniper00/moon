@@ -17,13 +17,39 @@
 #include "rapidjson/reader.h"
 #include "rapidjson/error/en.h"
 
-static constexpr int max_depth = 64;
+#ifdef MOON_ENABLE_MIMALLOC
+#include "mimalloc.h"
+class MimallocAllocator {
+public:
+    static const bool kNeedFree = true;
+    void* Malloc(size_t size) {
+        if (size) //  behavior of malloc(0) is implementation defined.
+            return mi_malloc(size);
+        else
+            return NULL; // standardize to returning NULL.
+    }
+    void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
+        (void)originalSize;
+        if (newSize == 0) {
+            mi_free(originalPtr);
+            return NULL;
+        }
+        return mi_realloc(originalPtr, newSize);
+    }
+    static void Free(void* ptr) { mi_free(ptr); }
+};
+    using JsonAllocator = MimallocAllocator;
+#else
+    using JsonAllocator = rapidjson::CrtAllocator;
+#endif
 
-using StreamBuf = rapidjson::StringBuffer;
+using StreamBuf = rapidjson::GenericStringBuffer<rapidjson::UTF8<>, JsonAllocator>;
 using JsonWriter = rapidjson::Writer<StreamBuf>;
 using JsonPrettyWriter = rapidjson::PrettyWriter<StreamBuf>;
 
-using JsonReader = rapidjson::Reader;
+using JsonReader = rapidjson::GenericReader<rapidjson::UTF8<>, rapidjson::UTF8<>, JsonAllocator>;
+
+static constexpr int max_depth = 64;
 
 namespace rapidjson
 {
