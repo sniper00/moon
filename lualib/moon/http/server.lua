@@ -130,7 +130,9 @@ end
 
 function http_response:write(content)
     self.content = content
-    self.header['Content-Length'] = #content
+    if content then
+        self.header['Content-Length'] = #content
+    end
 end
 
 function http_response:tb()
