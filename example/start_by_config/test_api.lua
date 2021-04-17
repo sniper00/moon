@@ -146,6 +146,18 @@ do
 	assert(not rank:range(1,4))
 end
 
+do
+	local q = make_queue()
+	queue_push(q, 4)
+	queue_push(q, 3)
+	queue_push(q, 2)
+	queue_push(q, 1)
+	assert(queue_pop(q) == 4)
+	assert(queue_pop(q) == 3)
+	assert(queue_pop(q) == 2)
+	assert(queue_pop(q) == 1)
+end
+
 moon.async(function()
 	local ncount = 0
 	moon.timeout(
