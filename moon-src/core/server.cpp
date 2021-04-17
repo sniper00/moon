@@ -135,32 +135,33 @@ namespace moon
 
     worker* server::next_worker()
     {
-        uint32_t  idx = next_.fetch_add(1);
-        uint32_t free_count = 0;
+        assert(workers_.size() > 0);
+        uint32_t min_count = std::numeric_limits<uint32_t>::max();
+        uint32_t min_count_workerid = 0;
         for (const auto& w : workers_)
         {
-            if (w->shared())
+            auto n = w->count_.load();
+            if (w->shared() && n < min_count)
             {
-                ++free_count;
+                min_count = n;
+                min_count_workerid = w->id();
             }
         }
 
-        if (free_count>0)
+        if (min_count_workerid == 0)
         {
-            idx = idx % free_count;
+            min_count = std::numeric_limits<uint32_t>::max();
             for (const auto& w : workers_)
             {
-                if (!w->shared())
-                    continue;
-                if (idx == 0)
+                auto n = w->count_.load();
+                if (n < min_count)
                 {
-                    return w.get();
+                    min_count = n;
+                    min_count_workerid = w->id();
                 }
-                idx--;
             }
         }
-        idx %= workers_.size();
-        return workers_[idx].get();
+        return workers_[min_count_workerid-1].get();
     }
 
     worker* server::get_worker(uint32_t workerid, uint32_t serviceid) const
