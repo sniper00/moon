@@ -87,8 +87,6 @@ bool lua_service::init(const moon::service_conf& conf)
 
         lua_pushlightuserdata(L, this);
         lua_setfield(L, LUA_REGISTRYINDEX, LMOON_GLOBAL);
-        lua_pushlightuserdata(L, &worker_->socket());
-        lua_setfield(L, LUA_REGISTRYINDEX, LASIO_GLOBAL);
 
         int r = luaL_dostring(L, server_->get_env("PATH").data());
         MOON_CHECK(r == LUA_OK, moon::format("PATH %s", lua_tostring(L, -1)));

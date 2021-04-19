@@ -7,7 +7,6 @@
 #include "service.hpp"
 
 #define LMOON_GLOBAL "LMOON_GLOBAL"
-#define LASIO_GLOBAL "LASIO_GLOBAL"
 
 class lua_service :public moon::service
 {
