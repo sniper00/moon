@@ -80,6 +80,7 @@ namespace moon
 
     void worker::add_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
     {
+        count_.fetch_add(1, std::memory_order_release);
         asio::post(io_ctx_, [this, service_type = std::move(service_type), conf = std::move(conf), creatorid, sessionid](){
             do
             {
@@ -135,8 +136,6 @@ namespace moon
                     break;
                 }
 
-                count_.fetch_add(1, std::memory_order_release);
-
                 if (0 != sessionid)
                 {
                     server_->response(creatorid, std::string_view{}, std::to_string(serviceid), sessionid);
@@ -144,6 +143,7 @@ namespace moon
                 return;
             } while (false);
 
+            count_.fetch_sub(1, std::memory_order_release);
             if (services_.empty())
             {
                 shared(true);

@@ -87,7 +87,7 @@ send_count = conf.count
 moon.async(function()
     moon.sleep(10)
     for _=1,conf.client_num do
-        local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET)
+        local fd = socket.connect(conf.host,conf.port,moon.PTYPE_SOCKET)
     end
 end)
 
