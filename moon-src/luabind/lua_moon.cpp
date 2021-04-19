@@ -750,46 +750,6 @@ static int lasio_address(lua_State* L)
     return 1;
 }
 
-static int lasio_write2(lua_State* L)
-{
-    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    auto& sock = S->get_worker()->socket();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    auto data = moon_to_buffer(L, 2);
-    if (!data->has_flag(buffer_flag::pack_size))
-    {
-        int len = (int)data->size();
-        moon::host2net(len);
-        data->write_front(&len, 1);
-        data->set_flag(buffer_flag::pack_size);
-    }
-    bool ok = sock.write(fd, std::move(data));
-    lua_pushboolean(L, ok ? 1 : 0);
-    return 1;
-}
-
-static int lasio_write_message2(lua_State* L)
-{
-    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    auto& sock = S->get_worker()->socket();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    moon::message* m = (moon::message*)lua_touserdata(L, 2);
-    if (nullptr == m)
-    {
-        return luaL_error(L, "asio.write_message param 'message' invalid");
-    }
-    if (!m->get_buffer()->has_flag(buffer_flag::pack_size))
-    {
-        int len = (int)m->size();
-        moon::host2net(len);
-        m->get_buffer()->write_front(&len, 1);
-        m->get_buffer()->set_flag(buffer_flag::pack_size);
-    }
-    bool ok = sock.write(fd, *m);
-    lua_pushboolean(L, ok ? 1 : 0);
-    return 1;
-}
-
 extern "C"
 {
     int LUAMOD_API luaopen_asio(lua_State* L)
@@ -809,8 +769,6 @@ extern "C"
             { "set_enable_chunked", lasio_set_enable_chunked},
             { "set_send_queue_limit", lasio_set_send_queue_limit},
             { "getaddress", lasio_address},
-            { "write2", lasio_write2},
-            { "write_message2", lasio_write_message2},
             {NULL,NULL}
         };
 
