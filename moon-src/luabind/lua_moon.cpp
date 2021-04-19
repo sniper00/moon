@@ -595,65 +595,70 @@ extern "C"
 
 static int lasio_try_open(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     std::string_view host = luaL_check_stringview(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
-    bool ok = S->try_open(std::string{host}, port);
+    bool ok = sock.try_open(std::string{host}, port);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_listen(lua_State* L)
 {
-    lua_service* LS  = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S  = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     std::string_view host = luaL_check_stringview(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
-    uint32_t fd = S->listen(std::string{ host }, port, LS->id(), type);
+    uint32_t fd = sock.listen(std::string{ host }, port, S->id(), type);
     lua_pushinteger(L, fd);
     return 1;
 }
 
 static int lasio_accept(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (int32_t)luaL_checkinteger(L, 1);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
     uint32_t owner = (uint32_t)luaL_checkinteger(L, 3);
-    S->accept(fd, sessionid, owner);
+    sock.accept(fd, sessionid, owner);
     return 0;
 }
 
 static int lasio_connect(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     std::string_view host = luaL_check_stringview(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     uint32_t owner = (uint32_t)luaL_checkinteger(L, 3);
     uint8_t type = (uint8_t)luaL_checkinteger(L, 4);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
     uint32_t timeout = (uint32_t)luaL_checkinteger(L, 6);
-    uint32_t fd = S->connect(std::string{ host }, port, owner, type, sessionid, timeout);
+    uint32_t fd = sock.connect(std::string{ host }, port, owner, type, sessionid, timeout);
     lua_pushinteger(L, fd);
     return 1;
 }
 
 static int lasio_read(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     uint32_t owner = (uint32_t)luaL_checkinteger(L, 2);
     int64_t size = (int64_t)luaL_checkinteger(L, 3);
     std::string_view delim = luaL_check_stringview(L, 4);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
-    S->read(fd, owner, size, delim, sessionid);
+    sock.read(fd, owner, size, delim, sessionid);
     return 0;
 }
 
 static int lasio_write(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     auto data = moon_to_buffer(L, 2);
     int flag = (int)luaL_optinteger(L, 3, 0);
@@ -661,86 +666,94 @@ static int lasio_write(lua_State* L)
     {
         return luaL_error(L, "asio.write param 'flag' invalid");
     }
-    bool ok = S->write(fd, data, (moon::buffer_flag)flag);
+    bool ok = sock.write(fd, data, (moon::buffer_flag)flag);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_write_message(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     moon::message* m =(moon::message*)lua_touserdata(L, 2);
     if (nullptr == m)
     {
         return luaL_error(L, "asio.write_message param 'message' invalid");
     }
-    bool ok = S->write(fd, *m);
+    bool ok = sock.write(fd, *m);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_close(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    bool ok = S->close(fd);
+    bool ok = sock.close(fd);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_settimeout(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     int32_t v = (int32_t)luaL_checkinteger(L, 2);//seconds
-    bool ok = S->settimeout(fd, v);
+    bool ok = sock.settimeout(fd, v);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_setnodelay(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    bool ok = S->setnodelay(fd);
+    bool ok = sock.setnodelay(fd);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_set_enable_chunked(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     std::string_view flag = luaL_check_stringview(L, 2);
-    bool ok = S->set_enable_chunked(fd, flag);
+    bool ok = sock.set_enable_chunked(fd, flag);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_set_send_queue_limit(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     uint32_t warnsize = (uint32_t)luaL_checkinteger(L, 2);
     uint32_t errorsize = (uint32_t)luaL_checkinteger(L, 3);
-    bool ok = S->set_send_queue_limit(fd, warnsize, errorsize);
+    bool ok = sock.set_send_queue_limit(fd, warnsize, errorsize);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_address(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    std::string addr = S->getaddress(fd);
+    std::string addr = sock.getaddress(fd);
     lua_pushlstring(L, addr.data(), addr.size());
     return 1;
 }
 
 static int lasio_write2(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     auto data = moon_to_buffer(L, 2);
     if (!data->has_flag(buffer_flag::pack_size))
@@ -750,14 +763,15 @@ static int lasio_write2(lua_State* L)
         data->write_front(&len, 1);
         data->set_flag(buffer_flag::pack_size);
     }
-    bool ok = S->write(fd, std::move(data));
+    bool ok = sock.write(fd, std::move(data));
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
 
 static int lasio_write_message2(lua_State* L)
 {
-    moon::socket* S = (moon::socket*)get_ptr(L, LASIO_GLOBAL);
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     moon::message* m = (moon::message*)lua_touserdata(L, 2);
     if (nullptr == m)
@@ -771,7 +785,7 @@ static int lasio_write_message2(lua_State* L)
         m->get_buffer()->write_front(&len, 1);
         m->get_buffer()->set_flag(buffer_flag::pack_size);
     }
-    bool ok = S->write(fd, *m);
+    bool ok = sock.write(fd, *m);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
