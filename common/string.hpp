@@ -368,10 +368,10 @@ namespace moon
 
     inline std::string hex_string(std::string_view text)
     {
-        static constexpr char hex[] = "0123456789abcdef";
+        static constexpr std::string_view hex = "0123456789abcdef";
         std::string res(text.size()*2, 0);
         size_t i = 0;
-        for (auto c : text)
+        for (uint8_t c : text)
         {
             res[i * 2] = hex[c >> 4];
             res[i * 2 + 1] = hex[c & 0xf];
