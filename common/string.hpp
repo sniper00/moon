@@ -33,7 +33,7 @@ namespace moon
     template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
     inline T string_convert(const std::string_view& s, std::errc& ec, int base = 10)
     {
-        T result;
+        T result{};
         auto res = std::from_chars(s.data(), s.data() + s.size(), result, base);
         ec = res.ec;
         return result;
