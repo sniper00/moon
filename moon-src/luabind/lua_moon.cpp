@@ -150,8 +150,7 @@ static int lmoon_log(lua_State* L)
             if (ar.source != nullptr && ar.source[0] != '\0')
                 buf.write_back(ar.source + 1, std::strlen(ar.source) - 1);
             buf.write_back(":", 1);
-            auto line = std::to_string(ar.currentline);
-            buf.write_back(line.data(), line.size());
+            buf.write_chars(ar.currentline);
             buf.write_back(")", 1);
         }
     }
