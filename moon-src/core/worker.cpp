@@ -100,7 +100,7 @@ namespace moon
                 {
                     if (serviceid == BOOTSTRAP_ADDR)
                     {
-                        server_->set_state(state::stopping);
+                        server_->stop(-1);
                     }
                     break;
                 }

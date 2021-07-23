@@ -35,7 +35,7 @@ namespace moon
         state_.store(state::init, std::memory_order_release);
     }
 
-    void server::run()
+    int server::run()
     {
         asio::io_context io_context;
         asio::steady_timer timer(io_context);
@@ -84,6 +84,7 @@ namespace moon
             timer.wait(ignore);
         }
         wait();
+        return stopcode_;
     }
 
     void server::stop(int stopcode)

@@ -234,15 +234,18 @@ int main(int argc, char* argv[])
         server_->new_service("lua", conf, 0, 0);
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
-        server_->run();
+        int stopcode = server_->run();
+        if (stopcode >= 0)
+        {
+            print_mem_stats();
+            return 0;
+        }
     }
     catch (std::exception& e)
     {
         printf("ERROR:%s\n", e.what());
     }
-
-    print_mem_stats();
-    return 0;
+    return -1;
 }
 
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\
