@@ -164,20 +164,27 @@ end
 ----------------------------------------------------------
 
 local M = {}
+--header and content max length
+M.content_max_len = false
+--is enable keepalvie
+M.keepalive = true
 
 local routers = {}
 
-local function read_chunked(fd)
+local function read_chunked(fd, content_max_len)
 
     local chunkdata = {}
     local content_length = 0
 
     while true do
         local data, err = socket.readline(fd, "\r\n", 64)
-        assert(data,err)
+        if not data then
+            return {socket_error = err}
+        end
+
         local length = tonumber(data,"16")
         if not length then
-            error("Invalid response body")
+            return {protocol_error = "Invalid chunked format:"..data}
         end
 
         if length==0 then
@@ -186,24 +193,28 @@ local function read_chunked(fd)
 
         content_length = content_length + length
 
-        if M.content_max_len and content_length > M.content_max_len then
-            error(strfmt( "content length %d, limit %d", content_length, M.content_max_len ))
+        if content_max_len and content_length > content_max_len then
+            return {protocol_error = string.format( "content length %d, limit %d", content_length, content_max_len )}
         end
 
         if length >0 then
             data, err = socket.read(fd, length)
-            assert(data,err)
+            if not data then
+                return {socket_error = err}
+            end
             tbinsert( chunkdata, data )
             data, err = socket.readline(fd, "\r\n", 2)
-            assert(data,err)
+            if not data then
+                return {socket_error = err}
+            end
         elseif length <0 then
-            error("Invalid response body")
+            return {protocol_error = "Invalid chunked format:"..length}
         end
     end
 
     local  data, err = socket.readline(fd, "\r\n", 2)
     if not data then
-        return false,err
+        return {socket_error = err}
     end
 
     return chunkdata
@@ -211,6 +222,7 @@ end
 
 local traceback = debug.traceback
 
+---return keepalive
 local function request_handler(fd, request)
     local response = http_response.new()
 
@@ -220,12 +232,13 @@ local function request_handler(fd, request)
         if static_src then
             response:write_header("Content-Type", static_src.mime)
             response:write(static_src.bin)
-            if request.header["Connection"] == "close" then
+            if not M.keepalive or request.header["connection"] == "close" then
                 socket.write_then_close(fd, seri.concat(response:tb()))
+                return
             else
                 socket.write(fd, seri.concat(response:tb()))
+                return true
             end
-            return
         end
     end
 
@@ -236,6 +249,9 @@ local function request_handler(fd, request)
             if M.error then
                 M.error(err)
             end
+
+            request.header["connection"] = "close"
+
             response.status_code = 500
             response:write_header("Content-Type","text/plain")
             response:write("Server Internal Error")
@@ -246,20 +262,25 @@ local function request_handler(fd, request)
         response:write(string.format("Cannot %s %s", request.method, request.path))
     end
 
-    if request.header["Connection"] == "close" then
+    if not M.keepalive or request.header["connection"] == "close" then
         socket.write_then_close(fd, seri.concat(response:tb()))
     else
         socket.write(fd, seri.concat(response:tb()))
+        return true
     end
 end
 
-local function session_handler(fd)
+local function read_request(fd)
     local data, err = socket.readline(fd, "\r\n\r\n", M.header_max_len)
-    assert(data,err)
+    if not data then
+        return {socket_error = err}
+    end
 
     --print("raw data",data)
     local ok,method,path,query_string,version,header = parse_request(data)
-    assert(ok,"Invalid HTTP response header")
+    if not ok then
+        return {protocol_error = "Invalid HTTP request header"}
+    end
 
     local request = {
         method = method,
@@ -283,27 +304,33 @@ local function session_handler(fd)
     if content_length then
         content_length = tonumber(content_length)
         if not content_length then
-            error("content-length is not number")
+            return {protocol_error = "content-length is not number"}
         end
 
         if M.content_max_len and content_length> M.content_max_len then
-            error(strfmt( "content length %d, limit %d",content_length,M.content_max_len ))
+            return {protocol_error = strfmt( "content length %d, limit %d",content_length,M.content_max_len )}
         end
 
         data, err = socket.read(fd, content_length)
-        assert(data,err)
+        if not data then
+            return {socket_error = err}
+        end
         --print("Content-Length",content_length)
         request.content = data
     elseif header["transfer-encoding"] == 'chunked' then
-        local chunkdata = read_chunked(fd)
-        if not chunkdata then
-            error("Invalid response body")
+        local chunkdata = read_chunked(fd, M.content_max_len)
+        if chunkdata.socket_error or chunkdata.protocol_error then
+            return chunkdata
         end
         request.content = tbconcat( chunkdata )
-    elseif method:upper()~="GET" then
-        moon.warn("Unsupport transfer-encoding: "..tostring(header["transfer-encoding"]))
+    elseif method ~="GET" and method ~= "HEAD" then
+        if header["transfer-encoding"] then
+            return {protocol_error = "Unsupport transfer-encoding:"..header["transfer-encoding"]}
+        else
+            return {protocol_error = "Unsupport content without length, method:"..method}
+        end
     end
-    request_handler(fd, request)
+    return request
 end
 
 -----------------------------------------------------------------
@@ -314,14 +341,20 @@ function M.start(fd, timeout)
     socket.settimeout(fd, timeout)
     moon.async(function()
         while true do
-            local ok,errmsg = pcall(session_handler,fd)
-            if not ok then
+            local request = read_request(fd)
+            if request.socket_error or request.protocol_error then
                 socket.close(fd)
-                if M.error then
-                    M.error(fd, errmsg)
-                else
-                    print("httpserver session error",errmsg)
+                if request.protocol_error then
+                    if M.error then
+                        M.error(fd, request.protocol_error)
+                    else
+                        moon.error("httpserver read request error", request.protocol_error)
+                    end   
                 end
+                return
+            end
+
+            if not request_handler(fd, request) then
                 return
             end
         end
