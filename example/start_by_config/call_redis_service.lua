@@ -32,6 +32,29 @@ moon.async(function()
 end)
 
 moon.async(function()
+    local json = require("json")
+
+    local args = {}
+    for i=1,1000,2 do
+        args[i] = i
+        args[i+1] = i
+    end
+
+    local res,err = redis.call(db, "hmset", "test", table.unpack(args))
+    if not res then
+        print("redis set error", res, err)
+        moon.sleep(1000)
+    else
+        count=count+1
+    end
+
+    local t,err = redis.call(db, "hgetall", "test")
+    for i=1,#t,2 do
+        assert( math.tointeger(t[i]) == math.tointeger(t[i+1]))
+    end
+end)
+
+moon.async(function()
     while true do
         moon.sleep(1000)
         print(count)
