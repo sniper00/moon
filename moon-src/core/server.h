@@ -47,7 +47,7 @@ namespace moon
 
         void init(uint32_t worker_num, const std::string& logfile);
 
-        void run();
+        int run();
 
         void stop(int signalcode);
 
