@@ -220,7 +220,6 @@ else
 
     local yield = coroutine.yield
     local raw_send = moon.raw_send
-    local pack = seri.pack
     local packstr = seri.packs
 
     local wfront = buffer.write_front

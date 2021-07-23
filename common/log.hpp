@@ -185,8 +185,9 @@ namespace moon
                 memcpy(buf + offset, "        ", 9 - len);
                 offset += 9 - len;
             }
-            memcpy(buf + offset, to_string(level), 11);
-            offset += 11;
+            std::string_view strlevel = to_string(level);
+            memcpy(buf + offset, strlevel.data(), strlevel.size());
+            offset += strlevel.size();
             return offset;
         }
 
@@ -207,7 +208,7 @@ namespace moon
                     it->seek(2, buffer::seek_origin::Current);
                     if (bconsole)
                     {
-                        auto s = std::string_view(reinterpret_cast<const char*>(it->data()), it->size());
+                        auto s = std::string_view{ it->data(), it->size() };
                         switch (level)
                         {
                         case LogLevel::Error:
@@ -242,7 +243,7 @@ namespace moon
             }
         }
 
-        const char* to_string(LogLevel lv) const
+        static constexpr std::string_view to_string(LogLevel lv)
         {
             switch (lv)
             {

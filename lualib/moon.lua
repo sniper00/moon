@@ -50,6 +50,9 @@ moon.PTYPE_TIMER = 9
 -- LOG_WARN = 2
 -- LOG_INFO = 3
 -- LOG_DEBUG = 4
+moon.DEBUG = function ()
+    return core.get_loglevel() == 4 -- LOG_DEBUG
+end
 moon.error = function(...) core.log(1,...) end
 moon.warn = function(...) core.log(2,...) end
 moon.info = function(...) core.log(3,...) end
@@ -64,9 +67,6 @@ local _g = _G
 ---rewrite lua print
 _g["print"] = moon.info
 
-moon.DEBUG = function ()
-    return core.get_loglevel() == 4 -- LOG_DEBUG
-end
 
 moon.exports = {}
 setmetatable(
