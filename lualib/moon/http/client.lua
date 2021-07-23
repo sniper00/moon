@@ -17,22 +17,30 @@ local create_query_string = http.create_query_string
 
 -----------------------------------------------------------------
 
-local function read_chunked(fd)
+local function read_chunked(fd, content_max_len)
 
     local chunkdata = {}
+    local content_length = 0
 
     while true do
-        local data, err = socket.readline(fd, "\r\n")
+        local data, err = socket.readline(fd, "\r\n", 64)
         if not data then
             return {socket_error = err}
         end
+
         local length = tonumber(data,"16")
         if not length then
-            error("Invalid response body")
+            return {protocol_error = "Invalid chunked format:"..data}
         end
 
         if length==0 then
             break
+        end
+
+        content_length = content_length + length
+
+        if content_max_len and content_length > content_max_len then
+            return {protocol_error = string.format( "content length %d, limit %d", content_length, content_max_len )}
         end
 
         if length >0 then
@@ -41,16 +49,16 @@ local function read_chunked(fd)
                 return {socket_error = err}
             end
             tbinsert( chunkdata, data )
-            data, err = socket.readline(fd, "\r\n")
+            data, err = socket.readline(fd, "\r\n", 2)
             if not data then
                 return {socket_error = err}
             end
         elseif length <0 then
-            error("Invalid response body")
+            return {protocol_error = "Invalid chunked format:"..length}
         end
     end
 
-    local  data, err = socket.readline(fd, "\r\n")
+    local  data, err = socket.readline(fd, "\r\n", 2)
     if not data then
         return {socket_error = err}
     end
@@ -66,7 +74,9 @@ local function response_handler(fd)
 
     --print("raw data",data)
     local ok, version, status_code, header = parse_response(data)
-    assert(ok,"Invalid HTTP response header")
+    if not ok then
+        return {protocol_error = "Invalid HTTP response header"}
+    end
 
     local response = {
         version = version,
@@ -85,8 +95,7 @@ local function response_handler(fd)
     if content_length then
         content_length = tonumber(content_length)
         if not content_length then
-            moon.warn("content-length is not number")
-            return response
+            return {protocol_error = "content-length is not number"}
         end
 
         if content_length >0 then
@@ -99,7 +108,7 @@ local function response_handler(fd)
         end
     elseif header["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd)
-        if chunkdata.socket_error then
+        if chunkdata.socket_error or chunkdata.protocol_error then
             return chunkdata
         end
         response.content = tbconcat( chunkdata )
@@ -164,6 +173,10 @@ local function do_request(baseaddress, options, req)
     if not ok then
         socket.close(fd)
         return false, response
+    end
+
+    if response.protocol_error then
+        return false, response.protocol_error
     end
 
     if response.socket_error then
