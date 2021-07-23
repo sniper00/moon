@@ -15,7 +15,8 @@
 #define atomic_load_relaxed_(ptr) atomic_load_explicit(ptr, memory_order_relaxed)
 
 #if defined(__x86_64__)
-#define atomic_pause_() __builtin_ia32_pause()
+#include <immintrin.h>
+#define atomic_pause_() _mm_pause()
 #else
 #define atomic_pause_() ((void)0)
 #endif
