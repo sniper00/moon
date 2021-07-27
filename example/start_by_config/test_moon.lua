@@ -52,7 +52,7 @@ local next_case = function ()
         end)
     else
         --print("abort")
-        moon.exit(-1)
+        moon.exit(100)
     end
 end
 
