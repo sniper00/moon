@@ -386,7 +386,8 @@ function M.static(dir, showdebug)
     dir = fs.abspath(dir)
     local res = fs.listdir(dir, 100)
     for _, v in ipairs(res) do
-        local src = string.gsub(v, dir, "")
+        local pos = string.find(v, dir, 1, true)
+        local src = string.sub(v, pos+#dir)
         src = string.gsub(src, "\\","/")
         if string.sub(src,1,1) ~= "/" then
             src = "/"..src
