@@ -205,7 +205,11 @@ namespace moon
                 {
                     if (holder_.close())
                     {
-                        close();
+                        if (parent_ != nullptr)
+                        {
+                            parent_->close(fd_);
+                            parent_ = nullptr;
+                        }
                     }
                     else
                     {
