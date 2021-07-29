@@ -1,35 +1,43 @@
 #pragma once
 #include <atomic>
 #include <thread>
-#include "noncopyable.hpp"
 
 //https://probablydance.com/2019/12/30/measuring-mutexes-spinlocks-and-how-bad-the-linux-scheduler-really-is/
+//https://rigtorp.se/spinlock/
 
 namespace moon
 {
-    class spin_lock : public moon::noncopyable
+    class spin_lock
     {
-        std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
-
+        std::atomic<bool> lock_ = { false };
     public:
-        bool try_lock()
+        bool try_lock() noexcept
         {
-            return !flag_.test_and_set(std::memory_order_acquire);
+            // First do a relaxed load to check if lock is free in order to prevent
+            // unnecessary cache misses if someone does while(!try_lock())
+            return !lock_.load(std::memory_order_relaxed) &&
+                !lock_.exchange(true, std::memory_order_acquire);
         }
 
-        void lock()
+        void lock() noexcept
         {
-            int counter = 0;
-            while (!try_lock())
-            {
-                if (++counter > 1000)
-                    std::this_thread::yield();
+            for (;;) {
+                // Optimistically assume the lock is free on the first try
+                if (!lock_.exchange(true, std::memory_order_acquire)) {
+                    return;
+                }
+                // Wait for lock to be released without generating cache misses
+                uint_fast32_t counter = 0;
+                while (lock_.load(std::memory_order_relaxed)) {
+                    if (++counter > 1000)
+                        std::this_thread::yield();
+                }
             }
         }
 
-        void unlock()
+        void unlock() noexcept
         {
-            flag_.clear(std::memory_order_release);
+            lock_.store(false, std::memory_order_release);
         }
     };
 }
