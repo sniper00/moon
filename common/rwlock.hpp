@@ -1,70 +1,72 @@
 #pragma once
-
 #include <atomic>
 #include <cstdint>
-#include "noncopyable.hpp"
-/* read write lock */
+
+/* RWSpinLock */
 namespace moon
 {
-    class rwlock : public moon::noncopyable
+    class rwlock
     {
+        enum : int32_t { READER = 2, WRITER = 1 };
     public:
         rwlock()
-            : read_(0), write_(false)
+            : bits_(0)
         {
         }
 
-        void lock_shared()
+        rwlock(rwlock const&) = delete;
+        rwlock& operator=(rwlock const&) = delete;
+
+        bool try_lock_shared() noexcept
         {
-            for (;;)
-            {
-                int count = 0;
-                while (write_.load(std::memory_order_acquire))
-                {
-                    if (++count > 1000)
-                        std::this_thread::yield();
-                }
-                read_.fetch_add(1, std::memory_order_release);
-                if (write_.load(std::memory_order_acquire))
-                {
-                    read_.fetch_sub(1, std::memory_order_release);
-                }
-                else
-                {
-                    break;
-                }
+            // fetch_add is considerably (100%) faster than compare_exchange,
+            // so here we are optimizing for the common (lock success) case.
+            int32_t value = bits_.fetch_add(READER, std::memory_order_acquire);
+            if ((value & WRITER)) {
+                bits_.fetch_add(-READER, std::memory_order_release);
+                return false;
             }
+            return true;
         }
 
-        void lock()
+        void lock_shared() noexcept
         {
-            int count = 0;
-            while (write_.exchange(true, std::memory_order_acquire))
-            {
-                if (++count > 1000)
+            uint_fast32_t count = 0;
+            while (!(try_lock_shared())) {
+                if (++count > 1000) {
                     std::this_thread::yield();
+                }
             }
+        }
 
-            count = 0;
-            while (read_.load(std::memory_order_acquire))
-            {
-                if (++count > 1000)
+        // Attempt to acquire writer permission. Return false if we didn't get it.
+        bool try_lock() noexcept {
+            int32_t expect = 0;
+            return bits_.compare_exchange_strong(
+                expect, WRITER, std::memory_order_acq_rel);
+        }
+
+        void lock() noexcept
+        {
+            uint_fast32_t count = 0;
+            while (!try_lock()) {
+                if (++count > 1000) {
                     std::this_thread::yield();
+                }
             }
         }
 
-        void unlock()
+        void unlock() noexcept
         {
-            write_.store(false, std::memory_order_release);
+            static_assert(READER > WRITER, "wrong bits!");
+            bits_.fetch_and(~WRITER, std::memory_order_release);
         }
 
-        void unlock_shared()
+        void unlock_shared() noexcept
         {
-            read_.fetch_sub(1, std::memory_order_release);
+            bits_.fetch_add(-READER, std::memory_order_release);
         }
-
     private:
-        std::atomic<int32_t> read_;
-        std::atomic_bool write_;
+        std::atomic<int32_t> bits_;
     };
 }
