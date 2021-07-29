@@ -1,7 +1,6 @@
 #include "lua.hpp"
 #include "common/time.hpp"
 #include "common/timer.hpp"
-#include "common/log.hpp"
 #include "common/md5.hpp"
 #include "common/byte_convert.hpp"
 #include "common/lua_utility.hpp"

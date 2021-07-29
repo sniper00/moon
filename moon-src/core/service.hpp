@@ -1,10 +1,9 @@
 #pragma once
 #include "config.hpp"
-#include "common/log.hpp"
+#include "log.hpp"
 
 namespace moon
 {
-    class log;
     class worker;
     class server;
 

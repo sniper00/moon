@@ -1,12 +1,5 @@
 #pragma once
-#include <algorithm>
-#include <locale>
-#include <cmath>
-#include <sstream>
-#include <cctype>
-#include <charconv>
-#include <iostream>
-#include "macro_define.hpp"
+#include "common.hpp"
 
 namespace moon
 {

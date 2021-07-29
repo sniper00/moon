@@ -1,8 +1,8 @@
 #pragma once
-#include "config.hpp"
-#include "common/log.hpp"
 #include "common/timer.hpp"
 #include "common/concurrent_map.hpp"
+#include "config.hpp"
+#include "log.hpp"
 #include "worker.h"
 
 namespace moon
@@ -49,7 +49,7 @@ namespace moon
 
         int run();
 
-        void stop(int signalcode);
+        void stop(int exitcode);
 
         log* logger() const;
 
@@ -93,7 +93,7 @@ namespace moon
 
         void response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT);
 
-        std::string info();
+        std::string info() const;
 
         uint32_t nextfd();
 
@@ -101,18 +101,18 @@ namespace moon
 
         void unlock_fd(uint32_t fd);
 
-        size_t socket_num();
+        size_t socket_num() const;
     private:
         void on_timer(uint32_t serviceid, uint32_t timerid);
 
         void wait();
     private:
-        volatile int stopcode_ = 0;
+        volatile int exitcode_ = std::numeric_limits<int>::max();
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> fd_seq_ = 1;
         std::time_t now_ = 0;
         mutable log logger_;
-        mutable rwlock fd_lock_;
+        mutable std::mutex fd_lock_;
         base_timer<timer_expire_policy> timer_;
         std::unordered_map<std::string, register_func > regservices_;
         concurrent_map<std::string, std::string, rwlock> env_;

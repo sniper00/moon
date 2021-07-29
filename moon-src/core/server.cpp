@@ -47,15 +47,15 @@ namespace moon
         {
             now_ = time::now();
 
-            if (stopcode_ < 0 )
+            if (exitcode_ < 0 )
             {
                 break;
             }
 
-            if (stopcode_ > 0 && !stop_once)
+            if (exitcode_ != std::numeric_limits<int>::max() && !stop_once)
             {
                 stop_once = true;
-                CONSOLE_WARN(logger(), "Received signal code %d", stopcode_);
+                CONSOLE_WARN(logger(), "Received signal code %d", exitcode_);
                 for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
                 {
                     (*iter)->stop();
@@ -84,12 +84,12 @@ namespace moon
             timer.wait(ignore);
         }
         wait();
-        return stopcode_;
+        return exitcode_;
     }
 
-    void server::stop(int stopcode)
+    void server::stop(int exitcode)
     {
-        stopcode_ = stopcode;
+        exitcode_ = exitcode;
     }
 
     log* server::logger() const
@@ -375,7 +375,7 @@ namespace moon
         send_message(std::move(m));
     }
 
-    std::string server::info()
+    std::string server::info() const
     {
         std::string req;
         req.append("[\n");
@@ -423,7 +423,7 @@ namespace moon
         MOON_CHECK(count == 1, "socket fd erase failed!");
     }
 
-    size_t server::socket_num()
+    size_t server::socket_num() const
     {
         std::unique_lock lck(fd_lock_);
         return fd_watcher_.size();

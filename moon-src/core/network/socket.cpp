@@ -1,5 +1,4 @@
 #include "socket.h"
-#include "common/log.hpp"
 #include "common/string.hpp"
 #include "common/hash.hpp"
 #include "worker.h"

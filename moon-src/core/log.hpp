@@ -1,13 +1,12 @@
 #pragma once
-#include "common/macro_define.hpp"
 #include "common/concurrent_queue.hpp"
 #include "common/time.hpp"
 #include "common/termcolor.hpp"
 #include "common/directory.hpp"
 #include "common/object_pool.hpp"
 #include "common/buffer.hpp"
-#include "common/spinlock.hpp"
 #include "common/string.hpp"
+#include "config.hpp"
 
 namespace moon
 {

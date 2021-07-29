@@ -1,9 +1,5 @@
 #pragma  once
-#include "lua.hpp"
-#include "common/log.hpp"
-#include "common/buffer.hpp"
 #include "common/lua_utility.hpp"
-#include "config.hpp"
 #include "service.hpp"
 
 #define LMOON_GLOBAL "LMOON_GLOBAL"
