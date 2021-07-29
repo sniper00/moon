@@ -1,7 +1,7 @@
 #pragma once
 #include <chrono>
 #include <ctime>
-#include "macro_define.hpp"
+#include "common.hpp"
 #include "string.hpp"
 
 namespace moon

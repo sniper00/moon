@@ -2,8 +2,8 @@
 #include<unordered_map>
 #include<string>
 #include<memory>
+#include "common.hpp"
 #include "noncopyable.hpp"
-#include "macro_define.hpp"
 
 namespace moon
 {

@@ -1,5 +1,6 @@
 #pragma once
 #include <string_view>
+#include <string>
 #include "lua.hpp"
 
 #define luaL_rawsetfield(L, tbindex, kname, valueexp)\
@@ -41,6 +42,11 @@ namespace moon
             luaL_typeerror(L, index, lua_typename(L, LUA_TBOOLEAN));
         }
         return lua_toboolean(L, index);
+    }
+
+    inline bool luaL_optboolean(lua_State* L, int arg, bool def)
+    {
+        return luaL_opt(L, luaL_checkboolean, arg, def);
     }
 
     inline bool requiref(lua_State* L, const char* name, lua_CFunction f)

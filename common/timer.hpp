@@ -4,6 +4,8 @@
 #include <cassert>
 #include <map>
 #include <unordered_set>
+#include <mutex>
+#include <atomic>
 
 namespace moon
 {

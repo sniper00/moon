@@ -1,5 +1,4 @@
 #include <csignal>
-#include "common/log.hpp"
 #include "common/directory.hpp"
 #include "common/string.hpp"
 #include "common/file.hpp"
@@ -234,8 +233,8 @@ int main(int argc, char* argv[])
         server_->new_service("lua", conf, 0, 0);
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
-        int stopcode = server_->run();
-        if (stopcode >= 0)
+        int exitcode = server_->run();
+        if (exitcode >= 0)
         {
             print_mem_stats();
             return 0;

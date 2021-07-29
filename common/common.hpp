@@ -73,9 +73,64 @@ typedef _W64 int   ssize_t;
 #define __has_feature(x) 0  // Compatibility with non-clang compilers.
 #endif
 
-#include<cstdint>
-#include<functional>
-#include<thread>
+#include <cstdint>
+#include <cinttypes>
+#include <algorithm>
+#include <cstdint>
+#include <cassert>
+#include <cstdarg>
+#include <iomanip>
+#include <fstream>
+#include <functional>
+#include <locale>
+#include <cmath>
+#include <sstream>
+#include <cctype>
+#include <charconv>
+#include <iostream>
+
+#include <thread>
+#include <mutex>
+#include <shared_mutex>
+#include <atomic>
+#include <condition_variable>
+
+#include <vector>
+#include <map>
+#include <string_view>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <deque>
+#include <array>
+#include <forward_list>
+#include <queue>
+
+#include <memory>
+
+#include "exception.hpp"
+
+using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
+
+#undef min
+#undef max
+
+#define VA_ARGS_NUM(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
+
+#define DECLARE_SHARED_PTR(classname)\
+class classname;\
+using classname##_ptr_t = std::shared_ptr<classname>;
+
+#define DECLARE_UNIQUE_PTR(classname)\
+class classname;\
+using classname##_ptr_t = std::unique_ptr<classname>;
+
+#define DECLARE_WEAK_PTR(classname)\
+class classname;\
+using classname##_wptr_t = std::weak_ptr<classname>;
+
+#define thread_sleep(x)  std::this_thread::sleep_for(std::chrono::milliseconds(x));
 
 namespace moon
 {

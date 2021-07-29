@@ -1,5 +1,5 @@
 #pragma once
-#include "common/macro_define.hpp"
+#include "common/common.hpp"
 #include "common/buffer.hpp"
 
 namespace moon
@@ -31,6 +31,15 @@ namespace moon
     constexpr  std::string_view STR_LF = "\n"sv;
     constexpr  std::string_view STR_CRLF = "\r\n"sv;
     constexpr  std::string_view STR_DCRLF = "\r\n\r\n"sv;
+
+    enum class state
+    {
+        unknown,
+        init,
+        ready,
+        stopping,
+        stopped
+    };
 
     enum class buffer_flag :uint8_t
     {

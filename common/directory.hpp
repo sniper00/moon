@@ -1,5 +1,5 @@
 #pragma once
-#include "platform_define.hpp"
+#include "common.hpp"
 #include "common/string.hpp"
 #include <filesystem>
 
