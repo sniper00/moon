@@ -159,7 +159,6 @@ static int lconnect(lua_State *L)
     return lua_gettop(L) - top;
 }
 
-//only support readline readlen
 static int lreceive(lua_State *L)
 {
     master_box* box = (master_box*)lua_touserdata(L, 1);
@@ -174,19 +173,15 @@ static int lreceive(lua_State *L)
     int top = lua_gettop(L);
     auto& client = box->asio_ctx->client;
 
-    bool read_line = false;
     size_t readn = 0;
+    std::string delim;
     /* receive new patterns */
     if (!lua_isnumber(L, 2))
     {
-        const char *p = luaL_optstring(L, 2, "*l");
-        if (p[0] == '*' && p[1] == 'l')
+        delim = luaL_optstring(L, 2, "*l");
+        if (delim == "*l")
         {
-            read_line = true;
-        }
-        else
-        {
-            luaL_argcheck(L, 0, 2, "invalid receive pattern");
+            delim = "\n";
         }
     }
     else
@@ -198,10 +193,9 @@ static int lreceive(lua_State *L)
     if (!client->isreading)
     {
         client->isreading = true;
-        if (read_line)
+        if (!delim.empty())
         {
-
-            asio::async_read_until(client->socket, client->buf, "\n",
+            asio::async_read_until(client->socket, client->buf, delim,
                 [client](const asio::error_code& result_error, std::size_t result_n)
                 {
                     client->error = result_error;
@@ -243,14 +237,10 @@ static int lreceive(lua_State *L)
         else
         {
             auto data = reinterpret_cast<const char*>(client->buf.data().data());
-            if (read_line)
+            if (!delim.empty())
             {
                 size_t len = client->readn;
-                while (len > 0 && data[len - 1] == '\n')
-                {
-                    --len;
-                }
-
+                len -= delim.size();
                 lua_pushlstring(L, data, len);
             }
             else
