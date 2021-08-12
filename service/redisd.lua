@@ -72,11 +72,8 @@ if conf.name then
 
     local db_pool_size = conf.poolsize or 1
 
-    local make_queue = make_queue
-    local queue_push = queue_push
-    local queue_pop = queue_pop
-    local queue_front = queue_front
-    local queue_size = queue_size
+    local list = require("list")
+
     local traceback = debug.traceback
     local xpcall = xpcall
 
@@ -95,7 +92,7 @@ if conf.name then
     local pool = {}
 
     for _=1,db_pool_size do
-        local one = setmetatable({queue = make_queue(), running = false, db = false},{
+        local one = setmetatable({queue = list.new(), running = false, db = false},{
             __gc = free_all
         }) 
         tbinsert(pool,one)
@@ -105,7 +102,7 @@ if conf.name then
         hash = hash%db_pool_size + 1
         --print(moon.name, "db hash", hash)
         local ctx = pool[hash]
-        queue_push(ctx.queue, {clone(msg), sender, sessionid})
+        list.push(ctx.queue, {clone(msg), sender, sessionid})
         if ctx.running then
             return
         end
@@ -113,7 +110,7 @@ if conf.name then
         moon.async(function()
             while true do
                 ---args - sender - sessionid
-                local req = queue_front(ctx.queue)
+                local req = list.front(ctx.queue)
                 if not req then
                     break
                 end
@@ -131,7 +128,7 @@ if conf.name then
                 end
                 if iscall or db then
                     release(req[1])
-                    queue_pop(ctx.queue)
+                    list.pop(ctx.queue)
                 end
             end
             ctx.running = false
@@ -151,7 +148,7 @@ if conf.name then
     function command.len()
         local res = {}
         for _,v in ipairs(pool) do
-            res[#res+1] = queue_size(v.queue)
+            res[#res+1] = list.size(v.queue)
         end
         return res
     end
@@ -190,9 +187,9 @@ if conf.name then
         while true do
             local all = true
             for _,v in ipairs(pool) do
-                if queue_front(v.queue) then
+                if list.front(v.queue) then
                     all = false
-                    print("wait_all_send", _, queue_size(v.queue))
+                    print("wait_all_send", _, list.size(v.queue))
                     break
                 end
             end

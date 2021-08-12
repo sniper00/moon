@@ -112,7 +112,7 @@ namespace moon
             }
         }
 
-        int64_t score(int64_t key)
+        int64_t score(int64_t key) const
         {
             auto iter = index_.find(key);
             if (iter != index_.end())
@@ -181,7 +181,7 @@ namespace moon
         }
     private:
         bool ordered_ = true;
-        size_t max_count_;
+        const size_t max_count_;
         std::vector<const_iterator> jump_;
         std::set<context*, compare> order_;
         std::unordered_map<int64_t, context> index_;

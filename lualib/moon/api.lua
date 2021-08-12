@@ -1,5 +1,4 @@
 ---@class core
----@field public timezone integer @当前时区
 local core = {}
 
 --------------------FOR EMMYLUA HINT---------------------
@@ -16,7 +15,7 @@ core.id = 0
 ---timezone
 core.timezone = 0
 
----same as c function clock().
+---same as os.clock()
 ---@return number @in seconds
 function core.clock()
     -- body
@@ -91,10 +90,10 @@ function core.send_prefab(receiver, prefabid, header, sessionid, type)
     ignore_param(receiver, prefabid, header, sessionid, type)
 end
 
----向目标服务发送消息
+--- send message from `sender` to `receiver`
 ---@param sender integer
 ---@param receiver integer
----@param data string|userdata
+---@param data string|userdata @ message
 ---@param header string
 ---@param sessionid integer
 function core.send(sender, receiver, data, header, sessionid)
@@ -115,7 +114,7 @@ function core.runcmd(sender, cmd, sessionid)
     ignore_param(sender, cmd, sessionid)
 end
 
---- 根据服务名字查询服务ID
+--- query **unique** service's address by name
 function core.queryservice(name)
     ignore_param(name)
 end
@@ -138,7 +137,7 @@ function core.wsate(workerid)
     ignore_param(workerid)
 end
 
----发送进程退出信号
+--- let server exit: exitcode>=0 will wait all services quit.
 ---@param exitcode integer
 function core.exit(exitcode)
     ignore_param(exitcode)
@@ -150,7 +149,7 @@ function core.size()
     -- body
 end
 
----推进时间 server time(millsecond)
+--- adjusts server time(millsecond)
 ---@param milliseconds integer
 function core.adjtime(milliseconds)
     ignore_param(milliseconds)
@@ -168,22 +167,16 @@ function core.now()
     -- body
 end
 
----获取message相关信息
----'S' message:sender()
+--- get message's field
 ---
----'R' message:receiver()
----
----'E' message:sessionid()
----
----'H' message:header()
----
----'Z' message:bytes()
----
----'N' message:size()
----
----'B' message:buffer()
----
----'C' message:buffer():data() message:buffer():size()
+--- - 'S' message:sender()
+--- - 'R' message:receiver()
+--- - 'E' message:sessionid()
+--- - 'H' message:header()
+--- - 'Z' message:bytes()
+--- - 'N' message:size()
+--- - 'B' message:buffer()
+--- - 'C' message:buffer():data() and message:buffer():size()
 ---@param msg userdata @message* lightuserdata
 ---@param pattern string
 function core.decode(msg, pattern)
@@ -396,6 +389,81 @@ end
 ---@return table
 function random.rand_weight_some(values, weights, count)
     ignore_param(values, weights, count)
+end
+
+---@class zset
+local zset = {}
+ignore_param(zset)
+
+---@param maxcount integer @排行榜上限
+function zset.new(maxcount)
+    ignore_param(maxcount)
+end
+
+---只排序O(logN)
+---@param key integer @排行对象唯一ID
+---@param score integer @积分
+---@param timestamp integer @积分相同按时间戳排序
+function zset:update(key, score, timestamp)
+    ignore_param(self, key, score, timestamp)
+end
+
+---处理排行O(N)
+function zset:prepare()
+    ignore_param(self)
+end
+
+---获取排行, 0 未上榜. 会自动调用prepare
+---@param key integer @排行对象唯一ID
+---@return integer
+function zset:rank(key)
+    ignore_param(self, key)
+end
+
+---获取位于排行nrank的对象唯一ID. 会自动调用prepare
+---@param nrank integer
+---@return integer
+function zset:key(nrank)
+    ignore_param(self, nrank)
+end
+
+
+---获取积分
+---@param key integer @排行对象唯一ID
+---@return integer
+function zset:score(key)
+    ignore_param(self)
+end
+
+---是否在排行榜中
+---@param key integer @排行对象唯一ID
+---@return boolean
+function zset:has(key)
+    ignore_param(self)
+end
+
+---排行榜实际大小
+function zset:size()
+    ignore_param(self)
+end
+
+function zset:clear()
+    ignore_param(self)
+end
+
+---删除某个对象
+---@param key integer @排行对象唯一ID
+---@return integer @删除的个数
+function zset:erase(key)
+    ignore_param(self, key)
+end
+
+---获取[start, finish] 对象唯一ID 数组
+---@param start integer
+---@param finish integer
+---@return table
+function zset:range(start, finish)
+    ignore_param(self, start, finish)
 end
 
 
