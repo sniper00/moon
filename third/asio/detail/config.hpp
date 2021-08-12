@@ -2,7 +2,7 @@
 // detail/config.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -415,7 +415,11 @@
 # if !defined(ASIO_DISABLE_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 #  if (__cplusplus >= 201103)
 #   define ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS 1
-#  endif // (__cplusplus >= 201103)
+#  elif defined(ASIO_MSVC)
+#   if (_MSC_VER >= 1900 && _MSVC_LANG >= 201103)
+#    define ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS 1
+#   endif // (_MSC_VER >= 1900 && _MSVC_LANG >= 201103)
+#  endif // defined(ASIO_MSVC)
 # endif // !defined(ASIO_DISABLE_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 #endif // !defined(ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 
@@ -1832,5 +1836,30 @@
 #  endif // _POSIX_VERSION >= 200809L
 # endif // defined(_POSIX_VERSION)
 #endif // !defined(ASIO_HAS_MSG_NOSIGNAL)
+
+// Standard library support for std::hash.
+#if !defined(ASIO_HAS_STD_HASH)
+# if !defined(ASIO_DISABLE_STD_HASH)
+#  if defined(__clang__)
+#   if defined(ASIO_HAS_CLANG_LIBCXX)
+#    define ASIO_HAS_STD_HASH 1
+#   elif (__cplusplus >= 201103)
+#    define ASIO_HAS_STD_HASH 1
+#   endif // (__cplusplus >= 201103)
+#  endif // defined(__clang__)
+#  if defined(__GNUC__)
+#   if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4)
+#    if (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#     define ASIO_HAS_STD_HASH 1
+#    endif // (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#   endif // ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4)
+#  endif // defined(__GNUC__)
+#  if defined(ASIO_MSVC)
+#   if (_MSC_VER >= 1700)
+#    define ASIO_HAS_STD_HASH 1
+#   endif // (_MSC_VER >= 1700)
+#  endif // defined(ASIO_MSVC)
+# endif // !defined(ASIO_DISABLE_STD_HASH)
+#endif // !defined(ASIO_HAS_STD_HASH)
 
 #endif // ASIO_DETAIL_CONFIG_HPP

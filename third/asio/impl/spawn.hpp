@@ -2,7 +2,7 @@
 // impl/spawn.hpp
 // ~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -434,10 +434,10 @@ template <typename Handler, typename Function>
 void spawn(ASIO_MOVE_ARG(Handler) handler,
     ASIO_MOVE_ARG(Function) function,
     const boost::coroutines::attributes& attributes,
-    typename enable_if<
+    typename constraint<
       !is_executor<typename decay<Handler>::type>::value &&
       !execution::is_executor<typename decay<Handler>::type>::value &&
-      !is_convertible<Handler&, execution_context&>::value>::type*)
+      !is_convertible<Handler&, execution_context&>::value>::type)
 {
   typedef typename decay<Handler>::type handler_type;
   typedef typename decay<Function>::type function_type;
@@ -475,9 +475,9 @@ template <typename Function, typename Executor>
 inline void spawn(const Executor& ex,
     ASIO_MOVE_ARG(Function) function,
     const boost::coroutines::attributes& attributes,
-    typename enable_if<
+    typename constraint<
       is_executor<Executor>::value || execution::is_executor<Executor>::value
-    >::type*)
+    >::type)
 {
   asio::spawn(asio::strand<Executor>(ex),
       ASIO_MOVE_CAST(Function)(function), attributes);
@@ -511,8 +511,8 @@ template <typename Function, typename ExecutionContext>
 inline void spawn(ExecutionContext& ctx,
     ASIO_MOVE_ARG(Function) function,
     const boost::coroutines::attributes& attributes,
-    typename enable_if<is_convertible<
-      ExecutionContext&, execution_context&>::value>::type*)
+    typename constraint<is_convertible<
+      ExecutionContext&, execution_context&>::value>::type)
 {
   asio::spawn(ctx.get_executor(),
       ASIO_MOVE_CAST(Function)(function), attributes);

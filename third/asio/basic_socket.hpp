@@ -2,7 +2,7 @@
 // basic_socket.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -111,7 +111,7 @@ public:
    * dispatch handlers for any asynchronous operations performed on the socket.
    */
   explicit basic_socket(const executor_type& ex)
-    : impl_(ex)
+    : impl_(0, ex)
   {
   }
 
@@ -125,10 +125,10 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_socket(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
   }
 
@@ -144,7 +144,7 @@ public:
    * @throws asio::system_error Thrown on failure.
    */
   basic_socket(const executor_type& ex, const protocol_type& protocol)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     asio::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), protocol, ec);
@@ -165,10 +165,11 @@ public:
    */
   template <typename ExecutionContext>
   basic_socket(ExecutionContext& context, const protocol_type& protocol,
-      typename enable_if<
-        is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      typename constraint<
+        is_convertible<ExecutionContext&, execution_context&>::value,
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : impl_(0, 0, context)
   {
     asio::error_code ec;
     impl_.get_service().open(impl_.get_implementation(), protocol, ec);
@@ -191,7 +192,7 @@ public:
    * @throws asio::system_error Thrown on failure.
    */
   basic_socket(const executor_type& ex, const endpoint_type& endpoint)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     asio::error_code ec;
     const protocol_type protocol = endpoint.protocol();
@@ -219,10 +220,10 @@ public:
    */
   template <typename ExecutionContext>
   basic_socket(ExecutionContext& context, const endpoint_type& endpoint,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     asio::error_code ec;
     const protocol_type protocol = endpoint.protocol();
@@ -247,7 +248,7 @@ public:
    */
   basic_socket(const executor_type& ex, const protocol_type& protocol,
       const native_handle_type& native_socket)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     asio::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(),
@@ -272,10 +273,10 @@ public:
   template <typename ExecutionContext>
   basic_socket(ExecutionContext& context, const protocol_type& protocol,
       const native_handle_type& native_socket,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     asio::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(),
@@ -331,10 +332,10 @@ public:
    */
   template <typename Protocol1, typename Executor1>
   basic_socket(basic_socket<Protocol1, Executor1>&& other,
-      typename enable_if<
+      typename constraint<
         is_convertible<Protocol1, Protocol>::value
           && is_convertible<Executor1, Executor>::value
-      >::type* = 0)
+      >::type = 0)
     : impl_(std::move(other.impl_))
   {
   }
@@ -350,7 +351,7 @@ public:
    * constructed using the @c basic_socket(const executor_type&) constructor.
    */
   template <typename Protocol1, typename Executor1>
-  typename enable_if<
+  typename constraint<
     is_convertible<Protocol1, Protocol>::value
       && is_convertible<Executor1, Executor>::value,
     basic_socket&
