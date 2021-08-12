@@ -51,8 +51,7 @@ local next_case = function ()
             moon.new_service("lua",cfg)
         end)
     else
-        --print("abort")
-        moon.exit(100)
+        moon.exit(0)
     end
 end
 

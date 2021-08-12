@@ -147,15 +147,17 @@ do
 end
 
 do
-	local q = make_queue()
-	queue_push(q, 4)
-	queue_push(q, 3)
-	queue_push(q, 2)
-	queue_push(q, 1)
-	assert(queue_pop(q) == 4)
-	assert(queue_pop(q) == 3)
-	assert(queue_pop(q) == 2)
-	assert(queue_pop(q) == 1)
+	local list = require("list")
+
+	local q = list.new()
+	list.push(q, 4)
+	list.push(q, 3)
+	list.push(q, 2)
+	list.push(q, 1)
+	assert(list.pop(q) == 4)
+	assert(list.pop(q) == 3)
+	assert(list.pop(q) == 2)
+	assert(list.pop(q) == 1)
 end
 
 moon.async(function()
