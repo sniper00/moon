@@ -22,7 +22,7 @@ Moon is a lightweight online game server framework implement with multithread an
    - inter luaVM communication
    - inter cluster(process) communication
    - redis/mysql/pgsql driver
-- High performance and optimized LuaJSON library
+- High performance and optimized Lua Json library
 - Lua protobuf library
 - Lua filesystem(C++ std::filesystem)
 
@@ -73,7 +73,7 @@ Moon is a lightweight online game server framework implement with multithread an
 ## Demo
 - [BallGame](https://github.com/sniper00/BallGame.git)
 
-# Friend Open Source
+## Friend Open Source
 **NoahGameFrame**  
 -  Author: ketoo  
 -  GitHub: https://github.com/ketoo/NoahGameFrame  
