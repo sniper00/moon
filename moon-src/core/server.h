@@ -35,6 +35,8 @@ namespace moon
     public:
         using register_func = service_ptr_t(*)();
 
+        using timer_type = base_timer<timer_expire_policy>;
+
         server() = default;
 
         ~server();
@@ -113,11 +115,11 @@ namespace moon
         std::time_t now_ = 0;
         mutable log logger_;
         mutable std::mutex fd_lock_;
-        base_timer<timer_expire_policy> timer_;
         std::unordered_map<std::string, register_func > regservices_;
         concurrent_map<std::string, std::string, rwlock> env_;
         concurrent_map<std::string, uint32_t, rwlock> unique_services_;
         std::unordered_set<uint32_t> fd_watcher_;
+        std::vector<std::unique_ptr<timer_type>> timer_;
         std::vector<std::unique_ptr<worker>> workers_;
     };
 };
