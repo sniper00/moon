@@ -25,6 +25,7 @@ namespace moon
         for (uint32_t i = 0; i != worker_num; i++)
         {
             workers_.emplace_back(std::make_unique<worker>(this,  i + 1));
+            timer_.emplace_back(std::make_unique<timer_type>());
         }
 
         for (auto& w : workers_)
@@ -79,7 +80,10 @@ namespace moon
                 }
             }
 
-            timer_.update(now_);
+            for (auto& t : timer_)
+            {
+                t->update(now_);
+            }
             timer.expires_after(std::chrono::milliseconds(1));
             timer.wait(ignore);
         }
@@ -191,13 +195,16 @@ namespace moon
 
     uint32_t server::timeout(int64_t interval, uint32_t serviceid)
     {
+        auto workerid = worker_id(serviceid);
+        assert(workerid > 0);
+        --workerid;
         if (0 == interval)
         {
-            auto timerid = timer_.make_timerid();
+            auto timerid = timer_[workerid]->make_timerid();
             on_timer(serviceid, timerid);
             return timerid;
         }
-        return timer_.add(now_+ interval, serviceid, this);
+        return timer_[workerid]->add(now_+ interval, serviceid, this);
     }
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)
