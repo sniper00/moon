@@ -138,6 +138,7 @@ namespace moon
         void settimeout(uint32_t v)
         {
             timeout_ = v;
+            recvtime_ = now();
         }
 
         void set_send_queue_limit(uint32_t warnsize, uint32_t errorsize)
