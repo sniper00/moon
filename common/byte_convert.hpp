@@ -29,6 +29,7 @@ namespace moon
     template<typename T>
     inline void host2net(T& val)
     {
+        static_assert(!std::is_pointer_v<T>, "need value type");
 #ifdef  MOON_LITTLEENDIAN
         detail::apply<T>(&val);
 #endif //  MOON_LITTLEENDIAN	
@@ -37,15 +38,9 @@ namespace moon
     template<typename T>
     inline void net2host(T& val)
     {
+        static_assert(!std::is_pointer_v<T>, "need value type");
 #ifdef MOON_LITTLEENDIAN
         detail::apply<T>(&val);
 #endif // MOON_LITTLEENDIAN
     }
-
-    template<typename T> void net2host(T*);    // will generate link error
-    template<typename T> void host2net(T*);  // will generate link error
-    inline void net2host(uint8_t*) {}
-    inline void net2host(int8_t*) {}
-    inline void host2net(uint8_t*) { }
-    inline void host2net(int8_t*) { }
 }
