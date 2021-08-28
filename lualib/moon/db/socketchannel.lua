@@ -20,16 +20,16 @@ end
 function socketchannel:connect()
     local fd, err = socket.connect(self._opts.host, self._opts.port, moon.PTYPE_TEXT,self._opts.timeout)
     if not fd or fd ==0 then
-        return false, err
+        return {code = "SOCKET", err = err}
     end
     self._fd = fd
     if self._opts.auth then
         local ok, res = pcall(self._opts.auth, self)
         if not ok then
-            return false, res
+            return {code = "AUTH", err = res}
         end
     end
-    return true
+    return
 end
 
 function socketchannel:close()

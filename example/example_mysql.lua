@@ -8,13 +8,13 @@ moon.async(function()
         port=3306,
         database="mysql",
         user="root",
-        password="4321",
+        password="123456",
         timeout= 1000,--连接超时ms
         max_packet_size = 1024 * 1024, --数据包最大字节数
     })
 
-    if not db then
-        print(err)
+    if db.code then
+        print(db.err)
         return
     end
 
