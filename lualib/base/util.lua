@@ -9,43 +9,11 @@ local strtrim       = string.trim
 local tsort         = table.sort
 local tbconcat = table.concat
 local tbinsert = table.insert
-local strsub = string.sub
-local strmatch = string.match
 
 local pairs = pairs
 local ipairs = ipairs
-local tonumber = tonumber
 local tostring = tostring
 local type = type
-
-function checknumber(value, base)
-    return tonumber(value, base) or 0
-end
-
-function checkint(value)
-    value = tonumber(value) or 0
-    return math_floor(value + 0.5)
-end
-
-function checkbool(value)
-    return (value ~= nil and value ~= false)
-end
-
-function checktable(value)
-    if type(value) ~= "table" then value = {} end
-    return value
-end
-
-function unused()
-    -- body
-end
-
-function get_script_path()
-    local info = debug.getinfo(2, "S")
-    local path = info.source
-    path = strsub(path, 2, -1)
-    return strmatch(path, "^.*[/\\]")
-end
 
 local function _dump_value(v)
     if type(v) == "string" then
@@ -61,7 +29,7 @@ local function _dump_key(v)
     return tostring(v)
 end
 
-function print_r(value, desciption, nesting, _print)
+_G["print_r"] = function (value, desciption, nesting, _print)
     if type(nesting) ~= "number" then nesting = 10 end
     _print = _print or print
 

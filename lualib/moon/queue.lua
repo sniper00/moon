@@ -11,14 +11,17 @@ local function queue()
 	local scope = setmetatable({}, { __close = function()
 		ref = ref - 1
 		if ref == 0 then
-			current_thread = list.pop(thread_queue,1)
+			current_thread = list.pop(thread_queue)
 			if current_thread then
 				moon.wakeup(current_thread)
 			end
 		end
 	end})
 
-	return function()
+	return function(counter)
+		if counter then
+			return list.size(thread_queue)
+		end
 		local thread = coroutine.running()
 		if current_thread and current_thread ~= thread then
 			list.push(thread_queue, thread)

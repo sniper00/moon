@@ -7,11 +7,6 @@ local test_assert = require("test_assert")
 
 local equal = test_assert.equal
 
-equal(type(checkbool) , "function")
-equal(type(checkint) , "function")
-equal(type(checknumber) , "function")
-equal(type(checktable) , "function")
-
 equal(type(class) , "function")
 equal(type(iskindof) , "function")
 

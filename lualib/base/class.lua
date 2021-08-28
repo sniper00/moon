@@ -22,7 +22,7 @@ _iskindofinternal = function(mt, classname)
     return _iskindofinternal(getmetatable(index), classname)
 end
 
-function iskindof(target, classname)
+_G["iskindof"] = function(target, classname)
     local targetType = type(target)
     if targetType ~= "table" then
         return false
@@ -30,7 +30,7 @@ function iskindof(target, classname)
     return _iskindofinternal(getmetatable(target), classname)
 end
 
-function class(classname, super)
+_G["class"] = function(classname, super)
     assert(type(classname) == "string", strfmt("class() - invalid class name \"%s\"", tostring(classname)))
     local superType = type(super)
     local cls

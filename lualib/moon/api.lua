@@ -43,6 +43,17 @@ function core.localtime(t)
     ignore_param(t)
 end
 
+---@return string @get server info
+function core.server_info()
+
+end
+
+---if linked mimalloc, call mimalloc collect
+---@param force boolean @
+function core.collect(force)
+
+end
+
 ---create a timer
 ---@param interval integer @ms
 ---@return integer @timer id
@@ -319,12 +330,19 @@ function asio.setnodelay(fd)
     ignore_param(fd)
 end
 
+---对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
 ---@param fd integer
 ---@param flag string
----对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
 ---@return boolean
 function asio.set_enable_chunked(fd, flag)
     ignore_param(fd,flag)
+end
+
+---set send queue limit
+---@param fd integer @ fd
+---@param warnsize integer @ if send queue size > warnsize, print warnning log
+---@param errorsize integer @ if send queue size > errorsize, print error log and close socket
+function asio.set_send_queue_limit(fd, warnsize, errorsize)
 end
 
 ---@param fd integer

@@ -384,14 +384,20 @@ namespace moon
 
     std::string server::info() const
     {
+        size_t timer_size = 0;
+        for (const auto& timer : timer_)
+        {
+            timer_size += timer->size();
+        }
+
         std::string req;
         req.append("[\n");
         req.append(moon::format(R"({"id":0, "socket":%zu, "timer":%zu, "log":%zu})",
             socket_num(),
-            timer_.size(),
+            timer_size,
             logger_.size()
         ));
-        for (auto& w : workers_)
+        for (const auto& w : workers_)
         {
             req.append(",\n");
             auto v = moon::format(R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u})",
