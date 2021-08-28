@@ -160,8 +160,6 @@ local function do_request(baseaddress, options, req)
         if not fd then
             return false ,err
         end
-        local read_timeout = options.read_timeout or 0
-        socket.settimeout(fd, read_timeout//1000)
         newconn = true
     end
 
@@ -169,7 +167,10 @@ local function do_request(baseaddress, options, req)
         goto TRY_AGAIN
     end
 
+    local read_timeout = options.read_timeout or 0
+    socket.settimeout(fd, read_timeout//1000)
     local ok , response = pcall(response_handler, fd)
+    socket.settimeout(fd, 0)
     if not ok then
         socket.close(fd)
         return false, response
