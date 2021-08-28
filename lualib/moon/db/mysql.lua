@@ -6,11 +6,9 @@
 
 -- protocol detail: https://mariadb.com/kb/en/clientserver-protocol/
 
+local moon = require "moon"
 local crypt = require("crypt")
 local socketchannel = require("moon.db.socketchannel")
-
-socketchannel.__index = socketchannel
-
 
 local sub = string.sub
 local strgsub = string.gsub
@@ -26,7 +24,9 @@ local error = error
 local tonumber = tonumber
 local tointeger = math.tointeger
 
+---@class mysql
 local _M = {_VERSION = "0.14"}
+
 
 -- the following charset map is generated from the following mysql query:
 --   SELECT CHARACTER_SET_NAME, ID
@@ -563,6 +563,10 @@ local store_types = {
     end
 }
 
+store_types["nil"] = function(v)
+    return _set_byte2(0x06), ""
+end
+
 local function _compose_stmt_execute(self, stmt, cursor_type, args)
     local arg_num = #args
     if arg_num ~= stmt.param_count then
@@ -573,11 +577,29 @@ local function _compose_stmt_execute(self, stmt, cursor_type, args)
 
     local cmd_packet = strpack("<c1I4BI4", COM_STMT_EXECUTE, stmt.prepare_id, cursor_type, 0x01)
     if arg_num > 0 then
-        local null_count = (arg_num + 7) // 8
         local f, ts, vs
         local types_buf = ""
         local values_buf = ""
-        for _, v in pairs(args) do
+        --生成NULL位图
+        local null_count = (arg_num + 7) // 8
+        local null_map = ""
+        local field_index = 1
+        for i = 1, null_count do
+            local byte = 0
+            for j = 0, 7 do
+                if field_index < arg_num then
+                    if args[field_index] == nil then
+                        byte = byte | (1 << j)
+                    else
+                        byte = byte | (0 << j)
+                    end
+                end
+                field_index = field_index + 1
+            end
+            null_map = null_map .. strchar(byte)
+        end
+        for i = 1, arg_num do
+            local v = args[i]
             f = store_types[type(v)]
             if not f then
                 error("invalid parameter type", type(v))
@@ -586,7 +608,7 @@ local function _compose_stmt_execute(self, stmt, cursor_type, args)
             types_buf = types_buf .. ts
             values_buf = values_buf .. vs
         end
-        cmd_packet = cmd_packet .. strrep("\0", null_count) .. strchar(0x01) .. types_buf .. values_buf
+        cmd_packet = cmd_packet .. null_map .. strchar(0x01) .. types_buf .. values_buf
     end
 
     return _compose_packet(self, cmd_packet)
@@ -682,7 +704,7 @@ local function _query_resp(self)
             local badresult = {}
             badresult.badresult = true
             badresult.err = err
-            badresult.errno = errno
+            badresult.code = errno
             badresult.sqlstate = sqlstate
             return true, badresult
         end
@@ -697,7 +719,7 @@ local function _query_resp(self)
             if not res then
                 multiresultset.badresult = true
                 multiresultset.err = err
-                multiresultset.errno = errno
+                multiresultset.code = errno
                 multiresultset.sqlstate = sqlstate
                 return true, multiresultset
             end
@@ -722,7 +744,7 @@ function _M.connect(opts)
     local user = opts.user or ""
     local password = opts.password or ""
     local charset = CHARSET_MAP[opts.charset or "_default"]
-    local channel =
+    local channel = 
         socketchannel.channel {
         host = opts.host,
         port = opts.port or 3306,
@@ -732,9 +754,9 @@ function _M.connect(opts)
     }
     self.sockchannel = channel
     -- try connect first only once
-    local res, err = channel:connect(true)
-    if not res then
-        return nil, err
+    local err = channel:connect(true)
+    if err then
+        return err
     end
     return self
 end
@@ -745,6 +767,9 @@ function _M.disconnect(self)
 end
 
 function _M.query(self, query)
+    if type(query) == "userdata" then
+        query = moon.decode(query, "Z")
+    end
     local querypacket = _compose_query(self, query)
     local sockchannel = self.sockchannel
     if not self.query_resp then
@@ -758,7 +783,7 @@ local function read_prepare_result(self, sock)
     local packet, typ, err = _recv_packet(self, sock)
     if not packet then
         resp.badresult = true
-        resp.errno = 300101
+        resp.code = 300101
         resp.err = err
         return false, resp
     end
@@ -766,7 +791,7 @@ local function read_prepare_result(self, sock)
     if typ == "ERR" then
         local errno, msg, sqlstate = _parse_err_packet(packet)
         resp.badresult = true
-        resp.errno = errno
+        resp.code = errno
         resp.err = msg
         resp.sqlstate = sqlstate
         return true, resp
@@ -775,7 +800,7 @@ local function read_prepare_result(self, sock)
     --第一节只能是OK
     if typ ~= "OK" then
         resp.badresult = true
-        resp.errno = 300201
+        resp.code = 300201
         resp.err = "first typ must be OK,now" .. typ
         return false, resp
     end
@@ -982,7 +1007,7 @@ local function _execute_resp(self)
             local badresult = {}
             badresult.badresult = true
             badresult.err = err
-            badresult.errno = errno
+            badresult.code = errno
             badresult.sqlstate = sqlstate
             return true, badresult
         end
@@ -997,7 +1022,7 @@ local function _execute_resp(self)
             if not res then
                 mulitresultset.badresult = true
                 mulitresultset.err = err
-                mulitresultset.errno = errno
+                mulitresultset.code = errno
                 mulitresultset.sqlstate = sqlstate
                 return true, mulitresultset
             end
@@ -1017,20 +1042,6 @@ end
         err
 ]]
 function _M.execute(self, stmt, ...)
-    -- 检查参数，不能为nil
-    local p_n = select('#', ...)
-    local p_v
-    for i = 1, p_n do
-        p_v = select(i, ...)
-        if p_v == nil then
-            return {
-                badresult = true,
-                errno = 30902,
-                err = "parameter " .. i .. " is nil"
-            }
-        end
-    end
-
     local querypacket, er = _compose_stmt_execute(self, stmt, CURSOR_TYPE_NO_CURSOR, {...})
     if not querypacket then
         return {
@@ -1116,6 +1127,10 @@ end
 
 function _M.set_compact_arrays(self, value)
     self.compact = value
+end
+
+function _M.pack_query_buffer()
+
 end
 
 return _M

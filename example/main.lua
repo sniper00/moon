@@ -26,8 +26,6 @@ local arg = load(moon.get_env("ARG"))()
 
 local sid = math.tointeger(arg[1])
 
-moon.set_env("NODE", arg[1])
-
 local services
 
 local switch = {}
@@ -117,15 +115,18 @@ switch[5] = function ()
         {
             unique = true,
             name = "mysql",
-            file = "start_by_config/service_mysql.lua",
-            host = "127.0.0.1",
-            port = 3306,
-            database = "mysql",
-            user="root",
-            password="4321",
-            timeout= 1000,
-            max_packet_size=102400,
-            connection_num=4
+            file = "../service/sqldriver.lua",
+            provider = "moon.db.mysql",
+            db_conf = {
+                host = "127.0.0.1",
+                port = 3306,
+                database = "mysql",
+                user="root",
+                password="123456",
+                timeout= 1000,
+                max_packet_size=102400,
+                connection_num=4
+            }
         },
         {
             unique = true,
@@ -224,6 +225,8 @@ local fn = switch[sid]
 if not fn then
     return 0
 end
+
+moon.set_env("NODE", tostring(sid))
 
 fn()
 

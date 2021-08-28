@@ -285,7 +285,19 @@ local function wait_until_ready(self)
     return true
 end
 
+---@class pg_error
+---@field public code integer
+---@field public err string
+
+---@class pg_result
+---@field public data table @ table rows
+---@field public num_queries integer
+---@field public notifications integer
+---@field public errmsg string @ error message
+---@field public errdata table @ error detail info
+
 ---@class pg
+---@field public sock integer @ socket fd
 local pg = {}
 
 pg.disconnect = disconnect
@@ -298,14 +310,12 @@ pg.__gc = function(o)
     end
 end
 
-pg.socket_errcode = -1
-
 ---@param opts table @{database = "", user = "", password = ""}
----@return pg
+---@return pg|pg_error
 function pg.connect(opts)
     local sock, err = socket.connect(opts.host, opts.port, moon.PTYPE_TEXT, opts.connect_timeout)
     if not sock then
-        return {code= pg.socket_errcode, message = err}
+        return {code = "SOCKET", message = err}
     end
 
     local obj = table.deepcopy(opts)
@@ -317,7 +327,7 @@ function pg.connect(opts)
 
     success, err = auth(obj)
     if success == socket_error then
-        return {code= pg.socket_errcode, message = err}
+        return {code = "SOCKET", message = err}
     end
 
     if not success then
@@ -326,11 +336,11 @@ function pg.connect(opts)
 
     success, err = wait_until_ready(obj)
     if success == socket_error then
-        return {code= pg.socket_errcode, message = err}
+        return {code = "SOCKET", message = err}
     end
 
     if not success then
-        return err
+        return {code = "AUTH", message = err}
     end
 
     return setmetatable(obj, pg)
@@ -393,8 +403,6 @@ local function parse_row_desc(row_desc)
     end
     return fields
 end
-
-
 
 local function parse_row_data(data_row, fields)
     local tupnfields = decode_short(data_row:sub(1, 2))
@@ -474,16 +482,8 @@ function pg.pack_query_buffer(buf)
     bwritefront(buf, MSG_TYPE.query)
 end
 
----@class pg_result
----@field public data table @ table rows
----@field public num_queries integer
----@field public notifications integer
----@field public errmsg string @ error message
----@field public errdata table @ error detail info
-
-
 ---@param sql userdata|string @ userdata cpp message pointer:sql string
----@return pg_result
+---@return pg_result|pg_error
 function pg.query(self, sql)
     if type(sql) == "string" then
         send_message(self, MSG_TYPE.query, {sql, NULL})
@@ -496,7 +496,7 @@ function pg.query(self, sql)
     while true do
         local t, msg = receive_message(self)
         if t == socket_error then
-            return {code= pg.socket_errcode, message = msg}
+            return {code = "SOCKET", message = msg}
         end
         local _exp_0 = t
         if MSG_TYPE.data_row == _exp_0 then
@@ -507,7 +507,6 @@ function pg.query(self, sql)
         elseif MSG_TYPE.error == _exp_0 then
             err_msg = msg
         elseif MSG_TYPE.command_complete == _exp_0 then
-
             local next_result = format_query_result(row_desc, data_rows, msg)
             num_queries = num_queries + 1
             if num_queries == 1 then
