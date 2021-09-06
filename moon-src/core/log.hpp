@@ -83,6 +83,9 @@ namespace moon
                 return;
             }
 
+            if (level == LogLevel::Error)
+                ++error_count_;
+
             console = enable_console_ ? console : enable_console_;
 
             auto buf = buffer_cache_.create(64+s.size());
@@ -160,6 +163,11 @@ namespace moon
         size_t size() const
         {
             return size_.load();
+        }
+
+        int64_t error_count() const
+        {
+            return error_count_;
         }
     private:
         size_t format_header(char* buf, LogLevel level, uint64_t serviceid) const
@@ -263,6 +271,7 @@ namespace moon
         std::atomic<state> state_;
         std::atomic_uint32_t size_ = 0;
         std::atomic<LogLevel> level_;
+        int64_t error_count_ = 0;
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
         shared_pointer_pool<buffer, 1000, std::mutex> buffer_cache_;

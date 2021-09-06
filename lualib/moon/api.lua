@@ -212,6 +212,10 @@ function core.redirect(header, receiver, mtype, sender, sessionid)
     ignore_param(header, receiver, mtype, sender, sessionid)
 end
 
+---get error log count
+function core.error_count()
+end
+
 ---@class fs
 local fs = {}
 ignore_param(fs)

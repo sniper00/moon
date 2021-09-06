@@ -552,6 +552,12 @@ static int lmi_collect(lua_State* L)
     return 0;
 }
 
+static int lmoon_error_count(lua_State* L)
+{
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    lua_pushinteger(L, S->logger()->error_count());
+    return 1;
+}
 
 extern "C"
 {
@@ -582,6 +588,7 @@ extern "C"
             { "now", lmoon_now},
             { "adjtime", lmoon_adjtime},
             { "callback", lmoon_callback},
+            { "error_count", lmoon_error_count},
             { "decode", message_decode},
             { "clone", message_clone },
             { "release", message_release },
