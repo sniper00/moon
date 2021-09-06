@@ -247,7 +247,7 @@ local function request_handler(fd, request)
         local ok,err = xpcall(handler, traceback, request, response)
         if not ok then
             if M.error then
-                M.error(err)
+                M.error(fd, err)
             end
 
             request.header["connection"] = "close"

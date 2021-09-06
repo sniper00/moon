@@ -13,6 +13,8 @@ local assert = assert
 local error = error
 
 local parse_response = http.parse_response
+
+---@type fun(params:table):string
 local create_query_string = http.create_query_string
 
 -----------------------------------------------------------------
@@ -292,6 +294,11 @@ M.create_query_string = create_query_string
 function M.get(host, options)
     options = options or {}
     return request("GET", host, options)
+end
+
+function M.head(host, options)
+    options = options or {}
+    return request("HEAD", host, options)
 end
 
 ---@param host string @host:port
