@@ -15,6 +15,7 @@ local strfmt = string.format
 
 local tostring = tostring
 local tonumber = tonumber
+local tointeger = math.tointeger
 local setmetatable = setmetatable
 local pairs = pairs
 local assert = assert
@@ -233,6 +234,7 @@ local function request_handler(fd, request)
             response:write_header("Content-Type", static_src.mime)
             response:write(static_src.bin)
             if not M.keepalive or request.header["connection"] == "close" then
+                response:write_header("Connection", "close")
                 socket.write_then_close(fd, seri.concat(response:tb()))
                 return
             else
@@ -263,6 +265,7 @@ local function request_handler(fd, request)
     end
 
     if not M.keepalive or request.header["connection"] == "close" then
+        response:write_header("Connection", "close")
         socket.write_then_close(fd, seri.concat(response:tb()))
     else
         socket.write(fd, seri.concat(response:tb()))
@@ -296,13 +299,21 @@ local function read_request(fd)
 
     header = request.header
 
+    if method == "HEAD" then
+        return request
+    end
+
     request.parse_query = function() return parse_query_string(request.query_string) end
 
     request.parse_form = function() return parse_query_string(request.content) end
 
+    if header["transfer-encoding"] ~= 'chunked' and not header["content-length"] then
+        header["content-length"] = "0"
+    end
+
     local content_length = header["content-length"]
     if content_length then
-        content_length = tonumber(content_length)
+        content_length = tointeger(content_length)
         if not content_length then
             return {protocol_error = "content-length is not number"}
         end
@@ -323,13 +334,10 @@ local function read_request(fd)
             return chunkdata
         end
         request.content = tbconcat( chunkdata )
-    elseif method ~="GET" and method ~= "HEAD" then
-        if header["transfer-encoding"] then
-            return {protocol_error = "Unsupport transfer-encoding:"..header["transfer-encoding"]}
-        else
-            return {protocol_error = "Unsupport content without length, method:"..method}
-        end
+    else
+        return {protocol_error = "Unsupport transfer-encoding:"..header["transfer-encoding"]}
     end
+
     return request
 end
 
@@ -349,7 +357,7 @@ function M.start(fd, timeout)
                         M.error(fd, request.protocol_error)
                     else
                         moon.error("httpserver read request error", request.protocol_error)
-                    end   
+                    end
                 end
                 return
             end
