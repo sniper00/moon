@@ -11,8 +11,6 @@ namespace moon
     {
         using queue_type = concurrent_queue<message_ptr_t, std::mutex, std::vector>;
 
-        using command_hander_type = std::function<std::string(const std::vector<std::string_view>&)>;
-
         using asio_work_type = asio::executor_work_guard<asio::io_context::executor_type>;
     public:
         static constexpr uint32_t MAX_SERVICE = 0xFFFFFF;
@@ -48,6 +46,8 @@ namespace moon
         bool send_prefab(uint32_t sender, uint32_t receiver, intptr_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const;
 
         moon::socket& socket() { return *socket_; }
+
+        uint32_t alive();
     private:
         void run();
 
@@ -63,8 +63,9 @@ namespace moon
         std::atomic_uint32_t count_ = 0;
         std::atomic_uint32_t mqsize_ = 0;
         uint32_t nextid_ = 0;
+        uint32_t workerid_ = 0;
+        uint32_t version_ = 0;
         double cpu_cost_ = 0.0;
-        uint32_t workerid_;
         server*  server_;
         asio::io_context io_ctx_;
         asio_work_type work_;

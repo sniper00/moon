@@ -400,11 +400,13 @@ namespace moon
         for (const auto& w : workers_)
         {
             req.append(",\n");
-            auto v = moon::format(R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u})",
+            auto v = moon::format(R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u, "timer":%zu, "alive":%u})",
                 w->id(),
                 w->cpu_cost_,
                 w->mqsize_.load(),
-                w->count_.load(std::memory_order_acquire)
+                w->count_.load(std::memory_order_acquire),
+                timer_[w->id()-1]->size(),
+                w->alive()
             );
             w->cpu_cost_ = 0;
             req.append(v);

@@ -3,14 +3,13 @@
 #include "common/time.hpp"
 #include "common/termcolor.hpp"
 #include "common/directory.hpp"
-#include "common/object_pool.hpp"
 #include "common/buffer.hpp"
 #include "common/string.hpp"
 #include "config.hpp"
 
 namespace moon
 {
-    enum class LogLevel
+    enum class LogLevel:char
     {
         Error = 1,
         Warn,
@@ -88,16 +87,15 @@ namespace moon
 
             console = enable_console_ ? console : enable_console_;
 
-            auto buf = buffer_cache_.create(64+s.size());
-            auto b = std::addressof(*buf->begin());
-            *(b++) = static_cast<char>(console);
-            *(b++) = static_cast<char>(level);
-            size_t offset = format_header(b, level, serviceid);
-            buf->commit(2 + offset);
-            buf->write_back(s.data(), s.size());
-            buf->write_back("\n", 1);
+            auto line = buffer{64+s.size()};
+            auto it = line.begin();
+            *(it++) = static_cast<char>(console);
+            *(it++) = static_cast<char>(level);
+            size_t offset = format_header(std::addressof(*it), level, serviceid);
+            line.commit(2 + offset);
+            line.write_back(s.data(), s.size());
+            log_queue_.push_back(std::move(line));
             ++size_;
-            log_queue_.push_back(buf);
         }
 
         void set_level(LogLevel level)
@@ -209,13 +207,13 @@ namespace moon
                 log_queue_.swap(swaps);
                 for (auto& it : swaps)
                 {
-                    auto b = it->data();
-                    auto bconsole = static_cast<bool>(*(b++));
-                    auto level = static_cast<LogLevel>(*(b++));
-                    it->seek(2, buffer::seek_origin::Current);
+                    auto p = it.data();
+                    auto bconsole = static_cast<bool>(*(p++));
+                    auto level = static_cast<LogLevel>(*(p++));
+                    it.seek(2, buffer::seek_origin::Current);
                     if (bconsole)
                     {
-                        auto s = std::string_view{ it->data(), it->size() };
+                        auto s = std::string_view{ it.data(), it.size() };
                         switch (level)
                         {
                         case LogLevel::Error:
@@ -233,12 +231,15 @@ namespace moon
                         default:
                             break;
                         }
-                        std::cout << termcolor::white;
+                        std::cout << termcolor::white << std::endl;
                     }
 
                     if (ofs_)
                     {
-                        ofs_->write(it->data(), it->size());
+                        ofs_->write(it.data(), it.size());
+                        ofs_->put('\n');
+                        if(level <= LogLevel::Error)
+                            ofs_->flush();
                     }
                     --size_;
                 }
@@ -274,8 +275,7 @@ namespace moon
         int64_t error_count_ = 0;
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
-        shared_pointer_pool<buffer, 1000, std::mutex> buffer_cache_;
-        using queue_t = concurrent_queue<std::shared_ptr<buffer>, std::mutex, std::vector, true>;
+        using queue_t = concurrent_queue<buffer, std::mutex, std::vector, true>;
         queue_t log_queue_;
     };
 

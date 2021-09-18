@@ -6,6 +6,7 @@
 
 -- protocol detail: https://mariadb.com/kb/en/clientserver-protocol/
 
+
 local moon = require "moon"
 local crypt = require("crypt")
 local socketchannel = require("moon.db.socketchannel")
