@@ -114,7 +114,9 @@ static int lmoon_localtime(lua_State* L)
 static int lmoon_timeout(lua_State* L)
 {
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
-    int32_t interval = (int32_t)luaL_checkinteger(L, 1);
+    int64_t interval = luaL_checkinteger(L, 1);
+    if(interval<0)
+        return luaL_error(L,"attemp use negative timeout interval.");
     uint32_t timerid = S->get_server()->timeout(interval, S->id());
     lua_pushinteger(L, timerid);
     return 1;
