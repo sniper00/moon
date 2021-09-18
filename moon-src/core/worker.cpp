@@ -21,6 +21,15 @@ namespace moon
         wait();
     }
 
+    uint32_t worker::alive()
+    {
+        auto n = version_;
+        asio::post(io_ctx_, [this]() {
+            ++version_;
+            });
+        return n;
+    }
+
     void worker::run()
     {
         socket_ = std::make_unique<moon::socket>(server_, this, io_ctx_);
@@ -182,11 +191,9 @@ namespace moon
                     handle_one(ser, std::move(msg));
                     --mqsize_;
                 }
+
                 swapmq_.clear();
-                if (!prefabs_.empty())
-                {
-                    prefabs_.clear();
-                }
+                prefabs_.clear();
             });
         }
     }
