@@ -8,9 +8,8 @@ local tbconcat = table.concat
 
 local tostring = tostring
 local tonumber = tonumber
+local tointeger = math.tointeger
 local pairs = pairs
-local assert = assert
-local error = error
 
 local parse_response = http.parse_response
 
@@ -68,7 +67,7 @@ local function read_chunked(fd, content_max_len)
     return chunkdata
 end
 
-local function response_handler(fd)
+local function response_handler(fd, method)
     local data, err = socket.readline(fd, "\r\n\r\n")
     if not data then
         return {socket_error = err}
@@ -93,9 +92,17 @@ local function response_handler(fd)
 
     header = response.header
 
+    if method == "HEAD"  then
+        return response
+    end
+
+    if header["transfer-encoding"] ~= 'chunked' and not header["content-length"] then
+        header["content-length"] = "0"
+    end
+
     local content_length = header["content-length"]
     if content_length then
-        content_length = tonumber(content_length)
+        content_length = tointeger(content_length)
         if not content_length then
             return {protocol_error = "content-length is not number"}
         end
@@ -117,6 +124,7 @@ local function response_handler(fd)
     else
         moon.warn("Unsupport transfer-encoding:"..tostring(header["transfer-encoding"]))
     end
+
     return response
 end
 
@@ -141,7 +149,7 @@ local keep_alive_host = {}
 local max_pool_num = 10
 
 ---@param options HttpOptions
-local function do_request(baseaddress, options, req)
+local function do_request(baseaddress, options, req, method)
     options.connect_timeout = options.connect_timeout or default_connect_timeout
     options.read_timeout = options.read_timeout or default_read_timeout
 
@@ -171,7 +179,7 @@ local function do_request(baseaddress, options, req)
 
     local read_timeout = options.read_timeout or 0
     socket.settimeout(fd, read_timeout//1000)
-    local ok , response = pcall(response_handler, fd)
+    local ok , response = pcall(response_handler, fd, method)
     socket.settimeout(fd, 0)
     if not ok then
         socket.close(fd)
@@ -270,7 +278,7 @@ local function request( method, baseaddress, options, content)
         baseaddress = options.proxy
     end
 
-    local ok, response = do_request(baseaddress, options, cache)
+    local ok, response = do_request(baseaddress, options, cache, method)
 
     if ok then
         return response
