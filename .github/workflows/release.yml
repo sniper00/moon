@@ -28,12 +28,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Setup premake
         uses: abel0b/setup-premake@v1
-      - name: build windows
+      - name: setup windows msbuild
         if: matrix.os == 'windows-2019'
         uses: microsoft/setup-msbuild@v1
+      - name: build windows
+        if: matrix.os == 'windows-2019'
         run: |
-         premake5.exe vs2019
-         msbuild /m Server.sln /p:configuration="release"
+          premake5.exe vs2019
+          msbuild /m Server.sln /p:configuration="release"
         env:
           GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
       - name: build linux
