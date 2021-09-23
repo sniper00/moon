@@ -63,14 +63,19 @@ jobs:
           cp -r lualib packages/
           cp -r service packages/
           cp -r example packages/
+      - name: zip
+        shell: bash
+        run: |
+          cd packages
+          tar -zcvf ${{ matrix.os }}.tar.gz ./*
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: packages/*
+          path: packages/${{ matrix.os }}.tar.gz
       - name: release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: packages/*
+          files: packages/${{ matrix.os }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
