@@ -1,0 +1,58 @@
+
+# Workflow's name
+name: build moon
+
+# Run this workflow every time a new commit pushed to your repository
+on: [push, pull_request]
+
+jobs:
+  windows-vs2019:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
+      - name: configure
+        run: premake5.exe vs2019
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v1
+      - name: build
+        run: msbuild /m Server.sln /p:configuration="release"
+      - name: test
+        run: .\moon.exe example/main.lua 1
+  linux-gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
+      - name: configure
+        run: premake5 gmake
+      - name: build
+        run: make -j2 config=release
+      - name: test
+        run: chmod +x moon && ./moon example/main.lua 1
+  linux-clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
+      - name: configure
+        run: premake5 gmake --cc=clang
+      - name: build
+        run: make -j2 config=release
+      - name: test
+        run: chmod +x moon && ./moon example/main.lua 1
+  macos-clang:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
+      - name: configure
+        run: premake5 gmake --cc=clang
+      - name: build
+        run: make -j2 config=release
+      - name: test
+        run: chmod +x moon && ./moon example/main.lua 1
