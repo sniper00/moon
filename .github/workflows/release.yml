@@ -33,14 +33,16 @@ jobs:
         uses: microsoft/setup-msbuild@v1
       - name: build windows
         if: matrix.os == 'windows-2019'
-        shell: bash
         run: |
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
-          mkdir packages
-          cp moon.exe packages/
-          cp -r lualib packages/
-          cp -r service packages/
+          mkdir packages\lualib
+          mkdir packages\service
+          mkdir packages\example
+          xcopy moon.exe packages\
+          xcopy lualib packages\lualib\ /s
+          xcopy service packages\service\ /s
+          xcopy example packages\example\ /s
       - name: build linux
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -50,6 +52,7 @@ jobs:
           cp moon packages/
           cp -r lualib packages/
           cp -r service packages/
+          cp -r example packages/
       - name: build macos
         if: matrix.os == 'macos-latest'
         run: |
@@ -59,6 +62,7 @@ jobs:
           cp moon packages/
           cp -r lualib packages/
           cp -r service packages/
+          cp -r example packages/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
