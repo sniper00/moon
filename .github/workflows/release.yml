@@ -59,22 +59,22 @@ jobs:
         run: |
           cp moon.exe packages/
           cd packages
-          tar -zcvf $RUNNER_OS.tar.gz ./*
+          tar -zcvf ${{ matrix.os }}.tar.gz ./*
       - name: package linux and macosx
         if: matrix.os != 'windows-2019'
         shell: bash
         run: |
           cp moon packages/
           cd packages
-          tar -zcvf $RUNNER_OS.tar.gz ./*
+          tar -zcvf ${{ matrix.os }}.tar.gz ./*
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: packages/$RUNNER_OS.tar.gz
+          path: packages/${{ matrix.os }}.tar.gz
       - name: release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: packages/$RUNNER_OS.tar.gz
+          files: packages/${{ matrix.os }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
