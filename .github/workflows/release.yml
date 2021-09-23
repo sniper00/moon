@@ -21,7 +21,7 @@ jobs:
     # create a build matrix for jobs
     strategy:
       matrix:
-        os: [windows-2019, ubuntu-18.04, macos-latest]
+        os: [windows-2019, ubuntu-latest, macos-latest]
 
     # create steps
     steps:
@@ -37,7 +37,7 @@ jobs:
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
       - name: build linux
-        if: matrix.os == 'ubuntu-18.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           premake5 gmake
           make -j2 config=release
