@@ -198,7 +198,7 @@ namespace moon
         auto workerid = worker_id(serviceid);
         assert(workerid > 0);
         --workerid;
-        if (0 == interval)
+        if (interval<=0)
         {
             auto timerid = timer_[workerid]->make_timerid();
             on_timer(serviceid, timerid);
