@@ -26,6 +26,8 @@ jobs:
     # create steps
     steps:
       - uses: actions/checkout@v2
+      - name: mkdir
+        run: mkdir packages
       - name: Setup premake
         uses: abel0b/setup-premake@v1
       - name: setup windows msbuild
@@ -36,29 +38,30 @@ jobs:
         run: |
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
+          xcopy moon.exe packages\
         env:
           GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
       - name: build linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-         premake5 gmake
-         make -j2 config=release
+          premake5 gmake
+          make -j2 config=release
+          cp moon packages/
         env:
           GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
       - name: build macos
         if: matrix.os == 'macos-latest'
         run: |
-         premake5 gmake --cc=clang
-         make -j2 config=release
+          premake5 gmake --cc=clang
+          make -j2 config=release
+          cp moon packages/
         env:
           GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
       - name: copy files
         shell: bash
         run: |
-          mkdir packages
           cp -r lualib packages/
           cp -r service packages/
-          cp moon*.* packages/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
