@@ -248,6 +248,7 @@ namespace moon
     {
         uint32_t sender = msg->sender();
         uint32_t receiver = msg->receiver();
+        uint8_t type = msg->type();
         if (msg->broadcast())
         {
             for (auto& it : services_)
@@ -293,7 +294,7 @@ namespace moon
         if (cost_time > 0.1)
         {
             CONSOLE_WARN(server_->logger(),
-                "worker %u handle one message cost %f, from %08X to %08X", id(), cost_time, sender, receiver);
+                "worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, cost_time, sender, receiver);
         }
     }
 }
