@@ -36,36 +36,35 @@ jobs:
         run: |
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
-          mkdir packages\lualib
-          mkdir packages\service
-          mkdir packages\example
-          xcopy moon.exe packages\
-          xcopy lualib packages\lualib\ /s
-          xcopy service packages\service\ /s
-          xcopy example packages\example\ /s
       - name: build linux
         if: matrix.os == 'ubuntu-18.04'
         run: |
           premake5 gmake
           make -j2 config=release
-          mkdir packages
-          cp moon packages/
-          cp -r lualib packages/
-          cp -r service packages/
-          cp -r example packages/
       - name: build macos
         if: matrix.os == 'macos-latest'
         run: |
           premake5 gmake --cc=clang
           make -j2 config=release
+      - name: copy scripts
+        shell: bash
+        run: |
           mkdir packages
-          cp moon packages/
           cp -r lualib packages/
           cp -r service packages/
           cp -r example packages/
-      - name: zip
+      - name: package windows
+        if: matrix.os == 'windows-2019'
         shell: bash
         run: |
+          cp moon.exe packages/
+          cd packages
+          tar -zcvf ${{ RUNNER_OS }}.tar.gz ./*
+      - name: package linux and macosx
+        if: matrix.os != 'windows-2019'
+        shell: bash
+        run: |
+          cp moon packages/
           cd packages
           tar -zcvf ${{ RUNNER_OS }}.tar.gz ./*
       - uses: actions/upload-artifact@v2
