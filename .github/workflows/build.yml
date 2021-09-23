@@ -19,7 +19,7 @@ jobs:
       - name: build
         run: msbuild /m Server.sln /p:configuration="release"
       - name: test
-        run: moon example/main.lua 1
+        run: .\moon.exe example/main.lua 1
   linux-gcc:
     runs-on: ubuntu-latest
     steps:
