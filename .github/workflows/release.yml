@@ -1,0 +1,66 @@
+
+# Workflow's name
+name: release
+
+# Workflow's trigger
+on:
+  push:
+    tags:
+      - 'v*.*'
+
+# Workflow's jobs
+jobs:
+  # job's id
+  release:
+    # job's name
+    name: build and release moon
+    
+    # the type of machine to run the job on
+    runs-on: ${{ matrix.os }}
+    
+    # create a build matrix for jobs
+    strategy:
+      matrix:
+        os: [windows-2019, ubuntu-latest, macos-latest]
+
+    # create steps
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
+      - name: build windows
+        if: matrix.os == 'windows-2019'
+        uses: microsoft/setup-msbuild@v1
+        run: |
+         premake5.exe vs2019
+         msbuild /m Server.sln /p:configuration="release"
+        env:
+          GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
+      - name: build linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+         premake5 gmake
+         make -j2 config=release
+        env:
+          GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
+      - name: build macos
+        if: matrix.os == 'macos-latest'
+        run: |
+         premake5 gmake --cc=clang
+         make -j2 config=release
+        env:
+          GH_TOKEN: bef0b46667d2b13f8asdasdasd762873af59f71c
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}
+          path: |
+            lualib/
+            service/
+            moon
+      - name: release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: "./**"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
