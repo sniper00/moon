@@ -6,7 +6,7 @@ name: Release moon
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*'
 
 # Workflow's jobs
 jobs:
