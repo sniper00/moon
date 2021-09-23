@@ -21,7 +21,7 @@ jobs:
     # create a build matrix for jobs
     strategy:
       matrix:
-        os: [windows-2019, ubuntu-latest, macos-latest]
+        os: [windows-2019, ubuntu-18.04, macos-latest]
 
     # create steps
     steps:
@@ -44,7 +44,7 @@ jobs:
           xcopy service packages\service\ /s
           xcopy example packages\example\ /s
       - name: build linux
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-18.04'
         run: |
           premake5 gmake
           make -j2 config=release
@@ -67,15 +67,15 @@ jobs:
         shell: bash
         run: |
           cd packages
-          tar -zcvf ${{ matrix.os }}.tar.gz ./*
+          tar -zcvf ${{ RUNNER_OS }}.tar.gz ./*
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.os }}
-          path: packages/${{ matrix.os }}.tar.gz
+          path: packages/${{ RUNNER_OS }}.tar.gz
       - name: release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: packages/${{ matrix.os }}.tar.gz
+          files: packages/${{ RUNNER_OS }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
