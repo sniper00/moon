@@ -9,8 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Setup premake
+        uses: abel0b/setup-premake@v1
       - name: configure
-        run: chmod +x premake5 && ./premake5 gmake --cc=clang
+        run: premake5 gmake --cc=clang
       - name: build
         run: make -j2 config=release
       - name: test
