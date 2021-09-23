@@ -26,8 +26,6 @@ jobs:
     # create steps
     steps:
       - uses: actions/checkout@v2
-      - name: mkdir
-        run: mkdir packages
       - name: Setup premake
         uses: abel0b/setup-premake@v1
       - name: setup windows msbuild
@@ -35,25 +33,30 @@ jobs:
         uses: microsoft/setup-msbuild@v1
       - name: build windows
         if: matrix.os == 'windows-2019'
+        shell: bash
         run: |
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
-          xcopy moon.exe packages\
+          mkdir packages
+          cp moon.exe packages/
+          cp -r lualib packages/
+          cp -r service packages/
       - name: build linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           premake5 gmake
           make -j2 config=release
+          mkdir packages
           cp moon packages/
+          cp -r lualib packages/
+          cp -r service packages/
       - name: build macos
         if: matrix.os == 'macos-latest'
         run: |
           premake5 gmake --cc=clang
           make -j2 config=release
+          mkdir packages
           cp moon packages/
-      - name: copy files
-        shell: bash
-        run: |
           cp -r lualib packages/
           cp -r service packages/
       - uses: actions/upload-artifact@v2
@@ -65,6 +68,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            packages/*
+            packages/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
