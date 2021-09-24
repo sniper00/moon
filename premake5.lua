@@ -55,7 +55,7 @@ project "moon"
 
     kind "ConsoleApp"
     language "C++"
-    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua54","./third/mimalloc"}
+    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua54","./third/mimalloc/include"}
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
         "lua54",
@@ -75,6 +75,7 @@ project "moon"
     --links {"mimalloc"}
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
+        linkoptions { '/STACK:"8388608"' }
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
         linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-rpath=./","-Wl,--as-needed"}
