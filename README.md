@@ -42,14 +42,31 @@ Moon is a lightweight online game server framework implement with multithread an
 
 # Quick Start
 
-1. [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+## Download Pre-Built Binaries
 
-2. Clone source code
+https://github.com/sniper00/moon/releases
+
+```shell
+# run echo server
+./moon example/helloworld.lua
+# another terminal run client(coroutine socket writed)
+./moon example/helloworld_client.lua
+# input any string
+```
+
+## Manual Build
+
+1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support for C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+
+2. Moon uses [premake5](http://premake.github.io/) to build platform specific projects. Download it and make sure it's available on your path.
+
+3. Clone source code
+
 ```
     git clone https://github.com/sniper00/moon.git
 ``` 
 
-3. Build
+4. Build
     - windows run `build.bat`。
     - linux:
         ```shell
@@ -59,16 +76,6 @@ Moon is a lightweight online game server framework implement with multithread an
         ```
 
     **If failed，[See detail steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
-
-4. Run
-
-```shell
-# run echo server
-./moon example/helloworld.lua
-# another terminal run client(coroutine socket writed)
-./moon example/helloworld_client.lua
-# input any string
-```
 
 ## Demo
 - [BallGame](https://github.com/sniper00/BallGame.git)
