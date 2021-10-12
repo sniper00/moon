@@ -250,6 +250,8 @@ local function request_handler(fd, request)
         if not ok then
             if M.error then
                 M.error(fd, err)
+            else
+                moon.error(err)
             end
 
             request.header["connection"] = "close"
@@ -356,7 +358,7 @@ function M.start(fd, timeout)
                     if M.error then
                         M.error(fd, request.protocol_error)
                     else
-                        moon.error("httpserver read request error", request.protocol_error)
+                        moon.error(request.protocol_error)
                     end
                 end
                 return
