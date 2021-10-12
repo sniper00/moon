@@ -146,12 +146,12 @@ namespace moon
         };
 
         base_buffer(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
-            :flag_(0)
+            : allocator_(al)
+            , flag_(0)
             , headreserved_(headreserved)
             , capacity_(0)
             , readpos_(0)
             , writepos_(0)
-            , allocator_(al)
         {
             capacity = (capacity > 0 ? capacity : DEFAULT_CAPACITY);
             prepare(capacity + headreserved);
@@ -163,16 +163,17 @@ namespace moon
         base_buffer& operator=(const base_buffer&) = delete;
 
         base_buffer(base_buffer&& other) noexcept
-            : flag_(other.flag_)
+            : allocator_(std::move(other.allocator_))
+            , flag_(other.flag_)
             , headreserved_(other.headreserved_)
             , capacity_(other.capacity_)
             , readpos_(other.readpos_)
             , writepos_(other.writepos_)
             , data_(other.data_)
-            , allocator_(std::move(other.allocator_))
         {
             other.headreserved_ = 0;
             other.data_ = nullptr;
+            other.capacity_ = 0;
             other.clear();
         }
 
@@ -187,6 +188,7 @@ namespace moon
             allocator_ = std::move(other.allocator_);
             other.headreserved_ = 0;
             other.data_ = nullptr;
+            other.capacity_ = 0;
             other.clear();
             return *this;
         }
@@ -304,7 +306,6 @@ namespace moon
 
         void clear() noexcept
         {
-            assert(nullptr != data_);
             flag_ = 0;
             writepos_ = readpos_ = headreserved_;
         }
@@ -446,6 +447,8 @@ namespace moon
             return x + 1;
         }
     private:
+        allocator_type allocator_;
+
         uint32_t flag_;
 
         uint32_t headreserved_;
@@ -455,10 +458,7 @@ namespace moon
         size_t readpos_;
         //write position
         size_t writepos_;
-
         value_type* data_ = nullptr;
-
-        allocator_type allocator_;
     };
 };
 
