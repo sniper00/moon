@@ -192,12 +192,12 @@ local function cluster_service()
 
         c = clusters[header.to_node]
         if not c then
-            local response, err = httpc.get(conf.etc_host,{
+            local response = httpc.get(conf.etc_host,{
                 path = conf.etc_path.."?node="..tostring(header.to_node)
             })
-            if not response or response.status_code ~= "200 OK" then
-                local errstr = response and response.content or err
-                moon.error(errstr)
+            if response.status_code ~= 200 then
+                local errstr = response.content
+                moon.error(response.status_code, errstr)
                 moon.response("lua", header.from_addr, header.session, false, errstr)
                 return
             end
