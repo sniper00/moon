@@ -68,6 +68,54 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
     }
 }
 
+uint32_t socket::udp(uint32_t owner, std::string_view host, uint16_t port)
+{
+    try
+    {
+        udp_context_ptr_t ctx;
+        if (host.empty())
+        {
+            ctx = std::make_shared<socket::udp_context>(owner, ioc_);
+        }
+        else
+        {
+            asio::ip::udp::resolver resolver(ioc_);
+            asio::ip::udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            ctx = std::make_shared<socket::udp_context>(owner, ioc_, endpoint);
+        }
+        auto id = server_->nextfd();
+        ctx->fd = id;
+        do_receive(ctx);
+        udp_.emplace(id, std::move(ctx));
+        return id;
+    }
+    catch (asio::system_error& e)
+    {
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        return 0;
+    }
+}
+
+bool socket::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
+{
+    try
+    {
+        if (auto iter = udp_.find(fd); iter != udp_.end())
+        {
+            asio::ip::udp::resolver resolver(ioc_);
+            asio::ip::udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            iter->second->sock.connect(endpoint);
+            return true;
+        }
+        return false;
+    }
+    catch (asio::system_error& e)
+    {
+        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        return false;
+    }
+}
+
 void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
 {
     assert(owner > 0 && "socket::accept : invalid serviceid");
@@ -214,13 +262,22 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim,
 
 bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
 {
-    auto iter = connections_.find(fd);
-    if (iter == connections_.end())
+    if (auto iter = connections_.find(fd); iter != connections_.end())
     {
-        return false;
+        data->set_flag(flag);
+        return iter->second->send(std::move(data));
     }
-    data->set_flag(flag);
-    return iter->second->send(std::move(data));
+
+    if (auto iter = udp_.find(fd); iter != udp_.end())
+    {
+        iter->second->sock.async_send(
+            asio::buffer(data->data(), data->size()),
+            [this, data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            {
+            });
+        return true;
+    }
+    return false;
 }
 
 bool socket::close(uint32_t fd)
@@ -229,6 +286,15 @@ bool socket::close(uint32_t fd)
     {
         iter->second->close();
         connections_.erase(iter);
+        server_->unlock_fd(fd);
+        return true;
+    }
+
+    if (auto iter = udp_.find(fd); iter != udp_.end())
+    {
+        iter->second->closed = true;
+        iter->second->sock.close();
+        udp_.erase(iter);
         server_->unlock_fd(fd);
         return true;
     }
@@ -252,6 +318,11 @@ void socket::close_all()
     for (auto& c : connections_)
     {
         c.second->close();
+    }
+
+    for (auto& c : udp_)
+    {
+        c.second->sock.close();
     }
 
     for (auto& ac : acceptors_)
@@ -318,11 +389,58 @@ bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
     return false;
 }
 
-bool moon::socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
+bool socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
         iter->second->set_send_queue_limit(warnsize, errorsize);
+        return true;
+    }
+    return false;
+}
+
+static bool decode_endpoint(std::string_view address, asio::ip::udp::endpoint& ep)
+{
+    if (address[0] != '4' && address[0] != '6')
+        return false;
+    asio::ip::port_type port = 0;
+    if (address[0] == '4')
+    {
+        address = address.substr(1);
+        asio::ip::address_v4::bytes_type bytes;
+        if ((address.size()) != bytes.size() + sizeof(port))
+            return false;
+        memcpy(bytes.data(), address.data(), bytes.size());
+        memcpy(&port, address.data() + bytes.size(), sizeof(port));
+        ep = asio::ip::udp::endpoint(asio::ip::address(asio::ip::make_address_v4(bytes)), port);
+    }
+    else
+    {
+        address = address.substr(1);
+        asio::ip::address_v6::bytes_type bytes;
+        if ((address.size()) != bytes.size() + sizeof(port))
+            return false;
+        memcpy(bytes.data(), address.data(), bytes.size());
+        memcpy(&port, address.data() + bytes.size(), sizeof(port));
+        ep = asio::ip::udp::endpoint(asio::ip::address(asio::ip::make_address_v6(bytes)), port);
+    }
+    return true;
+}
+
+bool socket::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
+{
+    if (address.empty())
+        return false;
+    if (auto iter = udp_.find(host); iter != udp_.end())
+    {
+        asio::ip::udp::endpoint ep;
+        if (!decode_endpoint(address, ep))
+            return false;
+        iter->second->sock.async_send_to(
+            asio::buffer(data->data(), data->size()), ep,
+            [this, data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            {
+            });
         return true;
     }
     return false;
@@ -335,6 +453,30 @@ std::string moon::socket::getaddress(uint32_t fd)
 		return iter->second->address();
 	}
 	return std::string();
+}
+
+size_t socket::encode_endpoint(char* buf, const asio::ip::address& addr, asio::ip::port_type port)
+{
+    size_t size = 0;
+    if (addr.is_v4())
+    {
+        buf[0] = '4';
+        size+=1;
+        auto bytes = addr.to_v4().to_bytes();
+        memcpy(buf + size, bytes.data(), bytes.size());
+        size += bytes.size();
+    }
+    else if (addr.is_v6())
+    {
+        buf[0] = '6';
+        size += 1;
+        auto bytes = addr.to_v6().to_bytes();
+        memcpy(buf + size, bytes.data(), bytes.size());
+        size += bytes.size();
+    }
+    memcpy(buf + size, &port, sizeof(port));
+    size += sizeof(port);
+    return size;
 }
 
 connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
@@ -417,3 +559,31 @@ void socket::timeout()
         timeout();
     });
 }
+
+void socket::do_receive(const udp_context_ptr_t& ctx)
+{
+    if (ctx->closed)
+        return;
+
+    auto buf = ctx->msg->get_buffer();
+    buf->clear();
+    ctx->sock.async_receive_from(
+        asio::buffer(buf->data() + buf->size(), buf->writeablesize()), ctx->from_ep,
+        [this, ctx](std::error_code ec, std::size_t bytes_recvd)
+        {
+            if (!ec && bytes_recvd >0)
+            {
+                auto buf = ctx->msg->get_buffer();
+                buf->commit(bytes_recvd);
+                char arr[32];
+                size_t size = encode_endpoint(arr, ctx->from_ep.address(), ctx->from_ep.port());
+                buf->write_front(arr, size);
+                ctx->msg->set_sender(ctx->fd);
+                ctx->msg->set_receiver(0);
+                ctx->msg->set_type(PTYPE_SOCKET_UDP);
+                handle_message(ctx->owner, ctx->msg);
+            }
+            do_receive(ctx);
+        });
+}
+

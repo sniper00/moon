@@ -683,13 +683,12 @@ static int lasio_write(lua_State* L)
     lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
     auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    auto data = moon_to_buffer(L, 2);
     int flag = (int)luaL_optinteger(L, 3, 0);
     if (flag!=0 && (flag<=0 || flag >=(int)moon::buffer_flag::buffer_flag_max))
     {
         return luaL_error(L, "asio.write param 'flag' invalid");
     }
-    bool ok = sock.write(fd, data, (moon::buffer_flag)flag);
+    bool ok = sock.write(fd, moon_to_buffer(L, 2), (moon::buffer_flag)flag);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
@@ -773,6 +772,87 @@ static int lasio_address(lua_State* L)
     return 1;
 }
 
+static int lasio_udp(lua_State* L)
+{
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
+    size_t size = 0;
+    const char* addr = lua_tolstring(L, 1, &size);
+    asio::ip::port_type port = 0;
+    std::string_view address;
+    if (addr)
+    {
+        address = std::string_view{ addr, size };
+        port = (asio::ip::port_type)luaL_checkinteger(L, 2);
+    }
+    uint32_t fd = sock.udp(S->id(), address, port);
+    lua_pushinteger(L, fd);
+    return 1;
+}
+
+static int lasio_udp_connect(lua_State* L)
+{
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto ok = sock.udp_connect(fd, luaL_check_stringview(L, 2), (asio::ip::port_type)luaL_checkinteger(L, 3));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
+static int lasio_sendto(lua_State* L)
+{
+    lua_service* S = (lua_service*)get_ptr(L, LMOON_GLOBAL);
+    auto& sock = S->get_worker()->socket();
+    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    std::string_view address = luaL_check_stringview(L, 2);
+    bool ok = sock.send_to(fd, address, moon_to_buffer(L, 3));
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
+}
+
+static int lasio_make_endpoint(lua_State* L)
+{
+    size_t size = 0;
+    const char* str = luaL_checklstring(L, 1, &size);
+    auto port = (asio::ip::port_type)luaL_checkinteger(L, 2);
+    if (size == 0 || nullptr == str)
+        return 0;
+    asio::error_code ec;
+    auto addr = asio::ip::make_address(std::string_view{ str, size }, ec);
+    if (ec)
+    {
+        auto message = ec.message();
+        lua_pushboolean(L, 0);
+        lua_pushlstring(L, message.data(), message.size());
+        return 2;
+    }
+    char arr[32];
+    size = moon::socket::encode_endpoint(arr, addr, port);
+    lua_pushlstring(L, arr, size);
+    return 1;
+}
+
+static int lasio_unpack_udp(lua_State* L)
+{
+    size_t size = 0;
+    const char* str = nullptr;
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        str = luaL_checklstring(L, 1, &size);
+    }
+    else {
+        str = reinterpret_cast<const char*>(lua_touserdata(L, 1));
+        size = luaL_checkinteger(L, 2);
+    }
+    if (size == 0 || nullptr == str)
+        return 0;
+    size_t addr_size = ((str[0] == '4') ? moon::socket::addr_v4_size : moon::socket::addr_v6_size);
+    lua_pushlstring(L, str, addr_size);
+    str += addr_size;
+    lua_pushlstring(L, str, size - addr_size);
+    return 2;
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_asio(lua_State* L)
@@ -792,6 +872,11 @@ extern "C"
             { "set_enable_chunked", lasio_set_enable_chunked},
             { "set_send_queue_limit", lasio_set_send_queue_limit},
             { "getaddress", lasio_address},
+            { "udp", lasio_udp},
+            { "udp_connect", lasio_udp_connect},
+            { "sendto", lasio_sendto},
+            { "make_endpoint", lasio_make_endpoint},
+            { "unpack_udp", lasio_unpack_udp},
             {NULL,NULL}
         };
 

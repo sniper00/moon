@@ -360,6 +360,29 @@ function asio.getaddress(fd)
     ignore_param(fd)
 end
 
+---@param fd integer
+---@param addr string @ addr bytes string. see udp callback function second param or user make_endpoint
+---@param data string|userdata
+---@return boolean
+function asio.sendto(fd, addr, data)
+    ignore_param(fd, addr, data)
+end
+
+---@param fd integer
+---@param host string
+---@param port integer
+---@return boolean
+function asio.udp_connect(fd, host, port)
+    ignore_param(fd, host, port)
+end
+
+---@param host string
+---@param port integer
+---@return string @addr bytes string
+function asio.make_endpoint(host, port)
+    ignore_param(host, port)
+end
+
 ---@class random
 local random = {}
 ignore_param(random)
