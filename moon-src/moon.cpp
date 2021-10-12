@@ -279,5 +279,6 @@ extern "C"
         REGISTER_CUSTOM_LIBRARY("clonefunc", luaopen_clonefunc);
         REGISTER_CUSTOM_LIBRARY("random", luaopen_random);
         REGISTER_CUSTOM_LIBRARY("zset", luaopen_zset);
+        REGISTER_CUSTOM_LIBRARY("kcp.core", luaopen_kcp_core);
     }
 }
