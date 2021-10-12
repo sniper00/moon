@@ -1,7 +1,10 @@
 local http = require("http")
 local seri = require("seri")
 local moon = require("moon")
+local json = require("json")
 local socket = require("moon.socket")
+
+local string = string
 
 local tbinsert = table.insert
 local tbconcat = table.concat
@@ -81,8 +84,8 @@ local function response_handler(fd, method)
 
     local response = {
         version = version,
-        status_code = status_code,
-        header = header
+        status_code = tointeger(string.match(status_code, "%d+")),
+        header = header,
     }
 
     response.header = {}
@@ -168,7 +171,7 @@ local function do_request(baseaddress, options, req, method)
         local host, port = parse_host(baseaddress, 80)
         fd, err = socket.connect(host, port,  moon.PTYPE_TEXT, options.connect_timeout)
         if not fd then
-            return false ,err
+            return false, err
         end
         newconn = true
     end
@@ -279,11 +282,14 @@ local function request( method, baseaddress, options, content)
     end
 
     local ok, response = do_request(baseaddress, options, cache, method)
-
     if ok then
+        response.json = function()
+            if response.status_code ~= 200 then return end
+            return json.decode(response.content)
+        end
         return response
     else
-        return false, response
+        return {status_code = -1, content = response, json = function() return end}
     end
 end
 
@@ -297,13 +303,25 @@ M.create_query_string = create_query_string
 ---@field public read_timeout integer @ ms
 ---@field public proxy string @ host:port
 
+---@class HttpResponse
+---@field public version string @ http version
+---@field public status_code integer @ Integer Code of responded HTTP Status, e.g. 404 or 200. -1 means socket error and content is error message
+---@field public header table<string,string> @in lower-case key
+---@field public content string @ raw body string
+---@field public json fun():table @ Returns the json-encoded content of a response, if decode failed return nil and error string. if status_code not 200, return nil
+
+
 ---@param host string @host:port
 ---@param options HttpOptions
+---@return HttpResponse
 function M.get(host, options)
     options = options or {}
     return request("GET", host, options)
 end
 
+---@param host string @host:port
+---@param options HttpOptions
+---@return HttpResponse
 function M.head(host, options)
     options = options or {}
     return request("HEAD", host, options)
@@ -311,6 +329,7 @@ end
 
 ---@param host string @host:port
 ---@param options HttpOptions
+---@return HttpResponse
 function M.put(host, content, options)
     options = options or {}
     return request("PUT", host, options, content)
@@ -319,6 +338,7 @@ end
 ---@param host string @host:port
 ---@param content string
 ---@param options HttpOptions
+---@return HttpResponse
 function M.post(host, content, options)
     options = options or {}
     return request("POST", host, options, content)
@@ -327,6 +347,7 @@ end
 ---@param host string @host:port
 ---@param form table @
 ---@param options HttpOptions
+---@return HttpResponse
 function M.postform(host, form, options)
     options = options or {}
     options.header = options.header or {}
