@@ -16,8 +16,6 @@
 .vs/
 .vscode/
 build/
-bin/
-obj/
 exmaple/log/
 
 Server.sln
