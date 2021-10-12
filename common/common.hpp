@@ -96,6 +96,7 @@ typedef _W64 int   ssize_t;
 #include <condition_variable>
 
 #include <vector>
+#include <array>
 #include <map>
 #include <string_view>
 #include <string>

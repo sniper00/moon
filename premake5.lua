@@ -63,16 +63,16 @@ project "moon"
         "crypt",
         "pb",
         "sharetable",
-        "clonefunc"
+        "clonefunc",
+        "kcp",
+        -- "mimalloc",
     }
     defines {
         "ASIO_STANDALONE" ,
         "ASIO_NO_DEPRECATED",
-        "SOL_ALL_SAFETIES_ON",
-        "_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING",
         --"MOON_ENABLE_MIMALLOC"
     }
-    --links {"mimalloc"}
+
     filter { "system:windows" }
         defines {"_WIN32_WINNT=0x0601"}
         linkoptions { '/STACK:"8388608"' }
@@ -151,4 +151,10 @@ add_lua_module("./third/pb", "pb")--protobuf
 -------------------------laoi--------------------
 add_lua_module("./lualib-src/laoi", "aoi",function()
     language "C++"
+end)
+
+-------------------------kcp--------------------
+add_lua_module("./lualib-src/lkcp", "kcp", function()
+    language "C++"
+    files { "./third/kcp/**.h", "./third/kcp/**.c"}
 end)

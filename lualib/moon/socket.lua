@@ -8,10 +8,13 @@ local yield = coroutine.yield
 local make_response = moon.make_response
 local id = moon.addr()
 
+local close = core.close
 local accept = core.accept
 local connect = core.connect
 local read = core.read
 local write = core.write
+local udp = core.udp
+local unpack_udp = core.unpack_udp
 
 local flag_close = 2
 local flag_ws_text = 16
@@ -163,6 +166,33 @@ function socket.wson(name, cb)
     else
         error("register unsupport websocket data type "..name)
     end
+end
+
+local udp_callbacks = {}
+
+moon.dispatch(
+    "udp",
+    function(msg)
+        local fd, p, n = _decode(msg, "SC")
+        local fn = udp_callbacks[fd]
+        if not fn then
+            moon.error("drop udp message from", fd)
+            return
+        end
+        local from, str = unpack_udp(p, n)
+        fn(str, from)
+    end
+)
+
+function socket.udp(cb, host, port)
+    local fd = udp(host, port)
+    udp_callbacks[fd] = cb
+    return fd
+end
+
+function socket.close(fd)
+    close(fd)
+    udp_callbacks[fd] = nil
 end
 
 return socket

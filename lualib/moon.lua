@@ -43,6 +43,7 @@ moon.PTYPE_SOCKET_WS = 6
 moon.PTYPE_DEBUG = 7
 moon.PTYPE_SHUTDOWN = 8
 moon.PTYPE_TIMER = 9
+moon.PTYPE_SOCKET_UDP = 10
 
 --moon.codecache = require("codecache")
 
@@ -507,6 +508,15 @@ reg_protocol{
     pack = function(...) return ... end,
     dispatch = function(_)
         error("PTYPE_SOCKET_WS dispatch not implemented")
+    end
+}
+
+reg_protocol{
+    name = "udp",
+    PTYPE = moon.PTYPE_SOCKET_UDP,
+    pack = function(...) return ... end,
+    dispatch = function(_)
+        error("PTYPE_SOCKET_UDP dispatch not implemented")
     end
 }
 

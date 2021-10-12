@@ -24,6 +24,7 @@ namespace moon
     constexpr uint8_t PTYPE_DEBUG = 7;//
     constexpr uint8_t PTYPE_SHUTDOWN = 8;//
     constexpr uint8_t PTYPE_TIMER = 9;//
+    constexpr uint8_t PTYPE_SOCKET_UDP = 10;//
 
     //network
     using message_size_t = uint16_t;
