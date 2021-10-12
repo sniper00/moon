@@ -8,6 +8,8 @@ if params and params.client then
             moon.sleep(i*10)
             local fd, err = kcp.connect("127.0.0.1", 12347, 1000)
             if fd then
+                -- kcp.send(fd, "hello")
+                -- kcp.send(fd, "hello")
                 while true do
                     kcp.send(fd, "hello")
                     local ok = kcp.read(fd, 5)
