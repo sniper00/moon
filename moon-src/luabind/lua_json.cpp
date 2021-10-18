@@ -28,13 +28,13 @@ public:
         if (size) //  behavior of malloc(0) is implementation defined.
             return mi_malloc(size);
         else
-            return NULL; // standardize to returning NULL.
+            return nullptr; // standardize to returning NULL.
     }
     void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
         (void)originalSize;
         if (newSize == 0) {
             mi_free(originalPtr);
-            return NULL;
+            return nullptr;
         }
         return mi_realloc(originalPtr, newSize);
     }
@@ -140,29 +140,24 @@ static void encode_one(lua_State* L, Writer* writer, int idx, int depth = 0, boo
 
 static inline size_t array_size(lua_State* L, int index)
 {
-    int arr_size = (int)lua_rawlen(L, index);
-    if (arr_size == 0)
-    {
-        return arr_size;
-    }
+    size_t len = lua_rawlen(L, index);
+    if (len == 0)
+        return 0;
+    // test first key
     lua_pushnil(L);
-    while (lua_next(L, index) != 0) {
-        if (lua_type(L, -2) == LUA_TNUMBER) 
-        {
-            if (lua_isinteger(L, -2)) 
-            {
-                lua_Integer x = lua_tointeger(L, -2);
-                if (x > 0 && x <= arr_size) 
-                {
-                    lua_pop(L, 1);
-                    continue;
-                }
-            }
-        }
+    lua_next(L, index);
+    lua_Integer firstkey = lua_isinteger(L, -2) ? lua_tointeger(L, -2) : 0;
+    lua_pop(L, 2);
+    if (firstkey != 1)
+        return 0;
+    lua_pushinteger(L, len);
+    if (lua_next(L, index) == 0) {
+        return len;
+    }
+    else {
         lua_pop(L, 2);
         return 0;
     }
-    return arr_size;
 }
 
 template<typename Writer>
@@ -498,18 +493,16 @@ struct LuaPushHandler {
         char c = str[0];
         if (c == '-' || (c >= '0' && c <= '9'))
         {
+            const char* last = str + length;
             int64_t v = 0;
-            auto [p, ec] = std::from_chars(str, str + length, v);
-            if (ec != std::errc())
+            auto [p, ec] = std::from_chars(str, last, v);
+            if (ec == std::errc() && p == last)
             {
-                return false;
+                lua_pushinteger(L, v);
+                return true;
             }
-            lua_pushinteger(L, v);
         }
-        else
-        {
-            lua_pushlstring(L, str, length);
-        }
+        lua_pushlstring(L, str, length);
         return true;
     }
 
