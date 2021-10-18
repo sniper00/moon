@@ -4,7 +4,6 @@ local socket = require("moon.socket")
 local redis = require("moon.db.redis")
 
 local tbinsert = table.insert
-local tbunpack = table.unpack
 
 local conf = ...
 
