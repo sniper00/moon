@@ -59,13 +59,12 @@ local function make_connect(endpoint, close_callback, conv, fd, isclient)
 end
 
 local update
-
 function update()
     moon.timeout(10, function()
-        local now = math.floor(moon.clock()*1000)
+        local tm = moon.time()
         for _, obj in pairs(connections) do
             if not obj.closed then
-                if moon.time() - obj.recvtime>10 then
+                if tm - obj.recvtime>10 then
                     obj.closed = true
                     core.release(obj.kcp)
                     obj.kcp = nil
@@ -84,15 +83,15 @@ function update()
                         end
                     end
                 else
-                    if obj.nextupdate <= now then
+                    if obj.nextupdate <= moon.clock()*1000 then
                         obj.nextupdate = core.update(obj.kcp)
-                    end
-                    while true do
-                        local sdata = core.output(obj.kcp)
-                        if not sdata then
-                            break
+                        while true do
+                            local sdata = core.output(obj.kcp)
+                            if not sdata then
+                                break
+                            end
+                            socket.sendto(obj.fd, obj.addr, sdata)
                         end
-                        socket.sendto(obj.fd, obj.addr, sdata)
                     end
                 end
             end
@@ -100,8 +99,8 @@ function update()
         update()
     end)
 end
-
 update()
+
 
 local kcp = {}
 
