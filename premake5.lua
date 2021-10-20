@@ -26,16 +26,16 @@ workspace "Server"
     filter { "system:macosx" }
         warnings "High"
 
-project "lua54"
+project "lua"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
     kind "StaticLib"
     language "C"
-    includedirs {"./third/lua54"}
-    files { "./third/lua54/**.h", "./third/lua54/**.c"}
-    removefiles("./third/lua54/luac.c")
-    removefiles("./third/lua54/lua.c")
+    includedirs {"./third/lua"}
+    files { "./third/lua/**.h", "./third/lua/**.c"}
+    removefiles("./third/lua/luac.c")
+    removefiles("./third/lua/lua.c")
     filter { "system:windows" }
         disablewarnings { "4244","4324","4702","4310", "4701"}
         -- defines {"LUA_BUILD_AS_DLL"}
@@ -55,10 +55,10 @@ project "moon"
 
     kind "ConsoleApp"
     language "C++"
-    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua54","./third/mimalloc/include"}
+    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua","./third/mimalloc/include"}
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
-        "lua54",
+        "lua",
         "aoi",
         "crypt",
         "pb",
@@ -110,7 +110,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         targetdir "build/bin/%{cfg.buildcfg}"--目标文件目录
 
         kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib
-        includedirs {"./", "./third","./third/lua54"} --头文件搜索目录
+        includedirs {"./", "./third","./third/lua"} --头文件搜索目录
         files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
         --targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
         language "C"
@@ -120,7 +120,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
             normaladdon()
         end
         filter { "system:windows" }
-            --links{"lua54"} -- windows 版需要链接 lua 库
+            --links{"lua"} -- windows 版需要链接 lua 库
             --defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
             if type(winddowsaddon)=="function" then
                 winddowsaddon()
@@ -130,7 +130,7 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
                 linuxaddon()
             end
         filter {"system:macosx"}
-            -- links{"lua54"}
+            -- links{"lua"}
             if type(macaddon)=="function" then
                 macaddon()
             end
