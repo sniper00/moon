@@ -58,13 +58,12 @@ void *lua_service::lalloc(void *ud, void *ptr, size_t osize, size_t nsize)
 
 lua_service* lua_service::get(lua_State* L)
 {
-    if (lua_rawgetp(L, LUA_REGISTRYINDEX, &lua_service::KEY) == LUA_TNIL) {
-        luaL_error(L, "lua_service is not register");
-        return nullptr;
-    }
-    lua_service* v = (lua_service*)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    return v;
+    void* ud = nullptr;
+    lua_getallocf(L, &ud);
+    if (ud != nullptr)
+        return reinterpret_cast<lua_service*>(ud);
+    luaL_error(L, "lua_service is not init!");
+    return nullptr;
 }
 
 lua_service::lua_service()
@@ -90,9 +89,6 @@ bool lua_service::init(const moon::service_conf& conf)
         lua_gc(L, LUA_GCGEN, 0, 0);
 
         luaL_openlibs(L);
-
-        lua_pushlightuserdata(L, this);
-        lua_rawsetp(L, LUA_REGISTRYINDEX, &KEY);
 
         open_custom_libs(L);
 

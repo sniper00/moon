@@ -22,6 +22,5 @@ public:
 
     static lua_service* get(lua_State* L);
 private:
-    inline static void* KEY = nullptr;
     std::unique_ptr<lua_State, moon::state_deleter> lua_;
 };
