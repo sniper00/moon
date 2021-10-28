@@ -28,6 +28,8 @@ Moon is a lightweight online game server framework implement with multithread an
 
 # Community
 
+- [![Gitter](https://badges.gitter.im/undefined/community.svg)](https://gitter.im/undefined/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 - QQ group: 543833695
 
 # Documents
