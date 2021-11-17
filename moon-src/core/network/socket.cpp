@@ -272,7 +272,7 @@ bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
     {
         iter->second->sock.async_send(
             asio::buffer(data->data(), data->size()),
-            [this, data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            [data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
             {
             });
         return true;
@@ -438,7 +438,7 @@ bool socket::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
             return false;
         iter->second->sock.async_send_to(
             asio::buffer(data->data(), data->size()), ep,
-            [this, data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            [data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
             {
             });
         return true;

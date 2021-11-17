@@ -278,8 +278,6 @@ do
 		assert(tm.hour == 12)
 		assert(tm.min == 0)
 		assert(tm.sec == 0)
-
-		assert(datetime.make_hourly_time(0, 6)==0)
 	end
 end
 
