@@ -164,32 +164,28 @@ namespace moon
 
         base_buffer(base_buffer&& other) noexcept
             : allocator_(std::move(other.allocator_))
-            , flag_(other.flag_)
-            , headreserved_(other.headreserved_)
-            , capacity_(other.capacity_)
-            , readpos_(other.readpos_)
-            , writepos_(other.writepos_)
-            , data_(other.data_)
+            , flag_(std::exchange(other.flag_, 0))
+            , headreserved_(std::exchange(other.headreserved_, 0))
+            , capacity_(std::exchange(other.capacity_, 0))
+            , readpos_(std::exchange(other.readpos_, 0))
+            , writepos_(std::exchange(other.writepos_, 0))
+            , data_(std::exchange(other.data_, nullptr))
         {
-            other.headreserved_ = 0;
-            other.data_ = nullptr;
-            other.capacity_ = 0;
-            other.clear();
         }
 
         base_buffer& operator=(base_buffer&& other) noexcept
         {
-            flag_ = other.flag_;
-            headreserved_ = other.headreserved_;
-            capacity_ = other.capacity_;
-            readpos_ = other.readpos_;
-            writepos_ = other.writepos_;
-            data_ = other.data_;
-            allocator_ = std::move(other.allocator_);
-            other.headreserved_ = 0;
-            other.data_ = nullptr;
-            other.capacity_ = 0;
-            other.clear();
+            if (this != std::addressof(*other))
+            {
+                allocator_.deallocate(data_, capacity_);
+                flag_ = std::exchange(other.flag_, 0);
+                headreserved_ = std::exchange(other.headreserved_, 0);
+                capacity_ = std::exchange(other.capacity_, 0);
+                readpos_ = std::exchange(other.readpos_, 0);
+                writepos_ = std::exchange(other.writepos_, 0);
+                data_ = std::exchange(other.data_, nullptr);
+                allocator_ = std::move(other.allocator_);
+            }
             return *this;
         }
 
