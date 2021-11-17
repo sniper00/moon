@@ -39,15 +39,15 @@ namespace moon
         {
             udp_context(uint32_t o, asio::io_context& ioc, asio::ip::udp::endpoint ep)
                 :owner(o)
-                , sock(ioc, ep)
                 , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
+                , sock(ioc, ep)
             {
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
-                , sock(ioc, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
                 , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
+                , sock(ioc, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
             {
             }
 
