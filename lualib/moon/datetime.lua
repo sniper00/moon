@@ -213,4 +213,17 @@ function datetime.parse(strtime)
     return load(res)()
 end
 
+function datetime.make_time(tm)
+    tm = {
+        year= tm.year,
+        month=tm.month,
+        day=tm.day,
+        hour=tm.hour,
+        min=tm.min,
+        sec=tm.sec,
+        isdst = isdst
+    }
+    return os.time(tm)
+end
+
 return datetime
