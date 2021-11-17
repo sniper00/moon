@@ -15,7 +15,7 @@ local type = type
 local select = select
 local pairs = pairs
 
-local readline = socket.readline
+local readline = socket.read
 local read = socket.read
 
 local redis = {}

@@ -27,7 +27,7 @@ local function read_chunked(fd, content_max_len)
     local content_length = 0
 
     while true do
-        local data, err = socket.readline(fd, "\r\n", 64)
+        local data, err = socket.read(fd, "\r\n", 64)
         if not data then
             return {socket_error = err}
         end
@@ -53,7 +53,7 @@ local function read_chunked(fd, content_max_len)
                 return {socket_error = err}
             end
             tbinsert( chunkdata, data )
-            data, err = socket.readline(fd, "\r\n", 2)
+            data, err = socket.read(fd, "\r\n", 2)
             if not data then
                 return {socket_error = err}
             end
@@ -62,7 +62,7 @@ local function read_chunked(fd, content_max_len)
         end
     end
 
-    local  data, err = socket.readline(fd, "\r\n", 2)
+    local  data, err = socket.read(fd, "\r\n", 2)
     if not data then
         return {socket_error = err}
     end
@@ -71,7 +71,7 @@ local function read_chunked(fd, content_max_len)
 end
 
 local function response_handler(fd, method)
-    local data, err = socket.readline(fd, "\r\n\r\n")
+    local data, err = socket.read(fd, "\r\n\r\n")
     if not data then
         return {socket_error = err}
     end

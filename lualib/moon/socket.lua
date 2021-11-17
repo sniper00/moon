@@ -1,5 +1,4 @@
 local moon = require("moon")
-
 ---@type asio
 local core = require("asio")
 
@@ -57,7 +56,7 @@ function socket.connect(host, port, protocol, timeout)
     assert(supported_protocol[protocol],"not support")
     timeout = timeout or 0
     local sessionid = make_response()
-    connect(host, port, id, protocol, sessionid, timeout)
+    connect(host, port, protocol, sessionid, timeout)
     local fd,err = yield()
     if not fd then
         return nil,err
@@ -67,25 +66,19 @@ end
 
 function socket.sync_connect(host, port, protocol)
     assert(supported_protocol[protocol],"not support")
-    local fd = connect(host, port, id, protocol, 0, 0)
+    local fd = connect(host, port, protocol, 0, 0)
     if fd == 0 then
         return nil,"connect failed"
     end
     return fd
 end
 
---- async
-function socket.read(fd, len)
+--- async, used only when protocol == moon.PTYPE_TEXT
+---@param arg1 integer|string @ integer: read a specified number of bytes from the socket. string: read until reach the specified delim string from the socket
+---@param arg2 integer @ set limit len of data when arg1 is string type
+function socket.read(fd, arg1, arg2)
     local sessionid = make_response()
-    read(fd, id, len, "", sessionid)
-    return yield()
-end
-
---- async
-function socket.readline(fd, delim, limit)
-    limit= limit or 0
-    local sessionid = make_response()
-    read(fd, id, limit, delim, sessionid)
+    read(fd, sessionid, arg1, arg2)
     return yield()
 end
 

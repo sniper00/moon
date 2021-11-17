@@ -5,7 +5,6 @@
 #include <iterator>
 #include "common/random.hpp"
 #include "common/lua_utility.hpp"
-#include "common/utils.hpp"
 
 //[min,max]
 static int lrand_range(lua_State *L)

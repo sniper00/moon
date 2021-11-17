@@ -29,7 +29,6 @@ function socketchannel:connect()
             return {code = "AUTH", err = res}
         end
     end
-    return
 end
 
 function socketchannel:close()
