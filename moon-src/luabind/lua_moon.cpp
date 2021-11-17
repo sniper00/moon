@@ -79,24 +79,6 @@ static int lmoon_tostring(lua_State* L)
     return 1;
 }
 
-static int lmoon_localtime(lua_State* L)
-{
-    time_t t = luaL_checkinteger(L, 1);
-    std::tm local_tm;
-    time::localtime(&t, &local_tm);
-    lua_createtable(L, 0, 9);
-    luaL_rawsetfield(L, -3, "year", lua_pushinteger(L, (lua_Integer)local_tm.tm_year + 1900));
-    luaL_rawsetfield(L, -3, "month", lua_pushinteger(L, (lua_Integer)local_tm.tm_mon + 1));
-    luaL_rawsetfield(L, -3, "day", lua_pushinteger(L, local_tm.tm_mday));
-    luaL_rawsetfield(L, -3, "hour", lua_pushinteger(L, local_tm.tm_hour));
-    luaL_rawsetfield(L, -3, "min", lua_pushinteger(L, local_tm.tm_min));
-    luaL_rawsetfield(L, -3, "sec", lua_pushinteger(L, local_tm.tm_sec));
-    luaL_rawsetfield(L, -3, "weekday", lua_pushinteger(L, local_tm.tm_wday));
-    luaL_rawsetfield(L, -3, "yearday", lua_pushinteger(L, local_tm.tm_yday));
-    luaL_rawsetfield(L, -3, "isdst", lua_pushboolean(L, local_tm.tm_isdst));
-    return 1;
-}
-
 static int lmoon_timeout(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
@@ -147,7 +129,7 @@ static int lmoon_log(lua_State* L)
 static int lmoon_set_loglevel(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    S->logger()->set_level(moon::luaL_check_stringview(L, 1));
+    S->logger()->set_level(moon::lua_check<std::string_view>(L, 1));
     return 0;
 }
 
@@ -180,7 +162,7 @@ static int lmoon_send_prefab(lua_State* L)
     lua_service* S = lua_service::get(L);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
     intptr_t prefabid = (intptr_t)luaL_checkinteger(L, 2);
-    std::string_view header = luaL_check_stringview(L, 3);
+    std::string_view header = lua_check<std::string_view>(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
     int8_t type = (int8_t)luaL_checkinteger(L, 5);
     bool ok = S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type);
@@ -205,9 +187,9 @@ static int lmoon_send(lua_State* L)
     if (type == PTYPE_UNKNOWN)
         return luaL_error(L, "moon.send invalid message type");
 
-    buffer_ptr_t buf = moon_to_buffer(L, 2);
-    std::string_view header = luaL_check_stringview(L, 3);
+    std::string_view header = lua_check<std::string_view>(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
+    buffer_ptr_t buf = moon_to_buffer(L, 2);
 
     S->get_server()->send(S->id(), receiver, std::move(buf), header, sessionid, type);
     return 0;
@@ -244,7 +226,7 @@ static void table_tostring(std::string& res, lua_State* L, int index)
         case LUA_TSTRING:
         {
             res.append("'");
-            res.append(luaL_check_stringview(L, -1));
+            res.append(lua_check<std::string_view>(L, -1));
             res.append("'");
             break;
         }
@@ -266,28 +248,16 @@ static void table_tostring(std::string& res, lua_State* L, int index)
 static int lmoon_new_service(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view type = luaL_check_stringview(L, 1);
+    std::string_view type = lua_check<std::string_view>(L, 1);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
     luaL_checktype(L, 3, LUA_TTABLE);
 
     service_conf conf;
-
-    lua_pushnil(L);
-    while (lua_next(L,3))
-    {
-        std::string key = lua_tostring(L, -2);
-        if (key == "name")
-            conf.name = lua_tostring(L, -1);
-        else if (key == "file")
-            conf.source = luaL_check_stringview(L, -1);
-        else if (key == "memlimit")
-            conf.memlimit = luaL_checkinteger(L, -1);
-        else if (key == "unique")
-            conf.unique = lua_toboolean(L, -1);
-        else if (key == "threadid")
-            conf.threadid = (uint32_t)luaL_checkinteger(L, -1);
-        lua_pop(L, 1);
-    }
+    conf.name = lua_opt_field<std::string>(L, 3, "name");
+    conf.source = lua_opt_field<std::string>(L, 3, "file");
+    conf.memlimit = lua_opt_field<size_t>(L, 3, "memlimit", 0);
+    conf.unique = lua_opt_field<bool>(L, 3, "unique", false);
+    conf.threadid = lua_opt_field<uint32_t>(L, 3, "threadid", 0);
 
     conf.params.append("return ");
     table_tostring(conf.params, L, 3);
@@ -321,7 +291,7 @@ static int lmoon_scan_services(lua_State* L)
 static int lmoon_queryservice(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view name = luaL_check_stringview(L, 1);
+    std::string_view name = lua_check<std::string_view>(L, 1);
     uint32_t id = S->get_server()->get_unique_service(std::string{ name });
     lua_pushinteger(L, id);
     return 1;
@@ -330,8 +300,8 @@ static int lmoon_queryservice(lua_State* L)
 static int lmoon_setenv(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view name = luaL_check_stringview(L, 1);
-    std::string_view value = luaL_check_stringview(L, 2);
+    std::string_view name = lua_check<std::string_view>(L, 1);
+    std::string_view value = lua_check<std::string_view>(L, 2);
     S->get_server()->set_env(std::string{ name }, std::string{ value });
     return 0;
 }
@@ -339,7 +309,7 @@ static int lmoon_setenv(lua_State* L)
 static int lmoon_getenv(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view name = luaL_check_stringview(L, 1);
+    std::string_view name = lua_check<std::string_view>(L, 1);
     std::string value = S->get_server()->get_env(std::string{ name });
     if (value.empty())
         return 0;
@@ -553,7 +523,6 @@ extern "C"
             { "clock", lmoon_clock},
             { "md5", lmoon_md5 },
             { "tostring", lmoon_tostring },
-            { "localtime", lmoon_localtime },
             { "timeout", lmoon_timeout},
             { "log", lmoon_log},
             { "set_loglevel", lmoon_set_loglevel},
@@ -606,7 +575,7 @@ static int lasio_try_open(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
-    std::string_view host = luaL_check_stringview(L, 1);
+    std::string_view host = lua_check<std::string_view>(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     bool ok = sock.try_open(std::string{host}, port);
     lua_pushboolean(L, ok ? 1 : 0);
@@ -617,7 +586,7 @@ static int lasio_listen(lua_State* L)
 {
     lua_service* S  = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
-    std::string_view host = luaL_check_stringview(L, 1);
+    std::string_view host = lua_check<std::string_view>(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
     uint32_t fd = sock.listen(std::string{ host }, port, S->id(), type);
@@ -640,13 +609,12 @@ static int lasio_connect(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
-    std::string_view host = luaL_check_stringview(L, 1);
+    std::string_view host = lua_check<std::string_view>(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
-    uint32_t owner = (uint32_t)luaL_checkinteger(L, 3);
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 4);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
-    uint32_t timeout = (uint32_t)luaL_checkinteger(L, 6);
-    uint32_t fd = sock.connect(std::string{ host }, port, owner, type, sessionid, timeout);
+    uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
+    int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
+    uint32_t timeout = (uint32_t)luaL_checkinteger(L, 5);
+    uint32_t fd = sock.connect(std::string{ host }, port, S->id(), type, sessionid, timeout);
     lua_pushinteger(L, fd);
     return 1;
 }
@@ -656,11 +624,19 @@ static int lasio_read(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t owner = (uint32_t)luaL_checkinteger(L, 2);
-    int64_t size = (int64_t)luaL_checkinteger(L, 3);
-    std::string_view delim = luaL_check_stringview(L, 4);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 5);
-    sock.read(fd, owner, size, delim, sessionid);
+    int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
+    int64_t size = 0;
+    std::string_view delim;
+    if (lua_type(L, 3) == LUA_TNUMBER)
+    {
+        size = (int64_t)luaL_checkinteger(L, 3);
+    }
+    else
+    {
+        delim = lua_check<std::string_view>(L, 3);
+        size = (int64_t)luaL_optinteger(L, 4, 0);
+    }
+    sock.read(fd, S->id(), size, delim, sessionid);
     return 0;
 }
 
@@ -730,7 +706,7 @@ static int lasio_set_enable_chunked(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    std::string_view flag = luaL_check_stringview(L, 2);
+    std::string_view flag = lua_check<std::string_view>(L, 2);
     bool ok = sock.set_enable_chunked(fd, flag);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -781,7 +757,7 @@ static int lasio_udp_connect(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    auto ok = sock.udp_connect(fd, luaL_check_stringview(L, 2), (asio::ip::port_type)luaL_checkinteger(L, 3));
+    auto ok = sock.udp_connect(fd, lua_check<std::string_view>(L, 2), (asio::ip::port_type)luaL_checkinteger(L, 3));
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
@@ -791,7 +767,7 @@ static int lasio_sendto(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    std::string_view address = luaL_check_stringview(L, 2);
+    std::string_view address = lua_check<std::string_view>(L, 2);
     bool ok = sock.send_to(fd, address, moon_to_buffer(L, 3));
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
