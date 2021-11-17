@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include "string.hpp"
 #include "buffer_view.hpp"
-#include "utils.hpp"
 
 namespace moon
 {

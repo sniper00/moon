@@ -755,7 +755,7 @@ function _M.connect(opts)
     }
     self.sockchannel = channel
     -- try connect first only once
-    local err = channel:connect(true)
+    local err = channel:connect()
     if err then
         return err
     end
@@ -830,7 +830,7 @@ end
 
 local function _prepare_resp(self, sql)
     return function(sock)
-        return read_prepare_result(self, sock, sql)
+        return read_prepare_result(self, sock)
     end
 end
 
