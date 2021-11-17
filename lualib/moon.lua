@@ -305,7 +305,8 @@ local function routine(fn)
     end
 end
 
----启动一个异步
+---Creates a new coroutine(from coroutine pool) and start it immediately.
+---If `func` lacks call `coroutine.yield`, will run syncronously.
 ---@param func fun()
 ---@return thread
 function moon.async(func)
@@ -313,7 +314,7 @@ function moon.async(func)
     if not co then
         co = co_create(routine)
     end
-    coresume(co, func) --func 作为 routine 的参数
+    coresume(co, func)
     return co
 end
 
