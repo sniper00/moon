@@ -1,6 +1,6 @@
 #pragma once
 #include "base_connection.hpp"
-#include "common/http_util.hpp"
+#include "common/http_utility.hpp"
 #include "common/base64.hpp"
 #include "common/byte_convert.hpp"
 #include "common/sha1.hpp"
@@ -295,9 +295,9 @@ namespace moon
                         }
 
                         handshaked_ = true;
-                        auto msg = message::create();
-                        msg->write_data(address());
-                        msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_connect));
+                        auto msg = message{};
+                        msg.write_data(address());
+                        msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_connect));
                         handle_message(std::move(msg));
                         check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
                         read_some();
@@ -401,9 +401,9 @@ namespace moon
             handshaked_ = true;
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
-            auto msg = message::create();
-            msg->write_data(address());
-            msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
+            auto msg = message{};
+            msg.write_data(address());
+            msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return std::error_code();
         }
@@ -593,15 +593,15 @@ namespace moon
             }
 
             recv_buf_->seek(static_cast<int>(need), buffer::seek_origin::Current);
-            message_ptr_t msg = nullptr;
+            message msg;
             if (recv_buf_->size()==reallen)
             {
-                msg = message::create(std::move(recv_buf_));
+                msg = message{ std::move(recv_buf_) };
             }
             else
             {
-                msg = message::create(reallen);
-                msg->get_buffer()->write_back(recv_buf_->data(), reallen);
+                msg = message{ reallen };
+                msg.get_buffer()->write_back(recv_buf_->data(), reallen);
                 recv_buf_->seek(static_cast<int>(reallen));
             }
 
@@ -609,16 +609,16 @@ namespace moon
             {
             case ws::opcode::ping:
             {
-                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_ping));
+                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_ping));
                 break;
             }
             case ws::opcode::pong:
             {
-                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_pong));
+                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_pong));
                 break;
             }
             default:
-                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
+                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
                 break;
             }
 

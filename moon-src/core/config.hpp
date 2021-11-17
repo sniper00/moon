@@ -8,8 +8,6 @@ namespace moon
     constexpr int64_t UPDATE_INTERVAL = 10; //ms
     constexpr int32_t BUFFER_HEAD_RESERVED = 14;//max : websocket header  max  len
 
-    DECLARE_UNIQUE_PTR(message);
-
     DECLARE_UNIQUE_PTR(service);
 
     using buffer_ptr_t = std::shared_ptr<buffer>;

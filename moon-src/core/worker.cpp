@@ -173,7 +173,7 @@ namespace moon
         return io_ctx_;
     }
 
-    void worker::send(message_ptr_t&& msg)
+    void worker::send(message&& msg)
     {
         ++mqsize_;
         if (mq_.push_back(std::move(msg)) == 1)
@@ -244,16 +244,16 @@ namespace moon
         return shared_.load();
     }
 
-    void worker::handle_one(service*& s, message_ptr_t&& msg)
+    void worker::handle_one(service*& s, message&& msg)
     {
-        uint32_t sender = msg->sender();
-        uint32_t receiver = msg->receiver();
-        uint8_t type = msg->type();
-        if (msg->broadcast())
+        uint32_t sender = msg.sender();
+        uint32_t receiver = msg.receiver();
+        uint8_t type = msg.type();
+        if (msg.broadcast())
         {
             for (auto& it : services_)
             {
-                if (!it.second->unique() && msg->type() == PTYPE_SYSTEM)
+                if (!it.second->unique() && msg.type() == PTYPE_SYSTEM)
                 {
                     continue;
                 }
@@ -271,16 +271,16 @@ namespace moon
             s = find_service(receiver);
             if (nullptr == s || !s->ok())
             {
-                if (sender != 0 && msg->type()!=PTYPE_TIMER)
+                if (sender != 0 && msg.type()!=PTYPE_TIMER)
                 {
-                    std::string hexdata = moon::hex_string({ msg->data(),msg->size() });
+                    std::string hexdata = moon::hex_string({ msg.data(),msg.size() });
                     std::string str = moon::format("[%08X] attempt send to dead service [%08X]: %s."
                         , sender
                         , receiver
                         , hexdata.data());
 
-                    msg->set_sessionid(-msg->sessionid());
-                    server_->response(sender, "worker::handle_one "sv, str, msg->sessionid(), PTYPE_ERROR);
+                    msg.set_sessionid(-msg.sessionid());
+                    server_->response(sender, "worker::handle_one "sv, str, msg.sessionid(), PTYPE_ERROR);
                 }
                 return;
             }
