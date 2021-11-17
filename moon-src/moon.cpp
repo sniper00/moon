@@ -174,20 +174,11 @@ int main(int argc, char* argv[])
             r = lua_pcall(L, 1, 1, 1);
             MOON_CHECK(r == LUA_OK, moon::format("%s", lua_tostring(L, -1)));
             MOON_CHECK(lua_type(L, -1) == LUA_TTABLE, "init must return conf table");
-            lua_pushnil(L);
-            while (lua_next(L, -2))
-            {
-                std::string key = lua_tostring(L, -2);
-                if (key == "thread")
-                    thread_count = (uint32_t)luaL_checkinteger(L, -1);
-                else if (key == "logfile")
-                    logfile = luaL_check_stringview(L, -1);
-                else if (key == "enable_console")
-                    enable_console = lua_toboolean(L, -1);
-                else if (key == "loglevel")
-                    loglevel = luaL_check_stringview(L, -1);
-                lua_pop(L, 1);
-            }
+
+            thread_count = lua_opt_field<uint32_t>(L, -1, "thread", thread_count);
+            logfile = lua_opt_field<std::string>(L, -1, "logfile");
+            enable_console = lua_opt_field<bool>(L, -1, "enable_console", enable_console);
+            loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
         }
 
         std::shared_ptr<server> server_ = std::make_shared<server>();

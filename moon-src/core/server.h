@@ -75,7 +75,7 @@ namespace moon
 
         void scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid);
 
-        bool send_message(message_ptr_t&& msg) const;
+        bool send_message(message&& msg) const;
 
         bool send(uint32_t sender, uint32_t receiver, buffer_ptr_t buf, std::string_view header, int32_t sessionid, uint8_t type) const;
 

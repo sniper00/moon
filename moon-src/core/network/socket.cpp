@@ -15,8 +15,8 @@ socket::socket(server* s, worker* w, asio::io_context & ioctx)
     , worker_(w)
     , ioc_(ioctx)
     , timer_(ioctx)
+    , response_()
 {
-    response_ = message::create();
     timeout();
 }
 
@@ -511,13 +511,13 @@ void socket::response(uint32_t sender, uint32_t receiver, std::string_view data,
 {
     if (0 == sessionid)
         return;
-    response_->set_sender(sender);
-    response_->set_receiver(0);
-    response_->get_buffer()->clear();
-    response_->get_buffer()->write_back(data.data(), data.size());
-    response_->set_header(header);
-    response_->set_sessionid(sessionid);
-    response_->set_type(type);
+    response_.set_sender(sender);
+    response_.set_receiver(0);
+    response_.get_buffer()->clear();
+    response_.get_buffer()->write_back(data.data(), data.size());
+    response_.set_header(header);
+    response_.set_sessionid(sessionid);
+    response_.set_type(type);
 
     handle_message(receiver, response_);
 }
@@ -565,7 +565,7 @@ void socket::do_receive(const udp_context_ptr_t& ctx)
     if (ctx->closed)
         return;
 
-    auto buf = ctx->msg->get_buffer();
+    auto buf = ctx->msg.get_buffer();
     buf->clear();
     ctx->sock.async_receive_from(
         asio::buffer(buf->data() + buf->size(), buf->writeablesize()), ctx->from_ep,
@@ -573,14 +573,14 @@ void socket::do_receive(const udp_context_ptr_t& ctx)
         {
             if (!ec && bytes_recvd >0)
             {
-                auto buf = ctx->msg->get_buffer();
+                auto buf = ctx->msg.get_buffer();
                 buf->commit(bytes_recvd);
                 char arr[32];
                 size_t size = encode_endpoint(arr, ctx->from_ep.address(), ctx->from_ep.port());
                 buf->write_front(arr, size);
-                ctx->msg->set_sender(ctx->fd);
-                ctx->msg->set_receiver(0);
-                ctx->msg->set_type(PTYPE_SOCKET_UDP);
+                ctx->msg.set_sender(ctx->fd);
+                ctx->msg.set_receiver(0);
+                ctx->msg.set_type(PTYPE_SOCKET_UDP);
                 handle_message(ctx->owner, ctx->msg);
             }
             do_receive(ctx);

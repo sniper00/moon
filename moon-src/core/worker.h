@@ -9,7 +9,7 @@ namespace moon
 
     class worker
     {
-        using queue_type = concurrent_queue<message_ptr_t, std::mutex, std::vector>;
+        using queue_type = concurrent_queue<message, std::mutex, std::vector>;
 
         using asio_work_type = asio::executor_work_guard<asio::io_context::executor_type>;
     public:
@@ -35,7 +35,7 @@ namespace moon
 
         void new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid);
 
-        void send(message_ptr_t&& msg);
+        void send(message&& msg);
 
         void shared(bool v);
 
@@ -55,7 +55,7 @@ namespace moon
 
         void wait();
     private:
-        void handle_one(service*& ser, message_ptr_t&& msg);
+        void handle_one(service*& ser, message&& msg);
 
         service* find_service(uint32_t serviceid) const;
     private:

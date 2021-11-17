@@ -1,18 +1,19 @@
 #include "lua.hpp"
-#include "common/http_util.hpp"
+#include "common/http_utility.hpp"
 #include "common/lua_utility.hpp"
 
 using namespace moon;
 
 static int lhttp_parse_request(lua_State* L)
 {
-    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view data = lua_check<std::string_view>(L, 1);
     std::string_view method;
     std::string_view path;
     std::string_view query_string;
     std::string_view version;
     http::case_insensitive_multimap_view header;
     bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
+    luaL_checkstack(L, 8, NULL);
     lua_pushboolean(L, ok ? 1 : 0);
     lua_pushlstring(L, method.data(), method.size());
     lua_pushlstring(L, path.data(), path.size());
@@ -30,11 +31,12 @@ static int lhttp_parse_request(lua_State* L)
 
 static int lhttp_parse_response(lua_State* L)
 {
-    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view data = lua_check<std::string_view>(L, 1);
     std::string_view version;
     std::string_view status_code;
     http::case_insensitive_multimap_view header;
     bool ok = http::response_parser::parse(data, version, status_code, header);
+    luaL_checkstack(L, 6, NULL);
     lua_pushboolean(L, ok ? 1 : 0);
     lua_pushlstring(L, version.data(), version.size());
     lua_pushlstring(L, status_code.data(), status_code.size());
@@ -50,7 +52,7 @@ static int lhttp_parse_response(lua_State* L)
 
 static int lhttp_parse_query_string(lua_State* L)
 {
-    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view data = lua_check<std::string_view>(L, 1);
     http::case_insensitive_multimap cim = http::query_string::parse(data);
     lua_createtable(L, 0, (int)cim.size());
     for (const auto& v : cim)
@@ -69,11 +71,7 @@ static int lhttp_create_query_string(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, -2))
     {
-        size_t keylen;
-        const char* key = lua_tolstring(L, -2, &keylen);
-        size_t valuelen;
-        const char* value = lua_tolstring(L, -1, &valuelen);
-        cim.emplace(std::string_view{ key, keylen }, std::string_view{ value, valuelen });
+        cim.emplace(lua_check<std::string_view>(L, -2), lua_check<std::string_view>(L, -1));
         lua_pop(L, 1);
     }
     std::string s = http::query_string::create(cim);
@@ -83,7 +81,7 @@ static int lhttp_create_query_string(lua_State* L)
 
 static int lhttp_urlencode(lua_State* L)
 {
-    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view data = lua_check<std::string_view>(L, 1);
     std::string s = http::percent::encode(data);
     lua_pushlstring(L, s.data(), s.size());
     return 1;
@@ -91,7 +89,7 @@ static int lhttp_urlencode(lua_State* L)
 
 static int lhttp_urldecode(lua_State* L)
 {
-    std::string_view data = luaL_check_stringview(L, 1);
+    std::string_view data = lua_check<std::string_view>(L, 1);
     std::string s = http::percent::decode(data);
     lua_pushlstring(L, s.data(), s.size());
     return 1;

@@ -6,6 +6,7 @@ namespace moon
 {
     class worker;
     class server;
+    class message;
 
     class service
     {
@@ -118,15 +119,15 @@ namespace moon
     {
         try
         {
-            uint32_t receiver = m->receiver();
-            s->dispatch(m.get());
+            uint32_t receiver = m.receiver();
+            s->dispatch(&m);
             //redirect message
-            if (m->receiver() != receiver)
+            if (m.receiver() != receiver)
             {
-                MOON_ASSERT(!m->broadcast(), "can not redirect broadcast message");
+                MOON_ASSERT(!m.broadcast(), "can not redirect broadcast message");
                 if constexpr (std::is_rvalue_reference_v<decltype(m)>)
                 {
-                    s->get_server()->send_message(std::forward<message_ptr_t>(m));
+                    s->get_server()->send_message(std::forward<message>(m));
                 }
             }
         }

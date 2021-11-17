@@ -12,20 +12,9 @@ namespace moon
             return std::make_shared<buffer>(capacity, headreserved);
         }
 
-        static message_ptr_t create(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
-        {
-            return std::make_unique<message>(capacity, headreserved);
-        }
-
-        template<typename Buffer,std::enable_if_t<std::is_same_v<std::decay_t<Buffer>,buffer_ptr_t>,int> = 0>
-        static message_ptr_t create(Buffer&& v)
-        {
-            return std::make_unique<message>(std::forward<Buffer>(v));
-        }
-
         message(size_t capacity = 64, uint32_t headreserved = 0)
+            :data_(std::make_shared<buffer>(capacity, headreserved))
         {
-            data_ = std::make_shared<buffer>(capacity, headreserved);
         }
 
         template<typename Buffer, std::enable_if_t<std::is_same_v<std::decay_t<Buffer>, buffer_ptr_t>, int> = 0>
@@ -42,6 +31,30 @@ namespace moon
         message(const message&) = delete;
 
         message& operator=(const message&) = delete;
+
+        message(message&& other) noexcept
+            :type_(std::exchange(other.type_, uint8_t{}))
+            , sender_(std::exchange(other.sender_, 0))
+            , receiver_(std::exchange(other.receiver_, 0))
+            , sessionid_(std::exchange(other.sessionid_, 0))
+            , header_(std::move(other.header_))
+            , data_(std::move(other.data_))
+        {
+        }
+
+        message& operator=(message&& other) noexcept
+        {
+            if (this != std::addressof(other))
+            {
+                type_ = std::exchange(other.type_, uint8_t{});
+                sender_ = std::exchange(other.sender_, 0);
+                receiver_ = std::exchange(other.receiver_, 0);
+                sessionid_ = std::exchange(other.sessionid_, 0);
+                header_ = std::move(other.header_);
+                data_ = std::move(other.data_);
+            }
+            return *this;
+        }
 
         void set_sender(uint32_t serviceid)
         {

@@ -1,7 +1,6 @@
 #pragma once
 #include "config.hpp"
 #include "common/rwlock.hpp"
-#include "common/utils.hpp"
 #include "asio.hpp"
 #include "service.hpp"
 #include "message.hpp"
@@ -41,21 +40,21 @@ namespace moon
             udp_context(uint32_t o, asio::io_context& ioc, asio::ip::udp::endpoint ep)
                 :owner(o)
                 , sock(ioc, ep)
+                , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
             {
-                msg = message::create(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size));
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
                 , sock(ioc, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
+                , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
             {
-                msg = message::create(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size));
             }
 
             bool closed = false;
             uint32_t owner;
             uint32_t fd = 0;
-            message_ptr_t msg;
+            message msg;
             asio::ip::udp::socket sock;
             asio::ip::udp::endpoint from_ep;
         };
@@ -124,7 +123,7 @@ namespace moon
         worker* worker_;
         asio::io_context& ioc_;
         asio::steady_timer timer_;
-        message_ptr_t  response_;
+        message  response_;
         std::unordered_map<uint32_t, acceptor_context_ptr_t> acceptors_;
         std::unordered_map<uint32_t, connection_ptr_t> connections_;
         std::unordered_map<uint32_t, udp_context_ptr_t> udp_;
@@ -136,7 +135,7 @@ namespace moon
         auto s = find_service(serviceid);
         if (nullptr == s)
         {
-            close(m->sender());
+            close(m.sender());
             return;
         }
         moon::handle_message(s, std::forward<Message>(m));

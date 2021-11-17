@@ -13,8 +13,6 @@ namespace moon
     public:
         using socket_t = asio::ip::tcp::socket;
 
-        using message_handler_t = std::function<void(const message_ptr_t&)>;
-
         template <typename... Args>
         explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket* s, Args&&... args)
             : serviceid_(serviceid)
@@ -242,7 +240,7 @@ namespace moon
             {
                 if (e && e != asio::error::eof)
                 {
-                    auto msg = message::create();
+                    auto msg = message{};
                     std::string message = e.message();
                     if (!additional.empty())
                     {
@@ -254,19 +252,19 @@ namespace moon
                         , address().data()
                         , e.value()
                         , e.message().data());
-                    msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_error));
-                    msg->write_data(content);
-                    msg->set_sender(fd_);
+                    msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_error));
+                    msg.write_data(content);
+                    msg.set_sender(fd_);
                     handle_message(std::move(msg));
                 }
             }
 
             //closed
             {
-                auto msg = message::create();
-                msg->write_data(address());
-                msg->set_sender(fd_);
-                msg->set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
+                auto msg = message{};
+                msg.write_data(address());
+                msg.set_sender(fd_);
+                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
                 handle_message(std::move(msg));
                 parent_->close(fd_);
             }
@@ -278,10 +276,10 @@ namespace moon
         {
             if (nullptr != parent_)
             {
-                m->set_sender(fd_);
-                if (m->type() == 0)
+                m.set_sender(fd_);
+                if (m.type() == 0)
                 {
-                    m->set_type(type_);
+                    m.set_type(type_);
                 }
                 parent_->handle_message(serviceid_, std::forward<Message>(m));
             }

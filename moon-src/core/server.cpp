@@ -209,10 +209,10 @@ namespace moon
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)
     {
-        auto msg = message::create(buffer_ptr_t{nullptr});
-        msg->set_type(PTYPE_TIMER);
-        msg->set_sender(timerid);
-        msg->set_receiver(serviceid);
+        auto msg = message{ buffer_ptr_t{nullptr} };
+        msg.set_type(PTYPE_TIMER);
+        msg.set_sender(timerid);
+        msg.set_receiver(serviceid);
         send_message(std::move(msg));
     }
 
@@ -266,12 +266,12 @@ namespace moon
          });
     }
 
-    bool server::send_message(message_ptr_t&& m) const
+    bool server::send_message(message&& m) const
     {
-        worker* w = get_worker(0, m->receiver());
+        worker* w = get_worker(0, m.receiver());
         if (nullptr == w)
         {
-            CONSOLE_ERROR(logger(), "invalid message receiver serviceid %X", m->receiver());
+            CONSOLE_ERROR(logger(), "invalid message receiver serviceid %X", m.receiver());
             return false;
         }
         w->send(std::move(m));
@@ -281,15 +281,15 @@ namespace moon
     bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, std::string_view header, int32_t sessionid, uint8_t type) const
     {
         sessionid = -sessionid;
-        message_ptr_t m = message::create(std::move(data));
-        m->set_sender(sender);
-        m->set_receiver(receiver);
+        message m = message{ std::move(data) };
+        m.set_sender(sender);
+        m.set_receiver(receiver);
         if (header.size() != 0)
         {
-            m->set_header(header);
+            m.set_header(header);
         }
-        m->set_type(type);
-        m->set_sessionid(sessionid);
+        m.set_type(type);
+        m.set_sessionid(sessionid);
         return send_message(std::move(m));
     }
 
@@ -297,11 +297,11 @@ namespace moon
     {
         for (auto& w : workers_)
         {
-            auto m = message::create(buf);
-            m->set_broadcast(true);
-            m->set_header(header);
-            m->set_sender(sender);
-            m->set_type(type);
+            auto m = message{ buf };
+            m.set_broadcast(true);
+            m.set_header(header);
+            m.set_sender(sender);
+            m.set_type(type);
             w->send(std::move(m));
         }
     }
@@ -373,12 +373,12 @@ namespace moon
             return;
         }
 
-        auto m = message::create(content.size());
-        m->set_receiver(to);
-        m->set_header(header);
-        m->set_type(mtype);
-        m->set_sessionid(sessionid);
-        m->write_data(content);
+        auto m = message{ content.size() };
+        m.set_receiver(to);
+        m.set_header(header);
+        m.set_type(mtype);
+        m.set_sessionid(sessionid);
+        m.write_data(content);
         send_message(std::move(m));
     }
 

@@ -23,9 +23,9 @@ namespace moon
         void start(bool accepted) override
         {
             base_connection_t::start(accepted);
-            auto m = message::create();
-            m->write_data(address());
-            m->set_receiver(static_cast<uint8_t>(accepted ?
+            auto m = message{};
+            m.write_data(address());
+            m.set_receiver(static_cast<uint8_t>(accepted ?
                 socket_data_type::socket_accept : socket_data_type::socket_connect));
             handle_message(std::move(m));
             read_header();
@@ -157,8 +157,8 @@ namespace moon
                 buf_->commit(static_cast<int>(bytes_transferred));
                 if (fin)
                 {
-                    auto m = message::create(std::move(buf_));
-                    m->set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
+                    auto m = message{std::move(buf_)};
+                    m.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
                     handle_message(std::move(m));
                 }
 
