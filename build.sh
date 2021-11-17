@@ -12,6 +12,6 @@ if (($MAJOR<8)); then
 fi
 
 echo "use gcc " $MAJOR"."$MINOR 
-./premake5 gmake
+premake5 gmake
 make clean config=release
 make config=release
