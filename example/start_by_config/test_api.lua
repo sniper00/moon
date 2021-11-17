@@ -155,6 +155,134 @@ do
 	assert(list.pop(q) == 1)
 end
 
+do
+	do
+		local tablex = require("tablex")
+		assert(tablex.remove({100,200,300}, 100)==100)
+		local t = {100,200,300}
+		tablex.remove(t, 100)
+		table.equals(t,{300,200})
+		assert(tablex.remove({100}, 100)==100)
+		t = {100}
+		tablex.remove(t, 100)
+		table.equals(t,{})
+	end
+end
+
+do
+	local datetime = require("moon.datetime")
+
+	do
+		local t1 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 11,
+			hour= 23,
+			min = 59,
+			sec = 59
+		})
+
+		local t2 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 14,
+			hour= 23,
+			min = 59,
+			sec = 59
+		})
+
+		local t3 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 15,
+			hour= 0,
+			min = 0,
+			sec = 0
+		})
+
+		assert(datetime.is_same_week(t1, t2))
+		assert(not datetime.is_same_week(t1, t3))
+		assert(not datetime.is_same_week(t2, t3))
+	end
+
+	do
+		local year, yweek, weekday = datetime.isocalendar(datetime.make_time({
+			year = 2021,
+			month = 1,
+			day = 1,
+			hour= 0,
+			min = 0,
+			sec = 0
+		}))
+
+		assert(year == 2020)
+		assert(yweek == 53)
+		assert(weekday == 5)
+
+		year, yweek, weekday = datetime.isocalendar(datetime.make_time({
+			year = 2021,
+			month = 1,
+			day = 4,
+			hour= 0,
+			min = 0,
+			sec = 0
+		}))
+		assert(year == 2021)
+		assert(yweek == 1)
+		assert(weekday == 1)
+	end
+
+	do
+		local t1 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 12,
+			hour= 0,
+			min = 0,
+			sec = 0
+		})
+
+		local t2 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 13,
+			hour= 0,
+			min = 0,
+			sec = 0
+		})
+
+		local t3 = datetime.make_time({
+			year = 2021,
+			month = 11,
+			day = 13,
+			hour= 23,
+			min = 59,
+			sec = 59
+		})
+
+		assert(not datetime.is_same_day(t1, t2))
+		assert(datetime.is_same_day(t2, t3))
+
+		assert(datetime.is_same_month(t2, t3))
+	end
+
+	do
+		local t = datetime.make_hourly_time(moon.time(), 0)
+		local tm = datetime.localtime(t)
+		assert(tm.hour == 0)
+		assert(tm.min == 0)
+		assert(tm.sec == 0)
+
+		t = datetime.make_hourly_time(moon.time())
+		tm = datetime.localtime(t)
+		assert(tm.hour == 12)
+		assert(tm.min == 0)
+		assert(tm.sec == 0)
+
+		assert(datetime.make_hourly_time(0, 6)==0)
+	end
+end
+
 moon.async(function()
 	local ncount = 0
 	moon.timeout(
