@@ -8,7 +8,7 @@ local function run_slave()
     command.START =  function(fd)
         moon.async(function()
             while true do
-                local n = socket.readline(fd,"\r\n")
+                local n = socket.read(fd,"\r\n")
                 if not n then
                     --print(fd,"closed")
                     return

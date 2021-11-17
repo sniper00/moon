@@ -208,8 +208,8 @@ function core.release(msg)
 end
 
 ---redirect a message to other service
-function core.redirect(header, receiver, mtype, sender, sessionid)
-    ignore_param(header, receiver, mtype, sender, sessionid)
+function core.redirect(msg, header, receiver, mtype, sender, sessionid)
+    ignore_param(msg, header, receiver, mtype, sender, sessionid)
 end
 
 ---get error log count
