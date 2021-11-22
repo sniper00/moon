@@ -189,9 +189,8 @@ static int lmoon_send(lua_State* L)
 
     std::string_view header = lua_check<std::string_view>(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
-    buffer_ptr_t buf = moon_to_buffer(L, 2);
 
-    S->get_server()->send(S->id(), receiver, std::move(buf), header, sessionid, type);
+    S->get_server()->send(S->id(), receiver, moon_to_buffer(L, 2), header, sessionid, type);
     return 0;
 }
 
