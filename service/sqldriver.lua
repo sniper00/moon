@@ -22,13 +22,14 @@ if conf.name then
         while true do
             if db then
                 local res = db:query(sql)
-                if res.code == "SOCKET" then -- socket error
+                local code = rawget(res, "code")
+                if code == "SOCKET" then -- socket error
                     ---socket may disconnect when query , try reconnect
                     db:disconnect()
                     db = nil
                 else
                     ---query success but may has sql error
-                    if sessionid == 0 and res.code then
+                    if sessionid == 0 and code then
                         moon.error(moon.decode(sql, "Z") ..  "\n" ..table.tostring(res))
                     else
                         moon.response("lua", sender, sessionid, res)
@@ -37,7 +38,7 @@ if conf.name then
                 end
             else
                 db = provider.connect(conf.db_conf)
-                if db.code then
+                if rawget(db, "code") then
                     if sessionid == 0 then
                         ---if execute operation print error, then reconnect
                         moon.error(table.tostring(db))

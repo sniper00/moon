@@ -66,6 +66,7 @@ project "moon"
         "clonefunc",
         "kcp",
         -- "mimalloc",
+        "mongo"
     }
     defines {
         "ASIO_STANDALONE" ,
@@ -147,6 +148,7 @@ add_lua_module("./third/sharetable", "sharetable")
 add_lua_module("./third/clonefunc", "clonefunc")--for hotfix
 add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./third/pb", "pb")--protobuf
+add_lua_module("./third/lmongo", "mongo")--protobuf
 
 -------------------------laoi--------------------
 add_lua_module("./lualib-src/laoi", "aoi",function()
