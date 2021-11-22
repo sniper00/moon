@@ -19,6 +19,7 @@ typedef short               atomic_short;
 typedef int                 atomic_int;
 typedef long                atomic_long;
 typedef long long           atomic_llong;
+typedef unsigned long long  atomic_ullong;
 
 inline bool atomic_compare_exchange8_(volatile atomic_schar* object, int8_t* expected, int8_t desired)
 {
@@ -242,6 +243,7 @@ inline int64_t atomic_fetch_and64_(volatile atomic_llong* object, int64_t operan
 #define ATOM_INT atomic_int
 #define ATOM_POINTER atomic_uintptr_t
 #define ATOM_SIZET atomic_size_t
+#define ATOM_ULONG atomic_ullong
 #define ATOM_INIT(ref, v) atomic_init(ref, v)
 #define ATOM_LOAD(ptr) atomic_load(ptr)
 #define ATOM_STORE(ptr, v) atomic_store(ptr, v)

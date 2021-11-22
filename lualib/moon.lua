@@ -318,9 +318,10 @@ function moon.async(func)
     return co
 end
 
-function moon.wakeup(co)
+function moon.wakeup(co, ...)
+    local args = {...}
     moon.timeout(0, function()
-        local ok, err = co_resume(co)
+        local ok, err = co_resume(co, table.unpack(args))
         if not ok then
             err = traceback(co, tostring(err))
             co_close(co)
