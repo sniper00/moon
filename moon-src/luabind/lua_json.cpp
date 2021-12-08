@@ -354,65 +354,82 @@ static void write_resp(moon::buffer* buf, const char* cmd, size_t size)
     buf->write_back(cmd, size);
 }
 
-static int concat_resp(lua_State* L) {
-    int n = lua_gettop(L);
-    if (0 == n)
+static void concat_resp_one(moon::buffer* buf, lua_State* L, int i)
+{
+    switch (lua_type(L, i))
     {
-        return 0;
+    case LUA_TNIL:
+    {
+        std::string_view sv = "\r\n$-1";
+        buf->write_back(sv.data(), sv.size());
+        break;
     }
-
-    auto buf = new moon::buffer(256, 16);
-    buf->write_back("*", 1);
-    buf->write_chars(n);
-
-    for (int i = 1; i <= n; i++) {
-        switch (lua_type(L, i))
+    case LUA_TNUMBER:
+    {
+        if (lua_isinteger(L, i))
         {
-        case LUA_TNIL:
-        {
-            std::string_view sv = "\r\n$-1";
-            buf->write_back(sv.data(), sv.size());
-            break;
+            std::string s = std::to_string(lua_tointeger(L, i));
+            write_resp(buf, s.data(), s.size());
         }
-        case LUA_TNUMBER:
+        else
         {
-            if (lua_isinteger(L, i))
+            std::string s = std::to_string(lua_tonumber(L, i));
+            write_resp(buf, s.data(), s.size());
+        }
+        break;
+    }
+    case LUA_TBOOLEAN:
+    {
+        std::string_view sv = lua_toboolean(L, i) ? "true" : "false";
+        write_resp(buf, sv.data(), sv.size());
+        break;
+    }
+    case LUA_TSTRING:
+    {
+        size_t msize;
+        const char* sz = lua_tolstring(L, i, &msize);
+        write_resp(buf, sz, msize);
+        break;
+    }
+    case LUA_TTABLE:
+    {
+        if (luaL_getmetafield(L, i, "__redis") != LUA_TNIL)
+        {
+            lua_pop(L, 1);
+            auto size = lua_rawlen(L, i);
+            for (unsigned n = 1; n <= size; n++)
             {
-                std::string s = std::to_string(lua_tointeger(L, i));
-                write_resp(buf, s.data(), s.size());
+                lua_rawgeti(L, i, n);
+                concat_resp_one(buf, L, -1);
+                lua_pop(L, 1);
             }
-            else
-            {
-                std::string s = std::to_string(lua_tonumber(L, i));
-                write_resp(buf, s.data(), s.size());
-            }
-            break;
         }
-        case LUA_TBOOLEAN:
-        {
-            std::string_view sv = lua_toboolean(L, i) ? "true" : "false";
-            write_resp(buf, sv.data(), sv.size());
-            break;
-        }
-        case LUA_TSTRING:
-        {
-            size_t msize;
-            const char* sz = lua_tolstring(L, i, &msize);
-            write_resp(buf, sz, msize);
-            break;
-        }
-        case LUA_TTABLE:
+        else
         {
             StreamBuf stream;
             JsonWriter writer(stream);
             encode_one(L, &writer, i, 0, true);
             write_resp(buf, stream.GetString(), stream.GetSize());
-            break;
         }
-        default:
-            break;
-        }
+        break;
     }
+    default:
+        break;
+    }
+}
+
+static int concat_resp(lua_State* L) {
+    int n = lua_gettop(L);
+    if (0 == n)
+        return 0;
+    auto buf = new moon::buffer(256, 16);
+    buf->write_back("*", 1);
+    buf->write_chars(n);
+
+    for (int i = 1; i <= n; i++) {
+        concat_resp_one(buf, L, i);
+    }
+
     buf->write_back("\r\n", 2);
     lua_pushlightuserdata(L, buf);
     return 1;
