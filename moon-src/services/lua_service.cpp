@@ -92,21 +92,18 @@ bool lua_service::init(const moon::service_conf& conf)
 
         open_custom_libs(L);
 
-        int r = luaL_dostring(L, server_->get_env("PATH").data());
-        MOON_CHECK(r == LUA_OK, moon::format("PATH %s", lua_tostring(L, -1)));
-
         lua_pushcfunction(L, traceback);
         assert(lua_gettop(L) == 1);
 
-        r = luaL_loadfile(L, conf.source.data());
+        int r = luaL_loadfile(L, conf.source.data());
         MOON_CHECK(r == LUA_OK, moon::format("loadfile %s", lua_tostring(L, -1)));
 
+        std::string initialize = server_->get_env("PATH");
         int nargs = (conf.params.empty()?0:1);
         if (nargs > 0)
-        {
-            r = luaL_dostring(L, conf.params.data());
-            MOON_CHECK(r == LUA_OK, moon::format("params %s", lua_tostring(L, -1)));
-        }
+            initialize.append(conf.params);
+        r = luaL_dostring(L, initialize.data());
+        MOON_CHECK(r == LUA_OK, moon::format("initialize %s", lua_tostring(L, -1)));
 
         r = lua_pcall(L, nargs, 0, 1);
         MOON_CHECK(r == LUA_OK, moon::format("run %s", lua_tostring(L, -1)));
