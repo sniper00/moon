@@ -137,11 +137,14 @@ typedef struct lpb_State {
     pb_Cache  cache;
     pb_Buffer buffer;
     int defs_index;
-    int hooks_index;
+    int enc_hooks_index;
+    int dec_hooks_index;
     unsigned use_hooks     : 1; /* lpb_Int64Mode */
     unsigned enum_as_value : 1;
     unsigned default_mode  : 2; /* lpb_DefMode */
     unsigned int64_mode    : 2; /* lpb_Int64Mode */
+    unsigned encode_default_values : 1;
+    unsigned decode_default_array  : 1;
 } lpb_State;
 
 static int lpb_reftable(lua_State *L, int ref) {
@@ -158,8 +161,11 @@ static int lpb_reftable(lua_State *L, int ref) {
 static void lpb_pushdeftable(lua_State *L, lpb_State *LS)
 { LS->defs_index = lpb_reftable(L, LS->defs_index); }
 
-static void lpb_pushhooktable(lua_State *L, lpb_State *LS)
-{ LS->hooks_index = lpb_reftable(L, LS->hooks_index); }
+static void lpb_pushenchooktable(lua_State *L, lpb_State *LS)
+{ LS->enc_hooks_index = lpb_reftable(L, LS->enc_hooks_index); }
+
+static void lpb_pushdechooktable(lua_State *L, lpb_State *LS)
+{ LS->dec_hooks_index = lpb_reftable(L, LS->dec_hooks_index); }
 
 static int Lpb_delete(lua_State *L) {
     lpb_State *LS = (lpb_State*)luaL_testudata(L, 1, PB_STATE);
@@ -171,7 +177,8 @@ static int Lpb_delete(lua_State *L) {
         LS->state = NULL;
         pb_resetbuffer(&LS->buffer);
         luaL_unref(L, LUA_REGISTRYINDEX, LS->defs_index);
-        luaL_unref(L, LUA_REGISTRYINDEX, LS->hooks_index);
+        luaL_unref(L, LUA_REGISTRYINDEX, LS->enc_hooks_index);
+        luaL_unref(L, LUA_REGISTRYINDEX, LS->dec_hooks_index);
     }
     return 0;
 }
@@ -186,8 +193,9 @@ static lpb_State *default_lstate(lua_State *L) {
         LS = (lpb_State*)lua_newuserdatauv(L, sizeof(lpb_State), 0);
         memset(LS, 0, sizeof(lpb_State));
         LS->defs_index = LUA_NOREF;
-        LS->hooks_index = LUA_NOREF;
-        if (NULL != global_state){
+        LS->enc_hooks_index = LUA_NOREF;
+        LS->dec_hooks_index = LUA_NOREF;
+  		if (NULL != global_state){
             LS->state = global_state;
         }
         else{
@@ -1406,7 +1414,24 @@ static int Lpb_hook(lua_State *L) {
     if (type != LUA_TNONE && type != LUA_TNIL && type != LUA_TFUNCTION)
         typeerror(L, 2, "function");
     lua_settop(L, 2);
-    lpb_pushhooktable(L, LS);
+    lpb_pushdechooktable(L, LS);
+    lua_rawgetp(L, 3, t);
+    if (type != LUA_TNONE) {
+        lua_pushvalue(L, 2);
+        lua_rawsetp(L, 3, t);
+    }
+    return 1;
+}
+
+static int Lpb_encode_hook(lua_State *L) {
+    lpb_State *LS = default_lstate(L);
+    const pb_Type *t = lpb_type(LS, lpb_checkslice(L, 1));
+    int type = lua_type(L, 2);
+    if (t == NULL) luaL_argerror(L, 1, "type not found");
+    if (type != LUA_TNONE && type != LUA_TNIL && type != LUA_TFUNCTION)
+        typeerror(L, 2, "function");
+    lua_settop(L, 2);
+    lpb_pushenchooktable(L, LS);
     lua_rawgetp(L, 3, t);
     if (type != LUA_TNONE) {
         lua_pushvalue(L, 2);
@@ -1423,8 +1448,10 @@ static int Lpb_clear(lua_State *L) {
         pb_free(&LS->local), pb_init(&LS->local);
         luaL_unref(L, LUA_REGISTRYINDEX, LS->defs_index);
         LS->defs_index = LUA_NOREF;
-        luaL_unref(L, LUA_REGISTRYINDEX, LS->hooks_index);
-        LS->hooks_index = LUA_NOREF;
+        luaL_unref(L, LUA_REGISTRYINDEX, LS->enc_hooks_index);
+        LS->enc_hooks_index = LUA_NOREF;
+        luaL_unref(L, LUA_REGISTRYINDEX, LS->dec_hooks_index);
+        LS->dec_hooks_index = LUA_NOREF;
         return 0;
     }
     LS->state = &LS->local;
@@ -1482,6 +1509,19 @@ static void lpb_checktable(lua_State *L, const pb_Field *f) {
             (const char*)f->name, luaL_typename(L, -1));
 }
 
+static void lpb_useenchooks(lua_State *L, lpb_State *LS, const pb_Type *t) {
+    lpb_pushenchooktable(L, LS);
+    if (lua53_rawgetp(L, -1, t) != LUA_TNIL) {
+        lua_pushvalue(L, -3);
+        lua_call(L, 1, 1);
+        if (!lua_isnil(L, -1)) {
+            lua_pushvalue(L, -1);
+            lua_replace(L, -4);
+        }
+    }
+    lua_pop(L, 2);
+}
+
 static void lpbE_enum(lpb_Env *e, const pb_Field *f) {
     lua_State *L = e->L;
     pb_Buffer *b = e->b;
@@ -1508,10 +1548,12 @@ static void lpbE_field(lpb_Env *e, const pb_Field *f, size_t *plen) {
     if (plen) *plen = 0;
     switch (f->type_id) {
     case PB_Tenum:
+        lpb_useenchooks(L, e->LS, f->type);
         lpbE_enum(e, f);
         break;
 
     case PB_Tmessage:
+        lpb_useenchooks(L, e->LS, f->type);
         lpb_checktable(L, f);
         len = pb_bufflen(b);
         lpb_encode(e, f->type);
@@ -1532,7 +1574,7 @@ static void lpbE_tagfield(lpb_Env *e, const pb_Field *f, int ignorezero) {
             pb_pair(f->number, pb_wtypebytype(f->type_id)));
     size_t ignoredlen;
     lpbE_field(e, f, &ignoredlen);
-    if (ignoredlen != 0 && ignorezero)
+    if (!e->LS->encode_default_values && ignoredlen != 0 && ignorezero)
         e->b->size -= (unsigned)(ignoredlen + hlen);
 }
 
@@ -1609,6 +1651,7 @@ static int Lpb_encode(lua_State *L) {
     e.L = L, e.LS = LS, e.b = test_buffer(L, 3);
     if (e.b == NULL) pb_resetbuffer(e.b = &LS->buffer);
     lua_pushvalue(L, 2);
+    lpb_useenchooks(L, e.LS, t);
     lpb_encode(&e, t);
     if (e.b != &LS->buffer)
         lua_settop(L, 3);
@@ -1626,8 +1669,8 @@ static int Lpb_encode(lua_State *L) {
 
 static int lpbD_message(lpb_Env *e, const pb_Type *t);
 
-static void lpb_usehooks(lua_State *L, lpb_State *LS, const pb_Type *t) {
-    lpb_pushhooktable(L, LS);
+static void lpb_usedechooks(lua_State *L, lpb_State *LS, const pb_Type *t) {
+    lpb_pushdechooktable(L, LS);
     if (lua53_rawgetp(L, -1, t) != LUA_TNIL) {
         lua_pushvalue(L, -3);
         lua_call(L, 1, 1);
@@ -1642,7 +1685,7 @@ static void lpb_usehooks(lua_State *L, lpb_State *LS, const pb_Type *t) {
 static void lpb_pushtypetable(lua_State *L, lpb_State *LS, const pb_Type *t) {
     const pb_Field *f = NULL;
     int mode = LS->default_mode;
-    lua_createtable(L, 0, t->field_count);
+    lua_createtable(L, 0, t->field_count - t->oneof_count);
     switch (t->is_proto3 && mode == LPB_DEFDEF ? LPB_COPYDEF : mode) {
     case LPB_COPYDEF:
         while (pb_nextfield(t, &f))
@@ -1657,6 +1700,11 @@ static void lpb_pushtypetable(lua_State *L, lpb_State *LS, const pb_Type *t) {
         lua_setmetatable(L, -2);
         break;
     default: /* no default value */
+        if (LS->decode_default_array) {
+            while (pb_nextfield(t, &f))
+                if (f->repeated && lpb_pushdefault(L, LS, f, t->is_proto3))
+                    lua_setfield(L, -2, (const char*)f->name);
+        }
         break;
     }
 }
@@ -1684,7 +1732,7 @@ static void lpbD_rawfield(lpb_Env *e, const pb_Field *f) {
             ev = pb_field(f->type, (int32_t)u64);
         if (ev) lua_pushstring(L, (const char*)ev->name);
         else lpb_pushinteger(L, (lua_Integer)u64, default_lstate(L)->int64_mode);
-        if (e->LS->use_hooks) lpb_usehooks(L, e->LS, f->type);
+        if (e->LS->use_hooks) lpb_usedechooks(L, e->LS, f->type);
         break;
 
     case PB_Tmessage:
@@ -1768,6 +1816,7 @@ static int lpbD_message(lpb_Env *e, const pb_Type *t) {
     lua_State *L = e->L;
     pb_Slice *s = e->s;
     uint32_t tag;
+    luaL_checkstack(L, t->field_count * 2, "not enough stack space for fields");
     while (pb_readvarint32(s, &tag)) {
         const pb_Field *f = pb_field(t, pb_gettag(tag));
         if (f == NULL)
@@ -1782,7 +1831,7 @@ static int lpbD_message(lpb_Env *e, const pb_Type *t) {
             lua_rawset(L, -3);
         }
     }
-    if (e->LS->use_hooks) lpb_usehooks(L, e->LS, t);
+    if (e->LS->use_hooks) lpb_usedechooks(L, e->LS, t);
     return 1;
 }
 
@@ -1801,9 +1850,29 @@ static int lpb_decode(lua_State *L, pb_Slice s, int start) {
 }
 
 static int Lpb_decode(lua_State *L) {
-    return lpb_decode(L, lua_isnoneornil(L, 2) ?
-            pb_lslice(NULL, 0) :
-            lpb_checkslice(L, 2), 3);
+    //return lpb_decode(L, lua_isnoneornil(L, 2) ?
+    //        pb_lslice(NULL, 0) :
+    //        lpb_checkslice(L, 2), 3);
+
+    size_t size = 0;
+    const char* data = NULL;
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        data = luaL_checklstring(L, 2, &size);
+    }
+    else {
+        data = (const char*)lua_touserdata(L, 2);
+        size = luaL_checkinteger(L, 3);
+    }
+    return lpb_decode(L, pb_lslice(data, size), 4);
+}
+
+static int Lpb_share_state(lua_State* L) {
+    if (NULL != global_state) {
+        return luaL_error(L, "already share pbstate");
+    }
+    lpb_State* LS = default_lstate(L);
+    global_state = &LS->local;
+    return 0;
 }
 
 
@@ -1822,6 +1891,10 @@ static int Lpb_option(lua_State *L) {
     X(8, use_default_metatable, LS->default_mode = LPB_METADEF)    \
     X(9, enable_hooks,          LS->use_hooks = 1)                 \
     X(10, disable_hooks,        LS->use_hooks = 0)                 \
+    X(11, encode_default_values,LS->encode_default_values = 1)     \
+    X(12, no_encode_default_values,LS->encode_default_values = 0)  \
+    X(13, decode_default_array, LS->decode_default_array = 1)      \
+    X(14, no_decode_default_array, LS->decode_default_array = 0)   \
 
     static const char *opts[] = {
 #define X(ID,NAME,CODE) #NAME,
@@ -1857,11 +1930,13 @@ LUALIB_API int luaopen_pb(lua_State *L) {
         ENTRY(enum),
         ENTRY(defaults),
         ENTRY(hook),
+        ENTRY(encode_hook),
         ENTRY(tohex),
         ENTRY(fromhex),
         ENTRY(result),
         ENTRY(option),
         ENTRY(state),
+        ENTRY(share_state),
 #undef  ENTRY
         { NULL, NULL }
     };
@@ -1878,33 +1953,6 @@ LUALIB_API int luaopen_pb(lua_State *L) {
     luaL_newlib(L, libs);
     return 1;
 }
-
-static int Lpb_decode_unsafe(lua_State *L) {
-    const char *data = (const char *)lua_touserdata(L, 2);
-    size_t size = (size_t)luaL_checkinteger(L, 3);
-    if (data == NULL) typeerror(L, 2, "userdata");
-    return lpb_decode(L, pb_lslice(data, size), 4);
-}
-
-static int Lpb_share_state(lua_State *L) {
-    if (NULL != global_state){
-        return luaL_error(L, "already share pbstate");
-    }
-    lpb_State* LS = default_lstate(L);
-    global_state = &LS->local;
-    return 0;
-}
-
-LUALIB_API int luaopen_pb_unsafe(lua_State *L) {
-    luaL_Reg libs[] = {
-        { "decode", Lpb_decode_unsafe },
-        { "share_state", Lpb_share_state },
-        { NULL, NULL }
-    };
-    luaL_newlib(L, libs);
-    return 1;
-}
-
 
 PB_NS_END
 
