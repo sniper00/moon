@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
             }
             std::string lualibdir = p.string();
             moon::replace(lualibdir, "\\", "/");
-            server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path", lualibdir.data()));
+            server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path\n", lualibdir.data()));
         }
 
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());
@@ -264,7 +264,6 @@ extern "C"
 
         //custom
         REGISTER_CUSTOM_LIBRARY("pb", luaopen_pb);
-        REGISTER_CUSTOM_LIBRARY("pb.unsafe", luaopen_pb_unsafe);
         REGISTER_CUSTOM_LIBRARY("crypt", luaopen_crypt);
         REGISTER_CUSTOM_LIBRARY("aoi", luaopen_aoi);
         REGISTER_CUSTOM_LIBRARY("clonefunc", luaopen_clonefunc);
