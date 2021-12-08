@@ -41,10 +41,11 @@ static int lfs_isdir(lua_State* L)
         lua_pushboolean(L, res ? 1 : 0);
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.isdir %s", e.what());
+        lua_pushfstring(L, "fs.isdir %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_join(lua_State* L)
@@ -58,10 +59,11 @@ static int lfs_join(lua_State* L)
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.join %s", e.what());
+        lua_pushfstring(L, "fs.join %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_exists(lua_State* L)
@@ -72,10 +74,11 @@ static int lfs_exists(lua_State* L)
         lua_pushboolean(L, res ? 1 : 0);
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.exists %s", e.what());
+        lua_pushfstring(L, "fs.exists %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_mkdir(lua_State* L)
@@ -86,10 +89,11 @@ static int lfs_mkdir(lua_State* L)
         lua_pushboolean(L, res ? 1 : 0);
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.mkdir %s", e.what());
+        lua_pushfstring(L, "fs.mkdir %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_remove(lua_State* L)
@@ -104,10 +108,11 @@ static int lfs_remove(lua_State* L)
         lua_pushboolean(L, res ? 1 : 0);
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.remove %s", e.what());
+        lua_pushfstring(L, "fs.remove %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_cwd(lua_State* L)
@@ -118,10 +123,11 @@ static int lfs_cwd(lua_State* L)
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.cwd %s", e.what());
+        lua_pushfstring(L, "fs.cwd %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_split(lua_State* L)
@@ -135,10 +141,11 @@ static int lfs_split(lua_State* L)
         lua_pushlstring(L, basename.data(), basename.size());
         return 2;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.split %s", e.what());
+        lua_pushfstring(L, "fs.split %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_ext(lua_State* L)
@@ -150,10 +157,11 @@ static int lfs_ext(lua_State* L)
         lua_pushlstring(L, ext.data(), ext.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.ext %s", e.what());
+        lua_pushfstring(L, "fs.ext %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_root(lua_State* L)
@@ -165,10 +173,11 @@ static int lfs_root(lua_State* L)
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.root %s", e.what());
+        lua_pushfstring(L, "fs.root %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_stem(lua_State* L)
@@ -180,10 +189,11 @@ static int lfs_stem(lua_State* L)
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.stem %s", e.what());
+        lua_pushfstring(L, "fs.stem %s", e.what());
     }
+    return lua_error(L);
 }
 
 static int lfs_abspath(lua_State* L)
@@ -195,10 +205,11 @@ static int lfs_abspath(lua_State* L)
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        return luaL_error(L, "fs.abspath %s", e.what());
+        lua_pushfstring(L, "fs.abspath %s", e.what());
     }
+    return lua_error(L);
 }
 
 extern "C"
