@@ -2,23 +2,20 @@ local moon = require("moon")
 
 local function new_test(name)
     return setmetatable({}, { __close = function(...)
-        moon.error(...)
+        moon.warn(...)
     end, __name = "closemeta:" .. name})
 end
 
 local i = 0
 moon.dispatch("lua", function()
-    moon.async(function()
-        i = i + 1
-        if i==2 then
-            local c<close> = new_test("dispatch_error")
-            error("dispatch_error")
-        else
-            local c<close> = new_test("dispatch_wait")
-            moon.sleep(1000000)
-        end
-    end)
-
+    i = i + 1
+    if i==2 then
+        local c<close> = new_test("dispatch_error")
+        error("dispatch_error")
+    else
+        local c<close> = new_test("dispatch_wait")
+        moon.sleep(1000000)
+    end
 end)
 
 moon.async(function()

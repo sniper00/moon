@@ -1,9 +1,7 @@
 local moon = require("moon")
 local seri = require("seri")
-local buffer = require("buffer")
 
 local unpack_one = seri.unpack_one
-local wfront = buffer.write_front
 
 local tbinsert = table.insert
 
@@ -123,7 +121,14 @@ if conf.name then
         return res
     end
 
-    moon.dispatch('lua',function(msg,unpack)
+    local function xpcall_ret(ok, ...)
+        if ok then
+            return moon.pack(...)
+        end
+        return moon.pack(false, ...)
+    end
+
+    moon.dispatch('lua', function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd, sz, len = unpack_one(buf, true)
         if cmd == "Q" then
@@ -136,21 +141,17 @@ if conf.name then
         local fn = command[cmd]
         if fn then
             if sessionid == 0 then
-                fn(sender, sessionid, buf, msg)
+                fn(sender, sessionid, moon.unpack(sz, len))
             else
                 moon.async(function()
-                    local unsafe_buf = seri.pack(xpcall(fn, debug.traceback, unpack(sz, len)))
-                    local ok = unpack_one(unsafe_buf, true)
-                    if not ok then
-                        wfront(unsafe_buf, seri.packs(false))
-                    end
+                    local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
                     moon.raw_send("lua", sender, "", unsafe_buf, sessionid)
                 end)
             end
         else
             moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
-    end)
+    end, true)
 
     local function wait_all_send()
         while true do
@@ -182,7 +183,8 @@ else
 
     local json = require("json")
     local yield = coroutine.yield
-
+    local buffer = require("buffer")
+    local wfront = buffer.write_front
     local raw_send = moon.raw_send
     local packstr = seri.packs
     local concat = json.concat

@@ -10,21 +10,15 @@ if conf and conf.slave then
         moon.quit()
     end
 
-    local function docmd(sender,header,...)
-    -- body
-        local f = command[header]
+    print("conf:", conf.message)
+
+    moon.dispatch('lua',function(sender, session, cmd, ...)
+        local f = command[cmd]
         if f then
             f(sender,...)
         else
-            error(string.format("Unknown command %s", tostring(header)))
+            error(string.format("Unknown command %s", tostring(cmd)))
         end
-    end
-
-    print("conf:", conf.message)
-
-    moon.dispatch('lua',function(msg,unpack)
-        local sender, sz, len = moon.decode(msg,"SC")
-        docmd(sender, unpack(sz, len))
     end)
 
     if conf and conf.auto_quit then

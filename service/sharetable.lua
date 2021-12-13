@@ -1,5 +1,4 @@
 local moon = require "moon"
-local seri = require "seri"
 local core = require "sharetable.core"
 local fs = require("fs")
 
@@ -115,13 +114,8 @@ local function sharetable_service()
 		-- no return
 	end
 
-	local unpack = seri.unpack
-	local unpack_one = seri.unpack_one
-
-    moon.dispatch("lua",function(msg)
-        local sender, sessionid, buf = moon.decode(msg, "SEB")
-        local cmd, sz, len = unpack_one(buf)
-		sharetable[cmd](sender, sessionid, unpack(sz, len))
+    moon.dispatch("lua",function(sender, session, cmd, ...)
+		sharetable[cmd](sender, session, ...)
 	end)
 
     ---sharetable service's 'files' use fs.join(conf.dir, filename)

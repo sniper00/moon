@@ -138,10 +138,6 @@ if conf.name then
     assert(fd, "connect db redis failed")
     socket.close(fd)
 
-    local buffer = require("buffer")
-    local unpack_one = seri.unpack_one
-    local buf_write_front = buffer.write_front
-
     local command = {}
 
     function command.len()
@@ -152,7 +148,14 @@ if conf.name then
         return res
     end
 
-    moon.dispatch('lua',function(msg,unpack)
+    local function xpcall_ret(ok, ...)
+        if ok then
+            return moon.pack(...)
+        end
+        return moon.pack(false, ...)
+    end
+
+    moon.dispatch('lua',function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd, sz, len = seri.unpack_one(buf, true)
         if cmd == "Q" then
@@ -163,24 +166,20 @@ if conf.name then
 
         local fn = command[cmd]
         if fn then
-            if sessionid == 0 then
-                fn(sender, sessionid, buf, msg)
-            else
-                moon.async(function()
+            moon.async(function()
+                if sessionid == 0 then
+                    fn(sender, sessionid, buf, msg)
+                else
                     if sessionid ~= 0 then
-                        local unsafe_buf = seri.pack(xpcall(fn, debug.traceback, unpack(sz, len)))
-                        local ok = unpack_one(unsafe_buf, true)
-                        if not ok then
-                            buf_write_front(unsafe_buf, seri.packs(false))
-                        end
+                        local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
                         moon.raw_send("lua", sender, "", unsafe_buf, sessionid)
                     end
-                end)
-            end
+                end
+            end)
         else
             moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
-    end)
+    end, true)
 
     local function wait_all_send()
         while true do

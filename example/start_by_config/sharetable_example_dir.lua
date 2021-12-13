@@ -1,7 +1,7 @@
 local moon = require("moon")
 local seri = require("seri")
 local sharetable = require("sharetable")
-
+local test_assert = require("test_assert")
 local conf = ... or {}
 
 local name = "sharedata"
@@ -25,14 +25,10 @@ if conf.agent then
         print_r(data)
     end
 
-    moon.dispatch('lua',function(msg)
-        local sender, sessionid, buf = moon.decode(msg, "SEB")
-        local cmd, sz, len = seri.unpack_one(buf)
+    moon.dispatch('lua',function(sender, session, cmd, ...)
         local f = command[cmd]
         if f then
-            moon.async(function()
-                moon.response("lua", sender, sessionid, f(seri.unpack(sz, len)))
-            end)
+            moon.response("lua", sender, session, f(...))
         else
             moon.error(moon.name, "recv unknown cmd "..cmd)
         end
@@ -88,6 +84,8 @@ else
         print(moon.co_call("lua", agent, "UPDATE"))
 
         moon.remove_service(agent)
+        moon.exit(-1)
+        -- moon.remove_service(moon.queryservice("sharetable"))
     end)
 end
 

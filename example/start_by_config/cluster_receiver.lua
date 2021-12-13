@@ -49,24 +49,16 @@ moon.async(function()
 end)
 
 
-local function docmd(sender,sessionid, CMD,...)
+moon.dispatch('lua',function(sender, session, CMD, ...)
     local f = command[CMD]
     if f then
         if CMD ~= 'ADD' then
-            local args = {...}
-            moon.async(function ()
-                --moon.sleep(20000)
-                moon.response('lua',sender,sessionid,f(table.unpack(args)))
-            end)
+            --moon.sleep(20000)
+            moon.response('lua',sender, session,f(...))
         end
     else
         error(string.format("Unknown command %s", tostring(CMD)))
     end
-end
-
-moon.dispatch('lua',function(msg,unpack)
-    local sender, sessionid, sz, len = moon.decode(msg, "SEC")
-    docmd(sender, sessionid, unpack(sz, len))
 end)
 
 moon.async(function()

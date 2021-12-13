@@ -7,28 +7,24 @@ local onecount = 1000
 
 if arg and arg.runner then
     if arg.type == "receiver" then
-        moon.dispatch("lua", function(msg, unpack)
-            local sender, session, sz, len = moon.decode(msg, "SEC")
-            moon.response("lua", sender, session, unpack(sz, len))
+        moon.dispatch("lua", function(sender, session, ...)
+            moon.response("lua", sender, session, ...)
         end)
         return
     else
-        moon.dispatch("lua", function(msg, unpack)
-            moon.async(function()
-                for i=1,onecount do
-                    local ok,err= moon.co_call("lua", arg.target, "hello")
-                    assert(ok, err)
-                end
-                moon.send("lua", arg.main, moon.clock())
-            end)
+        moon.dispatch("lua", function(sender, session, ...)
+            for i=1,onecount do
+                local ok,err= moon.co_call("lua", arg.target, "hello")
+                assert(ok, err)
+            end
+            moon.send("lua", arg.main, moon.clock())
         end)
     end
 else
     local counter = 0
     local stime = 0
     local endtime = 0
-    moon.dispatch("lua", function(msg, unpack)
-        local etime = unpack(moon.decode(msg, "C"))
+    moon.dispatch("lua", function(sender, session, etime)
         if etime > endtime then
             endtime = etime
         end
