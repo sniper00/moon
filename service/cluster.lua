@@ -95,9 +95,8 @@ local function cluster_service()
                 assert(address>0, tostring(header.to_sname))
                 local session = moon.make_response(address)
                 redirect(msg, "", address, moon.PTYPE_LUA, moon.addr(), -session)
-                local res = {co_yield()}
                 header.session = -header.session
-                socket.write(fd, pack(header, table.unpack(res)))
+                socket.write(fd, pack(header, co_yield()))
             end)
         elseif header.session > 0 then --receive response message
             if remove_send_watch(fd, header.from_addr, header.session) then
@@ -250,27 +249,29 @@ local function cluster_service()
         end
     end)
 
-    moon.dispatch("lua",function(msg)
-        local sender, sessionid, buf = moon.decode(msg, "SEB")
-        local cmd = unpack_one(buf, true)
-        local fn = command[cmd]
-        if fn then
-            moon.async(function()
-                if sessionid ~= 0 then
-                    local unsafe_buf = pack(xpcall(fn, debug.traceback, msg))
-                    local ok = unpack_one(unsafe_buf, true)
-                    if not ok then
-                        wfront(unsafe_buf, packs(false))
-                    end
-                    moon.raw_send("lua", sender, "", unsafe_buf, sessionid)
+    local function xpcall_ret(ok, ...)
+        if ok then
+            return moon.pack(...)
+        end
+        return moon.pack(false, ...)
+    end
+
+    moon.dispatch("lua", function(m)
+        moon.async(function(msg)
+            local sender, session, buf = moon.decode(msg, "SEB")
+            local cmd = unpack_one(buf, true)
+            local fn = command[cmd]
+            if fn then
+                if session ~= 0 then
+                    moon.raw_send("lua", sender, "", xpcall_ret(xpcall(fn, debug.traceback, msg)), session)
                 else
                     fn(msg)
                 end
-            end)
-        else
-            moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
-        end
-    end)
+            else
+                moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
+            end
+        end, m)
+    end, true)
 
     moon.shutdown(function()
         moon.quit()

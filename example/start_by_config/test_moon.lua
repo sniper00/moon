@@ -74,18 +74,13 @@ command.FAILED = function(name, sid, dsp)
     end)
 end
 
-local function docmd(cmd,...)
+moon.dispatch('lua',function(sender, session, cmd, ...)
     local f = command[cmd]
     if f then
         f(...)
     else
         error(string.format("Unknown command %s", tostring(cmd)))
     end
-end
-
-moon.dispatch('lua',function(msg,unpack)
-    local sz, len = moon.decode(msg, "C")
-    docmd(unpack(sz, len))
 end)
 
 next_case()

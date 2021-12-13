@@ -102,7 +102,6 @@ local uuid = 0
 local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
-
 local timer_routine = {}
 
 local function coresume(co, ...)
@@ -140,44 +139,6 @@ function moon.cancel_session(sessionid)
 end
 
 moon.make_response = make_response
-
----@param msg userdata @message*
----@param PTYPE string
-local function _default_dispatch(msg, PTYPE)
-    local p = protocol[PTYPE]
-    if not p then
-        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, _decode(msg, "S")))
-    end
-
-    local sessionid = _decode(msg, "E")
-    if sessionid > 0 and PTYPE ~= moon.PTYPE_ERROR then
-        session_watcher[sessionid] = nil
-        local co = session_id_coroutine[sessionid]
-        if co then
-            session_id_coroutine[sessionid] = nil
-            --print(coroutine.status(co))
-            if p.unpack then
-                coresume(co, p.unpack(_decode(msg,"C")))
-            else
-                coresume(co, msg)
-            end
-            --print(coroutine.status(co))
-            return
-        end
-
-        if co ~= false then
-            error(string.format( "%s: response [%u] can not find co.",moon.name, sessionid))
-        end
-	else
-        if not p.dispatch then
-			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name, p.PTYPE))
-			return
-        end
-        p.dispatch(msg, p.unpack)
-    end
-end
-
-core.callback(_default_dispatch)
 
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
@@ -294,14 +255,18 @@ local co_num = 0
 
 local co_pool = setmetatable({}, {__mode = "kv"})
 
-local function routine(fn)
+local function invoke(co, fn, ...)
+    co_num = co_num + 1
+    fn(...)
+    co_num = co_num - 1
+    co_pool[#co_pool + 1] = co
+end
+
+local function routine(fn, ...)
     local co = co_running()
+    invoke(co, fn, ...)
     while true do
-        co_num = co_num + 1
-        fn()
-        co_num = co_num - 1
-        co_pool[#co_pool + 1] = co
-        fn = co_yield()
+        invoke(co, co_yield())
     end
 end
 
@@ -309,12 +274,12 @@ end
 ---If `func` lacks call `coroutine.yield`, will run syncronously.
 ---@param func fun()
 ---@return thread
-function moon.async(func)
+function moon.async(func, ...)
     local co = tremove(co_pool)
     if not co then
         co = co_create(routine)
     end
-    coresume(co, func)
+    coresume(co, func, ...)
     return co
 end
 
@@ -330,7 +295,7 @@ function moon.wakeup(co, ...)
     end)
 end
 
----返回运行中的协程个数,和协程池空闲的协程个数
+---return count of running coroutine and total coroutine in coroutine pool
 function moon.coroutine_num()
     return co_num, #co_pool
 end
@@ -389,6 +354,54 @@ function moon.response(PTYPE, receiver, sessionid, ...)
 end
 
 ------------------------------------
+---@param msg userdata @message*
+---@param PTYPE string
+local function _default_dispatch(msg, PTYPE)
+    local p = protocol[PTYPE]
+    if not p then
+        error(string.format( "handle unknown PTYPE: %s. sender %u",PTYPE, _decode(msg, "S")))
+    end
+
+    local sender, session, sz, len = _decode(msg, "SEC")
+    if session > 0 and PTYPE ~= moon.PTYPE_ERROR then
+        session_watcher[session] = nil
+        local co = session_id_coroutine[session]
+        if co then
+            session_id_coroutine[session] = nil
+            --print(coroutine.status(co))
+            if p.unpack then
+                coresume(co, p.unpack(sz, len))
+            else
+                coresume(co, msg)
+            end
+            --print(coroutine.status(co))
+            return
+        end
+
+        if co ~= false then
+            error(string.format( "%s: response [%u] can not find co.",moon.name, session))
+        end
+	else
+        local dispatch = p.dispatch
+        if not dispatch then
+			error(string.format( "[%s] dispatch PTYPE [%u] is nil",moon.name, p.PTYPE))
+			return
+        end
+
+        if not p.israw and p.unpack then
+            local co = tremove(co_pool)
+            if not co then
+                co = co_create(routine)
+            end
+            coresume(co, dispatch, sender, session, p.unpack(sz, len))
+        else
+            dispatch(msg)
+        end
+    end
+end
+
+core.callback(_default_dispatch)
+
 function moon.register_protocol(t)
     local PTYPE = t.PTYPE
     if protocol[PTYPE] then
@@ -400,16 +413,15 @@ end
 
 local reg_protocol = moon.register_protocol
 
-
----设置指定协议消息的消息处理函数
 ---@param PTYPE string
----@param cb fun(msg:userdata,ptype:table)
+---@param fn fun(msg:userdata,ptype:table)
 ---@return boolean
-function moon.dispatch(PTYPE, cb)
+function moon.dispatch(PTYPE, fn, israw)
     local p = protocol[PTYPE]
-    if cb then
+    if fn then
         local ret = p.dispatch
-        p.dispatch = cb
+        p.dispatch = fn
+        p.israw = israw
         return ret
     else
         return p and p.dispatch
@@ -444,7 +456,6 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = moon.tostring,
     dispatch = function(msg)
         local sessionid, content, data = _decode(msg,"EHZ")
         if data and #data >0 then
@@ -485,7 +496,6 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = moon.tostring,
     dispatch = function(msg)
         local sender, header = _decode(msg,"SH")
         local func = system_command[header]
@@ -617,14 +627,12 @@ reg_protocol {
     PTYPE = moon.PTYPE_DEBUG,
     pack = moon.pack,
     unpack = moon.unpack,
-    dispatch = function(msg, unpack_fn)
-        local sender, sessionid, sz, len = _decode(msg,"SEC")
-        local params = {unpack_fn(sz, len)}
-        local func = debug_command[params[1]]
+    dispatch = function(sender, session, cmd, ...)
+        local func = debug_command[cmd]
         if func then
-            func(sender, sessionid, table.unpack(params,2))
+            func(sender, session, ...)
         else
-            moon.response("debug",sender,sessionid, "unknow debug cmd "..params[1])
+            moon.response("debug",sender, session, "unknow debug cmd "..cmd)
         end
     end
 }

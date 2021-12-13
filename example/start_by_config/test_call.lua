@@ -31,18 +31,13 @@ if conf and conf.receiver then
         moon.quit()
     end
 
-    local function docmd(sender,sessionid, CMD,...)
-        local f = command[CMD]
+    moon.dispatch('lua',function(sender, session, cmd, ...)
+        local f = command[cmd]
         if f then
-            moon.response('lua',sender,sessionid,f(...))
+            moon.response('lua',sender,session,f(...))
         else
-            error(string.format("Unknown command %s", tostring(CMD)))
+            error(string.format("Unknown command %s", tostring(cmd)))
         end
-    end
-
-    moon.dispatch('lua',function(msg,unpack)
-        local sender, sessionid, sz, len = moon.decode(msg, "SEC")
-        docmd(sender,sessionid, unpack(sz, len))
     end)
 
 else

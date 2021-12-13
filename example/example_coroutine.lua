@@ -15,20 +15,14 @@ if conf and conf.receiver then
         moon.response("lua", sender, sessionid)
     end
 
-    local function docmd(sender,sessionid,cmd,...)
-        -- body
+    moon.dispatch('lua',function(sender, session, cmd, ...)
+        -- sessionid 对应表示发送方 挂起的协程
         local f = command[cmd]
         if f then
-            f(sender,sessionid,...)
+            f(sender,session,...)
         else
             error(string.format("Unknown command %s", tostring(cmd)))
         end
-    end
-
-    moon.dispatch('lua',function(msg,unpack)
-        -- sessionid 对应表示发送方 挂起的协程
-        local sender, sessionid, sz, len = moon.decode(msg,"SEC")
-        docmd(sender,sessionid, unpack(sz, len))
     end)
 
 else

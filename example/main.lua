@@ -248,9 +248,6 @@ moon.shutdown(function()
         for _, addr in ipairs(addrs) do
             moon.remove_service(addr)
         end
-
-        moon.remove_service(moon.queryservice("sharetable"))
-
         moon.quit()
     end)
 end)

@@ -22,9 +22,13 @@ if conf and conf.receiver then
         end
     end
 
-    moon.dispatch('lua',function(msg,unpack)
-        local sender, p, n = moon.decode(msg,"SC")
-        docmd(sender, unpack(p, n))
+    moon.dispatch('lua',function(sender, session, cmd, ...)
+        local f = command[cmd]
+        if f then
+            f(sender,...)
+        else
+            error(string.format("Unknown command %s", tostring(cmd)))
+        end
     end)
 
     print("callback example: service receiver start")
@@ -38,18 +42,13 @@ else
         moon.exit(-1)
     end
 
-    local function docmd(header,...)
-          local f = command[header]
-          if f then
-              f(...)
-          else
-              error(string.format("Unknown command %s", tostring(header)))
-          end
-    end
-
-    moon.dispatch('lua',function(msg,unpack)
-        local sz, len = moon.decode(msg,"C")
-        docmd(unpack(sz, len))
+    moon.dispatch('lua',function(sender, session, cmd, ...)
+        local f = command[cmd]
+        if f then
+            f(...)
+        else
+            error(string.format("Unknown command %s", tostring(cmd)))
+        end
     end)
 
     print("callback example: service sender start")

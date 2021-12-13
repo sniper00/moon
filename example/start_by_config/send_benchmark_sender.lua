@@ -21,18 +21,13 @@ command.TEST = function()
     end
 end
 
-local function docmd(header,...)
-      local f = command[header]
-      if f then
-          f(...)
-      else
-          error(string.format("Unknown command %s", tostring(header)))
-      end
-end
-
-moon.dispatch('lua',function(msg,unpack)
-    local p, n = moon.decode(msg, "C")
-    docmd(unpack(p, n))
+moon.dispatch('lua',function(sender, session, cmd, ...)
+    local f = command[cmd]
+    if f then
+        f(...)
+    else
+        error(string.format("Unknown command %s", tostring(cmd)))
+    end
 end)
 
 receiver1 = moon.queryservice("send_benchmark_receiver1")
@@ -45,10 +40,10 @@ moon.async(function()
         moon.sleep(1000)
         sttime = moon.now()
         for _=1,ncount do
-            moon.send('lua', receiver1,"TEST","123456789")
-            moon.send('lua', receiver2,"TEST","123456789")
-            moon.send('lua', receiver3,"TEST","123456789")
-            moon.send('lua', receiver4,"TEST","123456789")
+            moon.send('lua', receiver1, "TEST", "123456789")
+            moon.send('lua', receiver2, "TEST", "123456789")
+            moon.send('lua', receiver3, "TEST", "123456789")
+            moon.send('lua', receiver4, "TEST", "123456789")
         end
     end
 end)
