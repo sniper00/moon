@@ -207,7 +207,7 @@ static int lrelease(lua_State* L)
 
 static int lcreate(lua_State* L)
 {
-    auto meshfile = moon::lua_check<std::string>(L, 1);
+    std::string meshfile = luaL_optstring(L, 1, "");
     int mask =  (int)luaL_optinteger(L, 2, 0);
 
     navmesh_proxy* proxy = (navmesh_proxy*)lua_newuserdata(L, sizeof(navmesh_proxy));
