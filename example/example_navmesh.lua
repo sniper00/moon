@@ -33,7 +33,7 @@ print(nav:random_position())
 print(nav:random_position_around_circle(sx, sy, sz, 10))
 
 
-local dynamic_nav = navmesh.new("")
+local dynamic_nav = navmesh.new()
 
 assert(dynamic_nav:load_dynamic("navmesh/nav_test_tilecache.bin"))
 
