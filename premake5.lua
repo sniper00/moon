@@ -66,7 +66,8 @@ project "moon"
         "clonefunc",
         "kcp",
         -- "mimalloc",
-        "mongo"
+        "mongo",
+        "navmesh"
     }
     defines {
         "ASIO_STANDALONE" ,
@@ -148,7 +149,7 @@ add_lua_module("./third/sharetable", "sharetable")
 add_lua_module("./third/clonefunc", "clonefunc")--for hotfix
 add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./third/pb", "pb")--protobuf
-add_lua_module("./third/lmongo", "mongo")--protobuf
+add_lua_module("./third/lmongo", "mongo")--mongo
 
 -------------------------laoi--------------------
 add_lua_module("./lualib-src/laoi", "aoi",function()
@@ -159,4 +160,18 @@ end)
 add_lua_module("./lualib-src/lkcp", "kcp", function()
     language "C++"
     files { "./third/kcp/**.h", "./third/kcp/**.c"}
+end)
+
+-------------------------navmesh--------------------
+add_lua_module("./lualib-src/lnavmesh", "navmesh", function()
+    language "C++"
+    includedirs {"./third/recastnavigation/Detour/Include"}
+    includedirs {"./third/recastnavigation/DetourCrowd/Include"}
+    includedirs {"./third/recastnavigation/DetourTileCache/Include"}
+    includedirs {"./third/recastnavigation/Recast/Include"}
+    files { "./third/recastnavigation/Detour/**.h", "./third/recastnavigation/Detour/**.cpp"}
+    files { "./third/recastnavigation/DetourCrowd/**.h", "./third/recastnavigation/DetourCrowd/**.cpp"}
+    files { "./third/recastnavigation/DetourTileCache/**.h", "./third/recastnavigation/DetourTileCache/**.cpp"}
+    files { "./third/recastnavigation/Recast/**.h", "./third/recastnavigation/Recast/**.cpp"}
+    files { "./third/fastlz/**.h", "./third/fastlz/**.c"}
 end)
