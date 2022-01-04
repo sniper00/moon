@@ -627,7 +627,7 @@ namespace moon
             int nPolys = 0;
             int nStraightPath = 0;
 
-            if (dtVdist2D(spos, epos) < 1000.0f)
+            if (dtVdist2DSqr(spos, epos) < 10000.0f)
             {
                 float t = 0.0f;
                 meshQuery->raycast(startRef, spos, epos, &queryFilter, &t, nullptr, mPolys.data(), &nPolys, MAX_POLYS);
