@@ -65,9 +65,10 @@ project "moon"
         "sharetable",
         "clonefunc",
         "kcp",
-        -- "mimalloc",
+        "json",
         "mongo",
-        "navmesh"
+        "navmesh",
+        -- "mimalloc",
     }
     defines {
         "ASIO_STANDALONE" ,
@@ -105,7 +106,7 @@ project "moon"
     注意：
     默认使用C编译器编译，可以使用 *addon 参数进行更改
 ]]
-local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon, macaddon )
+local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, macaddon )
     project(name)
         location("build/projects/%{prj.name}")
         objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"--编译生成的中间文件目录
@@ -124,8 +125,8 @@ local function add_lua_module(dir, name, normaladdon, winddowsaddon, linuxaddon,
         filter { "system:windows" }
             --links{"lua"} -- windows 版需要链接 lua 库
             --defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
-            if type(winddowsaddon)=="function" then
-                winddowsaddon()
+            if type(windowsaddon)=="function" then
+                windowsaddon()
             end
         filter {"system:linux"}
             if type(linuxaddon)=="function" then
@@ -151,15 +152,22 @@ add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./third/pb", "pb")--protobuf
 add_lua_module("./third/lmongo", "mongo")--mongo
 
--------------------------laoi--------------------
-add_lua_module("./lualib-src/laoi", "aoi",function()
+-------------------------json--------------------
+add_lua_module("./lualib-src/ljson", "json", function()
     language "C++"
+    defines{"YYJSON_DISABLE_WRITER"}
+    files { "./third/yyjson/**.h", "./third/yyjson/**.c"}
 end)
 
 -------------------------kcp--------------------
 add_lua_module("./lualib-src/lkcp", "kcp", function()
     language "C++"
     files { "./third/kcp/**.h", "./third/kcp/**.c"}
+end)
+
+-------------------------aoi--------------------
+add_lua_module("./lualib-src/laoi", "aoi",function()
+    language "C++"
 end)
 
 -------------------------navmesh--------------------

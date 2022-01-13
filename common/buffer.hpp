@@ -194,15 +194,6 @@ namespace moon
             allocator_.deallocate(data_, capacity_);
         }
 
-        void init(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0)
-        {
-            readpos_ = headreserved;
-            writepos_ = headreserved;
-            headreserved_ = headreserved;
-            prepare(capacity);
-            flag_ = 0;
-        }
-
         template<typename T>
         void write_back(const T* Indata, size_t count)
         {
@@ -210,12 +201,20 @@ namespace moon
             if (nullptr == Indata || 0 == count)
                 return;
             size_t n = sizeof(T) * count;
-
-            prepare(n);
-
-            auto* buff = reinterpret_cast<T*>(std::addressof(*end()));
+            auto* buff = reinterpret_cast<T*>(prepare(n));
             memcpy(buff, Indata, n);
             writepos_ += n;
+        }
+
+        void write_back(char c)
+        {
+            *prepare(1) = c;
+            ++writepos_;
+        }
+
+        void unsafe_write_back(char c)
+        {
+            *(data_ + (writepos_++)) = c;
         }
 
         template<typename T>
@@ -241,16 +240,27 @@ namespace moon
         template<typename T, typename =  std::enable_if_t<std::is_arithmetic_v<T>>>
         bool write_chars(T value)
         {
-            prepare(32);
-            auto* b = data() + size();
-            auto* e = b + 32;
-            auto res = std::to_chars(b, e, value);
-            if (res.ec != std::errc())
+            static constexpr size_t MAX_NUMBER_2_STR = 44;
+            auto* b = prepare(MAX_NUMBER_2_STR);
+#ifndef _MSC_VER//std::to_chars in C++17£ºgcc and clang only integral types supported
+            if constexpr (std::is_floating_point_v<T>)
             {
-                return false;
+                int len = std::snprintf(b, MAX_NUMBER_2_STR, "%.16g", value);
+                if (len < 0)
+                    return false;
+                commit(len);
+                return true;
             }
-            commit(res.ptr - b);
-            return true;
+            else
+#endif
+            {
+                auto* e = b + MAX_NUMBER_2_STR;
+                auto res = std::to_chars(b, e, value);
+                if (res.ec != std::errc())
+                    return false;
+                commit(res.ptr - b);
+                return true;
+            }
         }
 
         template<typename T>
@@ -334,13 +344,14 @@ namespace moon
             }
         }
 
-        void revert(size_t n) noexcept
+        pointer revert(size_t n) noexcept
         {
             assert(writepos_ >= (readpos_+n));
             if (writepos_ >= n)
             {
                 writepos_ -= n;
             }
+            return (data_ + writepos_);
         }
 
         const_iterator begin() const noexcept
@@ -389,11 +400,11 @@ namespace moon
             return headreserved_;
         }
 
-        void prepare(size_t need)
+        pointer prepare(size_t need)
         {
             if (writeablesize() >= need)
             {
-                return;
+                return (data_ + writepos_);
             }
 
             if (writeablesize() + readpos_ < need + headreserved_)
@@ -420,6 +431,7 @@ namespace moon
                 readpos_ = headreserved_;
                 writepos_ = readpos_ + readable;
             }
+            return (data_ + writepos_);
         }
 
         size_t writeablesize() const noexcept
