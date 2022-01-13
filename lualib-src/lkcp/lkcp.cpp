@@ -69,7 +69,7 @@ static int lua_ikcp_input(lua_State* L) {
     }
     if (size == 0 || nullptr == str)
         return 0;
-    auto res = ikcp_input(kcp, str, size);
+    auto res = ikcp_input(kcp, str, (int)size);
     lua_pushinteger(L, res);
     return 1;
 }
@@ -100,7 +100,7 @@ static int lua_ikcp_send(lua_State* L) {
     }
     if (size == 0 || nullptr == str)
         return 0;
-    auto res = ikcp_send(kcp, str, size);
+    auto res = ikcp_send(kcp, str, (int)size);
     lua_pushinteger(L, res);
     return 1;
 }
@@ -109,8 +109,7 @@ static int lua_ikcp_poll_read(lua_State* L) {
     ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
     if (kcp == NULL) { return luaL_error(L, "null kcp pointer"); }
     box* ud = (box*)kcp->user;
-    ud->rbuf.prepare(2048);
-    int len = ikcp_recv(kcp, ud->rbuf.data() + ud->rbuf.size(), ud->rbuf.writeablesize());
+    int len = ikcp_recv(kcp, ud->rbuf.prepare(2048), 2048);
     if (len > 0)
         ud->rbuf.commit(len);
 

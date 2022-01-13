@@ -139,7 +139,7 @@ namespace moon
                 buf_->prepare(size);
             }
 
-            asio::async_read(socket_, asio::buffer((buf_->data() + buf_->size()), size),
+            asio::async_read(socket_, asio::buffer(&(*buf_->end()), size),
                     [this, self = shared_from_this(), fin](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
