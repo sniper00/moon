@@ -195,7 +195,7 @@ local function read_chunked(fd, content_max_len)
         content_length = content_length + length
 
         if content_max_len and content_length > content_max_len then
-            return {protocol_error = string.format( "content length %d, limit %d", content_length, content_max_len )}
+            return {protocol_error = strfmt( "HTTP content length exceeded %d, request length %d", content_max_len, content_length)}
         end
 
         if length >0 then
@@ -227,7 +227,7 @@ local traceback = debug.traceback
 local function request_handler(fd, request)
     local response = http_response.new()
 
-    if static_content then
+    if static_content and (request.method == "GET" or request.method == "HEAD") then
         local request_path = request.path
         local static_src = static_content[request_path]
         if static_src then
@@ -317,11 +317,11 @@ local function read_request(fd)
     if content_length then
         content_length = tointeger(content_length)
         if not content_length then
-            return {protocol_error = "content-length is not number"}
+            return {protocol_error = "Content-length is not number"}
         end
 
         if M.content_max_len and content_length> M.content_max_len then
-            return {protocol_error = strfmt( "content length %d, limit %d",content_length,M.content_max_len )}
+            return {protocol_error = strfmt( "HTTP content length exceeded %d, request length %d", M.content_max_len, content_length)}
         end
 
         data, err = socket.read(fd, content_length)
@@ -347,19 +347,25 @@ end
 
 local listenfd
 
+---@param timeout integer @read timeout in seconds
 function M.start(fd, timeout)
     socket.settimeout(fd, timeout)
     moon.async(function()
         while true do
             local request = read_request(fd)
-            if request.socket_error or request.protocol_error then
+            if request.socket_error then
                 socket.close(fd)
-                if request.protocol_error then
-                    if M.error then
-                        M.error(fd, request.protocol_error)
-                    else
-                        moon.error(request.protocol_error)
-                    end
+                return
+            end
+
+            if request.protocol_error then
+                local res = http_response.new()
+                res.status_code = 400
+                socket.write_then_close(fd, seri.concat(res:tb()))
+                if M.error then
+                    M.error(fd, request.protocol_error)
+                else
+                    moon.error("HTTP_SERVER_ERROR: "..request.protocol_error)
                 end
                 return
             end
@@ -371,6 +377,9 @@ function M.start(fd, timeout)
     end)--async
 end
 
+---@param host string @ ip address
+---@param port integer @ port
+---@param timeout integer @read timeout in seconds
 function M.listen(host,port,timeout)
     assert(not listenfd,"http server can only listen port once.")
     listenfd = socket.listen(host, port, moon.PTYPE_TEXT)
