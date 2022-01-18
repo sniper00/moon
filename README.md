@@ -44,7 +44,6 @@ Moon is a lightweight online game server framework implement with multithread an
 
 - [asio](https://github.com/chriskohlhoff/asio)
 - [lua](https://github.com/cloudwu/skynet/tree/master/3rd/lua)
-- [rapidjson](https://github.com/Tencent/rapidjson)
 
 # Quick Start
 
