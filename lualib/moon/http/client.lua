@@ -143,81 +143,80 @@ end
 
 local M = {}
 
-local default_connect_timeout = 1000
+local default_connect_timeout<const> = 1000
 
-local default_read_timeout = 10000
+local default_read_timeout<const> = 10000
+
+local max_pool_num<const> = 10
 
 local keep_alive_host = {}
-
-local max_pool_num = 10
 
 ---@param options HttpOptions
 local function do_request(baseaddress, options, req, method)
     options.connect_timeout = options.connect_timeout or default_connect_timeout
     options.read_timeout = options.read_timeout or default_read_timeout
 
-::TRY_AGAIN::
     local fd, err
     local pool = keep_alive_host[baseaddress]
     if not pool then
         pool = {}
         keep_alive_host[baseaddress] = pool
-    elseif #pool >0 then
-        fd = table.remove(pool)
     end
 
-    local newconn = false
+    fd = table.remove(pool)
+
     if not fd then
         local host, port = parse_host(baseaddress, 80)
-        fd, err = socket.connect(host, port,  moon.PTYPE_TEXT, options.connect_timeout)
+        fd, err = socket.connect(host, port, moon.PTYPE_TEXT, options.connect_timeout)
         if not fd then
             return false, err
         end
-        newconn = true
     end
 
     if not socket.write(fd, seri.concat(req)) then
-        goto TRY_AGAIN
+        return false, "CLOSED"
     end
 
     local read_timeout = options.read_timeout or 0
     socket.settimeout(fd, read_timeout//1000)
     local ok , response = pcall(response_handler, fd, method)
     socket.settimeout(fd, 0)
+
     if not ok then
         socket.close(fd)
         return false, response
     end
 
     if response.protocol_error then
+        socket.close(fd)
         return false, response.protocol_error
     end
 
     if response.socket_error then
         socket.close(fd)
-        if response.socket_error == "TIMEOUT" then
-            return false, response.socket_error
-        end
-        if newconn and response.socket_error == "EOF" then
-            return false, response.socket_error
-        end
-        goto TRY_AGAIN
+
+        repeat
+            local v = table.remove(pool)
+            if v then
+                socket.close(v)
+            end
+        until not v
+
+        return false, response.socket_error
     end
 
-    if not options.keepalive then
+    if not options.keepalive or response.header["connection"] == "close" or #pool >= max_pool_num then
         socket.close(fd)
     else
-        if response.header["connection"] == "close" then
-            socket.close(fd)
-        else
-            if #pool < max_pool_num then
-                table.insert(pool, fd)
-            else
-                socket.close(fd)
-            end
-        end
+        table.insert(pool, fd)
     end
+
     return ok, response
+end
+
+local function tojson(response)
+    if response.status_code ~= 200 then return end
+    return json.decode(response.content)
 end
 
 ---@param method string
@@ -276,20 +275,20 @@ local function request( method, baseaddress, options, content)
     tbinsert( cache, "\r\n")
     tbinsert( cache, content)
 
-
     if options.proxy then
         baseaddress = options.proxy
     end
 
     local ok, response = do_request(baseaddress, options, cache, method)
+    if not ok then
+        ok, response = do_request(baseaddress, options, cache, method)
+    end
+
     if ok then
-        response.json = function()
-            if response.status_code ~= 200 then return end
-            return json.decode(response.content)
-        end
+        response.json = tojson
         return response
     else
-        return {status_code = -1, content = response, json = function() return end}
+        return {status_code = -1, content = response}
     end
 end
 
