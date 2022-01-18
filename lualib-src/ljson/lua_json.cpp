@@ -26,7 +26,7 @@ static const yyjson_alc allocator = {
     NULL
 };
 #else
-static const yyjson_alc allocator = {NULL};
+static const yyjson_alc allocator = { NULL };
 #endif
 
 using namespace std::literals::string_view_literals;
@@ -36,8 +36,6 @@ static constexpr std::string_view json_null = "null"sv;
 static constexpr std::string_view json_true = "true"sv;
 static constexpr std::string_view json_false = "false"sv;
 
-// Maximum length of the conversion of a number to a string.
-static constexpr size_t MAXNUMBER2STR = 44;
 
 static constexpr int EMPTY_AS_ARRAY = 1;
 
@@ -59,10 +57,10 @@ static const char char2escape[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                                                     // 240~256
 };
 
-static const char hex_digits[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+static const char hex_digits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 template <bool format>
-static void format_new_line(buffer *writer)
+static void format_new_line(buffer* writer)
 {
     if constexpr (format)
     {
@@ -71,7 +69,7 @@ static void format_new_line(buffer *writer)
 }
 
 template <bool format>
-static void format_space(buffer *writer, int n)
+static void format_space(buffer* writer, int n)
 {
     if constexpr (format)
     {
@@ -85,10 +83,10 @@ static void format_space(buffer *writer, int n)
 }
 
 template <bool format>
-static void encode_table(lua_State *L, buffer *writer, int idx, int depth);
+static void encode_table(lua_State* L, buffer* writer, int idx, int depth);
 
 template <bool format>
-static void encode_one(lua_State *L, buffer *writer, int idx, int depth = 0)
+static void encode_one(lua_State* L, buffer* writer, int idx, int depth = 0)
 {
     int t = lua_type(L, idx);
     switch (t)
@@ -112,7 +110,7 @@ static void encode_one(lua_State *L, buffer *writer, int idx, int depth = 0)
     case LUA_TSTRING:
     {
         size_t len = 0;
-        const char *str = lua_tolstring(L, idx, &len);
+        const char* str = lua_tolstring(L, idx, &len);
         writer->prepare(len * 6 + 2);
         writer->unsafe_write_back('\"');
         for (size_t i = 0; i < len; ++i)
@@ -159,10 +157,10 @@ static void encode_one(lua_State *L, buffer *writer, int idx, int depth = 0)
         break;
     }
     }
-    throw std::logic_error{moon::format("json encode: unsupport value type : %s", lua_typename(L, t))};
+    throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
 }
 
-static inline size_t array_size(lua_State *L, int index)
+static inline size_t array_size(lua_State* L, int index)
 {
     // test first key
     lua_pushnil(L);
@@ -178,6 +176,12 @@ static inline size_t array_size(lua_State *L, int index)
     }
     else if (firstkey == 1)
     {
+        /*
+        * https://www.lua.org/manual/5.4/manual.html#6.6
+        * The length operator applied on a table returns a border in that table.
+        * A border in a table t is any natural number that satisfies the following condition :
+        * (border == 0 or t[border] ~= nil) and t[border + 1] == nil
+        */
         auto len = (lua_Integer)lua_rawlen(L, index);
         lua_pushinteger(L, len);
         if (lua_next(L, index)) // has more fields?
@@ -211,10 +215,10 @@ static inline size_t array_size(lua_State *L, int index)
 }
 
 template <bool format>
-static void encode_table(lua_State *L, buffer *writer, int idx, int depth)
+static void encode_table(lua_State* L, buffer* writer, int idx, int depth)
 {
     if ((++depth) > MAX_DEPTH)
-        throw std::logic_error{"nested too depth"};
+        throw std::logic_error{ "nested too depth" };
 
     if (idx < 0)
     {
@@ -258,7 +262,7 @@ static void encode_table(lua_State *L, buffer *writer, int idx, int depth)
             {
                 format_space<format>(writer, depth);
                 size_t len = 0;
-                const char *key = lua_tolstring(L, -2, &len);
+                const char* key = lua_tolstring(L, -2, &len);
                 writer->write_back('\"');
                 writer->write_back(key, len);
                 writer->write_back('\"');
@@ -284,12 +288,12 @@ static void encode_table(lua_State *L, buffer *writer, int idx, int depth)
                 }
                 else
                 {
-                    throw std::logic_error{"json encode: not support double type 'key'."};
+                    throw std::logic_error{ "json encode: not support double type 'key'." };
                 }
                 break;
             }
             default:
-                throw std::logic_error{moon::format("json encode: unsupport key type : %s", lua_typename(L, key_type))};
+                throw std::logic_error{ moon::format("json encode: unsupport key type : %s", lua_typename(L, key_type)) };
             }
             lua_pop(L, 1);
         }
@@ -312,7 +316,7 @@ static void encode_table(lua_State *L, buffer *writer, int idx, int depth)
     }
 }
 
-static int encode(lua_State *L)
+static int encode(lua_State* L)
 {
     try
     {
@@ -329,13 +333,13 @@ static int encode(lua_State *L)
         lua_pushlstring(L, writer.data(), writer.size());
         return 1;
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
         return luaL_error(L, ex.what());
     }
 }
 
-static void decode_one(lua_State *L, yyjson_val *value)
+static void decode_one(lua_State* L, yyjson_val* value)
 {
     yyjson_type type = yyjson_get_type(value);
     switch (type)
@@ -359,19 +363,19 @@ static void decode_one(lua_State *L, yyjson_val *value)
         luaL_checkstack(L, 6, "json.decode.object");
         lua_createtable(L, 0, (int)yyjson_obj_size(value));
 
-        yyjson_val *key, *val;
+        yyjson_val* key, * val;
         yyjson_obj_iter iter;
         yyjson_obj_iter_init(value, &iter);
         while (nullptr != (key = yyjson_obj_iter_next(&iter)))
         {
             val = yyjson_obj_iter_get_val(key);
-            std::string_view view{unsafe_yyjson_get_str(key), unsafe_yyjson_get_len(key)};
+            std::string_view view{ unsafe_yyjson_get_str(key), unsafe_yyjson_get_len(key) };
             if (view.size() > 0)
             {
                 char c = view.data()[0];
                 if (c == '-' || (c >= '0' && c <= '9'))
                 {
-                    const char *last = view.data() + view.size();
+                    const char* last = view.data() + view.size();
                     int64_t v = 0;
                     auto [p, ec] = std::from_chars(view.data(), last, v);
                     if (ec == std::errc() && p == last)
@@ -428,44 +432,42 @@ static void decode_one(lua_State *L, yyjson_val *value)
     }
 }
 
-static int decode(lua_State *L)
+static int decode(lua_State* L)
 {
     size_t len = 0;
-    const char *str = nullptr;
+    const char* str = nullptr;
     if (lua_type(L, 1) == LUA_TSTRING)
     {
         str = luaL_checklstring(L, 1, &len);
     }
     else
     {
-        str = reinterpret_cast<const char *>(lua_touserdata(L, 1));
+        str = reinterpret_cast<const char*>(lua_touserdata(L, 1));
         len = luaL_checkinteger(L, 2);
     }
 
-    if (nullptr == str || str[0]=='\0')
+    if (nullptr == str || str[0] == '\0')
         return 0;
 
     lua_settop(L, 1);
 
     yyjson_read_err err;
-    yyjson_doc *doc = yyjson_read_opts((char *)str, len, 0, (allocator.malloc)?&allocator:nullptr, &err);
+    yyjson_doc* doc = yyjson_read_opts((char*)str, len, 0, (allocator.malloc) ? &allocator : nullptr, &err);
     if (nullptr == doc)
     {
-        lua_pushboolean(L, 0);
-        lua_pushfstring(L, "decode error: %s code: %d at position: %d\n", err.msg, (int)err.code, (int)err.pos);
-        return 2;
+        return luaL_error(L, "decode error: %s code: %d at position: %d\n", err.msg, (int)err.code, (int)err.pos);
     }
     decode_one(L, yyjson_doc_get_root(doc));
     yyjson_doc_free(doc);
     return 1;
 }
 
-static int concat(lua_State *L)
+static int concat(lua_State* L)
 {
     if (lua_type(L, 1) == LUA_TSTRING)
     {
         size_t size;
-        const char *sz = lua_tolstring(L, -1, &size);
+        const char* sz = lua_tolstring(L, -1, &size);
         auto buf = new moon::buffer(size, 16);
         buf->write_back(sz, size);
         lua_pushlightuserdata(L, buf);
@@ -505,7 +507,7 @@ static int concat(lua_State *L)
             case LUA_TSTRING:
             {
                 size_t size;
-                const char *sz = lua_tolstring(L, -1, &size);
+                const char* sz = lua_tolstring(L, -1, &size);
                 buf->write_back(sz, size);
                 break;
             }
@@ -515,14 +517,14 @@ static int concat(lua_State *L)
                 break;
             }
             default:
-                throw std::logic_error{moon::format("json encode: unsupport value type : %s", lua_typename(L, t))};
+                throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
                 break;
             }
             lua_pop(L, 1);
         }
         lua_pushlightuserdata(L, buf);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
         delete buf;
         return luaL_error(L, ex.what());
@@ -530,7 +532,7 @@ static int concat(lua_State *L)
     return 1;
 }
 
-static void write_resp(moon::buffer *buf, const char *cmd, size_t size)
+static void write_resp(moon::buffer* buf, const char* cmd, size_t size)
 {
     buf->write_back("\r\n$", 3);
     buf->write_chars(size);
@@ -538,7 +540,7 @@ static void write_resp(moon::buffer *buf, const char *cmd, size_t size)
     buf->write_back(cmd, size);
 }
 
-static void concat_resp_one(moon::buffer *buf, lua_State *L, int i)
+static void concat_resp_one(moon::buffer* buf, lua_State* L, int i)
 {
     int t = lua_type(L, i);
     switch (t)
@@ -574,7 +576,7 @@ static void concat_resp_one(moon::buffer *buf, lua_State *L, int i)
     case LUA_TSTRING:
     {
         size_t msize;
-        const char *sz = lua_tolstring(L, i, &msize);
+        const char* sz = lua_tolstring(L, i, &msize);
         write_resp(buf, sz, msize);
         break;
     }
@@ -600,12 +602,12 @@ static void concat_resp_one(moon::buffer *buf, lua_State *L, int i)
         break;
     }
     default:
-        throw std::logic_error{moon::format("json encode: unsupport value type : %s", lua_typename(L, t))};
+        throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
         break;
     }
 }
 
-static int concat_resp(lua_State *L)
+static int concat_resp(lua_State* L)
 {
     int n = lua_gettop(L);
     if (0 == n)
@@ -624,7 +626,7 @@ static int concat_resp(lua_State *L)
         buf->write_back("\r\n", 2);
         lua_pushlightuserdata(L, buf);
     }
-    catch (const std::exception &ex)
+    catch (const std::exception& ex)
     {
         delete buf;
         return luaL_error(L, ex.what());
@@ -634,14 +636,14 @@ static int concat_resp(lua_State *L)
 
 extern "C"
 {
-    int LUAMOD_API luaopen_json(lua_State *L)
+    int LUAMOD_API luaopen_json(lua_State* L)
     {
         luaL_Reg l[] = {
             {"encode", encode},
             {"decode", decode},
             {"concat", concat},
             {"concat_resp", concat_resp},
-            {NULL, NULL}};
+            {NULL, NULL} };
         luaL_newlib(L, l);
         return 1;
     }
