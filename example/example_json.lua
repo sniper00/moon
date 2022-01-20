@@ -198,6 +198,18 @@ do
     print(ok, err)
 end
 
+do
+    local t = {nil,nil,nil, 100}
+    assert(string.sub(json.encode(t),1,1)=="[")
+    assert(#json.decode(json.encode(t)) == 4)
+
+    local t2 = json.decode(json.encode(t))
+    assert(t2[1]==json.null)
+    assert(t2[2]==json.null)
+    assert(t2[3]==json.null)
+    assert(t2[4]==100)
+end
+
 -- do
 --     local str = io.readfile([[twitter.json]])
 --     local t = json.decode(str)
