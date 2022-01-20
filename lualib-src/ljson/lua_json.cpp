@@ -23,10 +23,10 @@ static const yyjson_alc allocator = {
     my_malloc_func,
     my_realloc_func,
     my_free_func,
-    NULL
+    nullptr
 };
 #else
-static const yyjson_alc allocator = { NULL };
+static const yyjson_alc allocator = { nullptr };
 #endif
 
 using namespace std::literals::string_view_literals;
@@ -35,7 +35,6 @@ using namespace moon;
 static constexpr std::string_view json_null = "null"sv;
 static constexpr std::string_view json_true = "true"sv;
 static constexpr std::string_view json_false = "false"sv;
-
 
 static constexpr int EMPTY_AS_ARRAY = 1;
 
@@ -425,7 +424,7 @@ static void decode_one(lua_State* L, yyjson_val* value)
         lua_pushboolean(L, (yyjson_get_subtype(value) == YYJSON_SUBTYPE_TRUE) ? 1 : 0);
         break;
     case YYJSON_TYPE_NULL:
-        lua_pushlightuserdata(L, NULL);
+        lua_pushlightuserdata(L, nullptr);
         break;
     default:
         break;
@@ -643,8 +642,14 @@ extern "C"
             {"decode", decode},
             {"concat", concat},
             {"concat_resp", concat_resp},
-            {NULL, NULL} };
-        luaL_newlib(L, l);
+            {nullptr, nullptr} };
+
+        luaL_checkversion(L);
+        luaL_newlibtable(L, l);
+        lua_pushstring(L, "null");
+        lua_pushlightuserdata(L, nullptr);
+        lua_rawset(L, -3);
+        luaL_setfuncs(L, l, 0);
         return 1;
     }
 }
