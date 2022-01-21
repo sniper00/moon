@@ -338,7 +338,7 @@ static int encode(lua_State* L)
     }
 }
 
-static void decode_one(lua_State* L, yyjson_val* value)
+static void decode_one(lua_State* L, yyjson_val* value, bool null_as_userdata)
 {
     yyjson_type type = yyjson_get_type(value);
     switch (type)
@@ -352,7 +352,7 @@ static void decode_one(lua_State* L, yyjson_val* value)
         yyjson_arr_iter_init(value, &iter);
         while (nullptr != (value = yyjson_arr_iter_next(&iter)))
         {
-            decode_one(L, value);
+            decode_one(L, value, null_as_userdata);
             lua_rawseti(L, -2, pos++);
         }
         break;
@@ -386,7 +386,7 @@ static void decode_one(lua_State* L, yyjson_val* value)
                 {
                     lua_pushlstring(L, view.data(), view.size());
                 }
-                decode_one(L, val);
+                decode_one(L, val, null_as_userdata);
                 lua_rawset(L, -3);
             }
         }
@@ -424,8 +424,13 @@ static void decode_one(lua_State* L, yyjson_val* value)
         lua_pushboolean(L, (yyjson_get_subtype(value) == YYJSON_SUBTYPE_TRUE) ? 1 : 0);
         break;
     case YYJSON_TYPE_NULL:
-        lua_pushlightuserdata(L, nullptr);
+    {
+        if (null_as_userdata)
+            lua_pushlightuserdata(L, nullptr);
+        else
+            lua_pushnil(L);
         break;
+    }
     default:
         break;
     }
@@ -435,14 +440,17 @@ static int decode(lua_State* L)
 {
     size_t len = 0;
     const char* str = nullptr;
+    bool null_as_userdata = false;
     if (lua_type(L, 1) == LUA_TSTRING)
     {
         str = luaL_checklstring(L, 1, &len);
+        null_as_userdata = lua_toboolean(L, 2);
     }
     else
     {
         str = reinterpret_cast<const char*>(lua_touserdata(L, 1));
         len = luaL_checkinteger(L, 2);
+        null_as_userdata = lua_toboolean(L, 3);
     }
 
     if (nullptr == str || str[0] == '\0')
@@ -456,7 +464,7 @@ static int decode(lua_State* L)
     {
         return luaL_error(L, "decode error: %s code: %d at position: %d\n", err.msg, (int)err.code, (int)err.pos);
     }
-    decode_one(L, yyjson_doc_get_root(doc));
+    decode_one(L, yyjson_doc_get_root(doc), null_as_userdata);
     yyjson_doc_free(doc);
     return 1;
 }
