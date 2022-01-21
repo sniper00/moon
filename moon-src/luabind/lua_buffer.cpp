@@ -230,7 +230,6 @@ extern "C"
             { "set_flag", set_flag},
             {NULL,NULL}
         };
-        luaL_checkversion(L);
         luaL_newlib(L, l);
         return 1;
     }

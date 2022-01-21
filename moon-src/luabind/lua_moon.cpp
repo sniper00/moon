@@ -551,7 +551,7 @@ extern "C"
             {NULL,NULL}
         };
 
-        lua_createtable(L, 0, sizeof(l) / sizeof(l[0])  - 1);
+        luaL_newlib(L, l);
         lua_service* S = lua_service::get(L);
         lua_pushstring(L, "id");
         lua_pushinteger(L, S->id());
@@ -559,13 +559,9 @@ extern "C"
         lua_pushstring(L, "name");
         lua_pushlstring(L, S->name().data(), S->name().size());
         lua_rawset(L, -3);
-        lua_pushstring(L, "null");
-        lua_pushlightuserdata(L, S);
-        lua_rawset(L, -3);
         lua_pushstring(L, "timezone");
         lua_pushinteger(L, moon::time::timezone());
         lua_rawset(L, -3);
-        luaL_setfuncs(L, l, 0);
         return 1;
     }
 }
@@ -818,7 +814,6 @@ extern "C"
 {
     int LUAMOD_API luaopen_asio(lua_State* L)
     {
-        luaL_checkversion(L);
         luaL_Reg l[] = {
             { "try_open", lasio_try_open},
             { "listen", lasio_listen },
@@ -840,7 +835,6 @@ extern "C"
             { "unpack_udp", lasio_unpack_udp},
             {NULL,NULL}
         };
-
         luaL_newlib(L, l);
         return 1;
     }

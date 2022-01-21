@@ -670,7 +670,6 @@ extern "C"
 {
     int LUAMOD_API  luaopen_serialize(lua_State *L)
     {
-        luaL_checkversion(L);
         luaL_Reg l[] = {
             {"pack",pack},
             {"packs",packsafe },
