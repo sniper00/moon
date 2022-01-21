@@ -644,12 +644,10 @@ extern "C"
             {"concat_resp", concat_resp},
             {nullptr, nullptr} };
 
-        luaL_checkversion(L);
-        luaL_newlibtable(L, l);
+        luaL_newlib(L, l);
         lua_pushstring(L, "null");
         lua_pushlightuserdata(L, nullptr);
         lua_rawset(L, -3);
-        luaL_setfuncs(L, l, 0);
         return 1;
     }
 }

@@ -162,7 +162,6 @@ extern "C"
             {"rand_weight_some",lrand_weight_some },
             {NULL,NULL}
         };
-        luaL_checkversion(L);
         luaL_newlib(L, l);
         return 1;
     }
