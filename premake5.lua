@@ -59,15 +59,12 @@ project "moon"
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
         "lua",
-        "aoi",
+        "lualib",
         "crypt",
         "pb",
         "sharetable",
         "clonefunc",
-        "kcp",
-        "json",
         "mongo",
-        "navmesh",
         -- "mimalloc",
     }
     defines {
@@ -141,45 +138,45 @@ local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, 
             --postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
 end
 
------------------------------------------------------------------------------------
---[[
-    Lua C/C++扩展 在下面添加
-]]
+----------------------Lua C/C++ Modules------------------------
 
 add_lua_module("./third/sharetable", "sharetable")
 add_lua_module("./third/clonefunc", "clonefunc")--for hotfix
 add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./third/pb", "pb")--protobuf
-add_lua_module("./third/lmongo", "mongo")--mongo
+add_lua_module("./third/lmongo", "mongo")
 
--------------------------json--------------------
-add_lua_module("./lualib-src/ljson", "json", function()
+add_lua_module("./lualib-src", "lualib", function()
     language "C++"
-    defines{"YYJSON_DISABLE_WRITER"}
+    includedirs {"./moon-src", "./moon-src/core"}
+    defines {"_WIN32_WINNT=0x0601"}
+
+    ---json
+    defines{ "YYJSON_DISABLE_WRITER" }
     files { "./third/yyjson/**.h", "./third/yyjson/**.c"}
-end)
 
--------------------------kcp--------------------
-add_lua_module("./lualib-src/lkcp", "kcp", function()
-    language "C++"
+    ---kcp
     files { "./third/kcp/**.h", "./third/kcp/**.c"}
-end)
 
--------------------------aoi--------------------
-add_lua_module("./lualib-src/laoi", "aoi",function()
-    language "C++"
-end)
+    ---navmesh begin
+    includedirs {
+        "./third/recastnavigation/Detour/Include",
+        "./third/recastnavigation/DetourCrowd/Include",
+        "./third/recastnavigation/DetourTileCache/Include",
+        "./third/recastnavigation/Recast/Include"
+    }
 
--------------------------navmesh--------------------
-add_lua_module("./lualib-src/lnavmesh", "navmesh", function()
-    language "C++"
-    includedirs {"./third/recastnavigation/Detour/Include"}
-    includedirs {"./third/recastnavigation/DetourCrowd/Include"}
-    includedirs {"./third/recastnavigation/DetourTileCache/Include"}
-    includedirs {"./third/recastnavigation/Recast/Include"}
-    files { "./third/recastnavigation/Detour/**.h", "./third/recastnavigation/Detour/**.cpp"}
-    files { "./third/recastnavigation/DetourCrowd/**.h", "./third/recastnavigation/DetourCrowd/**.cpp"}
-    files { "./third/recastnavigation/DetourTileCache/**.h", "./third/recastnavigation/DetourTileCache/**.cpp"}
-    files { "./third/recastnavigation/Recast/**.h", "./third/recastnavigation/Recast/**.cpp"}
-    files { "./third/fastlz/**.h", "./third/fastlz/**.c"}
+    files {
+        "./third/recastnavigation/Detour/**.h",
+        "./third/recastnavigation/Detour/**.cpp",
+        "./third/recastnavigation/DetourCrowd/**.h",
+        "./third/recastnavigation/DetourCrowd/**.cpp",
+        "./third/recastnavigation/DetourTileCache/**.h",
+        "./third/recastnavigation/DetourTileCache/**.cpp",
+        "./third/recastnavigation/Recast/**.h",
+        "./third/recastnavigation/Recast/**.cpp",
+        "./third/fastlz/**.h",
+        "./third/fastlz/**.c"
+    }
+    ---navmesh end
 end)
