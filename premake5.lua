@@ -55,7 +55,7 @@ project "moon"
 
     kind "ConsoleApp"
     language "C++"
-    includedirs {"./","./moon-src","./moon-src/core","./third","./third/lua","./third/mimalloc/include"}
+    includedirs {"./","./moon-src","./moon-src/core", "./third", "./third/lua","./third/mimalloc/include"}
     files {"./moon-src/**.h", "./moon-src/**.hpp","./moon-src/**.cpp" }
     links{
         "lua",
@@ -149,7 +149,11 @@ add_lua_module("./third/lmongo", "mongo")
 add_lua_module("./lualib-src", "lualib", function()
     language "C++"
     includedirs {"./moon-src", "./moon-src/core"}
-    defines {"_WIN32_WINNT=0x0601"}
+    defines {
+        "ASIO_STANDALONE" ,
+        "ASIO_NO_DEPRECATED",
+        --"MOON_ENABLE_MIMALLOC"
+    }
 
     ---json
     defines{ "YYJSON_DISABLE_WRITER" }
@@ -179,4 +183,6 @@ add_lua_module("./lualib-src", "lualib", function()
         "./third/fastlz/**.c"
     }
     ---navmesh end
+end, function ()
+    defines {"_WIN32_WINNT=0x0601"}
 end)
