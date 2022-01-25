@@ -4,7 +4,6 @@ local seri = require("seri")
 local conf = ...
 
 local pack = seri.pack
-local packs = seri.packs
 local co_yield = coroutine.yield
 
 local NODE = math.tointeger(moon.get_env("NODE"))
@@ -23,7 +22,6 @@ local function cluster_service()
 
     local unpack_one = seri.unpack_one
     local queryservice = moon.queryservice
-    local wfront = buffer.write_front
 
     local redirect = moon.redirect
 
