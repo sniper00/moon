@@ -1,5 +1,6 @@
 local moon = require("moon")
 local seri = require("seri")
+local crypt = require("crypt")
 local socket = require("moon.socket")
 local redis = require("moon.db.redis")
 
@@ -60,9 +61,13 @@ if conf.name then
                 end
             else
                 if sessionid == 0 and not res then
-                    moon.error(err)
+                    moon.error(err, crypt.base64encode(moon.decode(msg, 'Z')))
                 else
-                    moon.response("lua", sender, sessionid, res, err)
+                    if err then
+                        moon.response("lua", sender, sessionid, res, err)
+                    else
+                        moon.response("lua", sender, sessionid, res)
+                    end
                 end
                 return db, res
             end
@@ -219,6 +224,8 @@ else
 
     local wfront = buffer.write_front
 
+    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
+    --- - if failed return false and error message.
     function client.call(db, ...)
         local sessionid = moon.make_response(db)
         local buf = concat_resp(...)
@@ -227,6 +234,8 @@ else
         return yield()
     end
 
+    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
+    --- - if failed return false and error message.
     function client.hash_call(hash, db, ...)
         local sessionid = moon.make_response(db)
         hash = hash or 1
@@ -236,12 +245,16 @@ else
         return yield()
     end
 
+    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
+    --- - if failed return false and error message.
     function client.send(db, ...)
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", 1)))
         raw_send("lua", db, "", buf, 0)
     end
 
+    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
+    --- - if failed return false and error message.
     function client.hash_send(hash, db, ...)
         hash = hash or 1
         local buf = concat_resp(...)
