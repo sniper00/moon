@@ -48,7 +48,11 @@ local function run_master()
             if balance>#slave then
                 balance = 1
             end
-            socket.accept(listenfd,slave[balance])
+            local fd, err = socket.accept(listenfd,slave[balance])
+            if not fd then
+                moon.error(err)
+                return
+            end
             balance = balance + 1
         end
     end)
