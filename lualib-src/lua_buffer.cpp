@@ -1,5 +1,5 @@
 #include "lua.hpp"
-#include "config.hpp"
+#include "core/config.hpp"
 #include "common/buffer.hpp"
 
 using namespace moon;
