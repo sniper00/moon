@@ -1,6 +1,5 @@
 local moon = require("moon")
 local seri = require("seri")
-local crypt = require("crypt")
 local socket = require("moon.socket")
 local redis = require("moon.db.redis")
 
@@ -61,7 +60,7 @@ if conf.name then
                 end
             else
                 if sessionid == 0 and not res then
-                    moon.error(err, crypt.base64encode(moon.decode(msg, 'Z')))
+                    moon.error(err)
                 else
                     moon.response("lua", sender, sessionid, res, err)
                 end
