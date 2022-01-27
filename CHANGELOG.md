@@ -1,4 +1,13 @@
-# v0.2
+# v0.3 (2022-01-27)
+
+- add lua navmesh lib
+- replace json lib with yyjson, decode speed 2x of rapidjson
+- add json.decode option:null_as_userdata
+- bugfix: http client connection pool reset
+- improve redisd service:print redis request(base64) when error
+- improve moon.log avoid memory copy
+
+# v0.2 (2021-12-20)
 - add mongodb driver
 - improve message dispatch
 
