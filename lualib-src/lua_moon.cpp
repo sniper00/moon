@@ -93,18 +93,18 @@ static int lmoon_log(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto level = (moon::LogLevel)luaL_checkinteger(L, 1);
     if (S->logger()->get_level() < level)
-    {
         return 0;
-    }
+
+    moon::buffer line = S->logger()->make_line(true, level, S->id());
+
     int n = lua_gettop(L);  /* number of arguments */
     int i;
-    buffer buf;
     for (i = 2; i <= n; i++) {  /* for each argument */
         size_t l;
         const char* s = luaL_tolstring(L, i, &l);  /* convert it to string */
         if (i > 2)  /* not the first element? */
-            buf.write_back("\t", 1);  /* add a tab before it */
-        buf.write_back(s, l);  /* print it */
+            line.write_back('\t');  /* add a tab before it */
+        line.write_back(s, l);  /* print it */
         lua_pop(L, 1);  /* pop result */
     }
 
@@ -113,16 +113,16 @@ static int lmoon_log(lua_State* L)
     {
         if (lua_getinfo(L, "Sl", &ar))
         {
-            buf.write_back("\t(", 2);
-            if (ar.source != nullptr && ar.source[0] != '\0')
-                buf.write_back(ar.source + 1, std::strlen(ar.source) - 1);
-            buf.write_back(":", 1);
-            buf.write_chars(ar.currentline);
-            buf.write_back(")", 1);
+            line.write_back('\t');
+            line.write_back('(');
+            if (ar.srclen>1)
+                line.write_back(ar.source + 1, ar.srclen - 1);
+            line.write_back(':');
+            line.write_chars(ar.currentline);
+            line.write_back(')');
         }
     }
-
-    S->logger()->logstring(true, level, std::string_view{ buf.data(), buf.size() }, S->id());
+    S->logger()->push_line(std::move(line));
     return 0;
 }
 
