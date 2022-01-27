@@ -75,24 +75,34 @@ namespace moon
             logstring(console, level, std::string_view{ str });
         }
 
-        void logstring(bool console, LogLevel level, std::string_view s, uint64_t serviceid = 0)
+        buffer make_line(bool console, LogLevel level, uint64_t serviceid = 0, size_t datasize = 0)
         {
-            if (level_ < level)
-            {
-                return;
-            }
-
             if (level == LogLevel::Error)
                 ++error_count_;
 
             console = enable_console_ ? console : enable_console_;
 
-            auto line = buffer{64+s.size()};
+            auto line = buffer{ (datasize>0)?(64 + datasize):256 };
             auto it = line.begin();
             *(it++) = static_cast<char>(console);
             *(it++) = static_cast<char>(level);
             size_t offset = format_header(std::addressof(*it), level, serviceid);
             line.commit(2 + offset);
+            return line;
+        }
+
+        void push_line(buffer line)
+        {
+            log_queue_.push_back(std::move(line));
+            ++size_;
+        }
+
+        void logstring(bool console, LogLevel level, std::string_view s, uint64_t serviceid = 0)
+        {
+            if (level_ < level)
+                return;
+
+            buffer line = make_line(console, level, serviceid, s.size());
             line.write_back(s.data(), s.size());
             log_queue_.push_back(std::move(line));
             ++size_;
