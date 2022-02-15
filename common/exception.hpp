@@ -9,26 +9,18 @@ namespace moon
     private:
         std::string w;
     public:
-        logic_error(const std::string& str) : std::runtime_error(""), w(str) {}
-        logic_error(std::string&& str) : std::runtime_error(""), w(std::move(str)) {}
-
-        logic_error(const std::string& str, const char* file, int line)
-            : std::runtime_error(""), w(str)
-        {
-            w.append("(");
-            w.append(file);
-            w.append(":");
-            w.append(std::to_string(line));
-            w.append(")");
-        }
-
-        logic_error(std::string&& str, const char* file, int line)
+        logic_error(std::string str, const char* file = nullptr, int line = -1)
             : std::runtime_error(""), w(std::move(str))
         {
+            if (file == nullptr)
+                return;
             w.append("(");
             w.append(file);
-            w.append(":");
-            w.append(std::to_string(line));
+            if (line >= 0)
+            {
+                w.append(":");
+                w.append(std::to_string(line));
+            }
             w.append(")");
         }
 
