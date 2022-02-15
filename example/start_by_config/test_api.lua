@@ -146,13 +146,21 @@ do
 
 	local q = list.new()
 	list.push(q, 4)
+	assert(list.size(q)==1)
 	list.push(q, 3)
+	assert(list.size(q)==2)
 	list.push(q, 2)
+	assert(list.size(q)==3)
 	list.push(q, 1)
+	assert(list.size(q)==4)
 	assert(list.pop(q) == 4)
+	assert(list.size(q)==3)
 	assert(list.pop(q) == 3)
+	assert(list.size(q)==2)
 	assert(list.pop(q) == 2)
+	assert(list.size(q)==1)
 	assert(list.pop(q) == 1)
+	assert(list.size(q)==0)
 end
 
 do

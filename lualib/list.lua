@@ -40,13 +40,7 @@ function queue.pop(q)
 end
 
 function queue.size(q)
-    local size = 0
-    for k,_ in pairs(q) do
-        if k~="h" and k~="t" then
-            size = size + 1
-        end
-    end
-    return size
+    return q.t - q.h + 1
 end
 
 return queue
