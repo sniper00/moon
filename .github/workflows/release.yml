@@ -21,7 +21,7 @@ jobs:
     # create a build matrix for jobs
     strategy:
       matrix:
-        os: [windows-2019, ubuntu-latest, macos-latest]
+        os: [windows-vs2019, ubuntu-latest, macos-latest]
 
     # create steps
     steps:
@@ -29,10 +29,10 @@ jobs:
       - name: Setup premake
         uses: abel0b/setup-premake@v1
       - name: setup windows msbuild
-        if: matrix.os == 'windows-2019'
+        if: matrix.os == 'windows-vs2019'
         uses: microsoft/setup-msbuild@v1
       - name: build windows
-        if: matrix.os == 'windows-2019'
+        if: matrix.os == 'windows-vs2019'
         run: |
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
@@ -54,14 +54,14 @@ jobs:
           cp -r service packages/
           cp -r example packages/
       - name: package windows
-        if: matrix.os == 'windows-2019'
+        if: matrix.os == 'windows-vs2019'
         shell: bash
         run: |
           cp moon.exe packages/
           cd packages
           tar -zcvf ${{ matrix.os }}.tar.gz ./*
       - name: package linux and macosx
-        if: matrix.os != 'windows-2019'
+        if: matrix.os != 'windows-vs2019'
         shell: bash
         run: |
           cp moon packages/
