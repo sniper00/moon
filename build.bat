@@ -12,13 +12,18 @@ for /f "usebackq tokens=*" %%i in (`!vswherestr!`) do (
   echo BUILDVCTOOLS: !BUILDVCTOOLS!
   if not exist !BUILDVCTOOLS!\devenv.com (
     echo Error: Cannot find VS2017 or later Build Tools
-    goto :buildfailed
+    exit /b 2
   )
   git pull
-  echo.!BUILDVCTOOLS! | findstr /C:"2019" >nul && (
+  echo.!BUILDVCTOOLS! | findstr /C:"2022" >nul &&(
+      "premake5.exe" "vs2022"
+  ) || echo.!BUILDVCTOOLS! | findstr /C:"2019" >nul &&(
       "premake5.exe" "vs2019"
-  ) || (
+  ) || echo.!BUILDVCTOOLS! | findstr /C:"2017" >nul &&(
       "premake5.exe" "vs2017"
+  ) || (
+      echo Error: Cannot find VS2017 or later Build Tools
+      exit /b 2
   )
   "!BUILDVCTOOLS!\devenv.com" "Server.sln" /Rebuild "Release"
 )
