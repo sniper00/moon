@@ -5,8 +5,8 @@ local socket = require("moon.socket")
 
 local concat = seri.concat
 local bsize = cbuffer.size
-local bwritefront = cbuffer.write_front
-local bwrite = cbuffer.write_back
+local wfront = cbuffer.write_front
+local wback = cbuffer.write_back
 
 local socket_error = setmetatable({}, {__tostring = function() return "[Error: socket]" end })	-- alias for error object
 
@@ -152,8 +152,8 @@ end
 local function send_message(self, t, data)
     local buf = concat(data)
     local len = bsize(buf)
-    bwritefront(buf, strpack(">I", len+4))
-    bwritefront(buf, t)
+    wfront(buf, strpack(">I", len+4))
+    wfront(buf, t)
     socket.write(self.sock, buf)
 end
 
@@ -476,10 +476,10 @@ local function format_query_result(row_desc, data_rows, command_complete)
 end
 
 function pg.pack_query_buffer(buf)
-    bwrite(buf, "\0")
+    wback(buf, "\0")
     local len = bsize(buf)
-    bwritefront(buf, strpack(">I", len+4))
-    bwritefront(buf, MSG_TYPE.query)
+    wfront(buf, strpack(">I", len+4))
+    wfront(buf, MSG_TYPE.query)
 end
 
 ---@param sql userdata|string @ userdata cpp message pointer:sql string

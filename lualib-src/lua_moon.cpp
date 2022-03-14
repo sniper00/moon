@@ -246,22 +246,24 @@ static void table_tostring(std::string& res, lua_State* L, int index)
 
 static int lmoon_new_service(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
-    std::string_view type = lua_check<std::string_view>(L, 1);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
     luaL_checktype(L, 3, LUA_TTABLE);
 
-    service_conf conf;
-    conf.name = lua_opt_field<std::string>(L, 3, "name");
-    conf.source = lua_opt_field<std::string>(L, 3, "file");
-    conf.memlimit = lua_opt_field<size_t>(L, 3, "memlimit", 0);
-    conf.unique = lua_opt_field<bool>(L, 3, "unique", false);
-    conf.threadid = lua_opt_field<uint32_t>(L, 3, "threadid", 0);
+    lua_service* S = lua_service::get(L);
+    std::unique_ptr<moon::service_conf> conf = std::make_unique<moon::service_conf>();
 
-    conf.params.append("return ");
-    table_tostring(conf.params, L, 3);
+    conf->creator = S->id();
+    conf->type = lua_check<std::string_view>(L, 1);
+    conf->session = (int32_t)luaL_checkinteger(L, 2);
+    conf->name = lua_opt_field<std::string>(L, 3, "name");
+    conf->source = lua_opt_field<std::string>(L, 3, "file");
+    conf->memlimit = lua_opt_field<size_t>(L, 3, "memlimit", 0);
+    conf->unique = lua_opt_field<bool>(L, 3, "unique", false);
+    conf->threadid = lua_opt_field<uint32_t>(L, 3, "threadid", 0);
 
-    S->get_server()->new_service(std::string{ type }, conf, S->id(), sessionid);
+    conf->params.append("return ");
+    table_tostring(conf->params, L, 3);
+
+    S->get_server()->new_service(std::move(conf));
     return 0;
 }
 

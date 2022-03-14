@@ -69,11 +69,11 @@ namespace moon
 
         uint32_t timeout(int64_t interval, uint32_t serviceid);
 
-        void new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid);
+        void new_service(std::unique_ptr<service_conf> conf);
 
         void remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid);
 
-        void scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid);
+        void scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid) const;
 
         bool send_message(message&& msg) const;
 
@@ -93,7 +93,7 @@ namespace moon
 
         bool set_unique_service(std::string name, uint32_t v);
 
-        void response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT);
+        void response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT) const;
 
         std::string info() const;
 

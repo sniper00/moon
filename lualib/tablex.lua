@@ -39,4 +39,29 @@ function M.count_if(array, fn)
     return count
 end
 
+---
+--- Returns true if the table contains the specified value.
+---@param t table
+---@param value any
+---@param fieldname string
+function M.contains(t, value, fieldname)
+    for k, v in pairs(t) do
+        if not fieldname and v == value then
+            return true
+        elseif fieldname and v[fieldname] == value then
+            return true
+        end
+    end
+    return false
+end
+
+function M.contains_if(t, fn)
+    for k, v in pairs(t) do
+        if fn(v) then
+            return true
+        end
+    end
+    return false
+end
+
 return M
