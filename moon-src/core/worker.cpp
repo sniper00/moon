@@ -65,10 +65,10 @@ namespace moon
         }
     }
 
-    void worker::new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
+    void worker::new_service(std::unique_ptr<service_conf> conf)
     {
         count_.fetch_add(1, std::memory_order_release);
-        asio::post(io_ctx_, [this, service_type = std::move(service_type), conf = std::move(conf), creatorid, sessionid](){
+        asio::post(io_ctx_, [this, conf = std::move(conf)](){
             do
             {
                 size_t counter = 0;
@@ -97,15 +97,14 @@ namespace moon
                     break;
                 }
 
-                auto s = server_->make_service(service_type);
-                MOON_ASSERT(s,
-                    moon::format("new service failed:service type[%s] was not registered", service_type.data()).data());
+                auto s = server_->make_service(conf->type);
+                MOON_ASSERT(s, moon::format("new service failed:service type[%s] was not registered", conf->type.data()).data());
                 s->set_id(serviceid);
                 s->logger(server_->logger());
-                s->set_unique(conf.unique);
+                s->set_unique(conf->unique);
                 s->set_server_context(server_, this);
 
-                if (!s->init(conf))
+                if (!s->init(*conf))
                 {
                     if (serviceid == BOOTSTRAP_ADDR)
                     {
@@ -116,9 +115,9 @@ namespace moon
                 s->ok(true);
                 services_.emplace(serviceid, std::move(s));
 
-                if (0 != sessionid)
+                if (0 != conf->session)
                 {
-                    server_->response(creatorid, std::string_view{}, std::to_string(serviceid), sessionid);
+                    server_->response(conf->creator, std::string_view{}, std::to_string(serviceid), conf->session);
                 }
                 return;
             } while (false);
@@ -129,9 +128,9 @@ namespace moon
                 shared(true);
             }
 
-            if (0 != sessionid)
+            if (0 != conf->session)
             {
-                server_->response(creatorid, std::string_view{}, "0"sv, sessionid);
+                server_->response(conf->creator, std::string_view{}, "0"sv, conf->session);
             }
         });
     }

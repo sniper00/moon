@@ -316,10 +316,12 @@ function moon.scan_services(workerid)
     return co_yield()
 end
 
----RPC形式调用，发送消息附带一个responseid，对方收到后把responseid发送回来，必须调用moon.response应答.
----@param PTYPE string @协议类型
----@param receiver integer @接收者服务id
----@return any|boolean,string @如果没有错误, 返回调用结果。如果发生错误第一个参数是false,后面是错误信息。
+--- Send message to target service (id=receiver), and use `coroutine.yield()` wait response
+---  - If success, return values are params of `moon.response(id,response, params...)`
+---  - If failed, return `false` and `error message(string)`
+---@param PTYPE string @protocol type
+---@param receiver integer @receiver service's id
+---@return any|boolean,string
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -335,9 +337,9 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
----回应moon.call
----@param PTYPE string @协议类型
----@param receiver integer  @接收者服务id
+--- Response message to the sender of `moon.co_call`
+---@param PTYPE string @protocol type
+---@param receiver integer @receiver service's id
 ---@param sessionid integer
 function moon.response(PTYPE, receiver, sessionid, ...)
     if sessionid == 0 then return end

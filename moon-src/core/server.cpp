@@ -216,9 +216,9 @@ namespace moon
         send_message(std::move(msg));
     }
 
-    void server::new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid)
+    void server::new_service(std::unique_ptr<service_conf> conf)
     {
-        worker* w = get_worker(conf.threadid);
+        worker* w = get_worker(conf->threadid);
         if (nullptr != w)
         {
             w->shared(false);
@@ -227,7 +227,7 @@ namespace moon
         {
             w = next_worker();
         }
-        w->new_service(std::move(service_type), std::move(conf), creatorid, sessionid);
+        w->new_service(std::move(conf));
     }
 
     void server::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid)
@@ -244,7 +244,7 @@ namespace moon
         }
     }
 
-    void server::scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid)
+    void server::scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid) const
     {
         auto* w = get_worker(workerid);
         if (nullptr == w)
@@ -359,7 +359,7 @@ namespace moon
         return unique_services_.try_set(std::move(name), v);
     }
 
-    void server::response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype)
+    void server::response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype) const
     {
         if (to == 0 || sessionid == 0)
         {

@@ -33,7 +33,7 @@ namespace moon
 
         uint32_t id() const;
 
-        void new_service(std::string service_type, service_conf conf, uint32_t creatorid, int32_t sessionid);
+        void new_service(std::unique_ptr<service_conf> conf);
 
         void send(message&& msg);
 

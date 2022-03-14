@@ -218,10 +218,11 @@ int main(int argc, char* argv[])
 
         server_->init(thread_count, logfile);
 
-        service_conf conf;
-        conf.name = "bootstrap";
-        conf.source = fs::path(bootstrap).filename().string();
-        server_->new_service("lua", conf, 0, 0);
+        std::unique_ptr<moon::service_conf> conf = std::make_unique<moon::service_conf>();
+        conf->type = "lua";
+        conf->name = "bootstrap";
+        conf->source = fs::path(bootstrap).filename().string();
+        server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
         int exitcode = server_->run();
