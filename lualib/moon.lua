@@ -180,12 +180,15 @@ function moon.addr()
     return _addr
 end
 
----async 创建一个新的服务
----@param stype string @服务类型，根据所注册的服务类型，可选有 'lua'
----@param config table @服务的启动配置，{name="a",file="file"}, 可以用来向服务传递额外参数
----                    unique 是否是唯一服务，唯一服务可以用moon.queryservice(name)查询服务id
----                    threadid 在指定工作者线程创建该服务，并绑定该线程。默认0,服务将轮询加入工作者线程。
----@return integer @返回服务id
+--- async
+--- Create a new service
+---@param stype string @Service type, options 'lua'
+---@param config table @Service's config in key-value format
+--- - name: string. Service's name.
+--- - file: string. Service's bootstrap lua script file.
+--- - unique: boolean. Is it unique service. If unique service can use moon.queryservice(name) get service's id.
+--- - threadid: integer. Create the service in the specified worker thread。Default 0, add to the thread with the least number of services。
+---@return integer @ Return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
     local sessionid = make_response()
     _newservice(stype, sessionid, config)
