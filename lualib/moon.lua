@@ -187,7 +187,7 @@ end
 --- - name: string. Service's name.
 --- - file: string. Service's bootstrap lua script file.
 --- - unique: boolean. Is it unique service. If unique service can use moon.queryservice(name) get service's id.
---- - threadid: integer. Create the service in the specified worker thread。Default 0, add to the thread with the least number of services。
+--- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
 ---@return integer @ Return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
     local sessionid = make_response()
@@ -247,7 +247,8 @@ function moon.get_env_unpack(name)
     return seri.unpack(core.get_env(name))
 end
 
----获取服务器时间, 可以调用 moon.adjtime 偏移时间
+---Get current server time in seconds
+---@return integer @unix timestamp seconds
 function moon.time()
     return _now()//1000
 end

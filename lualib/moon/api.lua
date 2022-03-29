@@ -102,13 +102,12 @@ function core.send_prefab(receiver, prefabid, header, sessionid, type)
 end
 
 --- send message from `sender` to `receiver`
----@param sender integer
 ---@param receiver integer
 ---@param data string|userdata @ message
 ---@param header string
 ---@param sessionid integer
-function core.send(sender, receiver, data, header, sessionid)
-    ignore_param(sender, receiver, data, header, sessionid)
+function core.send(receiver, data, header, sessionid)
+    ignore_param(receiver, data, header, sessionid)
 end
 
 --- remove a service
