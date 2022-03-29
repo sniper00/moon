@@ -4,7 +4,6 @@
 #include <charconv>
 #include <codecvt>
 #include "common/buffer.hpp"
-#include "common/string.hpp"
 
 #ifdef MOON_ENABLE_MIMALLOC
 static void* my_malloc_func(void*, size_t size) {
@@ -156,7 +155,7 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth = 0)
         break;
     }
     }
-    throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
+    throw std::logic_error{ std::string("json encode: unsupport value type :")+lua_typename(L, t)};
 }
 
 static inline size_t array_size(lua_State* L, int index)
@@ -176,7 +175,7 @@ static inline size_t array_size(lua_State* L, int index)
     else if (firstkey == 1)
     {
         /*
-        * https://www.lua.org/manual/5.4/manual.html#6.6
+        * https://www.lua.org/manual/5.4/manual.html#3.4.7
         * The length operator applied on a table returns a border in that table.
         * A border in a table t is any natural number that satisfies the following condition :
         * (border == 0 or t[border] ~= nil) and t[border + 1] == nil
@@ -292,7 +291,7 @@ static void encode_table(lua_State* L, buffer* writer, int idx, int depth)
                 break;
             }
             default:
-                throw std::logic_error{ moon::format("json encode: unsupport key type : %s", lua_typename(L, key_type)) };
+                throw std::logic_error{std::string("json encode: unsupport key type :") + lua_typename(L, key_type)};
             }
             lua_pop(L, 1);
         }
@@ -524,7 +523,8 @@ static int concat(lua_State* L)
                 break;
             }
             default:
-                throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
+                throw std::logic_error{std::string("json encode: unsupport value type :") +
+                                       lua_typename(L, t)};
                 break;
             }
             lua_pop(L, 1);
@@ -609,7 +609,7 @@ static void concat_resp_one(moon::buffer* buf, lua_State* L, int i)
         break;
     }
     default:
-        throw std::logic_error{ moon::format("json encode: unsupport value type : %s", lua_typename(L, t)) };
+        throw std::logic_error{std::string("json encode: unsupport value type :") + lua_typename(L, t)};
         break;
     }
 }
@@ -641,17 +641,34 @@ static int concat_resp(lua_State* L)
     return 1;
 }
 
+static int pretty_encode(lua_State *L)
+{
+    try
+    {
+        luaL_checkany(L, 1);
+        buffer writer(512);
+        lua_settop(L, 1);
+        encode_one<true>(L, &writer, 1);
+        lua_pushlstring(L, writer.data(), writer.size());
+        return 1;
+    }
+    catch (const std::exception& ex)
+    {
+        return luaL_error(L, ex.what());
+    }
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_json(lua_State* L)
     {
         luaL_Reg l[] = {
-            {"encode", encode},
+            {"encode", encode}, 
+            {"pretty_encode", pretty_encode},
             {"decode", decode},
             {"concat", concat},
             {"concat_resp", concat_resp},
-            {nullptr, nullptr} };
-
+            {NULL, NULL} };
         luaL_newlib(L, l);
         lua_pushstring(L, "null");
         lua_pushlightuserdata(L, nullptr);
