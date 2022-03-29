@@ -201,8 +201,8 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                         timer->async_wait([this, c, owner, sessionid, host, port, timer](const asio::error_code& ec) {
                             if (!ec)
                             {
-                                //maybe timer handler already in complete queue( 0 == timer->cancel()), 
-                                //so it will not trigger error code, check was connected:
+                                // The timer may have expired, but the callback function has not yet been called(asio's complete-queue).(0 == timer->cancel()).
+                                // Only trigger error code when socket not connected :
                                 if (c->fd() == 0)
                                 {
                                     c->close();
