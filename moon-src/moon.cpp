@@ -222,6 +222,7 @@ int main(int argc, char* argv[])
         conf->type = "lua";
         conf->name = "bootstrap";
         conf->source = fs::path(bootstrap).filename().string();
+        conf->memlimit = std::numeric_limits<size_t>::max();
         server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
