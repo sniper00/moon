@@ -256,7 +256,7 @@ static int lmoon_new_service(lua_State* L)
     conf->session = (int32_t)luaL_checkinteger(L, 2);
     conf->name = lua_opt_field<std::string>(L, 3, "name");
     conf->source = lua_opt_field<std::string>(L, 3, "file");
-    conf->memlimit = lua_opt_field<size_t>(L, 3, "memlimit", 0);
+    conf->memlimit = lua_opt_field<size_t>(L, 3, "memlimit",  std::numeric_limits<size_t>::max());
     conf->unique = lua_opt_field<bool>(L, 3, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 3, "threadid", 0);
 
