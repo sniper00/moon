@@ -76,76 +76,76 @@ lua_service::~lua_service()
     logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
 }
 
+static int protect_init(lua_State* L)
+{
+    const char* source = (const char*)lua_touserdata(L, 1);
+    const char* initialize_string = (const char*)lua_touserdata(L, 2);
+
+    luaL_openlibs(L);
+    open_custom_libs(L);
+
+    lua_pushcfunction(L, traceback);
+    int trace_fn = lua_gettop(L);
+
+    if ((luaL_loadfile(L, source)) != LUA_OK)
+    {
+        lua_pushfstring(L, "loadfile %s", lua_tostring(L, -1));
+        return 1;
+    }
+
+    int nparam = lua_gettop(L);
+    if ((luaL_dostring(L, initialize_string)) != LUA_OK)
+    {
+        lua_pushfstring(L, "initialize %s", lua_tostring(L, -1));
+        return 1;
+    }
+
+    nparam = lua_gettop(L) - nparam;
+
+    if ((lua_pcall(L, nparam, 0, trace_fn)) != LUA_OK)
+    {
+        lua_pushfstring(L, "run %s", lua_tostring(L, -1));
+        return 1;
+    }
+    return 0;
+};
+
 bool lua_service::init(const moon::service_conf& conf)
 {
-    auto protect_init = [](lua_State* L) -> int {
-        lua_service* S = lua_service::get(L);
-        try
-        {
-            const moon::service_conf* conf = (const moon::service_conf*)lua_touserdata(L, 1);
-            lua_settop(L, 0);
-            luaL_openlibs(L);
-            open_custom_libs(L);
-
-            lua_pushcfunction(L, traceback);
-            assert(lua_gettop(L) == 1);
-
-            int r = luaL_loadfile(L, conf->source.data());
-            if (r != LUA_OK)
-                return luaL_error(L, "loadfile %s", lua_tostring(L, -1));
-
-            int nargs = 0;
-            {
-                std::string initialize = S->server_->get_env("PATH");
-                nargs = (conf->params.empty() ? 0 : 1);
-                if (nargs > 0)
-                    initialize.append(conf->params);
-                r = luaL_dostring(L, initialize.data());
-            }
-            if (r != LUA_OK)
-                return luaL_error(L, "initialize %s", lua_tostring(L, -1));
-
-            r = lua_pcall(L, nargs, 0, 1);
-            if (r != LUA_OK)
-                return luaL_error(L, "run %s", lua_tostring(L, -1));
-
-            lua_settop(L, 0);
-
-            if (S->unique() && !S->server_->set_unique_service(S->name(), S->id()))
-                return luaL_error(L, "duplicate unique service name '%s'.", S->name().data());
-
-            S->ok_ = true;
-        }
-        catch (const std::exception& e)
-        {
-            CONSOLE_ERROR(S->logger(), "new_service exception:\n%s.", e.what());
-        }
-        return 0;
-    };
-
     mem_limit = conf.memlimit;
     name_ = conf.name;
+
+    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
 
     lua_State* L = lua_.get();
 
     lua_gc(L, LUA_GCSTOP, 0);
     lua_gc(L, LUA_GCGEN, 0, 0);
 
+    std::string initialize_string = server_->get_env("PATH");
+    initialize_string.append(conf.params);
+
     lua_pushcfunction(L, protect_init);
-    lua_pushlightuserdata(L, (void*)&conf);
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+    lua_pushlightuserdata(L, (void*)conf.source.data());
+    lua_pushlightuserdata(L, initialize_string.data());
+
+    if (lua_pcall(L, 2, LUA_MULTRET, 0) != LUA_OK || lua_gettop(L) > 0)
     {
         CONSOLE_ERROR(logger(), "new_service lua_error:\n%s.", lua_tostring(L, -1));
-        lua_pop(L, 1);
         return false;
     }
 
-    if (!ok_)
+    if (unique_ && !server_->set_unique_service(name_, id_))
+    {
+        CONSOLE_ERROR(logger(), "duplicate unique service name '%s'.", name_.data());
         return false;
+    }
 
     lua_gc(L, LUA_GCRESTART, 0);
 
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
+    assert(lua_gettop(L) == 0);
+
+    ok_ = true;
 
     return ok_;
 }
