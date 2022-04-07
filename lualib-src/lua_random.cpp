@@ -72,13 +72,16 @@ static int lrand_weight(lua_State *L)
     luaL_checktype(L, 1, LUA_TTABLE);
     luaL_checktype(L, 2, LUA_TTABLE);
 
+    auto vlen = lua_rawlen(L, 1);
+    auto wlen = lua_rawlen(L, 2);
+
+    if (vlen!=wlen || vlen==0)
+    {
+        return luaL_error(L, "lrand_weight table empty or values size != weights size");
+    }
+
     moon::lua_array_view<int64_t> values{ L,1 };
     moon::lua_array_view<int64_t> weights{ L,2 };
-
-    if (values.empty() || weights.empty() || values.size() != weights.size())
-    {
-        return luaL_error(L, "lrand_weight values size != weights size");
-    }
 
     int64_t sum = std::accumulate(weights.begin(), weights.end(), int64_t{ 0 });
     if (sum == 0)
@@ -104,18 +107,16 @@ static int lrand_weight_some(lua_State *L)
     luaL_checktype(L, 2, LUA_TTABLE);
     int64_t count = luaL_checkinteger(L, 3);
 
+    auto vlen = lua_rawlen(L, 1);
+    auto wlen = lua_rawlen(L, 2);
+
+    if (vlen != wlen || vlen == 0 || count<0 || (int64_t)vlen < count)
+    {
+        return luaL_error(L, "lrand_weight_some table empty or values size != weights size");
+    }
+
     moon::lua_array_view<int64_t> values{ L,1 };
     moon::lua_array_view<int64_t> weights{ L,2 };
-
-    if (values.size() != weights.size())
-    {
-        return luaL_error(L, "lrand_weight_some values size != weights size");
-    }
-
-    if (values.empty() || weights.empty() || count <= 0 || values.size() < (size_t)count)
-    {
-        return 0;
-    }
 
     std::vector<int64_t> v;
     std::vector<int64_t> w;
@@ -149,20 +150,17 @@ static int lrand_weight_some(lua_State *L)
     return 1;
 }
 
-extern "C"
+int LUAMOD_API luaopen_random(lua_State *L)
 {
-    int LUAMOD_API luaopen_random(lua_State *L)
-    {
-        luaL_Reg l[] = {
-            {"rand_range",lrand_range},
-            {"rand_range_some",lrand_range_some},
-            {"randf_range",lrandf_range },
-            {"randf_percent",lrandf_percent },
-            {"rand_weight",lrand_weight },
-            {"rand_weight_some",lrand_weight_some },
-            {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+    luaL_Reg l[] = {
+        {"rand_range",lrand_range},
+        {"rand_range_some",lrand_range_some},
+        {"randf_range",lrandf_range },
+        {"randf_percent",lrandf_percent },
+        {"rand_weight",lrand_weight },
+        {"rand_weight_some",lrand_weight_some },
+        {NULL,NULL}
+    };
+    luaL_newlib(L, l);
+    return 1;
 }

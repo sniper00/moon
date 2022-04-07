@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-global
+
 workspace "Server"
     configurations { "Debug", "Release" }
     flags{"NoPCH","RelativeLinks"}
@@ -13,7 +15,7 @@ workspace "Server"
     filter "configurations:Release"
         defines { "NDEBUG" }
         optimize "On"
-        --symbols "On" --带上调试信息
+        symbols "On"
 
     filter {"system:windows"}
         characterset "MBCS"
@@ -31,22 +33,17 @@ project "lua"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
     kind "StaticLib"
-    language "C"
+    language "C++"
     includedirs {"./third/lua"}
-    files { "./third/lua/**.h", "./third/lua/**.c"}
-    removefiles("./third/lua/luac.c")
-    removefiles("./third/lua/lua.c")
+    files {"./third/lua/onelua.cpp"}
+    defines {"MAKE_LIB"}
     filter { "system:windows" }
         disablewarnings { "4244","4324","4702","4310", "4701"}
-        -- defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
-        -- links{"dl"}
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
-        -- links{"dl"}
-    -- filter{"configurations:*"}
-    --     postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
+
 
 project "moon"
     location "build/projects/%{prj.name}"
@@ -63,7 +60,6 @@ project "moon"
         "crypt",
         "pb",
         "sharetable",
-        "clonefunc",
         "mongo",
         -- "mimalloc",
     }
@@ -106,22 +102,21 @@ project "moon"
 local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, macaddon )
     project(name)
         location("build/projects/%{prj.name}")
-        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"--编译生成的中间文件目录
-        targetdir "build/bin/%{cfg.buildcfg}"--目标文件目录
+        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+        targetdir "build/bin/%{cfg.buildcfg}"
 
-        kind "StaticLib" -- 静态库 StaticLib， 动态库 SharedLib
-        includedirs {"./", "./third","./third/lua"} --头文件搜索目录
-        files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"} --需要编译的文件， **.c 递归搜索匹配的文件
-        --targetprefix "" -- linux 下需要去掉动态库 'lib' 前缀
-        language "C"
+        language "C++"
+        kind "StaticLib"
+        includedirs {"./", "./third","./third/lua"}
+        files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"}
+
         defines{"SOL_ALL_SAFETIES_ON"}
 
         if type(normaladdon)=="function" then
             normaladdon()
         end
+
         filter { "system:windows" }
-            --links{"lua"} -- windows 版需要链接 lua 库
-            --defines {"LUA_BUILD_AS_DLL","LUA_LIB"} -- windows下动态库导出宏定义
             if type(windowsaddon)=="function" then
                 windowsaddon()
             end
@@ -130,24 +125,22 @@ local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, 
                 linuxaddon()
             end
         filter {"system:macosx"}
-            -- links{"lua"}
             if type(macaddon)=="function" then
                 macaddon()
             end
-        --filter{"configurations:*"}
-            --postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}/clib"}
+
+        filter "files:**.c"
+            compileas "C++"
 end
 
 ----------------------Lua C/C++ Modules------------------------
 
 add_lua_module("./third/sharetable", "sharetable")
-add_lua_module("./third/clonefunc", "clonefunc")--for hotfix
 add_lua_module("./third/lcrypt", "crypt")
 add_lua_module("./third/pb", "pb")--protobuf
 add_lua_module("./third/lmongo", "mongo")
 
 add_lua_module("./lualib-src", "lualib", function()
-    language "C++"
     includedirs {"./moon-src", "./moon-src/core"}
     defines {
         "ASIO_STANDALONE" ,
