@@ -666,23 +666,20 @@ static int sep_concatsafe(lua_State *L)
     return 1;
 }
 
-extern "C"
+int LUAMOD_API  luaopen_serialize(lua_State *L)
 {
-    int LUAMOD_API  luaopen_serialize(lua_State *L)
-    {
-        luaL_Reg l[] = {
-            {"pack",pack},
-            {"packs",packsafe },
-            {"unpack",unpack},
-            {"unpack_one",peek_one},
-            {"concat",concat },
-            {"concats",concatsafe },
-            {"sep_concat",sep_concat },
-            {"sep_concats",sep_concatsafe },
-            {NULL,NULL},
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+    luaL_Reg l[] = {
+        {"pack",pack},
+        {"packs",packsafe },
+        {"unpack",unpack},
+        {"unpack_one",peek_one},
+        {"concat",concat },
+        {"concats",concatsafe },
+        {"sep_concat",sep_concat },
+        {"sep_concats",sep_concatsafe },
+        {NULL,NULL},
+    };
+    luaL_newlib(L, l);
+    return 1;
 }
 

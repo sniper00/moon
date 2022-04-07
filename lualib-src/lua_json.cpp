@@ -291,7 +291,7 @@ static void encode_table(lua_State* L, buffer* writer, int idx, int depth)
                 break;
             }
             default:
-                throw std::logic_error{std::string("json encode: unsupport key type :") + lua_typename(L, key_type)};
+                throw std::logic_error{std::string("json encode: unsupport key type : ") + lua_typename(L, key_type)};
             }
             lua_pop(L, 1);
         }
@@ -333,8 +333,9 @@ static int encode(lua_State* L)
     }
     catch (const std::exception& ex)
     {
-        return luaL_error(L, ex.what());
+        lua_pushstring(L, ex.what());
     }
+    return lua_error(L);
 }
 
 static void decode_one(lua_State* L, yyjson_val* value, bool null_as_userdata)
@@ -530,13 +531,14 @@ static int concat(lua_State* L)
             lua_pop(L, 1);
         }
         lua_pushlightuserdata(L, buf);
+		return 1;
     }
     catch (const std::exception& ex)
     {
         delete buf;
-        return luaL_error(L, ex.what());
+        lua_pushstring(L, ex.what());
     }
-    return 1;
+    return lua_error(L);
 }
 
 static void write_resp(moon::buffer* buf, const char* cmd, size_t size)
@@ -632,13 +634,14 @@ static int concat_resp(lua_State* L)
 
         buf->write_back("\r\n", 2);
         lua_pushlightuserdata(L, buf);
+        return 1;
     }
     catch (const std::exception& ex)
     {
         delete buf;
-        return luaL_error(L, ex.what());
+        lua_pushstring(L, ex.what());
     }
-    return 1;
+    return lua_error(L);
 }
 
 static int pretty_encode(lua_State *L)
@@ -654,25 +657,23 @@ static int pretty_encode(lua_State *L)
     }
     catch (const std::exception& ex)
     {
-        return luaL_error(L, ex.what());
+        lua_pushstring(L, ex.what());
     }
+    return lua_error(L);
 }
 
-extern "C"
+int LUAMOD_API luaopen_json(lua_State* L)
 {
-    int LUAMOD_API luaopen_json(lua_State* L)
-    {
-        luaL_Reg l[] = {
-            {"encode", encode}, 
-            {"pretty_encode", pretty_encode},
-            {"decode", decode},
-            {"concat", concat},
-            {"concat_resp", concat_resp},
-            {NULL, NULL} };
-        luaL_newlib(L, l);
-        lua_pushstring(L, "null");
-        lua_pushlightuserdata(L, nullptr);
-        lua_rawset(L, -3);
-        return 1;
-    }
+    luaL_Reg l[] = {
+        {"encode", encode}, 
+        {"pretty_encode", pretty_encode},
+        {"decode", decode},
+        {"concat", concat},
+        {"concat_resp", concat_resp},
+        {NULL, NULL} };
+    luaL_newlib(L, l);
+    lua_pushstring(L, "null");
+    lua_pushlightuserdata(L, nullptr);
+    lua_rawset(L, -3);
+    return 1;
 }

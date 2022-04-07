@@ -15,7 +15,7 @@ using namespace moon;
 
 constexpr size_t mb_memory = 1024 * 1024;
 
-extern "C" void open_custom_libs(lua_State* L);
+void open_custom_libs(lua_State* L);
 
 void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 {

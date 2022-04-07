@@ -10,7 +10,7 @@ static int
 lclone(lua_State *L) {
 	if (!lua_isfunction(L, 1) || lua_iscfunction(L,1))
 		return luaL_error(L, "Need lua function");
-	const LClosure *c = lua_topointer(L,1);
+	const LClosure *c = (const LClosure*)lua_topointer(L,1);
 	int n = (int)luaL_optinteger(L, 2, 0);
 	if (n < 0 || n > c->p->sizep)
 		return 0;
@@ -36,7 +36,7 @@ static int
 lproto(lua_State *L) {
 	if (!lua_isfunction(L, 1) || lua_iscfunction(L,1))
 		return 0;
-	const LClosure *c = lua_topointer(L,1);
+	const LClosure *c = (const LClosure*)lua_topointer(L,1);
 	lua_pushlightuserdata(L, c->p);
 	lua_pushinteger(L, c->p->sizep);
 	return 2;

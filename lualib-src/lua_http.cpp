@@ -95,20 +95,17 @@ static int lhttp_urldecode(lua_State* L)
     return 1;
 }
 
-extern "C"
+int LUAMOD_API luaopen_http(lua_State *L)
 {
-    int LUAMOD_API luaopen_http(lua_State *L)
-    {
-        luaL_Reg l[] = {
-                  { "parse_request", lhttp_parse_request},
-                  { "parse_response", lhttp_parse_response },
-                  { "create_query_string", lhttp_create_query_string },
-                  { "parse_query_string", lhttp_parse_query_string},
-                  { "urlencode", lhttp_urlencode },
-                  { "urldecode", lhttp_urldecode},
-                  {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+    luaL_Reg l[] = {
+                { "parse_request", lhttp_parse_request},
+                { "parse_response", lhttp_parse_response },
+                { "create_query_string", lhttp_create_query_string },
+                { "parse_query_string", lhttp_parse_query_string},
+                { "urlencode", lhttp_urlencode },
+                { "urldecode", lhttp_urldecode},
+                {NULL,NULL}
+    };
+    luaL_newlib(L, l);
+    return 1;
 }

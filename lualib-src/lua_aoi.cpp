@@ -248,16 +248,14 @@ static int laoi_create(lua_State *L)
     return 2;
 }
 
-extern "C"
+int LUAMOD_API luaopen_aoi(lua_State *L)
 {
-    int LUAMOD_API luaopen_aoi(lua_State *L)
-    {
-        luaL_Reg l[] = {
-            {"create",laoi_create},
-            {"release",lrelease },
-            {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+    luaL_Reg l[] = {
+        {"create",laoi_create},
+        {"release",lrelease },
+        {NULL,NULL}
+    };
+    luaL_newlib(L, l);
+    return 1;
 }
+

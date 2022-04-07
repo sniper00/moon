@@ -516,56 +516,53 @@ static int lmoon_error_count(lua_State* L)
     return 1;
 }
 
-extern "C"
+int LUAMOD_API luaopen_moon(lua_State* L)
 {
-    int LUAMOD_API luaopen_moon(lua_State* L)
-    {
-        luaL_Reg l[] = {
-            { "clock", lmoon_clock},
-            { "md5", lmoon_md5 },
-            { "tostring", lmoon_tostring },
-            { "timeout", lmoon_timeout},
-            { "log", lmoon_log},
-            { "set_loglevel", lmoon_set_loglevel},
-            { "get_loglevel", lmoon_get_loglevel},
-            { "cpu", lmoon_cpu},
-            { "make_prefab", lmoon_make_prefab},
-            { "send_prefab", lmoon_send_prefab},
-            { "send", lmoon_send},
-            { "new_service", lmoon_new_service},
-            { "kill", lmoon_kill},
-            { "scan_services", lmoon_scan_services},
-            { "queryservice", lmoon_queryservice},
-            { "set_env", lmoon_setenv},
-            { "get_env", lmoon_getenv},
-            { "server_info", lmoon_server_info},
-            { "exit", lmoon_exit},
-            { "size", lmoon_size},
-            { "now", lmoon_now},
-            { "adjtime", lmoon_adjtime},
-            { "callback", lmoon_callback},
-            { "error_count", lmoon_error_count},
-            { "decode", message_decode},
-            { "clone", message_clone },
-            { "release", message_release },
-            { "redirect", message_redirect},
-            { "collect", lmi_collect},
-            {NULL,NULL}
-        };
+    luaL_Reg l[] = {
+        { "clock", lmoon_clock},
+        { "md5", lmoon_md5 },
+        { "tostring", lmoon_tostring },
+        { "timeout", lmoon_timeout},
+        { "log", lmoon_log},
+        { "set_loglevel", lmoon_set_loglevel},
+        { "get_loglevel", lmoon_get_loglevel},
+        { "cpu", lmoon_cpu},
+        { "make_prefab", lmoon_make_prefab},
+        { "send_prefab", lmoon_send_prefab},
+        { "send", lmoon_send},
+        { "new_service", lmoon_new_service},
+        { "kill", lmoon_kill},
+        { "scan_services", lmoon_scan_services},
+        { "queryservice", lmoon_queryservice},
+        { "set_env", lmoon_setenv},
+        { "get_env", lmoon_getenv},
+        { "server_info", lmoon_server_info},
+        { "exit", lmoon_exit},
+        { "size", lmoon_size},
+        { "now", lmoon_now},
+        { "adjtime", lmoon_adjtime},
+        { "callback", lmoon_callback},
+        { "error_count", lmoon_error_count},
+        { "decode", message_decode},
+        { "clone", message_clone },
+        { "release", message_release },
+        { "redirect", message_redirect},
+        { "collect", lmi_collect},
+        {NULL,NULL}
+    };
 
-        luaL_newlib(L, l);
-        lua_service* S = lua_service::get(L);
-        lua_pushstring(L, "id");
-        lua_pushinteger(L, S->id());
-        lua_rawset(L, -3);
-        lua_pushstring(L, "name");
-        lua_pushlstring(L, S->name().data(), S->name().size());
-        lua_rawset(L, -3);
-        lua_pushstring(L, "timezone");
-        lua_pushinteger(L, moon::time::timezone());
-        lua_rawset(L, -3);
-        return 1;
-    }
+    luaL_newlib(L, l);
+    lua_service* S = lua_service::get(L);
+    lua_pushstring(L, "id");
+    lua_pushinteger(L, S->id());
+    lua_rawset(L, -3);
+    lua_pushstring(L, "name");
+    lua_pushlstring(L, S->name().data(), S->name().size());
+    lua_rawset(L, -3);
+    lua_pushstring(L, "timezone");
+    lua_pushinteger(L, moon::time::timezone());
+    lua_rawset(L, -3);
+    return 1;
 }
 
 static int lasio_try_open(lua_State* L)
@@ -812,32 +809,29 @@ static int lasio_unpack_udp(lua_State* L)
     return 2;
 }
 
-extern "C"
+int LUAMOD_API luaopen_asio(lua_State* L)
 {
-    int LUAMOD_API luaopen_asio(lua_State* L)
-    {
-        luaL_Reg l[] = {
-            { "try_open", lasio_try_open},
-            { "listen", lasio_listen },
-            { "accept", lasio_accept },
-            { "connect", lasio_connect },
-            { "read", lasio_read},
-            { "write", lasio_write},
-            { "write_message", lasio_write_message},
-            { "close", lasio_close},
-            { "settimeout", lasio_settimeout},
-            { "setnodelay", lasio_setnodelay},
-            { "set_enable_chunked", lasio_set_enable_chunked},
-            { "set_send_queue_limit", lasio_set_send_queue_limit},
-            { "getaddress", lasio_address},
-            { "udp", lasio_udp},
-            { "udp_connect", lasio_udp_connect},
-            { "sendto", lasio_sendto},
-            { "make_endpoint", lasio_make_endpoint},
-            { "unpack_udp", lasio_unpack_udp},
-            {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+    luaL_Reg l[] = {
+        { "try_open", lasio_try_open},
+        { "listen", lasio_listen },
+        { "accept", lasio_accept },
+        { "connect", lasio_connect },
+        { "read", lasio_read},
+        { "write", lasio_write},
+        { "write_message", lasio_write_message},
+        { "close", lasio_close},
+        { "settimeout", lasio_settimeout},
+        { "setnodelay", lasio_setnodelay},
+        { "set_enable_chunked", lasio_set_enable_chunked},
+        { "set_send_queue_limit", lasio_set_send_queue_limit},
+        { "getaddress", lasio_address},
+        { "udp", lasio_udp},
+        { "udp_connect", lasio_udp_connect},
+        { "sendto", lasio_sendto},
+        { "make_endpoint", lasio_make_endpoint},
+        { "unpack_udp", lasio_unpack_udp},
+        {NULL,NULL}
+    };
+    luaL_newlib(L, l);
+    return 1;
 }
