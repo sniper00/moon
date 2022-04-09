@@ -1,80 +1,111 @@
 #include "lua.hpp"
 #include "config.hpp"
 #include "common/buffer.hpp"
+#include "common/byte_convert.hpp"
 
 using namespace moon;
 
+static buffer* get_pointer(lua_State* L, int index) {
+    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, index));
+    if (buf == NULL)
+        luaL_argerror(L, index, "null buffer pointer");
+    return buf;
+}
+
 static int clear(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     buf->clear();
     return 0;
 }
 
 static int size(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     lua_pushinteger(L, buf->size());
     return 1;
 }
 
-static int substr(lua_State* L)
-{
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
-    auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
-    auto count = static_cast<size_t>(luaL_checkinteger(L, 3));
-    if (pos >= buf->size())
-    {
-        return luaL_error(L, "invalid buffer.substr position");
-    }
-
-    std::string_view sw(buf->data(), buf->size());
-    std::string_view sub = sw.substr(pos, count);
-    lua_pushlstring(L, sub.data(), sub.size());
-    return 1;
+template<typename T>
+static void pushinteger(lua_State* L, const char*& b, const char* e, bool little) {
+    if ((e-b) < sizeof(T))
+        luaL_error(L, "data string too short");
+    T v = 0;
+    memcpy(&v, b, sizeof(T));
+    b += sizeof(T);
+    if (!little)
+        moon::host2net(v);
+    lua_pushinteger(L, v);
 }
 
-static int str(lua_State* L)
+static int unpack(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
-    lua_pushlstring(L, buf->data(), buf->size());
-    return 1;
-}
+    auto buf = get_pointer(L, 1);
 
-static int cstr(lua_State* L)
-{
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
-    size_t offset = 0;
-    if (lua_type(L, 2) == LUA_TNUMBER)
+    int top = lua_gettop(L);
+
+    int tp = lua_type(L, 2);
+    if (tp == LUA_TSTRING)
     {
-        offset = static_cast<size_t>(lua_tointeger(L, 2));
-        if (offset > buf->size())
-        {
-            return luaL_error(L, "out of range");
+        size_t opt_len = 0;
+        const char* opt = luaL_optlstring(L, 2, "", &opt_len);
+        auto pos = static_cast<size_t>(luaL_optinteger(L, 3, 0));
+        if (pos > buf->size())
+            return luaL_argerror(L, 3, "out of range");
+
+        const char* start = buf->data() + pos;
+        const char* end = buf->data() + buf->size();
+
+        bool little = true;
+        for (int i = 0; i < opt_len; ++i) {
+            switch (opt[i])
+            {
+            case '>':
+                little = false;
+                break;
+            case '<':
+                little = true;
+                break;
+            case 'h':
+                pushinteger<int16_t>(L, start, end, little);
+                break;
+            case 'H':
+                pushinteger<uint16_t>(L, start, end, little);
+                break;
+            case 'i':
+                pushinteger<int32_t>(L, start, end, little);
+                break;
+            case 'I':
+                pushinteger<uint32_t>(L, start, end, little);
+                break;
+            case 'C':
+                lua_pushlightuserdata(L, (void*)start);
+                lua_pushinteger(L, end - start);
+                break;
+            default:
+                return luaL_error(L, "invalid format option '%c'", opt[i]);
+                break;
+            }
         }
     }
-    lua_pushlightuserdata(L, (void*)(buf->data() + offset));
-    lua_pushinteger(L, buf->size() - offset);
-    return 2;
+    else
+    {
+        auto pos = static_cast<size_t>(luaL_optinteger(L, 2, 0));
+        if (pos > buf->size())
+            return luaL_argerror(L, 2, "out of range");
+        auto count = static_cast<size_t>(luaL_optinteger(L, 3, -1));
+        count = std::min(buf->size() - pos, count);
+        lua_pushlstring(L, buf->data() + pos, count);
+    }
+    return lua_gettop(L) - top;
 }
 
 static int read(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
-    auto count = static_cast<int>(luaL_checkinteger(L, 2));
-    if (count<0 || count > static_cast<int>(buf->size()))
-    {
-        lua_pushboolean(L, 0);
-        lua_pushstring(L, "out off index");
-        return 2;
-    }
-
+    auto buf = get_pointer(L, 1);
+    auto count = static_cast<size_t>(luaL_checkinteger(L, 2));
+    if (count > buf->size())
+        return luaL_argerror(L, 2, "out of range");
     lua_pushlstring(L, buf->data(), count);
     buf->seek(count);
     return 1;
@@ -83,11 +114,11 @@ static int read(lua_State* L)
 static void write_string(lua_State* L, int index, buffer* b)
 {
     int type = lua_type(L, index);
-    switch (type) {
+    switch (type)
+    {
     case LUA_TNIL:
         break;
-    case LUA_TNUMBER:
-    {
+    case LUA_TNUMBER: {
         if (lua_isinteger(L, index))
         {
             lua_Integer x = lua_tointeger(L, index);
@@ -102,8 +133,7 @@ static void write_string(lua_State* L, int index, buffer* b)
         }
         break;
     }
-    case LUA_TBOOLEAN:
-    {
+    case LUA_TBOOLEAN: {
         int n = lua_toboolean(L, index);
         const char* s = n ? "true" : "false";
         b->write_back(s, std::strlen(s));
@@ -116,14 +146,13 @@ static void write_string(lua_State* L, int index, buffer* b)
         break;
     }
     default:
-        luaL_error(L, "buffer.write unsupport type %s", lua_typename(L, type));
+        luaL_error(L, "unsupport type %s", lua_typename(L, type));
     }
 }
 
 static int write_front(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     size_t len = 0;
     auto data = luaL_checklstring(L, 2, &len);
     bool ok = buf->write_front(data, len);
@@ -133,16 +162,14 @@ static int write_front(lua_State* L)
 
 static int write_back(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     write_string(L, 2, buf);
     return 0;
 }
 
 static int seek(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     auto pos = static_cast<int>(luaL_checkinteger(L, 2));
     auto origin = buffer::seek_origin::Current;
     if (lua_type(L, 3) == LUA_TNUMBER)
@@ -155,28 +182,31 @@ static int seek(lua_State* L)
 
 static int commit(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     auto n = static_cast<size_t>(luaL_checkinteger(L, 2));
-    if (0 == n) { return luaL_error(L, "Invalid buffer commit param"); }
+    if (0 == n)
+    {
+        return luaL_error(L, "Invalid buffer commit param");
+    }
     buf->commit(n);
     return 0;
 }
 
 static int prepare(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     auto n = static_cast<size_t>(luaL_checkinteger(L, 2));
-    if (0 == n) { return luaL_error(L, "Invalid buffer prepare param"); }
+    if (0 == n)
+    {
+        return luaL_error(L, "Invalid buffer prepare param");
+    }
     buf->prepare(n);
     return 0;
 }
 
 static int has_flag(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     auto flag = static_cast<int>(luaL_checkinteger(L, 2));
     bool res = buf->has_flag(flag);
     lua_pushboolean(L, res ? 1 : 0);
@@ -185,8 +215,7 @@ static int has_flag(lua_State* L)
 
 static int set_flag(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     auto flag = static_cast<int>(luaL_checkinteger(L, 2));
     buf->set_flag(flag);
     return 0;
@@ -194,16 +223,16 @@ static int set_flag(lua_State* L)
 
 static int unsafe_delete(lua_State* L)
 {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, 1));
-    if (buf == NULL) { return luaL_error(L, "null buffer pointer"); }
+    auto buf = get_pointer(L, 1);
     delete buf;
     return 0;
 }
 
 static int unsafe_new(lua_State* L)
 {
-    size_t capacity = static_cast<size_t>(luaL_checkinteger(L, 1));
-    buffer* buf = new buffer(capacity, BUFFER_HEAD_RESERVED);
+    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, 256));
+    uint32_t headreserved = static_cast<uint32_t>(luaL_optinteger(L, 2, BUFFER_HEAD_RESERVED));
+    buffer* buf = new buffer(capacity, headreserved);
     lua_pushlightuserdata(L, buf);
     return 1;
 }
@@ -211,25 +240,21 @@ static int unsafe_new(lua_State* L)
 int LUAMOD_API luaopen_buffer(lua_State* L)
 {
     luaL_Reg l[] = {
-        { "unsafe_new", unsafe_new},
-        { "delete", unsafe_delete },
-        { "clear", clear },
-        { "size", size },
-        { "substr", substr},
-        { "str", str},
-        { "cstr", cstr},
-        { "read", read},
-        { "write_front", write_front},
-        { "write_back", write_back},
-        { "seek", seek},
-        { "commit", commit},
-        { "prepare", prepare},
-        { "has_flag", has_flag},
-        { "set_flag", set_flag},
-        {NULL,NULL}
+        {"unsafe_new", unsafe_new}
+        , {"delete", unsafe_delete}
+        , {"clear", clear}
+        , {"size", size}
+        , {"unpack", unpack}
+        , {"read", read}
+        , {"write_front", write_front}
+        , {"write_back", write_back}
+        , {"seek", seek}
+        , {"commit", commit}
+        , {"prepare", prepare}
+        , {"has_flag", has_flag}
+        , {"set_flag", set_flag}
+        , {NULL, NULL}
     };
     luaL_newlib(L, l);
     return 1;
 }
-
-
