@@ -30,6 +30,11 @@ static constexpr int32_t HEAP_BUFFER = 1;
 #define BLOCK_SIZE 128
 #define MAX_DEPTH 32
 
+static void wb_free(buffer* b) {
+    if (b->has_flag(HEAP_BUFFER))
+        delete b;
+}
+
 static inline void wb_nil(buffer* buf)
 {
     uint8_t n = TYPE_NIL;
@@ -161,16 +166,18 @@ static void wb_table_hash(lua_State *L, buffer* buf, int index, int depth, int a
     wb_nil(buf);
 }
 
-static void wb_table_metapairs(lua_State *L, buffer* buf, int index, int depth) {
+static int wb_table_metapairs(lua_State *L, buffer* buf, int index, int depth) {
     uint8_t n = COMBINE_TYPE(TYPE_TABLE, 0);
     buf->write_back(&n, 1);
     lua_pushvalue(L, index);
-    lua_call(L, 1, 3);
+    if (lua_pcall(L, 1, 3, 0) != LUA_OK)
+        return 1;
     for (;;) {
         lua_pushvalue(L, -2);
         lua_pushvalue(L, -2);
         lua_copy(L, -5, -3);
-        lua_call(L, 2, 2);
+        if (lua_pcall(L, 2, 2, 0) != LUA_OK)
+            return 1;
         int type = lua_type(L, -2);
         if (type == LUA_TNIL) {
             lua_pop(L, 4);
@@ -181,26 +188,32 @@ static void wb_table_metapairs(lua_State *L, buffer* buf, int index, int depth) 
         lua_pop(L, 1);
     }
     wb_nil(buf);
+    return 0;
 }
 
-static void wb_table(lua_State*L, buffer* buf, int index, int depth)
+static int wb_table(lua_State* L, buffer* buf, int index, int depth)
 {
-    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    if (!lua_checkstack(L, LUA_MINSTACK))
+    {
+        lua_pushstring(L, "out of memory");
+        return 1;
+    }
     if (index < 0) {
         index = lua_gettop(L) + index + 1;
     }
     if (luaL_getmetafield(L, index, "__pairs") != LUA_TNIL) {
-        wb_table_metapairs(L, buf, index, depth);
+        return wb_table_metapairs(L, buf, index, depth);
     }
     else {
         int array_size = wb_table_array(L, buf, index, depth);
         wb_table_hash(L, buf, index, depth, array_size);
+        return 0;
     }
 }
 
 static void pack_one(lua_State *L, buffer* b, int index, int depth) {
     if (depth > MAX_DEPTH) {
-        if (b->has_flag(HEAP_BUFFER)) delete b;
+        wb_free(b);
         luaL_error(L, "serialize can't pack too depth table");
         return;
     }
@@ -236,11 +249,14 @@ static void pack_one(lua_State *L, buffer* b, int index, int depth) {
         if (index < 0) {
             index = lua_gettop(L) + index + 1;
         }
-        wb_table(L, b, index, depth + 1);
+        if (wb_table(L, b, index, depth + 1)) {
+            wb_free(b);
+            lua_error(L);
+        }
         break;
     }
     default:
-        if (b->has_flag(HEAP_BUFFER)) delete b;
+        wb_free(b);
         luaL_error(L, "Unsupport type %s to serialize", lua_typename(L, type));
     }
 }
@@ -539,7 +555,7 @@ static void concat_table(lua_State*L, buffer* buf, int index, int depth)
 static void concat_one(lua_State *L, buffer* b, int index, int depth)
 {
     if (depth > MAX_DEPTH) {
-        if (b->has_flag(HEAP_BUFFER)) delete b;
+        wb_free(b);
         luaL_error(L, "serialize can't concat too depth table");
         return;
     }
@@ -585,7 +601,7 @@ static void concat_one(lua_State *L, buffer* b, int index, int depth)
         break;
     }
     default:
-        if (b->has_flag(HEAP_BUFFER)) delete b;
+        wb_free(b);
         luaL_error(L, "Unsupport type %s to concat", lua_typename(L, type));
     }
 }
