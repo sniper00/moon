@@ -566,17 +566,9 @@ static void concat_one(lua_State *L, buffer* b, int index, int depth)
     case LUA_TNUMBER:
     {
         if (lua_isinteger(L, index))
-        {
-            lua_Integer x = lua_tointeger(L, index);
-            auto s = std::to_string(x);
-            b->write_back(s.data(), s.size());
-        }
+            b->write_chars(lua_tointeger(L, index));
         else
-        {
-            lua_Number n = lua_tonumber(L, index);
-            auto s = std::to_string(n);
-            b->write_back(s.data(), s.size());
-        }
+            b->write_chars(lua_tonumber(L, index));
         break;
     }
     case LUA_TBOOLEAN:

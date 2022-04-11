@@ -28,7 +28,7 @@ static int size(lua_State* L)
 
 template<typename T>
 static void pushinteger(lua_State* L, const char*& b, const char* e, bool little) {
-    if ((e-b) < sizeof(T))
+    if ((size_t)(e-b) < sizeof(T))
         luaL_error(L, "data string too short");
     T v = 0;
     memcpy(&v, b, sizeof(T));
@@ -57,7 +57,7 @@ static int unpack(lua_State* L)
         const char* end = buf->data() + buf->size();
 
         bool little = true;
-        for (int i = 0; i < opt_len; ++i) {
+        for (size_t i = 0; i < opt_len; ++i) {
             switch (opt[i])
             {
             case '>':
@@ -107,7 +107,7 @@ static int read(lua_State* L)
     if (count > buf->size())
         return luaL_argerror(L, 2, "out of range");
     lua_pushlstring(L, buf->data(), count);
-    buf->seek(count);
+    buf->consume(count);
     return 1;
 }
 
@@ -120,17 +120,9 @@ static void write_string(lua_State* L, int index, buffer* b)
         break;
     case LUA_TNUMBER: {
         if (lua_isinteger(L, index))
-        {
-            lua_Integer x = lua_tointeger(L, index);
-            auto s = std::to_string(x);
-            b->write_back(s.data(), s.size());
-        }
+            b->write_chars(lua_tointeger(L, index));
         else
-        {
-            lua_Number n = lua_tonumber(L, index);
-            auto s = std::to_string(n);
-            b->write_back(s.data(), s.size());
-        }
+            b->write_chars(lua_tonumber(L, index));
         break;
     }
     case LUA_TBOOLEAN: {
@@ -170,13 +162,10 @@ static int write_back(lua_State* L)
 static int seek(lua_State* L)
 {
     auto buf = get_pointer(L, 1);
-    auto pos = static_cast<int>(luaL_checkinteger(L, 2));
-    auto origin = buffer::seek_origin::Current;
-    if (lua_type(L, 3) == LUA_TNUMBER)
-    {
-        origin = static_cast<buffer::seek_origin>(luaL_checkinteger(L, 3));
-    }
-    buf->seek(pos, origin);
+    auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
+    auto origin = ((luaL_optinteger(L, 3, 1) == 1) ? buffer::seek_origin::Current : buffer::seek_origin::Begin);
+    if (!buf->seek(pos, origin))
+        return luaL_error(L, "out off range");
     return 0;
 }
 
@@ -184,10 +173,6 @@ static int commit(lua_State* L)
 {
     auto buf = get_pointer(L, 1);
     auto n = static_cast<size_t>(luaL_checkinteger(L, 2));
-    if (0 == n)
-    {
-        return luaL_error(L, "Invalid buffer commit param");
-    }
     buf->commit(n);
     return 0;
 }
