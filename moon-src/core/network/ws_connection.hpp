@@ -429,7 +429,7 @@ namespace moon
                     uint16_t code = *(const uint16_t*)recv_buf_->data();
                     std::string reason;
                     reason.append(std::to_string(code));
-                    recv_buf_->seek(2);
+                    recv_buf_->consume(2);
                     if (recv_buf_->size() != 0)
                     {
                         reason.append(":");
@@ -586,13 +586,11 @@ namespace moon
                 }
             }
 
+            recv_buf_->consume(need);
             if (fh.op == ws::opcode::close)
             {
-                recv_buf_->seek(static_cast<int>(need), buffer::seek_origin::Current);
                 return make_error_code(moon::error::ws_closed);
             }
-
-            recv_buf_->seek(static_cast<int>(need), buffer::seek_origin::Current);
             message msg;
             if (recv_buf_->size()==reallen)
             {
@@ -602,7 +600,7 @@ namespace moon
             {
                 msg = message{ reallen };
                 msg.get_buffer()->write_back(recv_buf_->data(), reallen);
-                recv_buf_->seek(static_cast<int>(reallen));
+                recv_buf_->consume(reallen);
             }
 
             switch (fh.op)

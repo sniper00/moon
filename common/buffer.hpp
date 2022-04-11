@@ -142,7 +142,6 @@ namespace moon
         {
             Begin,
             Current,
-            End
         };
 
         base_buffer(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
@@ -242,7 +241,7 @@ namespace moon
         {
             static constexpr size_t MAX_NUMBER_2_STR = 44;
             auto* b = prepare(MAX_NUMBER_2_STR);
-#ifndef _MSC_VER//std::to_chars in C++17£ºgcc and clang only integral types supported
+#ifndef _MSC_VER//std::to_chars in C++17: gcc and clang only integral types supported
             if constexpr (std::is_floating_point_v<T>)
             {
                 int len = std::snprintf(b, MAX_NUMBER_2_STR, "%.16g", value);
@@ -283,31 +282,31 @@ namespace moon
             return true;
         }
 
-        void consume(std::size_t n)
+        void consume(std::size_t n) noexcept
         {
-            seek(static_cast<int>(n));
+            seek(n);
         }
 
-        size_t seek(int offset, seek_origin s = seek_origin::Current)  noexcept
+        //set read or forward read pos
+        bool seek(size_t offset, seek_origin s = seek_origin::Current) noexcept
         {
             switch (s)
             {
             case seek_origin::Begin:
+                if (offset > writepos_)
+                    return false;
                 readpos_ = offset;
                 break;
             case seek_origin::Current:
+                if (readpos_ + offset > writepos_)
+                    return false;
                 readpos_ += offset;
-                assert(readpos_ <= writepos_);
-                if (readpos_ > writepos_)
-                {
-                    readpos_ = writepos_;
-                }
                 break;
             default:
                 assert(false);
-                break;
+				return false;
             }
-            return readpos_;
+            return true;
         }
 
         void clear() noexcept

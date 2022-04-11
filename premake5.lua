@@ -37,8 +37,6 @@ project "lua"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.cpp"}
     defines {"MAKE_LIB"}
-    filter { "system:windows" }
-        disablewarnings { "4244","4324","4702","4310", "4701"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
     filter { "system:macosx" }
