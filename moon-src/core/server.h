@@ -85,7 +85,7 @@ namespace moon
 
         service_ptr_t make_service(const std::string& type);
 
-        std::shared_ptr<const std::string> get_env(std::string name) const;
+        std::shared_ptr<const std::string> get_env(const std::string& name) const;
 
         void set_env(std::string name, std::string value);
 
