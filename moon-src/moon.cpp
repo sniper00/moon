@@ -6,9 +6,6 @@
 #include "server.h"
 #include "services/lua_service.h"
 
-#include "lstring.h"
-
-
 static std::weak_ptr<moon::server>  wk_server;
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
@@ -244,7 +241,6 @@ int main(int argc, char* argv[])
             luaL_requiref(L, name, lua_c_fn, 0);\
             lua_pop(L, 1);  /* remove lib */\
 
-//extern "C"
 
 void open_custom_libs(lua_State* L)
 {
