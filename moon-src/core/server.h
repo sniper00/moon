@@ -85,7 +85,7 @@ namespace moon
 
         service_ptr_t make_service(const std::string& type);
 
-        std::string get_env(const std::string& name) const;
+        std::shared_ptr<const std::string> get_env(std::string name) const;
 
         void set_env(std::string name, std::string value);
 
@@ -116,7 +116,7 @@ namespace moon
         mutable log logger_;
         mutable std::mutex fd_lock_;
         std::unordered_map<std::string, register_func > regservices_;
-        concurrent_map<std::string, std::string, rwlock> env_;
+        concurrent_map<std::string, std::shared_ptr<const std::string>, rwlock> env_;
         concurrent_map<std::string, uint32_t, rwlock> unique_services_;
         std::unordered_set<uint32_t> fd_watcher_;
         std::vector<std::unique_ptr<timer_type>> timer_;
