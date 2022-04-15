@@ -328,7 +328,7 @@ namespace moon
         return nullptr;
     }
 
-    std::shared_ptr<const std::string> server::get_env(std::string name) const
+    std::shared_ptr<const std::string> server::get_env(const std::string& name) const
     {
         std::shared_ptr<const std::string> value;
         if (env_.try_get_value(name, value))
