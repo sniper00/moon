@@ -1,11 +1,11 @@
 local moon = require("moon")
----@type asio
+
 local core = require("asio")
 
 local tointeger = math.tointeger
 local yield = coroutine.yield
 local make_response = moon.make_response
-local id = moon.addr()
+local id = moon.id
 
 local close = core.close
 local accept = core.accept

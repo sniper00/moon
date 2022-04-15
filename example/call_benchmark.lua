@@ -50,7 +50,7 @@ else
                 runner = true,
                 type = "sender",
                 target = receiver,
-                main = moon.addr()
+                main = moon.id
             })
             sender_addrs[#sender_addrs+1] = addr
         end

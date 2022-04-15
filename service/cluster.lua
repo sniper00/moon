@@ -92,13 +92,13 @@ local function cluster_service()
                 local address = get_service_address(header.to_sname)
                 assert(address>0, tostring(header.to_sname))
                 local session = moon.make_response(address)
-                redirect(msg, "", address, moon.PTYPE_LUA, moon.addr(), -session)
+                redirect(msg, "", address, moon.PTYPE_LUA, moon.id, -session)
                 header.session = -header.session
                 socket.write(fd, pack(header, co_yield()))
             end)
         elseif header.session > 0 then --receive response message
             if remove_send_watch(fd, header.from_addr, header.session) then
-                redirect(msg, "", header.from_addr, moon.PTYPE_LUA, moon.addr(), header.session)
+                redirect(msg, "", header.from_addr, moon.PTYPE_LUA, moon.id, header.session)
             end
         else-- receive send message
             local address = get_service_address(header.to_sname)
@@ -302,7 +302,7 @@ function cluster.send(receiver_node, receiver_sname, ...)
         to_node = receiver_node,
         to_sname = receiver_sname,
         from_node = NODE,
-        from_addr = moon.addr(),
+        from_addr = moon.id,
         session = 0
     }
 
@@ -321,7 +321,7 @@ function cluster.call(receiver_node, receiver_sname, ...)
         to_node = receiver_node,
         to_sname = receiver_sname,
         from_node = NODE,
-        from_addr = moon.addr(),
+        from_addr = moon.id,
         session = -sessionid
     }
 

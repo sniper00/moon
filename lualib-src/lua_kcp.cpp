@@ -139,7 +139,6 @@ static int lua_ikcp_read(lua_State* L) {
     return 0;
 }
 
-
 int LUAMOD_API luaopen_kcp_core(lua_State* L)
 {
     luaL_Reg l[] = {
