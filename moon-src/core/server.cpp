@@ -253,15 +253,19 @@ namespace moon
         }
         asio::post(w->io_context(), [this, sender, w, sessionid] {
             std::string content;
-            content.append("[");
             for (auto& it : w->services_)
             {
+                if (content.empty())
+                    content.append("[");
+
                 content.append(moon::format(
                     R"({"name":"%s","serviceid":"%X"},)",
                     it.second->name().data(),
                     it.second->id()));
             }
-            content.back() = ']';
+
+            if (!content.empty())
+                content.back() = ']';
             response(sender, std::string_view{}, content, sessionid);
          });
     }
@@ -324,19 +328,19 @@ namespace moon
         return nullptr;
     }
 
-    std::string server::get_env(const std::string& name) const
+    std::shared_ptr<const std::string> server::get_env(std::string name) const
     {
-        std::string v;
-        if (env_.try_get_value(name, v))
+        std::shared_ptr<const std::string> value;
+        if (env_.try_get_value(name, value))
         {
-            return v;
+            return value;
         }
-        return std::string{};
+        return nullptr;
     }
 
     void server::set_env(std::string name, std::string value)
     {
-        env_.set(std::move(name), std::move(value));
+        env_.set(std::move(name), std::make_shared<const std::string>(std::move(value)));
     }
 
     uint32_t server::get_unique_service(const std::string& name) const
