@@ -2,6 +2,11 @@
 #include "common/lua_utility.hpp"
 #include "service.hpp"
 
+struct callback_context
+{
+    lua_State* L = nullptr;
+};
+
 class lua_service : public moon::service
 {
 public:
@@ -23,6 +28,9 @@ public:
 
     static lua_service* get(lua_State* L);
 
+    static int set_callback(lua_State* L);
+
 private:
+    callback_context* cb_ctx = nullptr;
     std::unique_ptr<lua_State, moon::state_deleter> lua_;
 };

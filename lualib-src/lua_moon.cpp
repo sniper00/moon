@@ -34,7 +34,7 @@ static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
         return moon::buffer_ptr_t(p);
     }
     default:
-        luaL_error(L, "expected nil or a  lightuserdata(buffer*) or a string");
+        luaL_argerror(L, index, "nil, lightuserdata(buffer*) or string expected");
     }
     return nullptr;
 }
@@ -70,10 +70,7 @@ static int lmoon_md5(lua_State* L)
 static int lmoon_tostring(lua_State* L)
 {
     const char* data = (const char*)lua_touserdata(L, 1);
-    if (nullptr == data)
-    {
-        return luaL_error(L, "need char* lightuserdata");
-    }
+    luaL_argcheck(L, nullptr != data, 1, "lightuserdata(char*) expected");
     size_t len = luaL_checkinteger(L, 2);
     lua_pushlstring(L, data, len);
     return 1;
@@ -151,8 +148,7 @@ static int lmoon_make_prefab(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     intptr_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
-    if (id == 0)
-        return luaL_error(L, "moon.make_prefab failed");
+    luaL_argcheck(L, id != 0, 1, "do not use same buffer pointer twice");
     lua_pushinteger(L, id);
     return 1;
 }
@@ -169,7 +165,7 @@ static int lmoon_send_prefab(lua_State* L)
     if (!ok)
     {
         lua_pushboolean(L, 0);
-        lua_pushstring(L, moon::format("send_prefab failed, can not find prepared data. prefabid %" PRId64, prefabid).data());
+        lua_pushstring(L, moon::format("can not find prefab data. id %" PRId64, prefabid).data());
         return 2;
     }
     lua_pushboolean(L, 1);
@@ -180,12 +176,9 @@ static int lmoon_send(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
-    int8_t type = (int8_t)luaL_checkinteger(L, 5);
-
-    if (receiver == 0)
-        return luaL_error(L, "moon.send 'receiver' must >0");
-    if (type == PTYPE_UNKNOWN)
-        return luaL_error(L, "moon.send invalid message type");
+    luaL_argcheck(L, receiver > 0, 1, "receiver must > 0");
+    uint8_t type = (uint8_t)luaL_checkinteger(L, 5);
+    luaL_argcheck(L, type > 0, 5, "PTYPE must > 0");
 
     std::string_view header = lua_check<std::string_view>(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
@@ -301,20 +294,17 @@ static int lmoon_queryservice(lua_State* L)
 static int lmoon_setenv(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view name = lua_check<std::string_view>(L, 1);
-    std::string_view value = lua_check<std::string_view>(L, 2);
-    S->get_server()->set_env(std::string{ name }, std::string{ value });
+    S->get_server()->set_env(lua_check<std::string>(L, 1), lua_check<std::string>(L, 2));
     return 0;
 }
 
 static int lmoon_getenv(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string_view name = lua_check<std::string_view>(L, 1);
-    std::string value = S->get_server()->get_env(std::string{ name });
-    if (value.empty())
+    auto value = S->get_server()->get_env(lua_check<std::string>(L, 1));
+    if (!value)
         return 0;
-    lua_pushlstring(L, value.data(), value.size());
+    lua_pushlstring(L, value->data(), value->size());
     return 1;
 }
 
@@ -345,7 +335,9 @@ static int lmoon_size(lua_State* L)
 static int lmoon_now(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    time_t t = S->get_server()->now();
+    auto ratio = luaL_optinteger(L, 1, 1);
+    luaL_argcheck(L, ratio > 0, 1, "must >0");
+    time_t t = (S->get_server()->now()/ratio);
     lua_pushinteger(L, t);
     return 1;
 }
@@ -360,21 +352,11 @@ static int lmoon_adjtime(lua_State* L)
     return 1;
 }
 
-static int lmoon_callback(lua_State* L) {
-    lua_service* S = lua_service::get(L);
-    luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_settop(L, 1);
-    lua_rawsetp(L, LUA_REGISTRYINDEX, S);
-    return 0;
-}
-
 static int message_decode(lua_State* L)
 {
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-    {
-        return luaL_error(L, "message info param 1 need userdata");
-    }
+        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     size_t len = 0;
     const char* sz = luaL_checklstring(L, 2, &len);
     int top = lua_gettop(L);
@@ -437,13 +419,13 @@ static int message_decode(lua_State* L)
             }
             else
             {
-                lua_pushlightuserdata(L, m->get_buffer()->data());
-                lua_pushinteger(L, m->get_buffer()->size());
+                lua_pushlightuserdata(L, buf->data());
+                lua_pushinteger(L, buf->size());
             }
             break;
         }
         default:
-            return luaL_error(L, "message decode get unknown cmd %s", sz);
+            return luaL_error(L, "invalid format option '%c'", sz[i]);
         }
     }
     return lua_gettop(L) - top;
@@ -453,9 +435,7 @@ static int message_clone(lua_State* L)
 {
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-    {
-        return luaL_error(L, "message clone param need lightuserdata(message*)");
-    }
+        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     message* nm = new message((const buffer_ptr_t&)*m);
     nm->set_broadcast(m->broadcast());
     nm->set_header(m->header());
@@ -471,9 +451,7 @@ static int message_release(lua_State* L)
 {
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-    {
-        return luaL_error(L, "message release param need lightuserdata(message*)");
-    }
+        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     delete m;
     return 0;
 }
@@ -483,9 +461,7 @@ static int message_redirect(lua_State* L)
     int top = lua_gettop(L);
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-    {
-        return luaL_error(L, "message clone param need lightuserdata(message*)");
-    }
+        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     size_t len = 0;
     const char* sz = luaL_checklstring(L, 2, &len);
     m->set_header(std::string_view{ sz, len });
@@ -541,7 +517,7 @@ int LUAMOD_API luaopen_moon(lua_State* L)
         { "size", lmoon_size},
         { "now", lmoon_now},
         { "adjtime", lmoon_adjtime},
-        { "callback", lmoon_callback},
+        { "callback", lua_service::set_callback},
         { "error_count", lmoon_error_count},
         { "decode", message_decode},
         { "clone", message_clone },
@@ -656,9 +632,7 @@ static int lasio_write_message(lua_State* L)
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     moon::message* m =(moon::message*)lua_touserdata(L, 2);
     if (nullptr == m)
-    {
-        return luaL_error(L, "asio.write_message param 'message' invalid");
-    }
+        return luaL_argerror(L, 2, "lightuserdata(message*) expected");
     bool ok = sock.write(fd, *m);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
