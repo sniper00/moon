@@ -191,6 +191,72 @@ local function test_safe_batch_insert()
 	assert(length == ret:count(), "test safe batch insert failed")
 end
 
+local function test_safe_batch_update()
+	local ok, err, ret
+	local c = _create_client()
+	local db = c[db_name]
+
+	db.testcoll:drop()
+
+	local val = 1
+	local id_list = {}
+	local docs, length = {}, 10
+	for i = 1, length do
+		local _id = bson.objectid()
+		table.insert(id_list, _id)
+		table.insert(docs, {_id = _id, test_key = val})
+	end
+
+	db.testcoll:safe_batch_insert(docs)
+	ret = db.testcoll:find()
+	while ret:hasNext() do
+		local doc = ret:next()
+		assert(doc.test_key == val)
+	end
+
+	local updates = {}
+	local new_val = val + 1
+	for _, _id in ipairs(id_list) do
+		table.insert(updates, {
+			query = {_id = _id, },
+			update = {test_key = new_val}
+		})
+	end
+	db.testcoll:safe_batch_update(updates)
+
+	ret = db.testcoll:find()
+	while ret:hasNext() do
+		local doc = ret:next()
+		assert(doc.test_key == new_val)
+	end
+end
+
+local function test_safe_batch_delete()
+	local ok, err, ret
+	local c = _create_client()
+	local db = c[db_name]
+
+	db.testcoll:drop()
+
+	local docs, length = {}, 10
+	for i = 1, length do
+		table.insert(docs, {test_key = i})
+	end
+
+	db.testcoll:safe_batch_insert(docs)
+
+	docs = {}
+	local del_num = 4
+	for i = 1, del_num do
+		table.insert(docs, {test_key = i})
+	end
+
+	db.testcoll:safe_batch_delete(docs)
+
+	local ret = db.testcoll:find()
+	assert(length - del_num == ret:count(), "test safe batch delete failed")
+end
+
 moon.async(function()
 	if username then
 		print("Test auth")
@@ -208,5 +274,9 @@ moon.async(function()
 	test_expire_index()
 	print("test safe batch insert")
 	test_safe_batch_insert()
+	print("test safe batch update")
+	test_safe_batch_update()
+	print("test safe batch delete")
+	test_safe_batch_delete()
 	print("mongodb test finish.");
 end)
