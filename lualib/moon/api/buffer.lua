@@ -6,7 +6,7 @@ error("DO NOT REQUIRE THIS FILE")
 ---@class buffer
 local buffer = {}
 
---- Create a buffer, must use unsafe_delete free it.
+--- Create a buffer, must use 'buffer.delete' free it.
 ---@param capacity? integer @ Data capacity, default 256
 ---@param headreserved? integer @ Head reserved size, default 14
 ---@return lightuserdata @buffer*
@@ -15,7 +15,7 @@ function buffer.unsafe_new(capacity, headreserved)
 end
 
 ---@param buf lightuserdata @buffer*
-function buffer.unsafe_delete(buf)
+function buffer.delete(buf)
 
 end
 
