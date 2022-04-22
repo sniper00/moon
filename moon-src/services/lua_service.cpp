@@ -15,7 +15,7 @@ using namespace moon;
 
 constexpr size_t mb_memory = 1024 * 1024;
 
-void open_custom_libs(lua_State* L);
+extern "C" void open_custom_libs(lua_State * L);
 
 void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 {
@@ -84,9 +84,6 @@ static int protect_init(lua_State* L)
     luaL_openlibs(L);
     open_custom_libs(L);
 
-    lua_pushcfunction(L, traceback);
-    int trace_fn = lua_gettop(L);
-
     if ((luaL_loadfile(L, source)) != LUA_OK)
     {
         lua_pushfstring(L, "loadfile %s", lua_tostring(L, -1));
@@ -102,11 +99,7 @@ static int protect_init(lua_State* L)
 
     nparam = lua_gettop(L) - nparam;
 
-    if ((lua_pcall(L, nparam, 0, trace_fn)) != LUA_OK)
-    {
-        lua_pushfstring(L, "run %s", lua_tostring(L, -1));
-        return 1;
-    }
+    lua_call(L, nparam, 0);
     return 0;
 };
 
@@ -128,15 +121,20 @@ bool lua_service::init(const moon::service_conf& conf)
         initialize_string.append(*lua_path);
     initialize_string.append(conf.params);
 
+    lua_pushcfunction(L, traceback);
+    int trace_fn = lua_gettop(L);
+
     lua_pushcfunction(L, protect_init);
     lua_pushlightuserdata(L, (void*)conf.source.data());
     lua_pushlightuserdata(L, initialize_string.data());
 
-    if (lua_pcall(L, 2, LUA_MULTRET, 0) != LUA_OK || lua_gettop(L) > 0)
+    if (lua_pcall(L, 2, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1)
     {
         CONSOLE_ERROR(logger(), "new_service lua_error:\n%s.", lua_tostring(L, -1));
         return false;
     }
+
+	lua_pop(L, 1);
 
     if (unique_ && !server_->set_unique_service(name_, id_))
     {

@@ -229,6 +229,10 @@ static void pack_one(lua_State *L, buffer* b, int index, int depth) {
         }
         else {
             lua_Number n = lua_tonumber(L, index);
+            if (std::isnan(n)) {
+                wb_free(b);
+                luaL_error(L, "serialize can't pack '-nan' number value", lua_typename(L, type));
+            }
             wb_real(b, n);
         }
         break;
@@ -674,20 +678,22 @@ static int sep_concatsafe(lua_State *L)
     return 1;
 }
 
-int LUAMOD_API  luaopen_serialize(lua_State *L)
-{
-    luaL_Reg l[] = {
-        {"pack",pack},
-        {"packs",packsafe },
-        {"unpack",unpack},
-        {"unpack_one",peek_one},
-        {"concat",concat },
-        {"concats",concatsafe },
-        {"sep_concat",sep_concat },
-        {"sep_concats",sep_concatsafe },
-        {NULL,NULL},
-    };
-    luaL_newlib(L, l);
-    return 1;
+extern "C" {
+    int LUAMOD_API  luaopen_serialize(lua_State *L)
+    {
+        luaL_Reg l[] = {
+            {"pack",pack},
+            {"packs",packsafe },
+            {"unpack",unpack},
+            {"unpack_one",peek_one},
+            {"concat",concat },
+            {"concats",concatsafe },
+            {"sep_concat",sep_concat },
+            {"sep_concats",sep_concatsafe },
+            {NULL,NULL},
+        };
+        luaL_newlib(L, l);
+        return 1;
+    }
 }
 

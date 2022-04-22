@@ -239,14 +239,16 @@ static int lcreate(lua_State* L)
     return 2;
 }
 
-int LUAMOD_API luaopen_navmesh(lua_State* L)
-{
-    luaL_Reg l[] = {
-        {"new",lcreate},
-        {"load_static",load_static},
-        {"release",lrelease },
-        {NULL,NULL}
-    };
-    luaL_newlib(L, l);
-    return 1;
+extern "C" {
+    int LUAMOD_API luaopen_navmesh(lua_State* L)
+    {
+        luaL_Reg l[] = {
+            {"new",lcreate},
+            {"load_static",load_static},
+            {"release",lrelease },
+            {NULL,NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
+    }
 }
