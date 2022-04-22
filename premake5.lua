@@ -33,9 +33,9 @@ project "lua"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
     kind "StaticLib"
-    language "C++"
+    language "C"
     includedirs {"./third/lua"}
-    files {"./third/lua/onelua.cpp"}
+    files {"./third/lua/onelua.c"}
     defines {"MAKE_LIB"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
@@ -103,7 +103,7 @@ local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, 
         objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
         targetdir "build/bin/%{cfg.buildcfg}"
 
-        language "C++"
+        language "C"
         kind "StaticLib"
         includedirs {"./", "./third","./third/lua"}
         files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"}
@@ -126,9 +126,6 @@ local function add_lua_module(dir, name, normaladdon, windowsaddon, linuxaddon, 
             if type(macaddon)=="function" then
                 macaddon()
             end
-
-        filter "files:**.c"
-            compileas "C++"
 end
 
 ----------------------Lua C/C++ Modules------------------------
@@ -139,6 +136,7 @@ add_lua_module("./third/pb", "pb")--protobuf
 add_lua_module("./third/lmongo", "mongo")
 
 add_lua_module("./lualib-src", "lualib", function()
+    language "C++"
     includedirs {"./moon-src", "./moon-src/core"}
     defines {
         "ASIO_STANDALONE" ,
