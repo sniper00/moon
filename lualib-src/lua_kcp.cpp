@@ -139,19 +139,21 @@ static int lua_ikcp_read(lua_State* L) {
     return 0;
 }
 
-int LUAMOD_API luaopen_kcp_core(lua_State* L)
-{
-    luaL_Reg l[] = {
-        { "create", lua_ikcp_create},
-        { "release", lua_ikcp_release },
-        { "update", lua_ikcp_update },
-        { "input", lua_ikcp_input },
-        { "output", lua_ikcp_output },
-        { "send", lua_ikcp_send},
-        { "read", lua_ikcp_read},
-        { "poll_read", lua_ikcp_poll_read},
-        {NULL,NULL}
-    };
-    luaL_newlib(L, l);
-    return 1;
+extern "C" {
+    int LUAMOD_API luaopen_kcp_core(lua_State* L)
+    {
+        luaL_Reg l[] = {
+            { "create", lua_ikcp_create},
+            { "release", lua_ikcp_release },
+            { "update", lua_ikcp_update },
+            { "input", lua_ikcp_input },
+            { "output", lua_ikcp_output },
+            { "send", lua_ikcp_send},
+            { "read", lua_ikcp_read},
+            { "poll_read", lua_ikcp_poll_read},
+            {NULL,NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
+    }
 }

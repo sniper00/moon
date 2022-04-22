@@ -242,6 +242,7 @@ int main(int argc, char* argv[])
             lua_pop(L, 1);  /* remove lib */\
 
 
+extern "C" {
 void open_custom_libs(lua_State* L)
 {
     //core
@@ -270,5 +271,6 @@ void open_custom_libs(lua_State* L)
     REGISTER_CUSTOM_LIBRARY("bson", luaopen_bson);
     REGISTER_CUSTOM_LIBRARY("mongo.driver", luaopen_mongo_driver);
     REGISTER_CUSTOM_LIBRARY("navmesh", luaopen_navmesh);
+}
 }
 

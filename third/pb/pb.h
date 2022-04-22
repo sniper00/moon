@@ -3,8 +3,8 @@
 
 #ifndef PB_NS_BEGIN
 # ifdef __cplusplus
-#   define PB_NS_BEGIN
-#   define PB_NS_END
+#   define PB_NS_BEGIN extern "C" {
+#   define PB_NS_END  }
 # else
 #   define PB_NS_BEGIN
 #   define PB_NS_END

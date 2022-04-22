@@ -6,7 +6,11 @@
 #define STD_ std::
 #define atomic_value_type_(p, v) decltype((p)->load())(v) 
 #else
+#if defined(_MSC_VER)
+#include "msvc-stdatomic.h"
+#else
 #include <stdatomic.h>
+#endif
 #define STD_
 #define atomic_value_type_(p, v) v
 #endif
@@ -44,5 +48,4 @@ ATOM_CAS_POINTER(STD_ atomic_uintptr_t *ptr, uintptr_t oval, uintptr_t nval) {
 #define ATOM_FADD(ptr,n) STD_ atomic_fetch_add(ptr, atomic_value_type_(ptr, n))
 #define ATOM_FSUB(ptr,n) STD_ atomic_fetch_sub(ptr, atomic_value_type_(ptr, n))
 #define ATOM_FAND(ptr,n) STD_ atomic_fetch_and(ptr, atomic_value_type_(ptr, n))
-
 #endif

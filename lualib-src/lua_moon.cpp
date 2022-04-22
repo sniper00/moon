@@ -492,6 +492,7 @@ static int lmoon_error_count(lua_State* L)
     return 1;
 }
 
+extern "C" {
 int LUAMOD_API luaopen_moon(lua_State* L)
 {
     luaL_Reg l[] = {
@@ -539,6 +540,7 @@ int LUAMOD_API luaopen_moon(lua_State* L)
     lua_pushinteger(L, moon::time::timezone());
     lua_rawset(L, -3);
     return 1;
+}
 }
 
 static int lasio_try_open(lua_State* L)
@@ -783,6 +785,7 @@ static int lasio_unpack_udp(lua_State* L)
     return 2;
 }
 
+extern "C" {
 int LUAMOD_API luaopen_asio(lua_State* L)
 {
     luaL_Reg l[] = {
@@ -808,4 +811,5 @@ int LUAMOD_API luaopen_asio(lua_State* L)
     };
     luaL_newlib(L, l);
     return 1;
+    }
 }

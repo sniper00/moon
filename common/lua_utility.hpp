@@ -2,6 +2,7 @@
 #include "lua.hpp"
 #include <string_view>
 #include <string>
+#include <vector>
 #include <type_traits>
 
 #define luaL_rawsetfield(L, tbindex, kname, valueexp)\
@@ -50,6 +51,31 @@ namespace moon
             return false;
         }
         return true;
+    }
+
+    template<typename T>
+    void table_to_vector(lua_State* L, int index, std::vector<T>& out)
+    {
+        auto size = lua_rawlen(L, index);
+        for (size_t i = 1; i <= size; ++i)
+        {
+            lua_rawgeti(L, index, i);
+            if constexpr (std::is_integral_v<T>)
+            {
+                out.emplace_back(static_cast<T>(luaL_checkinteger(L, -1)));
+            }
+            else if constexpr (std::is_floating_point_v<T>)
+            {
+                out.emplace_back(luaL_checknumber(L, -1));
+            }
+            else
+            {
+                size_t len;
+                const char* data = luaL_checklstring(L, -1, &len);
+                out.emplace_back(data, len);
+            }
+            lua_pop(L, 1);
+        }
     }
   
     template<class LuaArrayView>

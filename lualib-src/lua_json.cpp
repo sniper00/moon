@@ -662,18 +662,20 @@ static int pretty_encode(lua_State *L)
     return lua_error(L);
 }
 
-int LUAMOD_API luaopen_json(lua_State* L)
-{
-    luaL_Reg l[] = {
-        {"encode", encode}, 
-        {"pretty_encode", pretty_encode},
-        {"decode", decode},
-        {"concat", concat},
-        {"concat_resp", concat_resp},
-        {NULL, NULL} };
-    luaL_newlib(L, l);
-    lua_pushstring(L, "null");
-    lua_pushlightuserdata(L, nullptr);
-    lua_rawset(L, -3);
-    return 1;
+extern "C" {
+    int LUAMOD_API luaopen_json(lua_State* L)
+    {
+        luaL_Reg l[] = {
+            {"encode", encode}, 
+            {"pretty_encode", pretty_encode},
+            {"decode", decode},
+            {"concat", concat},
+            {"concat_resp", concat_resp},
+            {NULL, NULL} };
+        luaL_newlib(L, l);
+        lua_pushstring(L, "null");
+        lua_pushlightuserdata(L, nullptr);
+        lua_rawset(L, -3);
+        return 1;
+    }
 }

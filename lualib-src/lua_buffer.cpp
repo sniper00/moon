@@ -222,24 +222,26 @@ static int unsafe_new(lua_State* L)
     return 1;
 }
 
-int LUAMOD_API luaopen_buffer(lua_State* L)
-{
-    luaL_Reg l[] = {
-        {"unsafe_new", unsafe_new}
-        , {"delete", unsafe_delete}
-        , {"clear", clear}
-        , {"size", size}
-        , {"unpack", unpack}
-        , {"read", read}
-        , {"write_front", write_front}
-        , {"write_back", write_back}
-        , {"seek", seek}
-        , {"commit", commit}
-        , {"prepare", prepare}
-        , {"has_flag", has_flag}
-        , {"set_flag", set_flag}
-        , {NULL, NULL}
-    };
-    luaL_newlib(L, l);
-    return 1;
+extern "C" {
+    int LUAMOD_API luaopen_buffer(lua_State* L)
+    {
+        luaL_Reg l[] = {
+            {"unsafe_new", unsafe_new}
+            , {"delete", unsafe_delete}
+            , {"clear", clear}
+            , {"size", size}
+            , {"unpack", unpack}
+            , {"read", read}
+            , {"write_front", write_front}
+            , {"write_back", write_back}
+            , {"seek", seek}
+            , {"commit", commit}
+            , {"prepare", prepare}
+            , {"has_flag", has_flag}
+            , {"set_flag", set_flag}
+            , {NULL, NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
+    }
 }

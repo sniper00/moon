@@ -356,13 +356,15 @@ static int ltcp(lua_State *L)
     return 1;
 }
 
-int LUAMOD_API luaopen_socket_core(lua_State *L)
-{
-    luaL_Reg l[] = {
-        {"tcp",ltcp},
-        {"release",lrelease },
-        {NULL,NULL}
-    };
-    luaL_newlib(L, l);
-    return 1;
+extern "C" {
+    int LUAMOD_API luaopen_socket_core(lua_State *L)
+    {
+        luaL_Reg l[] = {
+            {"tcp",ltcp},
+            {"release",lrelease },
+            {NULL,NULL}
+        };
+        luaL_newlib(L, l);
+        return 1;
+    }
 }
