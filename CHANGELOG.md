@@ -1,3 +1,9 @@
+# v0.3 (2022-05-25)
+
+- update to lua5.4.4
+- fix some lua error handle issues
+- code optimize
+
 # v0.3 (2022-01-27)
 
 - add lua navmesh lib
