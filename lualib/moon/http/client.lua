@@ -222,7 +222,7 @@ end
 ---@param method string
 ---@param baseaddress string
 ---@param options HttpOptions
----@param content string
+---@param content? string
 local function request( method, baseaddress, options, content)
 
     local host, port = parse_host(baseaddress, 80)

@@ -75,7 +75,7 @@ end
 
 --- async, used only when protocol == moon.PTYPE_TEXT
 ---@param arg1 integer|string @ integer: read a specified number of bytes from the socket. string: read until reach the specified delim string from the socket
----@param arg2 integer @ set limit len of data when arg1 is string type
+---@param arg2 integer? @ set limit len of data when arg1 is string type
 function socket.read(fd, arg1, arg2)
     local sessionid = make_response()
     read(fd, sessionid, arg1, arg2)

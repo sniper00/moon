@@ -132,7 +132,7 @@ function datetime.dailytime(time)
 end
 
 ---Return days from ordinal, considering 01-Jan-0001 as day 1
----@param time integer @POSIX timestamp. if nil will use current time
+---@param time? integer @POSIX timestamp. if nil will use current time
 ---@return integer
 function datetime.localday(time)
     local tm = os.date("*t", time or moon.time())
