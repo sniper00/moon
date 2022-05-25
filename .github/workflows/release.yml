@@ -78,7 +78,7 @@ jobs:
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
       - name: Test
-        run: moon.exe example/main.lua 1
+        run: .\moon.exe example/main.lua 1
       - name: Publish
         shell: bash
         run: |
