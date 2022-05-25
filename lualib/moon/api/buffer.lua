@@ -36,7 +36,7 @@ end
 --- - buffer.unpack(buf, fmt, i)
 ---@param buf lightuserdata @buffer*
 ---@param fmt? string| integer @ like string.unpack but only support '>','<','h','H','i','I'
----@param j integer @ offset
+---@param j? integer @ offset
 ---@return string | any
 function buffer.unpack(buf, fmt, j)
 end

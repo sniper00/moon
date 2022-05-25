@@ -18,9 +18,9 @@ local function queue()
 		end
 	end})
 
-	return function(counter)
-		if counter then
-			return list.size(thread_queue)
+	return function(refcount)
+		if refcount then
+			return ref
 		end
 		local thread = coroutine.running()
 		if current_thread and current_thread ~= thread then
