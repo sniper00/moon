@@ -268,7 +268,7 @@ function auth_method:auth_scram_sha1(username,password)
 		parsed_t[k] = v
 	end
 	if parsed_t['v'] ~= server_sig then
-		skynet.error("Server returned an invalid signature.")
+		moon.error("Server returned an invalid signature.")
 		return false
 	end
 	if not r.done then
@@ -277,7 +277,7 @@ function auth_method:auth_scram_sha1(username,password)
 			return false
 		end
 		if not r.done then
-			skynet.error("SASL conversation failed to complete.")
+			moon.error("SASL conversation failed to complete.")
 			return false
 		end
 	end
