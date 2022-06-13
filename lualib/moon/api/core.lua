@@ -223,15 +223,9 @@ function asio.write_message(fd, m)
 
 end
 
+--- 设置读操作超时, 默认是0, 永远不会超时。为了处理大量链接的检测,实际超时检测并不严格，误差范围为[t, t+10)
 ---@param fd integer
----@param m userdata @ message*
----@return boolean
-function asio.write_message2(fd, m)
-
-end
-
----@param fd integer
----@param t integer 秒, 0不检测超时, 默认是0。
+---@param t integer @ seconds
 ---@return boolean
 function asio.settimeout(fd, t)
 
@@ -243,15 +237,21 @@ function asio.setnodelay(fd)
 
 end
 
----对于2字节大端长度开头的协议, 通过拆分，来支持收发超过2字节的数据。可以单独控制read,write "r", "w", "wr"
+---@alias chunkmode
+---| 'r' # read.
+---| 'w' # write.
+---| 'rw'
+
+--- 对于PTYPE_SOCKET_MOON类型的协议, 默认最大长度是32767字节。
+--- 可以设置chunkmode, 允许收发大于这个长度消息, 底层的处理是对消息进行切片。
 ---@param fd integer
----@param flag string
+---@param mode chunkmode
 ---@return boolean
-function asio.set_enable_chunked(fd, flag)
+function asio.set_enable_chunked(fd, mode)
 
 end
 
----set send queue limit
+--- set send queue limit
 ---@param fd integer @ fd
 ---@param warnsize integer @ if send queue size > warnsize, print warnning log
 ---@param errorsize integer @ if send queue size > errorsize, print error log and close socket

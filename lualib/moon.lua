@@ -36,13 +36,14 @@ local moon = core
 moon.PTYPE_SYSTEM = 1
 moon.PTYPE_TEXT = 2
 moon.PTYPE_LUA = 3
-moon.PTYPE_SOCKET = 4
-moon.PTYPE_ERROR = 5
-moon.PTYPE_SOCKET_WS = 6
-moon.PTYPE_DEBUG = 7
-moon.PTYPE_SHUTDOWN = 8
-moon.PTYPE_TIMER = 9
-moon.PTYPE_SOCKET_UDP = 10
+moon.PTYPE_ERROR = 4
+moon.PTYPE_DEBUG = 5
+moon.PTYPE_SHUTDOWN = 6
+moon.PTYPE_TIMER = 7
+moon.PTYPE_SOCKET_TCP = 8
+moon.PTYPE_SOCKET_UDP = 9
+moon.PTYPE_SOCKET_WS = 10
+moon.PTYPE_SOCKET_MOON = 11
 
 --moon.codecache = require("codecache")
 
@@ -140,26 +141,22 @@ end
 
 ---
 ---向指定服务发送消息,消息内容会根据协议类型进行打包
----@param PTYPE string @协议类型
----@param receiver integer @接收者服务id
----@return boolean
+---@param PTYPE string @protocol type. e. "lua"
+---@param receiver integer @receiver's service id
 function moon.send(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-
     _send(receiver, p.pack(...), "", 0, p.PTYPE)
-    return true
 end
 
 ---向指定服务发送消息，消息内容不进行协议打包
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
 ---@param header string @Message Header
----@param data string|userdata @消息内容
----@param sessionid integer
----@return boolean
+---@param data? string|userdata @消息内容
+---@param sessionid? integer
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     local p = protocol[PTYPE]
     if not p then
@@ -169,7 +166,6 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     header = header or ''
     sessionid = sessionid or 0
     _send(receiver, data, header, sessionid, p.PTYPE)
-    return true
 end
 
 --- async
@@ -187,9 +183,9 @@ function moon.new_service(stype, config)
     return math.tointeger(co_yield())
 end
 
----异步移除指定的服务
----@param addr integer @服务id
----@param iswait boolean @可选，为true时可以 使用协程等待移除结果
+---async kill service
+---@param addr integer @service's id
+---@param iswait? boolean @if true will wait the result. default false
 ---@return string
 function moon.remove_service(addr, iswait)
     if iswait then
@@ -504,11 +500,23 @@ reg_protocol {
 }
 
 reg_protocol {
-    name = "socket",
-    PTYPE = moon.PTYPE_SOCKET,
-    pack = function(...) return ... end,
+    name = "tcp",
+    PTYPE = moon.PTYPE_SOCKET_TCP,
+    pack = function(...)
+        return ...
+    end,
+    unpack = moon.tostring,
     dispatch = function()
-        error("PTYPE_SOCKET dispatch not implemented")
+        error("PTYPE_SOCKET_TCP dispatch not implemented")
+    end
+}
+
+reg_protocol {
+    name = "udp",
+    PTYPE = moon.PTYPE_SOCKET_UDP,
+    pack = function(...) return ... end,
+    dispatch = function(_)
+        error("PTYPE_SOCKET_UDP dispatch not implemented")
     end
 }
 
@@ -522,11 +530,11 @@ reg_protocol {
 }
 
 reg_protocol {
-    name = "udp",
-    PTYPE = moon.PTYPE_SOCKET_UDP,
+    name = "moonsocket",
+    PTYPE = moon.PTYPE_SOCKET_MOON,
     pack = function(...) return ... end,
-    dispatch = function(_)
-        error("PTYPE_SOCKET_UDP dispatch not implemented")
+    dispatch = function()
+        error("PTYPE_SOCKET_MOON dispatch not implemented")
     end
 }
 

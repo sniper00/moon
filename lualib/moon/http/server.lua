@@ -113,6 +113,7 @@ local mimes = {
     [".ico"] = "image/x-icon"
 }
 
+---@class HttpServerResponse
 local http_response = {}
 
 http_response.__index = http_response
@@ -122,13 +123,17 @@ local static_content
 function http_response.new()
     local o = {}
     o.header = {}
+    o.status_code = 200
     return setmetatable(o, http_response)
 end
 
+---@param field string
+---@param value string
 function http_response:write_header(field,value)
     self.header[tostring(field)] = tostring(value)
 end
 
+---@param content string
 function http_response:write(content)
     self.content = content
     if content then
@@ -137,7 +142,7 @@ function http_response:write(content)
 end
 
 function http_response:tb()
-    local status_code = self.status_code or 200
+    local status_code = self.status_code
     local status_msg = http_status_msg[status_code]
     assert(status_msg,"invalid http status code")
 
@@ -275,10 +280,14 @@ local function request_handler(fd, request)
     end
 end
 
-local function read_request(fd)
+local function read_request(fd, pre)
     local data, err = socket.read(fd, "\r\n\r\n", M.header_max_len)
     if not data then
         return {socket_error = err}
+    end
+
+    if pre then
+        data = pre..data
     end
 
     --print("raw data",data)
@@ -287,6 +296,12 @@ local function read_request(fd)
         return {protocol_error = "Invalid HTTP request header"}
     end
 
+    ---@class HttpServerRequest
+    ---@field method string
+    ---@field path string
+    ---@field query_string string
+    ---@field version string
+    ---@field content string
     local request = {
         method = method,
         path = path,
@@ -348,11 +363,15 @@ end
 local listenfd
 
 ---@param timeout integer @read timeout in seconds
-function M.start(fd, timeout)
+---@param pre? string @first request prefix data, for convert a tcp request to http request
+function M.start(fd, timeout, pre)
     socket.settimeout(fd, timeout)
     moon.async(function()
         while true do
-            local request = read_request(fd)
+            local request = read_request(fd, pre)
+            if pre then
+                pre = nil
+            end
             if request.socket_error then
                 socket.close(fd)
                 return
@@ -379,10 +398,10 @@ end
 
 ---@param host string @ ip address
 ---@param port integer @ port
----@param timeout integer @read timeout in seconds
+---@param timeout? integer @read timeout in seconds
 function M.listen(host,port,timeout)
     assert(not listenfd,"http server can only listen port once.")
-    listenfd = socket.listen(host, port, moon.PTYPE_TEXT)
+    listenfd = socket.listen(host, port, moon.PTYPE_SOCKET_TCP)
     timeout = timeout or 0
     moon.async(function()
         while true do
@@ -396,6 +415,7 @@ function M.listen(host,port,timeout)
     end)
 end
 
+---@param cb fun(request: HttpServerRequest, response: HttpServerResponse)
 function M.on( path, cb )
     routers[path] = cb
 end

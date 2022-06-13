@@ -36,7 +36,7 @@ end
 
 
 local function run_master(conf)
-    local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_TEXT)
+    local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_SOCKET_TCP)
 
     print(string.format([[
 

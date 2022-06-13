@@ -313,7 +313,7 @@ end
 ---@param opts table @{database = "", user = "", password = ""}
 ---@return pg|pg_error
 function pg.connect(opts)
-    local sock, err = socket.connect(opts.host, opts.port, moon.PTYPE_TEXT, opts.connect_timeout)
+    local sock, err = socket.connect(opts.host, opts.port, moon.PTYPE_SOCKET_TCP, opts.connect_timeout)
     if not sock then
         return {code = "SOCKET", message = err}
     end

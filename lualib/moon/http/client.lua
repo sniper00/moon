@@ -167,7 +167,7 @@ local function do_request(baseaddress, options, req, method)
 
     if not fd then
         local host, port = parse_host(baseaddress, 80)
-        fd, err = socket.connect(host, port, moon.PTYPE_TEXT, options.connect_timeout)
+        fd, err = socket.connect(host, port, moon.PTYPE_SOCKET_TCP, options.connect_timeout)
         if not fd then
             return false, err
         end

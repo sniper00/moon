@@ -139,7 +139,7 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_TEXT)
+    local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET_TCP)
     assert(fd, "connect db redis failed")
     socket.close(fd)
 

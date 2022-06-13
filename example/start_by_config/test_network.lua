@@ -6,7 +6,7 @@ local HOST = "127.0.0.1"
 local PORT = 30003
 --------------------------SERVER-------------------------
 
-local listenfd = socket.listen(HOST,PORT,moon.PTYPE_SOCKET)
+local listenfd = socket.listen(HOST,PORT,moon.PTYPE_SOCKET_MOON)
 
 socket.start(listenfd)
 
@@ -58,7 +58,7 @@ end
 
 moon.async(function()
     for i=1,100 do
-        local fd,err = socket.connect(HOST,PORT,moon.PTYPE_TEXT)
+        local fd,err = socket.connect(HOST,PORT,moon.PTYPE_SOCKET_TCP)
         if not fd then
             print("connect failed", err)
             return

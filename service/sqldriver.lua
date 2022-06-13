@@ -107,7 +107,7 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.db_conf.host, conf.db_conf.port, moon.PTYPE_TEXT)
+    local fd = socket.sync_connect(conf.db_conf.host, conf.db_conf.port, moon.PTYPE_SOCKET_TCP)
     assert(fd, "connect db postgres failed")
     socket.close(fd)
 

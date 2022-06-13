@@ -7,7 +7,7 @@ local fs = {}
 --- The table is in arbitrary order. It does not include the special entries '.' and '..'
 --- even if they are present in the directory.
 ---@param dir string @path of the directory
----@param depth integer @recursive depth, default 0
+---@param depth? integer @recursive depth, default 0
 ---@param ext? string @ filter by file extension
 ---@return table @ array table
 function fs.listdir(dir, depth, ext)

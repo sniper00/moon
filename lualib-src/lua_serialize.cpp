@@ -231,7 +231,7 @@ static void pack_one(lua_State *L, buffer* b, int index, int depth) {
             lua_Number n = lua_tonumber(L, index);
             if (std::isnan(n)) {
                 wb_free(b);
-                luaL_error(L, "serialize can't pack '-nan' number value", lua_typename(L, type));
+                luaL_error(L, "serialize can't pack 'nan' number value");
             }
             wb_real(b, n);
         }

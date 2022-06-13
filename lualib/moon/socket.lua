@@ -20,10 +20,10 @@ local flag_ws_text = 16
 local flag_ws_ping = 32
 local flag_ws_pong = 64
 
-local supported_protocol = {
-    [moon.PTYPE_TEXT] = true,
-    [moon.PTYPE_SOCKET] = true,
-    [moon.PTYPE_SOCKET_WS] = true
+local supported_tcp_protocol = {
+    [moon.PTYPE_SOCKET_TCP] = true,
+    [moon.PTYPE_SOCKET_WS] = true,
+    [moon.PTYPE_SOCKET_MOON] = true,
 }
 
 ---@class socket : asio
@@ -46,14 +46,14 @@ function socket.start(listenfd)
 end
 
 --- async
---- param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
+--- param protocol moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS、
 --- timeout millseconds
 ---@param host string
 ---@param port integer
 ---@param protocol integer
 ---@param timeout integer
 function socket.connect(host, port, protocol, timeout)
-    assert(supported_protocol[protocol],"not support")
+    assert(supported_tcp_protocol[protocol],"not support")
     timeout = timeout or 0
     local sessionid = make_response()
     connect(host, port, protocol, sessionid, timeout)
@@ -65,7 +65,7 @@ function socket.connect(host, port, protocol, timeout)
 end
 
 function socket.sync_connect(host, port, protocol)
-    assert(supported_protocol[protocol],"not support")
+    assert(supported_tcp_protocol[protocol],"not support")
     local fd = connect(host, port, protocol, 0, 0)
     if fd == 0 then
         return nil,"connect failed"
@@ -73,12 +73,13 @@ function socket.sync_connect(host, port, protocol)
     return fd
 end
 
---- async, used only when protocol == moon.PTYPE_TEXT
----@param arg1 integer|string @ integer: read a specified number of bytes from the socket. string: read until reach the specified delim string from the socket
----@param arg2 integer? @ set limit len of data when arg1 is string type
-function socket.read(fd, arg1, arg2)
+--- async, used only when protocol == moon.PTYPE_SOCKET_TCP
+---@param delim string @read until reach the specified delim string from the socket
+---@param count integer @ read a specified number of bytes(max count) from the socket.
+---@overload fun(fd: integer, count: integer)
+function socket.read(fd, delim, count)
     local sessionid = make_response()
-    read(fd, sessionid, arg1, arg2)
+    read(fd, sessionid, delim, count)
     return yield()
 end
 
@@ -86,15 +87,17 @@ function socket.write_then_close(fd, data)
     write(fd ,data, flag_close)
 end
 
---- only for websocket
+--- PTYPE_SOCKET_WS specific functions
 function socket.write_text(fd, data)
     write(fd ,data, flag_ws_text)
 end
 
+--- PTYPE_SOCKET_WS specific functions
 function socket.write_ping(fd, data)
     write(fd ,data, flag_ws_ping)
 end
 
+--- PTYPE_SOCKET_WS specific functions
 function socket.write_pong(fd, data)
     write(fd ,data, flag_ws_pong)
 end
@@ -109,16 +112,25 @@ local socket_data_type = {
     pong = 7,
 }
 
---- tow bytes len protocol callbacks
+---@alias socket_event
+---| 'connect'
+---| 'accept'
+---| 'message'
+---| 'close'
+---| 'error'
+---| 'ping'
+---| 'pong'
+
+--- PTYPE_SOCKET_MOON callbacks
 local callbacks = {}
 
---- websocket protocol wscallbacks
+--- PTYPE_SOCKET_WS wscallbacks
 local wscallbacks = {}
 
 local _decode = moon.decode
 
 moon.dispatch(
-    "socket",
+    "moonsocket",
     function(msg)
         local fd, sdt = _decode(msg, "SR")
         local f = callbacks[sdt]
@@ -139,8 +151,8 @@ moon.dispatch(
     end
 )
 
----param name socket_data_type's key
----@param name string
+---@param name socket_event
+---@param cb fun(fd:integer, msg:userdata)
 function socket.on(name, cb)
     local n = socket_data_type[name]
     if n then
@@ -150,8 +162,8 @@ function socket.on(name, cb)
     end
 end
 
----param name socket_data_type's key
----@param name string
+---@param name socket_event
+---@param cb fun(fd:integer, msg:userdata)
 function socket.wson(name, cb)
     local n = socket_data_type[name]
     if n then
@@ -177,6 +189,9 @@ moon.dispatch(
     end
 )
 
+---@param cb fun(data:string, endpoint:string)
+---@param host? string @ bind host
+---@param port? integer @ bind port
 function socket.udp(cb, host, port)
     local fd = udp(host, port)
     udp_callbacks[fd] = cb

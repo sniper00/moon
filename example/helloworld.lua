@@ -24,7 +24,7 @@ socket.on("error",function(fd, msg)
     print("error ", fd, moon.decode(msg, "Z"))
 end)
 
-local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET)
+local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_MOON)
 socket.start(listenfd)--start accept
 print("server start ", HOST, PORT)
 print("enter 'CTRL-C' stop server.")

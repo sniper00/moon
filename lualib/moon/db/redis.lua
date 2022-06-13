@@ -194,7 +194,7 @@ local function redis_login(auth, db)
 end
 
 function redis.connect(db_conf)
-	local fd, err = socket.connect(db_conf.host, db_conf.port or 6379, moon.PTYPE_TEXT, db_conf.timeout)
+	local fd, err = socket.connect(db_conf.host, db_conf.port or 6379, moon.PTYPE_SOCKET_TCP, db_conf.timeout)
 	if not fd then
 		return false, err
 	end
@@ -309,7 +309,7 @@ function redis.watch(db_conf)
 		__psubscribe = {},
 	}
 
-	local fd, err = socket.connect(db_conf.host, db_conf.port or 6379, moon.PTYPE_TEXT, db_conf.timeout)
+	local fd, err = socket.connect(db_conf.host, db_conf.port or 6379, moon.PTYPE_SOCKET_TCP, db_conf.timeout)
 	if not fd then
 		return false, err
 	end
