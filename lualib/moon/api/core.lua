@@ -199,7 +199,7 @@ function asio.try_open(host, port)
 
 end
 
----param protocol moon.PTYPE_TEXT、moon.PTYPE_SOCKET、moon.PTYPE_SOCKET_WS、
+---param protocol moon.PTYPE_SOCKET_TCP、moon.PTYPE_SOCKET_MOON、moon.PTYPE_SOCKET_WS、
 ---@param host string
 ---@param port integer
 ---@param protocol integer
