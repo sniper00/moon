@@ -34,7 +34,7 @@ local function session_read( fd )
 end
 
 moon.async(function()
-    local fd,err = socket.connect(HOST, PORT,moon.PTYPE_TEXT)
+    local fd,err = socket.connect(HOST, PORT,moon.PTYPE_SOCKET_TCP)
     if not fd then
         print(err)
         return

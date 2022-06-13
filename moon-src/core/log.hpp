@@ -149,12 +149,9 @@ namespace moon
 
         void wait()
         {
-            if (state_.load() == state::stopped)
-            {
-                return;
-            }
+            if (state_.exchange(state::stopped, std::memory_order_acq_rel) == state::stopped)
+                return
 
-            state_.store(state::stopped);
             log_queue_.exit();
 
             if (thread_.joinable())
@@ -212,7 +209,7 @@ namespace moon
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
             queue_t::container_type swaps;
-            while (state_.load() == state::ready || log_queue_.size() != 0)
+            while (state_.load(std::memory_order_acquire) == state::ready || log_queue_.size() != 0)
             {
                 log_queue_.swap(swaps);
                 for (auto& it : swaps)

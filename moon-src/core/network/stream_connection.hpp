@@ -120,7 +120,7 @@ namespace moon
             parent_ = nullptr;
         }
 
-        void response(size_t count, uint8_t type = PTYPE_TEXT)
+        void response(size_t count, uint8_t type = PTYPE_SOCKET_TCP)
         {
             if (sessionid_ == 0)
             {
@@ -129,7 +129,7 @@ namespace moon
             auto buf = response_.get_buffer();
             assert(buf->size() >= count);
             revert_ = 0;
-            if (type == PTYPE_TEXT)
+            if (type == PTYPE_SOCKET_TCP)
             {
                 revert_ = (buf->size() - count) + delim_.size();
             }   

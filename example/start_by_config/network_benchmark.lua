@@ -28,7 +28,7 @@ end
 
 
 local function run_master()
-    local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_SOCKET)
+    local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_SOCKET_MOON)
 
     print(string.format([[
 
@@ -48,11 +48,7 @@ local function run_master()
             if balance>#slave then
                 balance = 1
             end
-            local fd, err = socket.accept(listenfd,slave[balance])
-            if not fd then
-                moon.error(err)
-                return
-            end
+            socket.accept(listenfd,slave[balance])
             balance = balance + 1
         end
     end)

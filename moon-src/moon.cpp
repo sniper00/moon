@@ -20,12 +20,12 @@ static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
     switch (dwCtrlType)
     {
     case CTRL_C_EVENT:
-        svr->stop(100+ dwCtrlType);
+        svr->stop(dwCtrlType);
         return TRUE;
     case CTRL_CLOSE_EVENT:
     case CTRL_SHUTDOWN_EVENT:
     case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
-        svr->stop(100 + dwCtrlType);
+        svr->stop(dwCtrlType);
         while (svr->get_state() != moon::state::stopped)
         {
             std::this_thread::yield();

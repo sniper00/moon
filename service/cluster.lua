@@ -140,7 +140,7 @@ local function cluster_service()
 
     local function connect(node)
         local c = clusters[node]
-        local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET, 1000)
+        local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET_MOON, 1000)
         if not fd then
             moon.error(err)
             return
@@ -156,7 +156,7 @@ local function cluster_service()
     function command.Start()
         if conf.host and conf.port then
             local host, port = conf.host, conf.port
-            local listenfd = socket.listen(host, port,moon.PTYPE_SOCKET)
+            local listenfd = socket.listen(host, port,moon.PTYPE_SOCKET_MOON)
             socket.start(listenfd)
             print(strfmt("cluster run at %s %d", host, port))
             setmetatable(clusters, {__gc=function()

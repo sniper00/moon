@@ -493,8 +493,8 @@ static int lmoon_error_count(lua_State* L)
 }
 
 extern "C" {
-int LUAMOD_API luaopen_moon(lua_State* L)
-{
+    int LUAMOD_API luaopen_moon(lua_State* L)
+    {
     luaL_Reg l[] = {
         { "clock", lmoon_clock},
         { "md5", lmoon_md5 },
@@ -525,22 +525,23 @@ int LUAMOD_API luaopen_moon(lua_State* L)
         { "release", message_release },
         { "redirect", message_redirect},
         { "collect", lmi_collect},
+        /* placeholders */
+        { "id", NULL},
+        { "name", NULL}, 
+        { "timezone", NULL},
         {NULL,NULL}
     };
 
     luaL_newlib(L, l);
     lua_service* S = lua_service::get(L);
-    lua_pushstring(L, "id");
     lua_pushinteger(L, S->id());
-    lua_rawset(L, -3);
-    lua_pushstring(L, "name");
+    lua_setfield(L, -2, "id");
     lua_pushlstring(L, S->name().data(), S->name().size());
-    lua_rawset(L, -3);
-    lua_pushstring(L, "timezone");
+    lua_setfield(L, -2, "name");
     lua_pushinteger(L, moon::time::timezone());
-    lua_rawset(L, -3);
+    lua_setfield(L, -2, "timezone");
     return 1;
-}
+    }
 }
 
 static int lasio_try_open(lua_State* L)
@@ -786,8 +787,8 @@ static int lasio_unpack_udp(lua_State* L)
 }
 
 extern "C" {
-int LUAMOD_API luaopen_asio(lua_State* L)
-{
+    int LUAMOD_API luaopen_asio(lua_State* L)
+    {
     luaL_Reg l[] = {
         { "try_open", lasio_try_open},
         { "listen", lasio_listen },

@@ -484,12 +484,12 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     connection_ptr_t connection;
     switch (type)
     {
-    case PTYPE_SOCKET:
+    case PTYPE_SOCKET_MOON:
     {
         connection = std::make_shared<moon_connection>(serviceid, type, this, ioc_);
         break;
     }
-    case PTYPE_TEXT:
+    case PTYPE_SOCKET_TCP:
     {
         connection = std::make_shared<stream_connection>(serviceid, type, this, ioc_);
         break;

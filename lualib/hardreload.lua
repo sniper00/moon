@@ -380,4 +380,162 @@ function hardreload.reload(name, updatename)
 	return true, _LOADED[name]
 end
 
+local function hotfix(root, diff)
+	local getupvalue = debug.getupvalue
+	local upvalueid = debug.upvalueid
+	local upvaluejoin = debug.upvaluejoin
+	local setupvalue = debug.setupvalue
+
+	local exclude = {}
+
+	local function envid(f)
+		local i = 1
+		while true do
+			local name, value = getupvalue(f, i)
+			if name == nil then
+				return
+			end
+			if name == "_ENV" then
+				return upvalueid(f, i)
+			end
+			i = i + 1
+		end
+	end
+
+	local function collect_uv(f , uv, env)
+		local i = 1
+		while true do
+			local name, value = getupvalue(f, i)
+			if name == nil then
+				break
+			end
+			local id = upvalueid(f, i)
+
+			if uv[name] then
+				assert(uv[name].id == id, string.format("ambiguity local value %s", name))
+			else
+				uv[name] = { func = f, index = i, id = id, value = value }
+
+				if type(value) == "function" then
+					if envid(value) == env then
+						collect_uv(value, uv, env)
+					end
+				end
+			end
+
+			i = i + 1
+		end
+	end
+
+	local function collect_all_uv(funcs)
+		local global = {}
+		for _, v in pairs(funcs) do
+			if type(v) == "function"  then
+				collect_uv(v, global, envid(v))
+			end
+		end
+		if not global["_ENV"] then
+			global["_ENV"] = {func = collect_uv, index = 1}
+		end
+		return global
+	end
+
+	local function update_func(global, f)
+		if exclude[f] then
+			--print("exclude", f)
+			return
+		end
+		exclude[f] = true
+
+		local oldf = nil
+		f = old_functions[f] or f	-- find origin version
+		local i = 1
+		while true do
+			local name, value = getupvalue(f, i)
+			if name == nil then
+				oldf = f
+				break
+			end
+			if type(value) == "function" then
+				update_func(global, value)
+			else
+				local old_uv = assert(global[name])
+				upvaluejoin(f, i, old_uv.func, old_uv.index)
+			end
+			i = i + 1
+		end
+		old_functions[f] = old_functions[f] or oldf	-- don't clear old_functions
+
+		i = 1
+		while true do
+			local name , value = getupvalue(f, i)
+			if name == nil then
+				break
+			end
+			if name == "_ENV" then
+				if value == nil then
+					setupvalue(f, i, _ENV)
+				end
+				break
+			end
+			i = i + 1
+		end
+	end
+
+	local proto = clonefunc.proto
+	local global = collect_all_uv(root)
+
+	for name, v in pairs(global) do
+		if type(v.value) == "function" then
+			local newf = diff[proto(v.value)]
+			if newf then
+				--print("update upvalue function",  name, newf)
+				update_func(global, newf)
+				setupvalue(v.func,  v.index, newf)
+			end
+		end
+	end
+
+	for name, v in pairs(root) do
+		if type(v) == "function" then
+			local newf = diff[proto(v)]
+			--print("update function", name)
+			update_func(global, newf)
+			root[name] = newf
+		end
+	end
+end
+
+--- 1. Not update metatable
+function hardreload.reload_simple(name, updatename)
+	assert(type(name) == "string")
+	updatename = updatename or name
+	local _LOADED = debug.getregistry()._LOADED
+	if _LOADED[name] == nil then
+		return true, hardreload.require(name)
+	end
+	if loaders[name] == nil then
+		return false, "Can't find last version : " .. name
+	end
+
+	local loader = findloader(updatename)
+	local diff, err = hardreload.diff(loaders[name], loader)
+	if err then
+		-- failed
+		if loaders[name] == origin[name] then
+			-- first time reload
+			return false, table.concat(err, "\n")
+		end
+		local _, err = hardreload.diff(origin[name], loader)
+		if err then
+			-- add upvalue not exist in origin version
+			return false, table.concat(err, "\n")
+		end
+	end
+
+	hotfix(_LOADED[name], diff)
+	loaders[name] = loader
+	return true, _LOADED[name]
+end
+
 return hardreload

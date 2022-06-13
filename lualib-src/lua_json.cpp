@@ -6,24 +6,21 @@
 #include "common/buffer.hpp"
 
 #ifdef MOON_ENABLE_MIMALLOC
-static void* my_malloc_func(void*, size_t size) {
+static void* json_malloc(void*, size_t size) {
     return mi_malloc(size);
 }
 
-static void* my_realloc_func(void*, void* ptr, size_t size) {
+static void* json_realloc(void*, void* ptr, size_t size)
+{
     return mi_realloc(ptr, size);
 }
 
-static void my_free_func(void*, void* ptr) {
+static void json_free(void*, void* ptr)
+{
     mi_free(ptr);
 }
 
-static const yyjson_alc allocator = {
-    my_malloc_func,
-    my_realloc_func,
-    my_free_func,
-    nullptr
-};
+static const yyjson_alc allocator = {json_malloc, json_realloc, json_free,nullptr};
 #else
 static const yyjson_alc allocator = { nullptr };
 #endif
@@ -320,7 +317,8 @@ static int encode(lua_State* L)
     {
         luaL_checkany(L, 1);
         buffer writer(512);
-        if (lua_toboolean(L, 2))
+        bool empty_as_array = (bool)luaL_opt(L, lua_toboolean, 2, true);
+        if (empty_as_array)
             writer.set_flag(EMPTY_AS_ARRAY);
         bool format = lua_toboolean(L, 3);
         lua_settop(L, 1);

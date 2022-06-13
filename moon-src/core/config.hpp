@@ -16,13 +16,14 @@ namespace moon
     constexpr uint8_t PTYPE_SYSTEM = 1;
     constexpr uint8_t PTYPE_TEXT = 2;
     constexpr uint8_t PTYPE_LUA = 3;
-    constexpr uint8_t PTYPE_SOCKET = 4;
-    constexpr uint8_t PTYPE_ERROR = 5;
-    constexpr uint8_t PTYPE_SOCKET_WS = 6; //websocket
-    constexpr uint8_t PTYPE_DEBUG = 7;//
-    constexpr uint8_t PTYPE_SHUTDOWN = 8;//
-    constexpr uint8_t PTYPE_TIMER = 9;//
-    constexpr uint8_t PTYPE_SOCKET_UDP = 10;//
+    constexpr uint8_t PTYPE_ERROR = 4;
+    constexpr uint8_t PTYPE_DEBUG = 5;//
+    constexpr uint8_t PTYPE_SHUTDOWN = 6;//
+    constexpr uint8_t PTYPE_TIMER = 7;//
+    constexpr uint8_t PTYPE_SOCKET_TCP = 8; //
+    constexpr uint8_t PTYPE_SOCKET_UDP = 9;//
+    constexpr uint8_t PTYPE_SOCKET_WS = 10;   // websocket
+    constexpr uint8_t PTYPE_SOCKET_MOON = 11;
 
     //network
     using message_size_t = uint16_t;

@@ -19,7 +19,7 @@ function socketchannel.channel(opts)
 end
 
 function socketchannel:connect()
-    local fd, err = socket.connect(self._opts.host, self._opts.port, moon.PTYPE_TEXT,self._opts.timeout)
+    local fd, err = socket.connect(self._opts.host, self._opts.port, moon.PTYPE_SOCKET_TCP,self._opts.timeout)
     if not fd or fd ==0 then
         return {code = "SOCKET", err = err}
     end
