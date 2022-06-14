@@ -252,14 +252,14 @@ namespace moon
         {
             for (auto& it : services_)
             {
-                if (!it.second->unique() && msg.type() == PTYPE_SYSTEM)
+                if (!it.second->unique() && type == PTYPE_SYSTEM)
                 {
                     continue;
                 }
 
                 if (it.second->ok() && it.second->id() != sender)
                 {
-                    handle_message(it.second, std::move(msg));
+                    handle_message(it.second, msg);
                 }
             }
             return;
