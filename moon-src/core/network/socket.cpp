@@ -349,8 +349,7 @@ bool socket::setnodelay(uint32_t fd)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
-        iter->second->set_no_delay();
-        return true;
+        return iter->second->set_no_delay();
     }
     return false;
 }

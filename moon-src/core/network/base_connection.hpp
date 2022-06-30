@@ -116,11 +116,12 @@ namespace moon
             return;
         }
 
-        void set_no_delay()
+        bool set_no_delay()
         {
             asio::ip::tcp::no_delay option(true);
             asio::error_code ec;
             socket_.set_option(option, ec);
+            return !ec;
         }
 
         moon::log* logger() const
