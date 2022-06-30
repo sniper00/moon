@@ -2,7 +2,7 @@
 // detail/config.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -597,7 +597,9 @@
 
 #if defined(ASIO_HAS_ALIGNOF)
 # define ASIO_ALIGNOF(T) alignof(T)
-# if defined(__GNUC__)
+# if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
+#  define ASIO_DEFAULT_ALIGN __STDCPP_DEFAULT_NEW_ALIGNMENT__
+# elif defined(__GNUC__)
 #  if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 9)) || (__GNUC__ > 4)
 #   define ASIO_DEFAULT_ALIGN alignof(std::max_align_t)
 #  else // ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 9)) || (__GNUC__ > 4)
@@ -617,9 +619,11 @@
 #  if (__cplusplus >= 201703)
 #   if defined(__clang__)
 #    if defined(ASIO_HAS_CLANG_LIBCXX)
-#     if (_LIBCPP_STD_VER > 14) && defined(_LIBCPP_HAS_ALIGNED_ALLOC)
+#     if (_LIBCPP_STD_VER > 14) && defined(_LIBCPP_HAS_ALIGNED_ALLOC) \
+        && !defined(_LIBCPP_MSVCRT) && !defined(__MINGW32__)
 #      define ASIO_HAS_STD_ALIGNED_ALLOC 1
 #     endif // (_LIBCPP_STD_VER > 14) && defined(_LIBCPP_HAS_ALIGNED_ALLOC)
+            //   && !defined(_LIBCPP_MSVCRT) && !defined(__MINGW32__)
 #    elif defined(_GLIBCXX_HAVE_ALIGNED_ALLOC)
 #     define ASIO_HAS_STD_ALIGNED_ALLOC 1
 #    endif // defined(_GLIBCXX_HAVE_ALIGNED_ALLOC)
@@ -1190,14 +1194,17 @@
 // Standard library support for iostream move construction and assignment.
 #if !defined(ASIO_HAS_STD_IOSTREAM_MOVE)
 # if !defined(ASIO_DISABLE_STD_IOSTREAM_MOVE)
-#  if defined(__GNUC__)
+#  if defined(__clang__)
+#   if (__cplusplus >= 201103)
+#    define ASIO_HAS_STD_IOSTREAM_MOVE 1
+#   endif // (__cplusplus >= 201103)
+#  elif defined(__GNUC__)
 #   if (__GNUC__ > 4)
 #    if (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
 #     define ASIO_HAS_STD_IOSTREAM_MOVE 1
 #    endif // (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
 #   endif // (__GNUC__ > 4)
-#  endif // defined(__GNUC__)
-#  if defined(ASIO_MSVC)
+#  elif defined(ASIO_MSVC)
 #   if (_MSC_VER >= 1700)
 #    define ASIO_HAS_STD_IOSTREAM_MOVE 1
 #   endif // (_MSC_VER >= 1700)
@@ -1213,6 +1220,13 @@
 #    define ASIO_HAS_STD_INVOKE_RESULT 1
 #   endif // (_MSC_VER >= 1911 && _MSVC_LANG >= 201703)
 #  endif // defined(ASIO_MSVC)
+#  if defined(ASIO_HAS_CLANG_LIBCXX)
+#   if (_LIBCPP_VERSION >= 13000)
+#    if (__cplusplus >= 202002)
+#     define ASIO_HAS_STD_INVOKE_RESULT 1
+#    endif // (__cplusplus >= 202002)
+#   endif // (_LIBCPP_VERSION >= 13000)
+#  endif // defined(ASIO_HAS_CLANG_LIBCXX)
 # endif // !defined(ASIO_DISABLE_STD_INVOKE_RESULT)
 #endif // !defined(ASIO_HAS_STD_INVOKE_RESULT)
 
@@ -1480,6 +1494,13 @@
 # endif // !defined(ASIO_HAS_TIMERFD)
 #endif // defined(__linux__)
 
+// Linux: io_uring is used instead of epoll.
+#if !defined(ASIO_HAS_IO_URING_AS_DEFAULT)
+# if !defined(ASIO_HAS_EPOLL) && defined(ASIO_HAS_IO_URING)
+#  define ASIO_HAS_IO_URING_AS_DEFAULT 1
+# endif // !defined(ASIO_HAS_EPOLL) && defined(ASIO_HAS_IO_URING)
+#endif // !defined(ASIO_HAS_IO_URING_AS_DEFAULT)
+
 // Mac OS X, FreeBSD, NetBSD, OpenBSD: kqueue.
 #if (defined(__MACH__) && defined(__APPLE__)) \
   || defined(__FreeBSD__) \
@@ -1580,6 +1601,34 @@
 #  endif // !defined(ASIO_WINDOWS_RUNTIME)
 # endif // !defined(ASIO_DISABLE_LOCAL_SOCKETS)
 #endif // !defined(ASIO_HAS_LOCAL_SOCKETS)
+
+// Files.
+#if !defined(ASIO_HAS_FILE)
+# if !defined(ASIO_DISABLE_FILE)
+#  if defined(ASIO_HAS_WINDOWS_RANDOM_ACCESS_HANDLE)
+#   define ASIO_HAS_FILE 1
+#  elif defined(ASIO_HAS_IO_URING)
+#   define ASIO_HAS_FILE 1
+#  endif // defined(ASIO_HAS_IO_URING)
+# endif // !defined(ASIO_DISABLE_FILE)
+#endif // !defined(ASIO_HAS_FILE)
+
+// Pipes.
+#if !defined(ASIO_HAS_PIPE)
+# if defined(ASIO_HAS_IOCP) \
+  || !defined(ASIO_WINDOWS) \
+  && !defined(ASIO_WINDOWS_RUNTIME) \
+  && !defined(__CYGWIN__)
+#  if !defined(__SYMBIAN32__)
+#   if !defined(ASIO_DISABLE_PIPE)
+#    define ASIO_HAS_PIPE 1
+#   endif // !defined(ASIO_DISABLE_PIPE)
+#  endif // !defined(__SYMBIAN32__)
+# endif // defined(ASIO_HAS_IOCP)
+        //   || !defined(ASIO_WINDOWS)
+        //   && !defined(ASIO_WINDOWS_RUNTIME)
+        //   && !defined(__CYGWIN__)
+#endif // !defined(ASIO_HAS_PIPE)
 
 // Can use sigaction() instead of signal().
 #if !defined(ASIO_HAS_SIGACTION)

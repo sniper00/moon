@@ -2,8 +2,8 @@
 // experimental/detail/partial_promise.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2021 Klemens D. Morgenstern
-//                    (klemens dot morgenstern at gmx dot net)
+// Copyright (c) 2021-2022 Klemens D. Morgenstern
+//                         (klemens dot morgenstern at gmx dot net)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -13,9 +13,8 @@
 #define ASIO_EXPERIMENTAL_DETAIL_PARTIAL_PROMISE_HPP
 
 #include "asio/detail/config.hpp"
-#include "asio/experimental/detail/coro_traits.hpp"
 #include "asio/awaitable.hpp"
-#include <iostream>
+#include "asio/experimental/coro_traits.hpp"
 
 #if defined(ASIO_HAS_STD_COROUTINE)
 # include <coroutine>
@@ -92,7 +91,7 @@ struct partial_promise
 
 namespace std {
 
-template<typename ... Args>
+template <typename ... Args>
 struct coroutine_traits<
     coroutine_handle<asio::experimental::detail::partial_promise>,
     Args...>
@@ -106,7 +105,7 @@ struct coroutine_traits<
 
 namespace std { namespace experimental {
 
-template<typename... Args>
+template <typename... Args>
 struct coroutine_traits<
     coroutine_handle<asio::experimental::detail::partial_promise>,
     Args...>
@@ -122,7 +121,7 @@ namespace asio {
 namespace experimental {
 namespace detail {
 
-template<typename CompletionToken>
+template <typename CompletionToken>
 auto post_coroutine(CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
@@ -130,7 +129,7 @@ auto post_coroutine(CompletionToken token) noexcept
   co_return;
 }
 
-template<execution::executor Executor, typename CompletionToken>
+template <execution::executor Executor, typename CompletionToken>
 auto post_coroutine(Executor exec, CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
@@ -138,7 +137,7 @@ auto post_coroutine(Executor exec, CompletionToken token) noexcept
   co_return;
 }
 
-template<execution_context Context, typename CompletionToken>
+template <detail::execution_context Context, typename CompletionToken>
 auto post_coroutine(Context &ctx, CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
@@ -146,7 +145,7 @@ auto post_coroutine(Context &ctx, CompletionToken token) noexcept
   co_return;
 }
 
-template<typename CompletionToken>
+template <typename CompletionToken>
 auto dispatch_coroutine(CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
@@ -154,7 +153,7 @@ auto dispatch_coroutine(CompletionToken token) noexcept
   co_return;
 }
 
-template<execution::executor Executor, typename CompletionToken>
+template <execution::executor Executor, typename CompletionToken>
 auto dispatch_coroutine(Executor exec, CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
@@ -162,7 +161,7 @@ auto dispatch_coroutine(Executor exec, CompletionToken token) noexcept
   co_return;
 }
 
-template<execution_context Context, typename CompletionToken>
+template <detail::execution_context Context, typename CompletionToken>
 auto dispatch_coroutine(Context &ctx, CompletionToken token) noexcept
   -> coroutine_handle<partial_promise>
 {
