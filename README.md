@@ -8,6 +8,9 @@
 
 [![windows-vs2019](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2019.yml)
 
+# Demo
+- [BallGame](https://github.com/sniper00/BallGame.git)
+
 # Moon
 Moon is a lightweight online game server framework implement with actor model. One thread may have 1-N luaVM, they use message queue communication. There are many features for game server development:
 
@@ -81,9 +84,6 @@ https://github.com/sniper00/moon/releases
         ```
 
     **If failed，[See detail steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
-
-## Demo
-- [BallGame](https://github.com/sniper00/BallGame.git)
 
 ## Friend Open Source
 - [NoahGameFrame](https://github.com/ketoo/NoahGameFrame)
