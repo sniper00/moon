@@ -1,5 +1,14 @@
 error("DO NOT REQUIRE THIS FILE")
 
+--- lightuserdata buffer*
+---@class buffer_ptr
+
+--- lightuserdata message*
+---@class message_ptr
+
+--- lightuserdata char*
+---@class cstring_ptr
+
 ---@class core
 ---@field public id integer @service's id
 ---@field public name string @service's name
@@ -20,7 +29,7 @@ function core.md5(data)
 end
 
 ---convert c-string(char* and size) to lua-string
----@param sz userdata @ lightuserdata char*
+---@param sz cstring_ptr
 ---@param len integer
 ---@return string
 function core.tostring(sz, len)
@@ -69,7 +78,7 @@ function core.cpu()
 end
 
 ---make a prefab message
----@param data string|userdata
+---@param data string|buffer_ptr
 ---@return integer @prefab id
 function core.make_prefab(data)
 
@@ -162,21 +171,23 @@ end
 --- - 'N' message:size()
 --- - 'B' message:buffer()
 --- - 'C' message:buffer():data() and message:buffer():size()
----@param msg userdata @message* lightuserdata
+---@param msg message_ptr
 ---@param pattern string
+---@return ...
+---@nodiscard
 function core.decode(msg, pattern)
 
 end
 
 ---clone message, but share buffer field
----@param msg userdata @ message* lightuserdata
+---@param msg message_ptr
 ---@return userdata
 function core.clone(msg)
 
 end
 
 ---release clone message
----@param msg userdata @ message* lightuserdata
+---@param msg message_ptr
 function core.release(msg)
 
 end
@@ -187,6 +198,7 @@ function core.redirect(msg, header, receiver, mtype, sender, sessionid)
 end
 
 ---get error log count
+---@return integer
 function core.error_count()
 end
 
@@ -199,7 +211,7 @@ function asio.try_open(host, port)
 
 end
 
----param protocol moon.PTYPE_SOCKET_TCP、moon.PTYPE_SOCKET_MOON、moon.PTYPE_SOCKET_WS、
+---param protocol moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
 ---@param host string
 ---@param port integer
 ---@param protocol integer
@@ -207,17 +219,17 @@ function asio.listen(host, port, protocol)
 
 end
 
----send data to fd, data string or userdata moon.buffer*
+---send data to fd
 ---@param fd integer
----@param data string|userdata
----@param flag integer|nil
+---@param data string|buffer_ptr
+---@param flag? integer
 ---@return boolean
 function asio.write(fd, data, flag)
 
 end
 
 ---@param fd integer
----@param m userdata @ message*
+---@param m message_ptr
 ---@return boolean
 function asio.write_message(fd, m)
 

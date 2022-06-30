@@ -482,7 +482,7 @@ function pg.pack_query_buffer(buf)
     wfront(buf, MSG_TYPE.query)
 end
 
----@param sql userdata|string @ userdata cpp message pointer:sql string
+---@param sql message_ptr|string
 ---@return pg_result|pg_error
 function pg.query(self, sql)
     if type(sql) == "string" then

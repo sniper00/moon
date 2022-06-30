@@ -11,7 +11,7 @@ http_server.error = function(fd, err)
 end
 
 http_server.on("/get",function(request, response)
-    print_r(request.parse_query(request.query_string),"GET")
+    print_r(request.parse_query(),"GET")
     response:write_header("Content-Type","text/plain")
     response:write("GET:Hello World")
 end)
@@ -23,7 +23,7 @@ http_server.on("/post",function(request, response)
 end)
 
 http_server.on("/postform",function(request, response)
-    print_r(request.parse_form(request.content),"POST_FORM")
+    print_r(request.parse_form(),"POST_FORM")
     response:write_header("Content-Type","text/plain")
     response:write("POST_FROM:Hello World/home")
 end)

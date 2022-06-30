@@ -4,7 +4,7 @@ error("DO NOT REQUIRE THIS FILE")
 local seri = {}
 
 --- Pack lua objects to binary bytes, and return buffer* (avoid memory copy)
----@return lightuserdata
+---@return buffer_ptr
 ---@nodiscard
 function seri.pack(...)
 end
@@ -16,7 +16,7 @@ function seri.packs(...)
 end
 
 --- Unpack binary bytes to lua objects
----@param data string | lightuserdata @ lua string or lightuserdata(char*)
+---@param data string|cstring_ptr
 ---@param len? integer
 ---@return ...
 ---@nodiscard
@@ -25,15 +25,15 @@ function seri.unpack(data, len)
 end
 
 --- Unpack one lua object from binary bytes
----@param buf lightuserdata @ buffer*
+---@param buf buffer_ptr
 ---@param isseek? boolean @ If true will seek buffer's read pos
----@return any, lightuserdata, integer @return lua object, char*, charlen
+---@return any, cstring_ptr, integer @return lua object, char*, charlen
 function seri.unpack_one(buf, isseek)
 
 end
 
 --- Concat lua objects to string, and return buffer*
----@return lightuserdata @ buffer*
+---@return buffer_ptr
 function seri.concat(...)
 
 end
@@ -46,7 +46,7 @@ end
 
 --- Concat lua objects to string, and return buffer*
 ---@param sep string
----@return lightuserdata @ buffer*
+---@return buffer_ptr
 function seri.sep_concat(sep, ...)
 
 end

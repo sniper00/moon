@@ -155,7 +155,7 @@ end
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
 ---@param header string @Message Header
----@param data? string|userdata @消息内容
+---@param data? string|buffer_ptr @消息内容
 ---@param sessionid? integer
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     local p = protocol[PTYPE]
@@ -176,7 +176,7 @@ end
 --- - file: string. service's bootstrap lua script file.
 --- - unique: boolean. Is it unique service. If unique service can use moon.queryservice(name) get service's id.
 --- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
----@return integer @ return service's id, if values is 0, means create service failed
+---@return integer? @ return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
     local sessionid = make_response()
     _newservice(stype, sessionid, config)
@@ -194,6 +194,7 @@ function moon.remove_service(addr, iswait)
         return co_yield()
     else
         core.kill(addr, 0)
+        return ""
     end
 end
 
@@ -267,10 +268,7 @@ end
 ---@param func fun()
 ---@return thread
 function moon.async(func, ...)
-    local co = tremove(co_pool)
-    if not co then
-        co = co_create(routine)
-    end
+    local co = tremove(co_pool) or co_create(routine)
     coresume(co, func, ...)
     return co
 end
@@ -313,7 +311,7 @@ end
 ---  - If failed, return `false` and `error message(string)`
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
----@return any|boolean,string
+---@return ...
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
@@ -407,18 +405,16 @@ end
 
 local reg_protocol = moon.register_protocol
 
+---@alias dispatch_fn fun(sender:integer, session:integer, ...) | fun(m:message_ptr)
+
 ---@param PTYPE string
----@param fn fun(msg:userdata,ptype:table)
----@return boolean
+---@param fn dispatch_fn
+---@param israw? boolean
 function moon.dispatch(PTYPE, fn, israw)
     local p = protocol[PTYPE]
     if fn then
-        local ret = p.dispatch
         p.dispatch = fn
         p.israw = israw
-        return ret
-    else
-        return p and p.dispatch
     end
 end
 
@@ -578,7 +574,7 @@ reg_protocol {
         end
         if type(v) == "thread" then
             coresume(v, timerid)
-        elseif v then
+        else
             v()
         end
     end
