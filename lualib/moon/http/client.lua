@@ -32,7 +32,7 @@ local function read_chunked(fd, content_max_len)
             return {socket_error = err}
         end
 
-        local length = tonumber(data,"16")
+        local length = tonumber(data, 16)
         if not length then
             return {protocol_error = "Invalid chunked format:"..data}
         end
@@ -136,7 +136,7 @@ local function parse_host(host, defaultport)
     if port == "" then
         port = defaultport
     else
-        port = tonumber(port)
+        port = math.tointeger(port)
     end
     return host_, port
 end
@@ -223,6 +223,7 @@ end
 ---@param baseaddress string
 ---@param options HttpOptions
 ---@param content? string
+---@return HttpResponse
 local function request( method, baseaddress, options, content)
 
     local host, port = parse_host(baseaddress, 80)

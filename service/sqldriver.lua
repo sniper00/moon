@@ -15,7 +15,7 @@ if conf.name then
     local clone = moon.clone
     local release = moon.release
 
-    ---@param sql string|userdata @ message*
+    ---@param sql message_ptr
     local function exec_one(db, sql , sender, sessionid)
         while true do
             if db then
@@ -209,6 +209,6 @@ else
 end
 
 ---@class pgclient
----@field public execute fun(db:integer, sql:string|userdata, hash:integer)
----@field public query fun(db:integer, sql:string|userdata, hash:integer):pg_result|pg_error
+---@field public execute fun(db:integer, sql:string|userdata, hash?:integer)
+---@field public query fun(db:integer, sql:string|userdata, hash?:integer):pg_result|pg_error
 

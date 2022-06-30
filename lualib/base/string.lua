@@ -5,7 +5,7 @@ local tbinsert      = table.insert
 
 function string.split(input, delimiter)
     local resultStrList = {}
-    strgsub(input,'[^'..delimiter..']+',function ( w )
+    local _ = strgsub(input,'[^'..delimiter..']+',function ( w )
         tbinsert(resultStrList,w)
     end)
     return resultStrList

@@ -9,76 +9,89 @@ local buffer = {}
 --- Create a buffer, must use 'buffer.delete' free it.
 ---@param capacity? integer @ Data capacity, default 256
 ---@param headreserved? integer @ Head reserved size, default 14
----@return lightuserdata @buffer*
+---@return buffer_ptr
 function buffer.unsafe_new(capacity, headreserved)
 
 end
 
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 function buffer.delete(buf)
 
 end
 
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 function buffer.clear(buf)
 
 end
 
 --- Get buffer's readable size
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@return integer
 function buffer.size(buf)
 
 end
 
 --- Get buffer's subytes or unpack subytes to integer
---- - buffer.unpack(buf, i, j)
+--- - buffer.unpack(buf, i, count)
 --- - buffer.unpack(buf, fmt, i)
----@param buf lightuserdata @buffer*
----@param fmt? string| integer @ like string.unpack but only support '>','<','h','H','i','I'
----@param j? integer @ offset
+---@param buf buffer_ptr
+---@param fmt string @ like string.unpack but only support '>','<','h','H','i','I'
+---@param i integer @ start pos
 ---@return string | any
-function buffer.unpack(buf, fmt, j)
+---@overload fun(buf:buffer_ptr, i:integer, count?:integer)
+function buffer.unpack(buf, fmt, i)
+
 end
 
 --- Read n bytes from buffer
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param n integer
 ---@return string
 function buffer.read(buf, n)
 end
 
 --- Write string to buffer's head part
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param str string
 function buffer.write_front(buf, str)
 end
 
 --- Write string to buffer
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param str string
 function buffer.write_back(buf, str)
 end
 
 --- Seek buffer's read pos
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param pos integer
 ---@param origin? integer @ Seek's origin, Current:1, Begin:0, default 1
 function buffer.seek(buf, pos, origin)
 end
 
 --- Offset buffer's write pos
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param n integer
 function buffer.commit(buf, n)
 
 end
 
 --- Make buffer has enough space
----@param buf lightuserdata @buffer*
+---@param buf buffer_ptr
 ---@param n integer
 function buffer.prepare(buf, n)
 
+end
+
+---@param buf buffer_ptr
+---@param k integer
+---@return boolean
+function buffer.has_flag(buf, k)
+end
+
+---@param buf buffer_ptr
+---@param k integer
+function buffer.set_flag(buf, k)
 end
 
 return buffer

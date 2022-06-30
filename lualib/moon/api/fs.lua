@@ -18,6 +18,9 @@ function fs.isdir(dir)
 
 end
 
+---@param dir1 string
+---@param dir2 string
+---@return string
 function fs.join(dir1, dir2)
 
 end
@@ -33,7 +36,7 @@ function fs.mkdir(dir)
 end
 
 ---@param fp string
----@param all boolean
+---@param all? boolean
 function fs.remove(fp, all)
 
 end

@@ -114,6 +114,9 @@ local mimes = {
 }
 
 ---@class HttpServerResponse
+---@field header table<string, any>
+---@field status_code integer
+---@field content? string
 local http_response = {}
 
 http_response.__index = http_response
@@ -161,9 +164,6 @@ function http_response:tb()
     if self.content then
         tbinsert( cache, self.content )
     end
-    self.header = {}
-    self.status_code = nil
-    self.content = nil
     return cache
 end
 
@@ -188,7 +188,7 @@ local function read_chunked(fd, content_max_len)
             return {socket_error = err}
         end
 
-        local length = tonumber(data,"16")
+        local length = tonumber(data, 16)
         if not length then
             return {protocol_error = "Invalid chunked format:"..data}
         end

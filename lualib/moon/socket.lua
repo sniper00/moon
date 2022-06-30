@@ -51,7 +51,7 @@ end
 ---@param host string
 ---@param port integer
 ---@param protocol integer
----@param timeout integer
+---@param timeout? integer
 function socket.connect(host, port, protocol, timeout)
     assert(supported_tcp_protocol[protocol],"not support")
     timeout = timeout or 0
@@ -75,11 +75,11 @@ end
 
 --- async, used only when protocol == moon.PTYPE_SOCKET_TCP
 ---@param delim string @read until reach the specified delim string from the socket
----@param count integer @ read a specified number of bytes(max count) from the socket.
----@overload fun(fd: integer, count: integer)
-function socket.read(fd, delim, count)
+---@param maxcount? integer
+---@overload fun(fd: integer, count: integer) @ read a specified number of bytes from the socket.
+function socket.read(fd, delim, maxcount)
     local sessionid = make_response()
-    read(fd, sessionid, delim, count)
+    read(fd, sessionid, delim, maxcount)
     return yield()
 end
 
@@ -152,7 +152,7 @@ moon.dispatch(
 )
 
 ---@param name socket_event
----@param cb fun(fd:integer, msg:userdata)
+---@param cb fun(fd:integer, msg:message_ptr)
 function socket.on(name, cb)
     local n = socket_data_type[name]
     if n then
@@ -163,7 +163,7 @@ function socket.on(name, cb)
 end
 
 ---@param name socket_event
----@param cb fun(fd:integer, msg:userdata)
+---@param cb fun(fd:integer, msg:message_ptr)
 function socket.wson(name, cb)
     local n = socket_data_type[name]
     if n then

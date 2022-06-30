@@ -1,17 +1,6 @@
 local moon = require("moon")
 local os = os
 
----@class tm
----@field public year integer
----@field public month integer @[1,12]
----@field public day integer @[1,31]
----@field public hour integer
----@field public min integer
----@field public sec integer
----@field public wday integer @[0,6] 0 is sunday
----@field public yday integer @[1,366]
----@field public isdst integer
-
 local DAYS_IN_MONTH<const> = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 
 local DAYS_BEFORE_MONTH<const> = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334}
@@ -111,7 +100,7 @@ function datetime.isocalendar(t)
 end
 
 ---@param time integer @POSIX timestamp
----@return tm
+---@return osdate
 function datetime.localtime(time)
     return os.date("*t", time)
 end
@@ -174,7 +163,7 @@ end
 ---Get diff of days, always >= 0
 ---@param time1 integer @POSIX timestamp
 ---@param time2 integer @POSIX timestamp
----@return boolean
+---@return integer
 function datetime.past_day(time1, time2)
     local d1 = datetime.localday(time1);
     local d2 = datetime.localday(time2);
@@ -205,7 +194,7 @@ function datetime.make_hourly_time(time, hour, min, sec)
 end
 
 ---@param strtime string @ "2020/09/04 20:28:20"
----@return tm
+---@return osdate
 function datetime.parse(strtime)
     local rep = "return {year=%1,month=%2,day=%3,hour=%4,min=%5,sec=%6}"
     local res = string.gsub(strtime, "(%d+)[/-](%d+)[/-](%d+) (%d+):(%d+):(%d+)", rep)
@@ -224,6 +213,23 @@ function datetime.make_time(tm)
         isdst = isdst
     }
     return os.time(tm)
+end
+
+function datetime.parse_make_time(strtime)
+    local t = datetime.parse(strtime)
+    t.isdst = isdst
+    return os.time(t)
+end
+
+---当前时间距离目标周几相差几天
+---@param time integer @时间戳
+---@param tweek integer @周几
+function datetime.target_week_day(time, tweek)
+    local nweek = tonumber(os.date("%w", time))
+    if nweek == 0 then
+        nweek = WEEK
+    end
+    return WEEK - nweek + tweek
 end
 
 return datetime
