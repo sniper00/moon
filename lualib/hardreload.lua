@@ -485,24 +485,33 @@ local function hotfix(root, diff)
 	local proto = clonefunc.proto
 	local global = collect_all_uv(root)
 
+	local new_up_functions = {}
 	for name, v in pairs(global) do
 		if type(v.value) == "function" then
 			local newf = diff[proto(v.value)]
 			if newf then
-				--print("update upvalue function",  name, newf)
 				update_func(global, newf)
-				setupvalue(v.func,  v.index, newf)
+				new_up_functions[v] = newf
 			end
 		end
 	end
 
+	local new_functions = {}
 	for name, v in pairs(root) do
 		if type(v) == "function" then
 			local newf = diff[proto(v)]
 			--print("update function", name)
 			update_func(global, newf)
-			root[name] = newf
+			new_functions[name] = newf
 		end
+	end
+
+	for k, v in pairs(new_up_functions) do
+		setupvalue(k.func,  k.index, v)
+	end
+
+	for name, v in pairs(new_functions) do
+		root[name] = v
 	end
 end
 
