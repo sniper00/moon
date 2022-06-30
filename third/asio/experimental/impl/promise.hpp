@@ -2,14 +2,18 @@
 // experimental/impl/promise.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2021 Klemens D. Morgenstern
-//                    (klemens dot morgenstern at gmx dot net)
+// Copyright (c) 2021-2022 Klemens D. Morgenstern
+//                         (klemens dot morgenstern at gmx dot net)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 #ifndef ASIO_EXPERIMENTAL_IMPL_PROMISE_HPP
 #define ASIO_EXPERIMENTAL_IMPL_PROMISE_HPP
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+# pragma once
+#endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include "asio/cancellation_signal.hpp"
 #include "asio/experimental/detail/completion_handler_erasure.hpp"

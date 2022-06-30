@@ -2,7 +2,7 @@
 // detail/reactive_socket_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,7 +17,8 @@
 
 #include "asio/detail/config.hpp"
 
-#if !defined(ASIO_HAS_IOCP)
+#if !defined(ASIO_HAS_IOCP) \
+  && !defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 
 #include "asio/buffer.hpp"
 #include "asio/error.hpp"
@@ -601,5 +602,6 @@ public:
 #include "asio/detail/pop_options.hpp"
 
 #endif // !defined(ASIO_HAS_IOCP)
+       //   && !defined(ASIO_HAS_IO_URING_AS_DEFAULT)
 
 #endif // ASIO_DETAIL_REACTIVE_SOCKET_SERVICE_HPP
