@@ -176,9 +176,9 @@ end
 
 ---Make today's some time
 ---@param time integer @POSIX timestamp
----@param hour integer @0-23 default 12
----@param min integer @0-59 default 0
----@param sec integer @0-59 default 0
+---@param hour? integer @0-23 default 12
+---@param min? integer @0-59 default 0
+---@param sec? integer @0-59 default 0
 ---@return integer @POSIX timestamp
 function datetime.make_hourly_time(time, hour, min, sec)
     local tm = os.date("*t", time or moon.time())

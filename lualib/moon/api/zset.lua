@@ -4,6 +4,7 @@ error("DO NOT REQUIRE THIS FILE")
 local zset = {}
 
 ---@param maxcount integer @排行榜上限
+---@return zset
 function zset.new(maxcount)
 
 end
