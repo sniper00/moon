@@ -34,17 +34,6 @@ switch[1] = function ()
     services = {
         {
             unique = true,
-            name = "test",
-            file = "start_by_config/test_moon.lua",
-            threadid = 1
-        }
-    }
-end
-
-switch[2] = function ()
-    services = {
-        {
-            unique = true,
             name = "send_benchmark_receiver1",
             file = "start_by_config/send_benchmark_receiver.lua",
         },    {
@@ -72,7 +61,7 @@ switch[2] = function ()
     }
 end
 
-switch[3] = function ()
+switch[2] = function ()
     services = {
         {
             unique = true,
@@ -86,7 +75,7 @@ switch[3] = function ()
     }
 end
 
-switch[4] = function ()
+switch[3] = function ()
 
     services = {
         {
@@ -110,7 +99,7 @@ switch[4] = function ()
     }
 end
 
-switch[5] = function ()
+switch[4] = function ()
     services = {
         {
             unique = true,
@@ -136,7 +125,7 @@ switch[5] = function ()
     }
 end
 
-switch[6] = function ()
+switch[5] = function ()
     services = {
         {
             unique = true,
@@ -155,7 +144,7 @@ switch[6] = function ()
     }
 end
 
-switch[7] = function ()
+switch[6] = function ()
     services = {
         {
             unique = true,
@@ -165,7 +154,7 @@ switch[7] = function ()
     }
 end
 
-switch[8] = function ()
+switch[7] = function ()
     services = {
         {
             unique = true,
@@ -175,7 +164,7 @@ switch[8] = function ()
     }
 end
 
-switch[9] = function ()
+switch[8] = function ()
     services = {
         {
             unique = true,
@@ -202,7 +191,7 @@ switch[9] = function ()
     }
 end
 
-switch[10] = function ()
+switch[9] = function ()
     services = {
         {
             unique = true,

@@ -48,7 +48,7 @@ else
                 "lua",
                 {
                     name = "test_call_receiver",
-                    file = "start_by_config/test_call.lua",
+                    file = "call.lua",
                     receiver = true
                 }
             )

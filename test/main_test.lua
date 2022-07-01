@@ -4,43 +4,43 @@ local moon = require("moon")
 local test_case =
 {
     {
-        name = "test_api",
-        file = "start_by_config/test_api.lua"
+        name = "core",
+        file = "core.lua"
     }
     ,
     {
-        name = "test_network",
-        file = "start_by_config/test_network.lua",
+        name = "network",
+        file = "network.lua",
         type = "listen",
         ip = "127.0.0.1",
         port =  "30001"
     },
     {
-        name = "test_send_sender",
-        file = "start_by_config/test_send.lua"
+        name = "send",
+        file = "send.lua"
     }
     ,
     {
-        name = "test_call_sender",
-        file = "start_by_config/test_call.lua"
+        name = "call",
+        file = "call.lua"
     }
     ,
     {
-        name = "test_redis",
-        file = "start_by_config/test_redis.lua"
+        name = "redis",
+        file = "redis.lua"
     }
     ,
     {
-        name = "test_large_package",
-        file = "start_by_config/test_large_package.lua",
+        name = "large_package",
+        file = "large_package.lua",
         ip = "127.0.0.1",
         port =  "30002",
         frame_flag= "rw"
     }
     ,
     {
-        name = "test_http",
-        file = "start_by_config/test_http.lua"
+        name = "http",
+        file = "http.lua"
     }
 }
 

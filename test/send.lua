@@ -46,7 +46,7 @@ else
             "lua",
             {
                 name = "test_send",
-                file = "start_by_config/test_send.lua",
+                file = "send.lua",
                 receiver = true
             }
         )
