@@ -377,7 +377,7 @@ do
 	    local t = json.decode(str, null_as_userdata)
 	    local empty_as_array = true
 	    local pertty = true
-		assert(#json.encode(t, empty_as_array, pertty) == #str)
+		json.encode(t, empty_as_array, pertty)
 	end
 end
 
