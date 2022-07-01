@@ -17,4 +17,4 @@ jobs:
       - name: build
         run: make -j2 config=release
       - name: test
-        run: chmod +x moon && ./moon example/main.lua 1
+        run: chmod +x moon && ./moon test/main_test.lua
