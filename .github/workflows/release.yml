@@ -20,7 +20,7 @@ jobs:
           premake5 gmake
           make -j2 config=release
       - name: Test
-        run: chmod +x moon && ./moon example/main.lua 1
+        run: chmod +x moon && ./moon test/main_test.lua
       - name: Publish
         run: |
           mkdir publish
@@ -48,7 +48,7 @@ jobs:
           premake5 gmake --cc=clang
           make -j2 config=release
       - name: Test
-        run: chmod +x moon && ./moon example/main.lua 1
+        run: chmod +x moon && ./moon test/main_test.lua
       - name: Publish
         run: |
           mkdir publish
@@ -78,7 +78,7 @@ jobs:
           premake5.exe vs2019
           msbuild /m Server.sln /p:configuration="release"
       - name: Test
-        run: .\moon.exe example/main.lua 1
+        run: .\moon.exe test/main_test.lua
       - name: Publish
         shell: bash
         run: |

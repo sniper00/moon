@@ -19,5 +19,5 @@ jobs:
       - name: build
         run: msbuild /m Server.sln /p:configuration="release"
       - name: test
-        run: .\moon.exe example/main.lua 1
+        run: .\moon.exe test/main_test.lua
 
