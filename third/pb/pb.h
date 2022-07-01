@@ -4,7 +4,7 @@
 #ifndef PB_NS_BEGIN
 # ifdef __cplusplus
 #   define PB_NS_BEGIN extern "C" {
-#   define PB_NS_END  }
+#   define PB_NS_END   }
 # else
 #   define PB_NS_BEGIN
 #   define PB_NS_END
@@ -338,6 +338,7 @@ struct pb_Type {
     pb_Table field_names;
     pb_Table oneof_index;
     unsigned oneof_count; /* extra field count from oneof entries */
+    unsigned oneof_field; /* extra field in oneof declarations */
     unsigned field_count : 28;
     unsigned is_enum   : 1;
     unsigned is_map    : 1;
@@ -473,7 +474,7 @@ PB_API size_t pb_readvarint32(pb_Slice *s, uint32_t *pv) {
     uint64_t u64;
     size_t ret;
     if (s->p >= s->end)  return 0;
-    if (!(*s->p & 0x80)) { *pv = *s->p++; return 1; }
+    if (!(*s->p & 0x80)) return *pv = *s->p++, 1;
     if (pb_len(*s) >= 10 || !(s->end[-1] & 0x80))
         return pb_readvarint32_fallback(s, pv);
     if ((ret = pb_readvarint_slow(s, &u64)) != 0)
@@ -483,7 +484,7 @@ PB_API size_t pb_readvarint32(pb_Slice *s, uint32_t *pv) {
 
 PB_API size_t pb_readvarint64(pb_Slice *s, uint64_t *pv) {
     if (s->p >= s->end)  return 0;
-    if (!(*s->p & 0x80)) { *pv = *s->p++; return 1; }
+    if (!(*s->p & 0x80)) return *pv = *s->p++, 1;
     if (pb_len(*s) >= 10 || !(s->end[-1] & 0x80))
         return pb_readvarint64_fallback(s, pv);
     return pb_readvarint_slow(s, pv);
@@ -1217,7 +1218,7 @@ PB_API pb_Type *pb_newtype(pb_State *S, pb_Name *tname) {
     if (tname == NULL) return NULL;
     te = (pb_TypeEntry*)pb_settable(&S->types, (pb_Key)tname);
     if (te == NULL) return NULL;
-    if ((t = te->value) != NULL) { t->is_dead = 0; return t; }
+    if ((t = te->value) != NULL) return t->is_dead = 0, t;
     if (!(t = (pb_Type*)pb_poolalloc(&S->typepool))) return NULL;
     pbT_inittype(t);
     t->name = tname;
@@ -1245,7 +1246,7 @@ PB_API void pb_deltype(pb_State *S, pb_Type *t) {
     pb_freetable(&t->field_tags);
     pb_freetable(&t->field_names);
     pb_freetable(&t->oneof_index);
-    t->oneof_count = 0, t->field_count = 0;
+    t->oneof_field = 0, t->field_count = 0;
     t->is_dead = 1;
     /*pb_delname(S, t->name); */
     /*pb_poolfree(&S->typepool, t); */
@@ -1630,7 +1631,7 @@ static int pbL_loadField(pb_State *S, pbL_FieldInfo *info, pb_Loader *L, pb_Type
     pbCE(f = pb_newfield(S, t, pb_newname(S, info->name, NULL), info->number));
     f->default_value = pb_newname(S, info->default_value, NULL);
     f->type      = ft;
-    if ((f->oneof_idx = info->oneof_index)) ++t->oneof_count;
+    if ((f->oneof_idx = info->oneof_index)) ++t->oneof_field;
     f->type_id   = info->type;
     f->repeated  = info->label == 3; /* repeated */
     f->packed    = info->packed >= 0 ? info->packed : L->is_proto3 && f->repeated;
@@ -1659,7 +1660,7 @@ static int pbL_loadType(pb_State *S, pbL_TypeInfo *info, pb_Loader *L) {
         pbC(pbL_loadEnum(S, &info->enum_type[i], L));
     for (i = 0, count = pbL_count(info->nested_type); i < count; ++i)
         pbC(pbL_loadType(S, &info->nested_type[i], L));
-    t->oneof_count -= pbL_count(info->oneof_decl);
+    t->oneof_count = pbL_count(info->oneof_decl);
     L->b.size = (unsigned)curr;
     return PB_OK;
 }
