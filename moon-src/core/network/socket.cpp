@@ -262,6 +262,9 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim,
 
 bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
 {
+    if (nullptr == data)
+        return false;
+
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
         data->set_flag(flag);
