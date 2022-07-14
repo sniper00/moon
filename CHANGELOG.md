@@ -1,3 +1,13 @@
+# v0.4 (2022-07-14)
+
+- break changes
+- - socket: PTYPE_TEXT -> PTYPE_SOCKET_TCP
+- - socket: PTYPE_SOCKET -> PTYPE_SOCKET_MOON
+- update yyjson v0.5.1
+- update asio v1.22.1
+- add more test case
+- compat new version lua-language-server code intellisense
+
 # v0.3 (2022-05-25)
 
 - update to lua5.4.4
