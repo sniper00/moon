@@ -63,7 +63,6 @@ namespace moon
                     error(e);
                     return;
                 }
-                recvtime_ = now();
                 response(bytes_transferred);
             });
         }
@@ -79,7 +78,6 @@ namespace moon
                     error(e);
                     return;
                 }
-                recvtime_ = now();
                 response(count);
             });
         }
@@ -112,11 +110,12 @@ namespace moon
                 }
             }
 
+            parent_->close(fd_);
+
             if (sessionid_ != 0)
             {
                 response(0, PTYPE_ERROR);
             }
-            parent_->close(fd_);
             parent_ = nullptr;
         }
 

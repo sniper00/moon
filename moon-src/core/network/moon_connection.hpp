@@ -90,7 +90,7 @@ namespace moon
         void read_header()
         {
             asio::async_read(socket_, asio::buffer(&header_, sizeof(header_)),
-                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
+                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
                 if (e)
                 {
@@ -98,13 +98,6 @@ namespace moon
                     return;
                 }
 
-                if (bytes_transferred == 0)
-                {
-                    read_header();
-                    return;
-                }
-
-                recvtime_ = now();
                 net2host(header_);
 
                 bool enable = (static_cast<int>(flag_)&static_cast<int>(enable_chunked::receive)) != 0;
@@ -145,12 +138,6 @@ namespace moon
                 if (e)
                 {
                     error(e);
-                    return;
-                }
-
-                if (bytes_transferred == 0)
-                {
-                    read_header();
                     return;
                 }
 

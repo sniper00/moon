@@ -181,14 +181,6 @@ namespace moon
                     return;
                 }
 
-                if (bytes_transferred == 0)
-                {
-                    read_header();
-                    return;
-                }
-
-                recvtime_ = now();
-
                 size_t num_additional_bytes = sbuf->size() - bytes_transferred;
                 auto ec = handshake(sbuf, bytes_transferred);
                 if (!ec)
@@ -229,9 +221,9 @@ namespace moon
                 {
                     auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
                     asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                        [this, self = shared_from_this(), sbuf, key](const asio::error_code& e, std::size_t bytes_transferred)
+                        [this, self = shared_from_this(), sbuf, key](const asio::error_code& e, std::size_t)
                     {
-                        if (e || bytes_transferred == 0)
+                        if (e)
                         {
                             error(e);
                             return;
@@ -327,7 +319,6 @@ namespace moon
                     return;
                 }
 
-                recvtime_ = now();
                 recv_buf_->commit(static_cast<int>(bytes_transferred));
  
                 if (!handle_frame())
