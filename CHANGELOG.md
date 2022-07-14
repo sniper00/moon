@@ -1,8 +1,9 @@
 # v0.4 (2022-07-14)
 
 - break changes
-- - socket: PTYPE_TEXT -> PTYPE_SOCKET_TCP
-- - socket: PTYPE_SOCKET -> PTYPE_SOCKET_MOON
+- - socket: rename PTYPE_TEXT to PTYPE_SOCKET_TCP
+- - socket: rename PTYPE_SOCKET to PTYPE_SOCKET_MOON
+- - socket remove data type socket_error
 - update yyjson v0.5.1
 - update asio v1.22.1
 - add more test case
