@@ -27,10 +27,6 @@ socket.on("close",function(fd, msg)
     print("close ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.on("error",function(fd, msg)
-    print("error ", fd, moon.decode(msg, "Z"))
-end)
-
 -- moon.PTYPE_SOCKET_MOON ：2字节(大端)表示长度的协议
 local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_MOON)
 socket.start(listenfd)--start accept
