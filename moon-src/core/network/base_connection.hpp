@@ -237,44 +237,29 @@ namespace moon
                 return;
             }
 
-            //error
+            auto msg = message{};
+            std::string message = e.message();
+            if (!additional.empty())
             {
-                if (e && e != asio::error::eof)
-                {
-                    auto msg = message{};
-                    std::string message = e.message();
-                    if (!additional.empty())
-                    {
-                        message.append("(");
-                        message.append(additional);
-                        message.append(")");
-                    }
-                    std::string content = moon::format("{\"addr\":\"%s\",\"errcode\":%d,\"errmsg\":\"%s\"}"
-                        , address().data()
-                        , e.value()
-                        , e.message().data());
-                    msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_error));
-                    msg.write_data(content);
-                    msg.set_sender(fd_);
-                    handle_message(std::move(msg));
-                }
+                message.append("(");
+                message.append(additional);
+                message.append(")");
             }
+            std::string content =
+                moon::format("{\"addr\":\"%s\",\"code\":%d,\"message\":\"%s\"}", address().data(), e.value(), message.data());
+            msg.write_data(content);
 
-            //closed
-            {
-                auto msg = message{};
-                msg.write_data(address());
-                msg.set_sender(fd_);
-                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
-                handle_message(std::move(msg));
-                parent_->close(fd_);
-            }
+            msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
+            msg.set_sender(fd_);
+            parent_->close(fd_);
+            handle_message(std::move(msg));
             parent_ = nullptr;
         }
 
         template<typename Message>
         void handle_message(Message&& m)
         {
+            recvtime_ = now();
             if (nullptr != parent_)
             {
                 m.set_sender(fd_);

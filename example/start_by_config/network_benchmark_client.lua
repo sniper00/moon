@@ -19,22 +19,26 @@ local send_data = "Hello World"
 
 local n = 0
 
+local function millseconds()
+    return math.floor(moon.clock()*1000)
+end
+
 socket.on("connect",function(fd,msg)
     connects[fd] = 1
     n = n + 1
     if n == client_num then
         for k,v in pairs(connects) do
-            time_count[k] = moon.now()
+            time_count[k] = millseconds()
             socket.write(k,send_data)
         end
-        start_time = moon.now()
+        start_time = millseconds()
         print("start....")
     end
 end)
 
 socket.on("message",function(fd, msg)
     count = count + 1
-    local now = moon.now()
+    local now = millseconds()
     local diff = now - time_count[fd]
     local v = result[diff]
     if not v then
@@ -53,7 +57,7 @@ socket.on("message",function(fd, msg)
     socket.close(fd)
     --print(fd,connects[fd],count,total)
     if count == total then
-        local qps = total*1000/(moon.now()-start_time)
+        local qps = total*1000/(millseconds()-start_time)
         local keys = {}
         for k,_ in pairs(result) do
             table.insert( keys, k)
@@ -75,9 +79,6 @@ socket.on("close",function(fd, msg)
     --print("close ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.on("error",function(fd, msg)
-    --print("error ", fd, moon.decode(msg, "Z"))
-end)
 
 total = conf.client_num * conf.count
 print(total)
