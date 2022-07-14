@@ -1,4 +1,4 @@
-# v0.4 (2022-07-14)
+# v0.5 (2022-07-14)
 
 - break changes
 - - socket: rename PTYPE_TEXT to PTYPE_SOCKET_TCP
@@ -9,7 +9,7 @@
 - add more test case
 - compat new version lua-language-server code intellisense
 
-# v0.3 (2022-05-25)
+# v0.4 (2022-05-25)
 
 - update to lua5.4.4
 - fix some lua error handle issues
