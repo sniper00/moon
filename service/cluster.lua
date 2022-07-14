@@ -133,11 +133,6 @@ local function cluster_service()
         end
     end)
 
-    socket.on("error", function(fd, msg)
-        print("socket error",fd, moon.decode(msg, "Z"))
-    end)
-
-
     local function connect(node)
         local c = clusters[node]
         local fd, err = socket.connect(c.host, c.port, moon.PTYPE_SOCKET_MOON, 1000)

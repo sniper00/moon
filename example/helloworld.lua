@@ -20,10 +20,6 @@ socket.on("close",function(fd, msg)
     print("close ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.on("error",function(fd, msg)
-    print("error ", fd, moon.decode(msg, "Z"))
-end)
-
 local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_MOON)
 socket.start(listenfd)--start accept
 print("server start ", HOST, PORT)
