@@ -25,10 +25,6 @@ socket.wson("close",function(fd, msg)
     print("wsclose ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.wson("error",function(fd, msg)
-    print("wserror ", fd, moon.decode(msg, "Z"))
-end)
-
 socket.wson("ping",function(fd, msg)
     print("wsping ", fd, moon.decode(msg, "Z"))
     socket.write_pong(fd,"my pong")

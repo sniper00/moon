@@ -23,8 +23,10 @@ socket.on("message",function(_, msg)
 	test_assert.success()
 end)
 
-socket.on("error",function(_, msg)
-	test_assert.assert(false,moon.decode(msg, "Z"))
+socket.on("close",function(_, msg)
+	local json = require("json")
+	local m = json.decode(moon.decode(msg, "Z"))
+	test_assert.assert(m.code~=800001)
 end)
 
 local fd = socket.sync_connect("127.0.0.1", 30002, moon.PTYPE_SOCKET_MOON)

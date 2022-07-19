@@ -22,10 +22,6 @@ socket.on("close",function(fd, msg)
     --print("close ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.on("error",function(fd, msg)
-    --print("error ", fd, moon.decode(msg, "Z"))
-end)
-
 ------------------------CLIENT----------------------------
 
 local function send(fd,data)

@@ -107,9 +107,8 @@ local socket_data_type = {
     accept = 2,
     message = 3,
     close = 4,
-    error = 5,
-    ping = 6,
-    pong = 7,
+    ping = 5,
+    pong = 6,
 }
 
 ---@alias socket_event
@@ -117,7 +116,6 @@ local socket_data_type = {
 ---| 'accept'
 ---| 'message'
 ---| 'close'
----| 'error'
 ---| 'ping'
 ---| 'pong'
 
