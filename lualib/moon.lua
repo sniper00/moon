@@ -113,8 +113,10 @@ local function coresume(co, ...)
     return ok, err
 end
 
----make map<coroutine,sessionid>
-function moon.make_response(receiver)
+--- make map<coroutine,sessionid>
+---@param receiver? integer @ receiver's service id
+---@return integer @ session id
+function moon.make_session(receiver)
     uuid = uuid + 1
     if uuid == 0x7FFFFFFF then
         uuid = 1
@@ -132,7 +134,7 @@ function moon.make_response(receiver)
     return uuid
 end
 
-local make_response = moon.make_response
+local make_session = moon.make_session
 
 --- 取消等待session的回应
 function moon.cancel_session(sessionid)
@@ -178,7 +180,7 @@ end
 --- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
 ---@return integer? @ return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
-    local sessionid = make_response()
+    local sessionid = make_session()
     _newservice(stype, sessionid, config)
     return math.tointeger(co_yield())
 end
@@ -189,7 +191,7 @@ end
 ---@return string
 function moon.remove_service(addr, iswait)
     if iswait then
-        local sessionid = make_response()
+        local sessionid = make_session()
         core.kill(addr, sessionid)
         return co_yield()
     else
@@ -301,7 +303,7 @@ end
 
 ---@return string
 function moon.scan_services(workerid)
-    local sessionid = make_response()
+    local sessionid = make_session()
     _scan_services(workerid, sessionid)
     return co_yield()
 end
@@ -322,7 +324,7 @@ function moon.co_call(PTYPE, receiver, ...)
         error("moon co_call receiver == 0")
     end
 
-    local sessionid = make_response(receiver)
+    local sessionid = make_session(receiver)
     _send(receiver, p.pack(...), "", sessionid, p.PTYPE)
     return co_yield()
 end
@@ -346,7 +348,7 @@ function moon.response(PTYPE, receiver, sessionid, ...)
 end
 
 ------------------------------------
----@param msg userdata @message*
+---@param msg message_ptr
 ---@param PTYPE string
 local function _default_dispatch(msg, PTYPE)
     local p = protocol[PTYPE]

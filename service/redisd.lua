@@ -227,7 +227,7 @@ else
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
     --- - if failed return false and error message.
     function client.call(db, ...)
-        local sessionid = moon.make_response(db)
+        local sessionid = moon.make_session(db)
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", 1)))
         raw_send("lua", db, "", buf, sessionid)
@@ -237,7 +237,7 @@ else
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
     --- - if failed return false and error message.
     function client.hash_call(hash, db, ...)
-        local sessionid = moon.make_response(db)
+        local sessionid = moon.make_session(db)
         hash = hash or 1
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", hash)))

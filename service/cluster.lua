@@ -91,7 +91,7 @@ local function cluster_service()
             moon.async(function ()
                 local address = get_service_address(header.to_sname)
                 assert(address>0, tostring(header.to_sname))
-                local session = moon.make_response(address)
+                local session = moon.make_session(address)
                 redirect(msg, "", address, moon.PTYPE_LUA, moon.id, -session)
                 header.session = -header.session
                 socket.write(fd, pack(header, co_yield()))
@@ -310,7 +310,7 @@ function cluster.call(receiver_node, receiver_sname, ...)
         assert(cluster_address>0)
     end
 
-    local sessionid = moon.make_response(cluster_address)
+    local sessionid = moon.make_session(cluster_address)
 
     local header = {
         to_node = receiver_node,

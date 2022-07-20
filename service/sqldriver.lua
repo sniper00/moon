@@ -198,7 +198,7 @@ else
 
     function client.query(db, sql, hash)
         hash = hash or 1
-        local sessionid = moon.make_response(db)
+        local sessionid = moon.make_session(db)
         local buf = concat(sql)
         assert(wfront(buf, packstr("Q", hash)))
         raw_send("lua", db, "", buf, sessionid)
