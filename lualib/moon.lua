@@ -113,7 +113,7 @@ local function coresume(co, ...)
     return ok, err
 end
 
---- make map<coroutine,sessionid>
+--- map current running coroutine with a integer sesssion id, used to resume it later.
 ---@param receiver? integer @ receiver's service id
 ---@return integer @ session id
 function moon.make_session(receiver)
@@ -244,6 +244,13 @@ function moon.time()
     return _now(1000)
 end
 
+--- Return command line arguments.
+--- e. `moon main.lua arg1 arg2 arg3` return `{arg1, arg2, arg3}`
+---@return string[]
+function moon.args()
+    return load(moon.get_env("ARG"))()
+end
+
 -------------------------协程操作封装--------------------------
 
 local co_num = 0
@@ -314,6 +321,7 @@ end
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
 ---@return ...
+---@nodiscard
 function moon.co_call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
