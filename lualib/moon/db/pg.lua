@@ -331,7 +331,7 @@ function pg.connect(opts)
     end
 
     if not success then
-        return err
+        return {code = "AUTH", message = err}
     end
 
     success, err = wait_until_ready(obj)

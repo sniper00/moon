@@ -7,13 +7,13 @@ local zset = {}
 ---@return zset
 function zset.new(maxcount) end
 
----只排序O(logN)
+---Sort by score and timestamp. Time complexity O(logN)
 ---@param key integer @排行对象唯一ID
 ---@param score integer @积分
 ---@param timestamp integer @积分相同按时间戳排序
 function zset:update(key, score, timestamp) end
 
----处理排行O(N)
+---Prepare for get data by rank.If has prepared nothing effects, otherwise O(N).
 function zset:prepare() end
 
 ---获取排行, 0 未上榜. 会自动调用prepare
@@ -50,7 +50,7 @@ function zset:erase(key) end
 ---获取[start, finish] 对象唯一ID 数组
 ---@param start integer
 ---@param finish integer
----@return table
+---@return integer[]?
 function zset:range(start, finish) end
 
 return zset
