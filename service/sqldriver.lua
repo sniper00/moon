@@ -208,7 +208,7 @@ else
     return client
 end
 
----@class pgclient
----@field public execute fun(db:integer, sql:string|userdata, hash?:integer)
----@field public query fun(db:integer, sql:string|userdata, hash?:integer):pg_result|pg_error
+---@class sqlclient
+---@field public execute fun(db:integer, sql:string|string[], hash?:integer)
+---@field public query fun(db:integer, sql:string|string[], hash?:integer):pg_result|pg_error
 
