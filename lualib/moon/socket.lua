@@ -29,7 +29,9 @@ local supported_tcp_protocol = {
 ---@class socket : asio
 local socket = core
 
---- async
+---@async
+---@param listenfd integer
+---@param serviceid? integer
 function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
     local sessionid = make_session()
@@ -45,13 +47,11 @@ function socket.start(listenfd)
     accept(listenfd, 0, id)
 end
 
---- async
---- param protocol moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS、
---- timeout millseconds
+---@async
 ---@param host string
 ---@param port integer
----@param protocol integer
----@param timeout? integer
+---@param protocol integer # moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
+---@param timeout? integer # millseconds
 function socket.connect(host, port, protocol, timeout)
     assert(supported_tcp_protocol[protocol],"not support")
     timeout = timeout or 0
@@ -73,7 +73,8 @@ function socket.sync_connect(host, port, protocol)
     return fd
 end
 
---- async, used only when protocol == moon.PTYPE_SOCKET_TCP
+--- used only when protocol == moon.PTYPE_SOCKET_TCP
+---@async
 ---@param delim string @read until reach the specified delim string from the socket
 ---@param maxcount? integer
 ---@overload fun(fd: integer, count: integer) @ read a specified number of bytes from the socket.
