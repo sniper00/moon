@@ -136,7 +136,7 @@ end
 
 local make_session = moon.make_session
 
---- 取消等待session的回应
+--- Cancel wait session response
 function moon.cancel_session(sessionid)
     session_id_coroutine[sessionid] = false
 end
@@ -170,13 +170,13 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     _send(receiver, data, header, sessionid, p.PTYPE)
 end
 
---- async
---- Create a new service
+---@async
+--- Create a service
 ---@param stype string @service type, options 'lua'
 ---@param config table @service's config in key-value format
 --- - name: string. service's name.
---- - file: string. service's bootstrap lua script file.
---- - unique: boolean. Is it unique service. If unique service can use moon.queryservice(name) get service's id.
+--- - file: string. service's bootstrap file(lua script).
+--- - unique: boolean. Identifies whether the service is unique. Unique service can use moon.queryservice(name) get service's id.
 --- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
 ---@return integer? @ return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
@@ -185,7 +185,8 @@ function moon.new_service(stype, config)
     return math.tointeger(co_yield())
 end
 
----async kill service
+---kill service
+---@async
 ---@param addr integer @service's id
 ---@param iswait? boolean @if true will wait the result. default false
 ---@return string
@@ -301,7 +302,7 @@ end
 
 ------------------------------------------
 
----async
+---@async
 ---@param serviceid integer
 ---@return string
 function moon.co_remove_service(serviceid)
@@ -315,6 +316,7 @@ function moon.scan_services(workerid)
     return co_yield()
 end
 
+---@async
 --- Send message to target service (id=receiver), and use `coroutine.yield()` wait response
 ---  - If success, return values are params of `moon.response(id,response, params...)`
 ---  - If failed, return `false` and `error message(string)`
@@ -601,8 +603,8 @@ function moon.timeout(mills, fn)
     return timer_session
 end
 
----async
 ---异步等待 mills 毫秒
+---@async
 ---@param mills integer
 ---@return integer
 function moon.sleep(mills)
