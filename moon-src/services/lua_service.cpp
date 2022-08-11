@@ -59,17 +59,18 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 
 lua_service* lua_service::get(lua_State* L)
 {
-    void* ud = nullptr;
-    lua_getallocf(L, &ud);
-    if (ud != nullptr)
-        return reinterpret_cast<lua_service*>(ud);
-    luaL_error(L, "lua_service is not init!");
-    return nullptr;
+    intptr_t v = 0;
+    memcpy(&v, lua_getextraspace(L), LUA_EXTRASPACE);
+    return reinterpret_cast<lua_service*>(v);
 }
 
 lua_service::lua_service()
     : lua_(lua_newstate(lalloc, this))
-{}
+{
+    static_assert((LUA_EXTRASPACE == sizeof(this)) && (LUA_EXTRASPACE == sizeof(intptr_t)));
+    intptr_t p = (intptr_t)this;
+    memcpy(lua_getextraspace(lua_.get()), &p, LUA_EXTRASPACE);
+}
 
 lua_service::~lua_service()
 {
