@@ -574,8 +574,9 @@ static int lasio_accept(lua_State* L)
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 2);
     uint32_t owner = (uint32_t)luaL_checkinteger(L, 3);
-    sock.accept(fd, sessionid, owner);
-    return 0;
+    bool ok = sock.accept(fd, sessionid, owner);
+    lua_pushboolean(L, ok ? 1 : 0);
+    return 1;
 }
 
 static int lasio_connect(lua_State* L)
