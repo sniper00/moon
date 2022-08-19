@@ -21,14 +21,29 @@ namespace moon
             acceptor_context(uint8_t t, uint32_t o, asio::io_context& ioc)
                 :type(t)
                 , owner(o)
+                , reserve(ioc)
                 , acceptor(ioc)
             {
+            }
 
+            void close() 
+            {
+                asio::error_code ec;
+                reserve.close(ec);
+                acceptor.cancel(ec);
+                acceptor.close(ec);
+            }
+
+            void reset_reserve()
+            {
+                asio::error_code ec;
+                reserve.open(asio::ip::tcp::v4(), ec);
             }
 
             uint8_t type;
             uint32_t owner;
             uint32_t fd = 0;
+            asio::ip::tcp::socket reserve;
             asio::ip::tcp::acceptor acceptor;
         };
 
@@ -78,7 +93,7 @@ namespace moon
 
         bool udp_connect(uint32_t fd, std::string_view host, uint16_t port);
 
-        void accept(uint32_t fd, int32_t sessionid, uint32_t owner);
+        bool accept(uint32_t fd, int32_t sessionid, uint32_t owner);
 
         uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0);
 

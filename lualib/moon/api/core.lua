@@ -166,6 +166,7 @@ function asio.try_open(host, port) end
 ---@param host string
 ---@param port integer
 ---@param protocol integer
+---@return integer
 function asio.listen(host, port, protocol) end
 
 ---send data to fd

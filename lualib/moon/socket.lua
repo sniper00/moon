@@ -35,7 +35,7 @@ local socket = core
 function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
     local sessionid = make_session()
-    accept(listenfd, sessionid, serviceid)
+    assert(accept(listenfd, sessionid, serviceid),"invalid param")
     local fd,err = yield()
     if not fd then
         return nil,err

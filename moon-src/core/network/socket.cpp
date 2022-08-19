@@ -55,7 +55,7 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
 #endif
         ctx->acceptor.bind(endpoint);
         ctx->acceptor.listen(std::numeric_limits<int>::max());
-
+        ctx->reset_reserve();
         auto id = server_->nextfd();
         ctx->fd = id;
         acceptors_.emplace(id, ctx);
@@ -116,44 +116,66 @@ bool socket::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
     }
 }
 
-void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
+bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
 {
-    assert(owner > 0 && "socket::accept : invalid serviceid");
     auto iter = acceptors_.find(fd);
     if (iter == acceptors_.end())
     {
-        return;
+        return false;
     }
 
     auto& ctx = iter->second;
-
     if (!ctx->acceptor.is_open())
     {
-        return;
+        return false;
     }
 
     worker* w = server_->get_worker(0, owner);
+    if (nullptr == w)
+        return false;
+
     auto c = w->socket().make_connection(owner, ctx->type);
 
     ctx->acceptor.async_accept(c->socket(), [this, ctx, c, w, sessionid, owner](const asio::error_code& e)
     {
         if (!e)
         {
-            c->fd(server_->nextfd());
-            w->socket().add_connection(this, ctx, c, sessionid);
-        }
-        else
-        {
-            if (sessionid != 0)
-            {
-                response(ctx->fd, ctx->owner, moon::format("socket::accept error %s(%d)", e.message().data(), e.value()), "SOCKET_ERROR"sv, sessionid, PTYPE_ERROR);
+            if (!ctx->reserve.is_open()) {
+                c->socket().close();
+                ctx->reset_reserve();
+                auto ec = asio::error::make_error_code(asio::error::no_descriptors);
+                response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", ec.message().data(), ec.value()),
+                    "SOCKET_ERROR"sv,
+                    sessionid, PTYPE_ERROR);
             }
             else
             {
-                if (e != asio::error::operation_aborted)
+                c->fd(server_->nextfd());
+                w->socket().add_connection(this, ctx, c, sessionid);
+            }
+        }
+        else
+        {
+            if (e == asio::error::operation_aborted)
+                return;
+
+            if (e == asio::error::no_descriptors)
+            {
+                if (ctx->reserve.is_open())
                 {
-                    CONSOLE_WARN(server_->logger(), "socket::accept error %s(%d)", e.message().data(), e.value());
+                    ctx->reserve.close();
                 }
+            }
+
+            if (sessionid != 0)
+            {
+                response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", e.message().data(), e.value()),
+                    "SOCKET_ERROR"sv,
+                    sessionid, PTYPE_ERROR);
+            }
+            else
+            {
+                CONSOLE_WARN(server_->logger(), "socket::accept %s(%d)", e.message().data(), e.value());
             }
         }
 
@@ -162,6 +184,7 @@ void socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
             accept(ctx->fd, sessionid, owner);
         }
     });
+    return true;
 }
 
 uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds)
@@ -304,11 +327,7 @@ bool socket::close(uint32_t fd)
 
     if (auto iter = acceptors_.find(fd); iter != acceptors_.end())
     {
-        if (iter->second->acceptor.is_open())
-        {
-            iter->second->acceptor.cancel();
-            iter->second->acceptor.close();
-        }
+        iter->second->close();
         acceptors_.erase(iter);
         server_->unlock_fd(fd);
         return true;
@@ -330,11 +349,7 @@ void socket::close_all()
 
     for (auto& ac : acceptors_)
     {
-        if (ac.second->acceptor.is_open())
-        {
-            ac.second->acceptor.cancel();
-            ac.second->acceptor.close();
-        }
+        ac.second->close();
     }
 }
 
