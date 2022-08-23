@@ -178,7 +178,7 @@ end
 --- - file: string. service's bootstrap file(lua script).
 --- - unique: boolean. Identifies whether the service is unique. Unique service can use moon.queryservice(name) get service's id.
 --- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
----@return integer? @ return service's id, if values is 0, means create service failed
+---@return integer @ return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
     local sessionid = make_session()
     _newservice(stype, sessionid, config)
