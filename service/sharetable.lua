@@ -91,6 +91,14 @@ local function sharetable_service()
         moon.response("lua", source, sessionid, all_ptr)
     end
 
+    function sharetable.clients(source, sessionid)
+        local t = {}
+        for k in pairs(clients) do
+            table.insert(t, k)
+        end
+        moon.response("lua", source, sessionid, t)
+    end
+
 	function sharetable.close(source)
 		local list = clients[source]
 		if list then
@@ -160,6 +168,10 @@ end
 
 function sharetable.loadstring(filename, source, ...)
 	return moon.co_call( "lua", sharetable.address, "loadstring", filename, source, ...)
+end
+
+function sharetable.clients()
+	return moon.co_call( "lua", sharetable.address, "clients")
 end
 
 local RECORD = {}
