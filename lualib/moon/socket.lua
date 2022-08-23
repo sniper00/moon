@@ -202,4 +202,14 @@ function socket.close(fd)
     udp_callbacks[fd] = nil
 end
 
+function socket.parse_host_port(host_port, defaultport)
+    local host, port = host_port:match("([^:]+):?(%d*)$")
+    if port == "" then
+        port = defaultport
+    else
+        port = math.tointeger(port)
+    end
+    return host, port
+end
+
 return socket

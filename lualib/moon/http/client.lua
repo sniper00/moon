@@ -131,16 +131,6 @@ local function response_handler(fd, method)
     return response
 end
 
-local function parse_host(host, defaultport)
-    local host_, port = host:match("([^:]+):?(%d*)$")
-    if port == "" then
-        port = defaultport
-    else
-        port = math.tointeger(port)
-    end
-    return host_, port
-end
-
 local M = {}
 
 local default_connect_timeout<const> = 1000
@@ -166,7 +156,7 @@ local function do_request(baseaddress, options, req, method)
     fd = table.remove(pool)
 
     if not fd then
-        local host, port = parse_host(baseaddress, 80)
+        local host, port = socket.parse_host_port(baseaddress, 80)
         fd, err = socket.connect(host, port, moon.PTYPE_SOCKET_TCP, options.connect_timeout)
         if not fd then
             return false, err
@@ -226,7 +216,7 @@ end
 ---@return HttpResponse
 local function request( method, baseaddress, options, content)
 
-    local host, port = parse_host(baseaddress, 80)
+    local host, port = socket.parse_host_port(baseaddress, 80)
 
     if not options.path or options.path== "" then
         options.path = "/"

@@ -17,14 +17,12 @@ end
 --
 -- Read content from new file.
 --
+---@return string
 function io.readfile(filename)
-    local file, err = io.open(filename, "rb")
-    if file then
-        local content = file:read("*a")
-        file:close()
-        return content
-    end
-    return false, err
+    local file = assert(io.open(filename, "rb"))
+    local content = file:read("*a")
+    file:close()
+    return content
 end
 
 function io.pathinfo(path)
