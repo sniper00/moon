@@ -37,6 +37,8 @@ project "lua"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.c"}
     defines {"MAKE_LIB"}
+    filter { "system:windows" }
+        disablewarnings { "4244","4324","4702","4310", "4701"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
     filter { "system:macosx" }
@@ -131,9 +133,13 @@ end
 ----------------------Lua C/C++ Modules------------------------
 
 add_lua_module("./third/sharetable", "sharetable")
-add_lua_module("./third/lcrypt", "crypt")
+add_lua_module("./third/lcrypt", "crypt", nil, function ()
+    disablewarnings { "4244","4267","4456", "4459"}
+end)
 add_lua_module("./third/pb", "pb")--protobuf
-add_lua_module("./third/lmongo", "mongo")
+add_lua_module("./third/lmongo", "mongo",nil, function ()
+    disablewarnings { "4267","4457","4456", "4459", "4996", "4244", "4310"}
+end)
 
 add_lua_module("./lualib-src", "lualib", function()
     language "C++"
