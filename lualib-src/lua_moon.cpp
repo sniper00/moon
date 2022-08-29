@@ -388,10 +388,9 @@ static int message_decode(lua_State* L)
         }
         case 'Z':
         {
-            std::string_view str = m->bytes();
-            if (!str.empty())
+            if (m->data()!=nullptr)
             {
-                lua_pushlstring(L, str.data(), str.size());
+                lua_pushlstring(L, m->data(), m->size());
             }
             else
             {
