@@ -4,7 +4,7 @@
 
 namespace moon
 {
-    class  message final
+    class message final
     {
     public:
         static buffer_ptr_t create_buffer(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
@@ -124,23 +124,18 @@ namespace moon
             return type_;
         }
 
-        std::string_view bytes() const
+        bool broadcast() const
         {
-            if (!data_)
-            {
-                return std::string_view(nullptr, 0);
-            }
-            return std::string_view{ data_->data(), data_->size() };
+            return (data_ && data_->has_flag(buffer_flag::broadcast));
         }
 
-        std::string_view substr(int pos, size_t len = std::string_view::npos) const
+        void set_broadcast(bool v)
         {
             if (!data_)
             {
-                return std::string_view(nullptr, 0);
+                return;
             }
-            std::string_view sr(data_->data(), data_->size());
-            return sr.substr(pos, len);
+            v ? data_->set_flag(buffer_flag::broadcast) : data_->clear_flag(buffer_flag::broadcast);
         }
 
         void write_data(std::string_view s)
@@ -167,38 +162,6 @@ namespace moon
         buffer* get_buffer()
         {
             return data_ ? data_.get() : nullptr;
-        }
-
-        bool broadcast() const
-        {
-            return data_?data_->has_flag(buffer_flag::broadcast):false;
-        }
-
-        void set_broadcast(bool v)
-        {
-            if (!data_)
-            {
-                return;
-            }
-            v ? data_->set_flag(buffer_flag::broadcast) : data_->clear_flag(buffer_flag::broadcast);
-        }
-
-        void reset()
-        {
-            type_ = 0;
-            sender_ = 0;
-            receiver_ = 0;
-            sessionid_ = 0;
-
-            if (header_)
-            {
-                header_->clear();
-            }
-
-            if (data_)
-            {
-                data_->clear();
-            }
         }
     private:
         uint8_t type_ = 0;
