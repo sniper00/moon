@@ -382,24 +382,6 @@ do
 end
 
 do
-	local zset = require("zset")
-	local rank = zset.new(3)
-	rank:update(4, 1, 4)
-	rank:update(3, 1, 3)
-	rank:update(2, 1, 2)
-	rank:update(1, 1, 1)
-	assert(rank:rank(1) == 1)
-	assert(rank:rank(2) == 2)
-	assert(rank:rank(3) == 3)
-	assert(rank:rank(4) == 0)
-	assert(rank:size() == 3)
-	local res = rank:range(1, 4)
-	assert(#res == 3)
-	rank:clear()
-	assert(not rank:range(1, 4))
-end
-
-do
 	local list = require("list")
 
 	local q = list.new()
