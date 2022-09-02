@@ -124,7 +124,7 @@ namespace moon
 
         const_iterator start(uint32_t nrank) const
         {
-            size_t idx = nrank / JUMP_STEP;
+            size_t idx = (nrank-1) / JUMP_STEP;
             if (idx >= jump_.size())
             {
                 return  order_.end();
