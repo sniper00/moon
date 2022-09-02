@@ -39,7 +39,7 @@ static int lkey(lua_State* L)
     if (zset->size() == 0 || zset->size() < rank)
         return 0;
     
-    moon::zset::const_iterator it = (rank == 1) ? it = zset->begin() : zset->find_by_rank(rank);
+    moon::zset::const_iterator it = (rank == 1 ? zset->begin() : zset->find_by_rank(rank));
 
     if (it != zset->end()) {
         lua_pushinteger(L, it->key);

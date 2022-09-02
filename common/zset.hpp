@@ -155,8 +155,10 @@ namespace moon
             }
         }
     public:
+        friend class skip_list_iterator< skip_list>;
+
         using const_iterator = skip_list_iterator< skip_list>;
-        friend class const_iterator;
+
 
         skip_list()
         {
