@@ -42,6 +42,11 @@ local test_case =
         name = "http",
         file = "http.lua"
     }
+    ,
+    {
+        name = "zset",
+        file = "test_zset.lua"
+    }
 }
 
 local next_case = function ()
