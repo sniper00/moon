@@ -87,7 +87,7 @@ namespace moon
 
         bool try_open(const std::string& host, uint16_t port);
 
-        uint32_t listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
+        std::pair<uint32_t, asio::ip::tcp::endpoint> listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
 
         uint32_t udp(uint32_t owner, std::string_view host, uint16_t port);
 

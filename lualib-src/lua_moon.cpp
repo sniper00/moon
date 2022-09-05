@@ -561,8 +561,14 @@ static int lasio_listen(lua_State* L)
     std::string_view host = lua_check<std::string_view>(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
-    uint32_t fd = sock.listen(std::string{ host }, port, S->id(), type);
-    lua_pushinteger(L, fd);
+    auto res  = sock.listen(std::string{ host }, port, S->id(), type);
+    lua_pushinteger(L, res.first);
+    if (res.first > 0)
+    {
+        lua_pushstring(L, res.second.address().to_string().data());
+        lua_pushinteger(L, res.second.port());
+        return 3;
+    }
     return 1;
 }
 

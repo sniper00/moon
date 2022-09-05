@@ -42,7 +42,7 @@ bool socket::try_open(const std::string& host, uint16_t port)
     }
 }
 
-uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
+std::pair<uint32_t, asio::ip::tcp::endpoint> socket::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
 {
     try
     {
@@ -59,12 +59,12 @@ uint32_t socket::listen(const std::string & host, uint16_t port, uint32_t owner,
         auto id = server_->nextfd();
         ctx->fd = id;
         acceptors_.emplace(id, ctx);
-        return id;
+        return std::make_pair(id, ctx->acceptor.local_endpoint());
     }
     catch (asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
-        return 0;
+        return { 0, asio::ip::tcp::endpoint {}};
     }
 }
 
