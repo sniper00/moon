@@ -82,9 +82,22 @@ local function sharetable_service()
 		moon.response("lua", source, sessionid, ptr)
 	end
 
-    function sharetable.queryall(source, sessionid)
+    function sharetable.queryall(source, sessionid, filelist)
+        local tmp = files
+
+        if filelist then
+            tmp = {}
+            for _, v in ipairs(filelist) do
+                local filename = conf.dir and fs.join(conf.dir, v) or v
+                local m = files[filename]
+                if m then
+                    tmp[filename] = m
+                end
+            end
+        end
+
         local all_ptr = {}
-        for filename in pairs(files) do
+        for filename in pairs(tmp) do
             local _, name = fs.split(filename)
             all_ptr[name] = query_file(source, filename)
         end
@@ -191,8 +204,9 @@ function sharetable.query(filename)
     return newptr, err
 end
 
-function sharetable.queryall()
-    local conf_ptr,err = moon.co_call( "lua", sharetable.address, "queryall")
+---@param filelist? string[] @ {xxx.lua,yyy.lua,zzz.lua}
+function sharetable.queryall(filelist)
+    local conf_ptr,err = moon.co_call( "lua", sharetable.address, "queryall", filelist)
     assert(conf_ptr,err)
     local tbconf = {}
     for filename, newptr in pairs(conf_ptr) do
