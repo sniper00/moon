@@ -402,7 +402,6 @@ namespace moon
             int64_t key = 0;
             int64_t score = 0;
             int64_t timestamp = 0;
-            uint32_t rank = 0;
 
             bool operator==(const context& val) const
             {
