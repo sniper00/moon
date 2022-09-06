@@ -6,7 +6,7 @@ local conf = ...
 local pack = seri.pack
 local co_yield = coroutine.yield
 
-local NODE = math.tointeger(moon.get_env("NODE"))
+local NODE = math.tointeger(moon.env("NODE"))
 
 local function cluster_service()
 
@@ -285,6 +285,8 @@ local cluster_address
 ---@field public from_node integer @ 发送者服务器ID
 ---@field public from_addr integer @ 发送者服务ID
 ---@field public session integer @ 协程session
+---@field public ping boolean
+---@field public pong boolean
 
 
 function cluster.send(receiver_node, receiver_sname, ...)

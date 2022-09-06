@@ -20,9 +20,9 @@ package.path = path.. ";"
 
 local moon = require("moon")
 
-moon.set_env("PATH", string.format("package.path='%s'", package.path))
+moon.env("PATH", string.format("package.path='%s'", package.path))
 
-local arg = load(moon.get_env("ARG"))()
+local arg = moon.args()
 
 local sid = math.tointeger(arg[1])
 
@@ -215,7 +215,7 @@ if not fn then
     return 0
 end
 
-moon.set_env("NODE", tostring(sid))
+moon.env("NODE", tostring(sid))
 
 fn()
 
@@ -235,7 +235,7 @@ end)
 moon.shutdown(function()
     moon.async(function()
         for _, addr in ipairs(addrs) do
-            moon.remove_service(addr)
+            moon.kill(addr)
         end
         moon.quit()
     end)

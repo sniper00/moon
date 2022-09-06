@@ -24,11 +24,11 @@ local test_case =
         name = "call",
         file = "call.lua"
     }
-    ,
-    {
-        name = "redis",
-        file = "redis.lua"
-    }
+    -- ,
+    -- {
+    --     name = "redis",
+    --     file = "redis.lua"
+    -- }
     ,
     {
         name = "large_package",
@@ -46,6 +46,11 @@ local test_case =
     {
         name = "zset",
         file = "test_zset.lua"
+    }
+    ,
+    {
+        name = "json",
+        file = "json.lua"
     }
 }
 
@@ -66,7 +71,7 @@ local command = {}
 command.SUCCESS = function(name,sid)
     print("SUCCESS",name)
     moon.async(function ()
-        moon.co_remove_service(sid)
+        moon.kill(sid)
         next_case()
     end)
 end
@@ -74,7 +79,7 @@ end
 command.FAILED = function(name, sid, dsp)
     moon.error(string.format("FAILED %s %s", tostring(name), tostring(dsp)))
     moon.async(function ()
-        moon.co_remove_service(sid)
+        moon.kill(sid)
         next_case()
     end)
 end
