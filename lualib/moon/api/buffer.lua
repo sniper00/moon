@@ -27,8 +27,8 @@ function buffer.size(buf) end
 --- - buffer.unpack(buf, i, count)
 --- - buffer.unpack(buf, fmt, i)
 ---@param buf buffer_ptr
----@param fmt string @ like string.unpack but only support '>','<','h','H','i','I'
----@param i integer @ start pos
+---@param fmt? string @ like string.unpack but only support '>','<','h','H','i','I'
+---@param i? integer @ start pos
 ---@return string | any
 ---@overload fun(buf:buffer_ptr, i:integer, count?:integer)
 function buffer.unpack(buf, fmt, i) end

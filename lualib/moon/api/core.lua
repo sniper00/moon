@@ -30,10 +30,10 @@ function core.md5(data) end
 ---@return string
 function core.tostring(sz, len) end
 
----@return string @get server info
-function core.server_info() end
+---@return string @get server stats in json format
+function core.server_stats() end
 
----if linked mimalloc, call mimalloc collect
+---if linked mimalloc, call mimalloc's collect
 ---@param force boolean @
 function core.collect(force) end
 
@@ -47,14 +47,10 @@ function core.collect(force) end
 --- print console log
 function core.log(loglv,...) end
 
---- set log level
----@param lv string @DEBUG, INFO, WARN, ERROR
----@return integer
-function core.set_loglevel(lv) end
-
---- get log level
----@return integer
-function core.get_loglevel() end
+--- set or get log level
+---@param lv? string @DEBUG, INFO, WARN, ERROR
+---@return integer @ log level
+function core.loglevel(lv) end
 
 --- get this service's cpu cost time
 ---@return integer
@@ -83,18 +79,16 @@ function core.send_prefab(receiver, prefabid, header, sessionid, type) end
 -- end
 
 --- remove a service
-function core.kill(addr, sessionid) end
+function core.kill(addr) end
 
 --- query **unique** service's address by name
 function core.queryservice(name) end
 
+--- set or get env
 ---@param key string
----@param value string
-function core.set_env(key, value) end
-
----@param key string
+---@param value? string
 ---@return string
-function core.get_env(key) end
+function core.env(key, value) end
 
 ---get worker thread info
 ---@return string

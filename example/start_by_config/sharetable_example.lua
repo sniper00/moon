@@ -1,7 +1,5 @@
 local moon = require("moon")
-local seri = require("seri")
 local sharetable = require("sharetable")
-local test_assert = require("test_assert")
 local conf = ... or {}
 
 local file = "sharetable_data.lua"
@@ -77,9 +75,9 @@ else
 
         print(moon.co_call("lua", agent, "UPDATE"))
 
-        moon.remove_service(agent, true)
+        moon.kill(agent)
         moon.exit(-1)
-        -- moon.remove_service(moon.queryservice("sharetable"))
+        -- moon.kill(moon.queryservice("sharetable"))
     end)
 
 end

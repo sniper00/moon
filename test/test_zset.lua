@@ -34,10 +34,10 @@ print("init ",max_count, "cost", moon.clock() - bt)
 
 for i=1,max_count do
     local order = item2[i]
-    local key1 = rank:key(i)
+    local key1 = rank:key_by_rank(i)
     local key2 = order[1]
     --print(i, key1, key2, rank:size())
-    assert(rank:key(i) == order[1], string.format("%d %d", key1, key2))
+    assert(rank:key_by_rank(i) == order[1], string.format("%d %d", key1, key2))
 end
 
 for i=1,10 do
@@ -60,9 +60,9 @@ print("init ",max_count, " cost", moon.clock() - bt)
 
 for i=1,max_count do
     local order = item2[i]
-    local key1 = rank:key(i)
+    local key1 = rank:key_by_rank(i)
     local key2 = order[1]
-    assert(rank:key(i) == order[1], string.format("%d %d", key1, key2))
+    assert(rank:key_by_rank(i) == order[1], string.format("%d %d", key1, key2))
 end
 
 for i=1,10 do
@@ -85,7 +85,7 @@ do
     assert(rank:size()==2)
     assert(rank:rank(3) == 1)
     assert(rank:rank(2) == 2)
-    assert(rank:rank(1) == 0)
+    assert(rank:rank(1) == nil)
 
     assert(rank:score(1) == 0)
     assert(rank:score(2) == 200)
@@ -96,7 +96,7 @@ do
     rank:update(1,100,1)
 
     assert(rank:size()==2)
-    assert(rank:rank(3) == 0)
+    assert(rank:rank(3) == nil)
     assert(rank:rank(2) == 1)
     assert(rank:rank(1) == 2)
 end
@@ -113,7 +113,7 @@ do
     assert(rank:rank(1) == 1)
     assert(rank:rank(2) == 2)
     assert(rank:rank(3) == 3)
-    assert(rank:rank(4) == 0) ---no rank
+    assert(rank:rank(4) == nil) ---no rank
 end
 
 do
@@ -151,17 +151,17 @@ do
     rank:update(3,300,1)
     rank:update(4,400,1)
 
-    assert(rank:key(1) == 4)
-    assert(rank:key(2) == 3)
-    assert(rank:key(3) == 2)
-    assert(rank:key(4) == 1)
+    assert(rank:key_by_rank(1) == 4)
+    assert(rank:key_by_rank(2) == 3)
+    assert(rank:key_by_rank(3) == 2)
+    assert(rank:key_by_rank(4) == 1)
 
     ---delete key==2 rank==3
     rank:erase(2)
 
-    assert(rank:key(1) == 4)
-    assert(rank:key(2) == 3)
-    assert(rank:key(3) == 1)
+    assert(rank:key_by_rank(1) == 4)
+    assert(rank:key_by_rank(2) == 3)
+    assert(rank:key_by_rank(3) == 1)
 end
 
 do
@@ -172,7 +172,7 @@ do
     rank:update(3,300,1)
     rank:update(4,400,1)
 
-    assert(rank:rank(1) == 0)
+    assert(rank:rank(1) == nil)
     assert(rank:rank(2) == 3)
     assert(rank:rank(3) == 2)
     assert(rank:rank(4) == 1)

@@ -24,11 +24,16 @@ static int lrank(lua_State* L)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
     int64_t key = (int64_t)luaL_checkinteger(L, 2);
-    lua_pushinteger(L, zset->rank(key));
-    return 1;
+    auto v = zset->rank(key);
+    if(v>0)
+    {
+        lua_pushinteger(L, zset->rank(key));
+        return 1;
+    }
+    return 0;
 }
 
-static int lkey(lua_State* L)
+static int lkey_by_rank(lua_State* L)
 {
     moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
     if (nullptr == zset)
@@ -170,7 +175,7 @@ static int lcreate(lua_State* L)
             { "update", lupdate },
             { "has", lhas},
             { "rank", lrank},
-            { "key", lkey},
+            { "key_by_rank", lkey_by_rank},
             { "score", lscore},
             { "range", lrange},
             { "clear", lclear},

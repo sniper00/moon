@@ -54,7 +54,7 @@ else
     end)
 
     moon.shutdown(function()
-        moon.remove_service(receiver)
+        moon.kill(receiver)
     end)
 end
 

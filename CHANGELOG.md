@@ -1,3 +1,22 @@
+# v0.5 (2022-09-06)
+- break changes
+```
+moon.remove_service -> moon.kill
+moon.send_prefab -> moon.raw_send
+moon.set_loglevel moon.get_loglevel -> moon.loglevel
+moon.set_env moon.get_env -> moon.env
+moon.make_response -> make_session
+moon.size -> delete
+moon.error_count -> delete
+zset.key -> zset.key_by_rank
+```
+- use redis's skiplist implement zset
+- add game server proxy template
+- use lua extraspace save lua_service*
+- close the connection when accept no_descriptors
+- add uuid lualib
+- update lua 5.4.5
+
 # v0.5 (2022-07-14)
 
 - break changes

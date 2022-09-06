@@ -52,7 +52,7 @@ moon.PTYPE_SOCKET_MOON = 11
 -- LOG_INFO = 3
 -- LOG_DEBUG = 4
 moon.DEBUG = function()
-    return core.get_loglevel() == 4 -- LOG_DEBUG
+    return core.loglevel() == 4 -- LOG_DEBUG
 end
 moon.error = function(...) core.log(1, ...) end
 moon.warn = function(...) core.log(2, ...) end
@@ -157,7 +157,7 @@ end
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
 ---@param header string @Message Header
----@param data? string|buffer_ptr @消息内容
+---@param data? string|buffer_ptr|integer @消息内容
 ---@param sessionid? integer
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     local p = protocol[PTYPE]
@@ -185,23 +185,7 @@ function moon.new_service(stype, config)
     return math.tointeger(co_yield())
 end
 
----kill service
----@async
----@param addr integer @service's id
----@param iswait? boolean @if true will wait the result. default false
----@return string
-function moon.remove_service(addr, iswait)
-    if iswait then
-        local sessionid = make_session()
-        core.kill(addr, sessionid)
-        return co_yield()
-    else
-        core.kill(addr, 0)
-        return ""
-    end
-end
-
----使当前服务退出
+---kill self
 function moon.quit()
     local running = co_running()
     for k, co in pairs(session_id_coroutine) do
@@ -218,7 +202,7 @@ function moon.quit()
         end
     end
 
-    moon.remove_service(_addr)
+    moon.kill(_addr)
 end
 
 ---根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
@@ -231,12 +215,12 @@ function moon.queryservice(name)
     return name
 end
 
-function moon.set_env_pack(name, ...)
-    return core.set_env(name, seri.packs(...))
+function moon.env_packed(name, ...)
+    return core.env(name, seri.packs(...))
 end
 
-function moon.get_env_unpack(name)
-    return seri.unpack(core.get_env(name))
+function moon.env_unpacked(name)
+    return seri.unpack(core.env(name))
 end
 
 --- Get server timestamp in seconds
@@ -249,7 +233,7 @@ end
 --- e. `moon main.lua arg1 arg2 arg3` return `{arg1, arg2, arg3}`
 ---@return string[]
 function moon.args()
-    return load(moon.get_env("ARG"))()
+    return load(moon.env("ARG"))()
 end
 
 -------------------------协程操作封装--------------------------
@@ -301,13 +285,6 @@ function moon.coroutine_num()
 end
 
 ------------------------------------------
-
----@async
----@param serviceid integer
----@return string
-function moon.co_remove_service(serviceid)
-    return moon.remove_service(serviceid, true)
-end
 
 ---@return string
 function moon.scan_services(workerid)

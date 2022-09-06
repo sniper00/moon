@@ -426,16 +426,7 @@ namespace moon
             {
                 if (key == val.key)
                     return true;
-
-                if (score == val.score)
-                {
-                    if (timestamp == val.timestamp)
-                    {
-                        return key < val.key;
-                    }
-                    return timestamp < val.timestamp;
-                }
-                return score > val.score;
+                return operator<(val);
             }
 
             bool operator>(const context& val) const

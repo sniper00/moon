@@ -1,5 +1,6 @@
 local moon = require("moon")
 local json = require("json")
+local test_assert = require("test_assert")
 
 do
     local double = 2 ^ 53
@@ -179,21 +180,21 @@ do
 end
 
 do
-    local ok, err = xpcall(json.encode, debug.traceback, {a=function ()
-    end})
-    print(ok, err)
+    local ok, err = xpcall(json.encode, debug.traceback, { a = function()
+    end })
+    assert(not ok, err)
 end
 
 do
-    local ok, err = xpcall(json.concat, debug.traceback, {function ()
-    end})
-    print(ok, err)
+    local ok, err = xpcall(json.concat, debug.traceback, { function()
+    end })
+    assert(not ok, err)
 end
 
 do
-    local ok, err = xpcall(json.concat_resp, debug.traceback, {function ()
-    end})
-    print(ok, err)
+    local ok, err = xpcall(json.concat_resp, debug.traceback, { function()
+    end })
+    assert(not ok, err)
 end
 
 do
@@ -208,13 +209,13 @@ do
     assert(t2[4]==100)
 end
 
--- do
---     local str = io.readfile([[twitter.json]])
---     local null_as_userdata = true
---     local t = json.decode(str, null_as_userdata)
---     local empty_as_array = true
---     local pertty = true
---     io.writefile("twitter-out.json", json.encode(t, empty_as_array, pertty))
--- end
+do
+    local str = io.readfile([[twitter.json]])
+    local null_as_userdata = true
+    local t = json.decode(str, null_as_userdata)
+    local empty_as_array = true
+    local pertty = true
+    io.writefile("twitter-out.json", json.encode(t, empty_as_array, pertty))
+end
 
-moon.exit(100)
+test_assert.success()
