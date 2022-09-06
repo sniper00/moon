@@ -46,7 +46,7 @@ function zset:size() end
 --- Clear the zset. Time complexity: Linear in the size of the zset.
 function zset:clear() end
 
---- Removes the specified member ny key. Time complexity: O(log(N)).
+--- Removes the specified member by key. Time complexity: O(log(N)).
 ---@param key integer @unique id
 ---@return integer @ Removed count
 function zset:erase(key) end
