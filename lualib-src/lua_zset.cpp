@@ -4,22 +4,37 @@
 
 #define METANAME "lzet"
 
+#ifdef MOON_ENABLE_MIMALLOC
+#include "mimalloc.h"
+using zset_type = moon::zset<mi_stl_allocator>;
+#else
+using zset_type = moon::zset<std::allocator>;
+#endif
+
 static int lupdate(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
-    int64_t key = (int64_t)luaL_checkinteger(L, 2);
-    int64_t score = (int64_t)luaL_checkinteger(L, 3);
-    int64_t timestamp = (int64_t)luaL_checkinteger(L, 4);
-    zset->update(key, score, timestamp);
-    return 0;
+    try
+    {
+        int64_t key = (int64_t)luaL_checkinteger(L, 2);
+        int64_t score = (int64_t)luaL_checkinteger(L, 3);
+        int64_t timestamp = (int64_t)luaL_checkinteger(L, 4);
+        zset->update(key, score, timestamp);
+        return 0;
+    }
+    catch (const std::exception& ex)
+    {
+        lua_pushstring(L, ex.what());
+    }
+    return lua_error(L);
 }
 
 static int lrank(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
@@ -35,7 +50,7 @@ static int lrank(lua_State* L)
 
 static int lkey_by_rank(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
@@ -44,7 +59,7 @@ static int lkey_by_rank(lua_State* L)
     if (zset->size() == 0 || zset->size() < rank)
         return 0;
     
-    moon::zset::const_iterator it = (rank == 1 ? zset->begin() : zset->find_by_rank(rank));
+    zset_type::const_iterator it = (rank == 1 ? zset->begin() : zset->find_by_rank(rank));
 
     if (it != zset->end()) {
         lua_pushinteger(L, it->key);
@@ -55,7 +70,7 @@ static int lkey_by_rank(lua_State* L)
 
 static int lscore(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
@@ -66,7 +81,7 @@ static int lscore(lua_State* L)
 
 static int lhas(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
@@ -77,7 +92,7 @@ static int lhas(lua_State* L)
 
 static int lsize(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
@@ -87,7 +102,7 @@ static int lsize(lua_State* L)
 
 static int lclear(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
     zset->clear();
@@ -96,7 +111,7 @@ static int lclear(lua_State* L)
 
 static int lerase(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
     int64_t key = (int64_t)luaL_checkinteger(L, 2);
@@ -106,7 +121,7 @@ static int lerase(lua_State* L)
 
 static int lrange(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
     int64_t start = luaL_checkinteger(L, 2)-1;
@@ -131,7 +146,7 @@ static int lrange(lua_State* L)
     if (ranglen >= std::numeric_limits<int>::max())
         return luaL_error(L, "zset.range out off limit");
 
-    moon::zset::const_iterator it{nullptr};
+    zset_type::const_iterator it{nullptr};
     if (reverse) {
         it = zset->tail();
         if (start > 0)
@@ -156,7 +171,7 @@ static int lrange(lua_State* L)
 
 static int lrelease(lua_State* L)
 {
-    moon::zset* zset = (moon::zset*)lua_touserdata(L, 1);
+    zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
     std::destroy_at(zset);
@@ -167,8 +182,8 @@ static int lcreate(lua_State* L)
 {
     size_t max_count = (size_t)luaL_checkinteger(L, 1);
     bool reverse = lua_toboolean(L, 2) != 0;
-    void* p = lua_newuserdatauv(L, sizeof(moon::zset), 0);
-    new (p) moon::zset(max_count, reverse);
+    void* p = lua_newuserdatauv(L, sizeof(zset_type), 0);
+    new (p) zset_type(max_count, reverse);
     if (luaL_newmetatable(L, METANAME))//mt
     {
         luaL_Reg l[] = {

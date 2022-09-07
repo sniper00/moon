@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <limits>
+#include <memory>
 
 namespace moon
 {
@@ -53,7 +54,7 @@ namespace moon
         }
     };
 
-    template<typename Score>
+    template<typename Score, typename Alloc = std::allocator<char>>
     class skip_list
     {
     private:
@@ -65,26 +66,30 @@ namespace moon
         struct node_type;
         struct level_type
         {
-            node_type* forward;
-            size_t span;
+            node_type* forward = nullptr;
+            size_t span = 0;
         };
 
         struct node_type
         {
+            node_type(size_t size_, score_type score)
+                :size(size_)
+                , score(std::move(score))
+            {
+            }
+            size_t size;
             score_type score;
-            node_type* backward;
+            node_type* backward = nullptr;
             level_type level[1];
         };
 
-        static unsigned int random(unsigned int Min, unsigned int Max)
+        unsigned int random(unsigned int Min, unsigned int Max)
         {
-            std::random_device rd;
-            std::mt19937 gen(rd());
             std::uniform_int_distribution<unsigned int> dis(Min, Max);
-            return dis(gen);
+            return dis(gen_);
         }
 
-        static int rand_level()
+        int rand_level()
         {
             static const int threshold = (int)(PERCENT * std::numeric_limits<int16_t>::max());
             int level = 1;
@@ -93,23 +98,18 @@ namespace moon
             return (level < MAXLEVEL) ? level : MAXLEVEL;
         }
 
-        static node_type* make_node(int level, score_type score)
+        node_type* make_node(int level, score_type score)
         {
-            size_t size = sizeof(node_type) + level * sizeof(level_type);
-            node_type* n = (node_type*)::malloc(size);
-            if (nullptr == n)
-            {
-                fprintf(stderr, "malloc: Out of memory trying to allocate %zu bytes\n", size);
-                fflush(stderr);
-                ::abort();
-            }
-            n->score = score;
-            return n;
+            assert(level > 0);
+            size_t size = sizeof(node_type) + (size_t(level)-1)* sizeof(level_type);
+            char* node_memory = alloc_.allocate(size);
+            return new (node_memory) node_type{ size , score };
         }
 
-        static void free_node(node_type* node)
+        void free_node(node_type* node)
         {
-            ::free(node);
+            std::destroy_at(node);
+            alloc_.deallocate((char*)node, node->size);
         }
 
         void remove_node(node_type* x, node_type** update)
@@ -145,7 +145,7 @@ namespace moon
             if (header_ != nullptr)
             {
                 node_type* node = header_->level[0].forward, * next;
-                ::free(header_);
+                free_node(header_);
                 while (node)
                 {
                     next = node->level[0].forward;
@@ -156,12 +156,14 @@ namespace moon
             }
         }
     public:
-        friend class skip_list_iterator< skip_list>;
+        using allocator_type = Alloc;
 
+        friend class skip_list_iterator< skip_list>;
         using const_iterator = skip_list_iterator< skip_list>;
 
-
-        skip_list()
+        skip_list(const allocator_type& alloc = allocator_type())
+            :alloc_(alloc)
+            , gen_(std::random_device{}())
         {
             clear();
         }
@@ -390,12 +392,15 @@ namespace moon
             return length_;
         }
     private:
+        allocator_type alloc_;
+        std::mt19937 gen_;
         size_t length_ = 0;
         int level_ = 1;
         node_type* header_ = nullptr;
         node_type* tail_ = nullptr;
     };
 
+    template<template<typename T> class Alloc = std::allocator>
     class zset
     {
         struct context
@@ -443,7 +448,10 @@ namespace moon
             }
         };
     public:
-        using const_iterator = skip_list<context>::const_iterator;
+        template<typename T>
+        using allocator_type = Alloc<T>;
+        using skip_list_type = skip_list<context, allocator_type<char>>;
+        using const_iterator = typename skip_list_type::const_iterator;
 
         zset(size_t max_count = std::numeric_limits<size_t>::max(), bool reverse = false)
             : reverse_(reverse)
@@ -551,7 +559,7 @@ namespace moon
     private:
         bool reverse_ = false;
         const size_t max_count_;
-        skip_list<context> zsl_;
-        std::unordered_map<int64_t, const context*> dict_;
+        skip_list_type zsl_;
+        std::unordered_map<int64_t, const context*, std::hash<int64_t>, std::equal_to<int64_t>, allocator_type<std::pair<const int64_t, const context*>>> dict_;
     };
 } // namespace moon
