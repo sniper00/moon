@@ -74,7 +74,9 @@ https://github.com/sniper00/moon/releases
     git clone https://github.com/sniper00/moon.git
 ``` 
 
-4. Build
+4. If want link mimalloc, edit premake5.lua `local MOON_ENABLE_MIMALLOC = true`
+
+5. Build
     - windows run `build.bat`。
     - linux:
         ```shell
