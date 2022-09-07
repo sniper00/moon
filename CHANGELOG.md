@@ -16,6 +16,7 @@ zset.key -> zset.key_by_rank
 - close the connection when accept no_descriptors
 - add uuid lualib
 - update lua 5.4.5
+- add mimalloc submodule
 
 # v0.5 (2022-07-14)
 
