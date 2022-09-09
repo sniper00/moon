@@ -84,6 +84,12 @@ https://github.com/sniper00/moon/releases
             chmod +x premake5
             ./build.sh
         ```
+    - macosx:
+        ```shell
+            ./premake5 gmake --cc=clang
+            make clean config=release
+            make config=release
+        ```
 
     **If failed，[See detail steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
 
