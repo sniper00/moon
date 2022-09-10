@@ -25,11 +25,11 @@ Moon is a lightweight online game server framework implement with actor model. O
    - timer
    - inter luaVM communication
    - inter cluster(process) communication
-   - redis/mysql/pgsql driver
+   - redis/mysql/pgsql/mongodb async driver
 - High performance and optimized Lua Json library
 - Lua protobuf library
 - Lua filesystem
-
+- Recast Navigation
 # OverView
 ![image](https://github.com/sniper00/MoonNetLua/raw/master/image/02.png)
 
@@ -83,6 +83,12 @@ https://github.com/sniper00/moon/releases
             chmod +x build.sh
             chmod +x premake5
             ./build.sh
+        ```
+    - macosx:
+        ```shell
+            ./premake5 gmake --cc=clang
+            make clean config=release
+            make config=release
         ```
 
     **If failed，[See detail steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
