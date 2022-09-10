@@ -1,4 +1,4 @@
-# v0.5 (2022-09-06)
+# v0.6 (2022-09-06)
 - break changes
 ```
 moon.remove_service -> moon.kill
