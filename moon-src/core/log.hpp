@@ -20,6 +20,7 @@ namespace moon
 
     class log
     {
+        using queue_type = concurrent_queue<buffer, std::mutex, std::vector, true>;
     public:
         log()
             :state_(state::init)
@@ -75,16 +76,16 @@ namespace moon
             logstring(console, level, std::string_view{ str });
         }
 
-        buffer make_line(bool console, LogLevel level, uint64_t serviceid = 0, size_t datasize = 0)
+        buffer make_line(bool enable_stdout, LogLevel level, uint64_t serviceid = 0, size_t datasize = 0)
         {
             if (level == LogLevel::Error)
                 ++error_count_;
 
-            console = enable_console_ ? console : enable_console_;
+            enable_stdout = enable_stdout_ ? enable_stdout : enable_stdout_;
 
             auto line = buffer{ (datasize>0)?(64 + datasize):256 };
             auto it = line.begin();
-            *(it++) = static_cast<char>(console);
+            *(it++) = static_cast<char>(enable_stdout);
             *(it++) = static_cast<char>(level);
             size_t offset = format_header(std::addressof(*it), level, serviceid);
             line.commit(2 + offset);
@@ -120,7 +121,7 @@ namespace moon
 
         void set_enable_console(bool v)
         {
-            enable_console_ = v;
+            enable_stdout_ = v;
         }
 
         void set_level(std::string_view s)
@@ -203,57 +204,69 @@ namespace moon
             return offset;
         }
 
+        void do_write(queue_type::container_type& datas)
+        {
+            for (auto& it : datas)
+            {
+                auto p = it.data();
+                auto bconsole = static_cast<bool>(*(p++));
+                auto level = static_cast<LogLevel>(*(p++));
+                it.seek(2, buffer::seek_origin::Current);
+                if (bconsole)
+                {
+                    auto s = std::string_view{ it.data(), it.size() };
+                    switch (level)
+                    {
+                    case LogLevel::Error:
+                        std::cerr << termcolor::red << s;
+                        break;
+                    case LogLevel::Warn:
+                        std::cout << termcolor::yellow << s;
+                        break;
+                    case LogLevel::Info:
+                        std::cout << termcolor::white << s;
+                        break;
+                    case LogLevel::Debug:
+                        std::cout << termcolor::green << s;
+                        break;
+                    default:
+                        break;
+                    }
+                    std::cout << termcolor::white << std::endl;
+                }
+
+                if (ofs_)
+                {
+                    ofs_->write(it.data(), it.size());
+                    ofs_->put('\n');
+                    if(level <= LogLevel::Error)
+                        ofs_->flush();
+                }
+                --size_;
+            }
+            if (ofs_)
+            {
+                ofs_->flush();
+            }
+        }
+
         void write()
         {
             while (state_.load(std::memory_order_acquire) == state::init)
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
-            queue_t::container_type swaps;
-            while (state_.load(std::memory_order_acquire) == state::ready || log_queue_.size() != 0)
+            queue_type::container_type swaps;
+            while (state_.load(std::memory_order_acquire) == state::ready)
             {
                 log_queue_.swap(swaps);
-                for (auto& it : swaps)
-                {
-                    auto p = it.data();
-                    auto bconsole = static_cast<bool>(*(p++));
-                    auto level = static_cast<LogLevel>(*(p++));
-                    it.seek(2, buffer::seek_origin::Current);
-                    if (bconsole)
-                    {
-                        auto s = std::string_view{ it.data(), it.size() };
-                        switch (level)
-                        {
-                        case LogLevel::Error:
-                            std::cerr << termcolor::red << s;
-                            break;
-                        case LogLevel::Warn:
-                            std::cout << termcolor::yellow << s;
-                            break;
-                        case LogLevel::Info:
-                            std::cout << termcolor::white << s;
-                            break;
-                        case LogLevel::Debug:
-                            std::cout << termcolor::green << s;
-                            break;
-                        default:
-                            break;
-                        }
-                        std::cout << termcolor::white << std::endl;
-                    }
+                do_write(swaps);
+                swaps.clear();
+            }
 
-                    if (ofs_)
-                    {
-                        ofs_->write(it.data(), it.size());
-                        ofs_->put('\n');
-                        if(level <= LogLevel::Error)
-                            ofs_->flush();
-                    }
-                    --size_;
-                }
-                if (ofs_)
-                {
-                    ofs_->flush();
-                }
+            if(log_queue_.size()>0)
+            {
+                log_queue_.swap(swaps);
+                do_write(swaps);
                 swaps.clear();
             }
         }
@@ -275,15 +288,14 @@ namespace moon
             }
         }
 
-        bool enable_console_ = true;
+        bool enable_stdout_ = true;
         std::atomic<state> state_;
         std::atomic_uint32_t size_ = 0;
         std::atomic<LogLevel> level_;
         int64_t error_count_ = 0;
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
-        using queue_t = concurrent_queue<buffer, std::mutex, std::vector, true>;
-        queue_t log_queue_;
+        queue_type log_queue_;
     };
 
 #define CONSOLE_INFO(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);

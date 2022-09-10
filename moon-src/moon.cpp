@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
     try
     {
         uint32_t thread_count = std::thread::hardware_concurrency();
-        bool enable_console = true;
+        bool enable_stdout = true;
         std::string logfile;
         std::string bootstrap;
         std::string loglevel;
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 
             thread_count = lua_opt_field<uint32_t>(L, -1, "thread", thread_count);
             logfile = lua_opt_field<std::string>(L, -1, "logfile");
-            enable_console = lua_opt_field<bool>(L, -1, "enable_console", enable_console);
+            enable_stdout = lua_opt_field<bool>(L, -1, "enable_console", enable_stdout);
             loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
         }
 
@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
         server_->set_env("ARG", arg);
         server_->set_env("THREAD_NUM", std::to_string(thread_count));
 
-        server_->logger()->set_enable_console(enable_console);
+        server_->logger()->set_enable_console(enable_stdout);
         server_->logger()->set_level(loglevel);
 
         server_->init(thread_count, logfile);

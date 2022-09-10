@@ -8,71 +8,43 @@
 
 namespace moon
 {
-    template<bool v>
-    struct queue_block_empty :std::false_type {};
-
-    template<>
-    struct queue_block_empty<true> :std::true_type
+    template<bool enable>
+    struct queue_condition_variable
     {
-        std::condition_variable notempty_;
-        template<typename TLock, typename TCond>
-        void check(TLock& lock, TCond&& cond)
+        std::condition_variable cv_;
+        template<typename TLock>
+        void wait(TLock& lock)
         {
-            notempty_.wait(lock, std::forward<TCond>(cond));
+            if constexpr(enable)
+                cv_.wait(lock);
         }
 
         void notify_one()
         {
-            notempty_.notify_one();
+            if constexpr(enable)
+                cv_.notify_one();
         }
 
         void notify_all()
         {
-            notempty_.notify_all();
-        }
-    };
-
-    template<bool v>
-    struct queue_block_full :std::false_type {};
-
-    template<>
-    struct queue_block_full<true> :std::true_type
-    {
-        std::condition_variable notfull_;
-
-        template<typename TLock, typename TCond>
-        void check(TLock& lock, TCond&& cond)
-        {
-            notfull_.wait(lock, std::forward<TCond>(cond));
-        }
-
-        void notify_one()
-        {
-            notfull_.notify_one();
-        }
-
-        void notify_all()
-        {
-            notfull_.notify_all();
+            if constexpr(enable)
+                cv_.notify_all();
         }
     };
 
     template<class T, typename Lock = std::mutex, template <typename Elem,typename = std::allocator<Elem>> class Container = std::vector, bool BlockEmpty = false, bool BlockFull = false>
-    class concurrent_queue :public queue_block_empty<BlockEmpty>, public queue_block_full<BlockFull>
+    class concurrent_queue
     {
     public:
         using container_type = Container<T>;
-        using lock_t = Lock;
-        using block_empty = queue_block_empty<BlockEmpty>;
-        using block_full = queue_block_full<BlockFull>;
-        static constexpr bool use_cv = std::is_same_v< typename block_empty::type, std::true_type> || std::is_same_v< typename block_full::type, std::true_type>;
-        using raii_lock_t =  std::conditional_t<use_cv,std::unique_lock<lock_t>,std::lock_guard<lock_t>>;
+        using lock_type = Lock;
+        using empty_cv_type = queue_condition_variable<BlockEmpty>;
+        using full_cv_type = queue_condition_variable<BlockFull>;
+        using lock_guard_type =  std::conditional_t<BlockEmpty || BlockFull,std::unique_lock<lock_type>,std::lock_guard<lock_type>>;
 
         concurrent_queue()
-            :exit_(false)
-            , max_size_(std::numeric_limits<size_t>::max())
+            :max_size_(std::numeric_limits<size_t>::max())
         {
-
         }
 
         concurrent_queue(const concurrent_queue& t) = delete;
@@ -86,86 +58,58 @@ namespace moon
         template<typename TData>
         size_t push_back(TData&& x)
         {
-            raii_lock_t lck(mutex_);
-
-            if constexpr (block_full::value)
-            {
-                block_full::check(lck, [this] {
-                    return (container_.size() < max_size_) || exit_;
-                });
-            }
-
+            lock_guard_type lck(mutex_);
+            if(container_.size()>=max_size_)
+                full_cv_.wait(lck);
             container_.push_back(std::forward<TData>(x));
-
-            if constexpr (block_empty::value)
-            {
-                block_empty::notify_one();
-            }
+            empty_cv_.notify_one();
             return container_.size();
         }
 
         bool try_pop(T& t)
         {
-            raii_lock_t lck(mutex_);
+            lock_guard_type lck(mutex_);
             if (container_.empty())
-            {
                 return false;
-            }
+
             t = std::move(container_.front());
             container_.pop_front();
-            if constexpr (block_full::value)
-            {
-                block_full::notify_one();
-            }
+            full_cv_.notify_one();
             return true;
         }
 
         size_t size() const
         {
-            raii_lock_t lck(mutex_);
+            lock_guard_type lck(mutex_);
             return container_.size();
         }
 
         size_t capacity() const
         {
-            raii_lock_t lck(mutex_);
+            lock_guard_type lck(mutex_);
             return container_.capacity();
         }
 
-        void  swap(container_type& other)
+        void swap(container_type& other)
         {
-            raii_lock_t lck(mutex_);
-            if constexpr (block_empty::value)
-            {
-                block_empty::check(lck, [this] {
-                    return (container_.size() > 0) || exit_;
-                });
-            }
+            lock_guard_type lck(mutex_);
+            if(container_.empty())
+                empty_cv_.wait(lck);
             container_.swap(other);
-            if constexpr (block_full::value)
-            {
-                block_full::notify_one();
-            }
+            full_cv_.notify_one();
         }
 
         void exit()
         {
-            raii_lock_t lck(mutex_);
-            exit_ = true;
-            if constexpr (block_full::value)
-            {
-                block_full::notify_all();
-            }
-            if constexpr (block_empty::value)
-            {
-                block_empty::notify_all();
-            }
+            lock_guard_type lck(mutex_);
+            full_cv_.notify_all();
+            empty_cv_.notify_all();
         }
-
     private:
-        mutable lock_t mutex_;
+        mutable lock_type mutex_;
+        empty_cv_type empty_cv_;
+        full_cv_type full_cv_;
         container_type container_;
-        bool exit_;
         size_t max_size_;
     };
 
