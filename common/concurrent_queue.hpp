@@ -110,6 +110,18 @@ namespace moon
             producer_cv_.notify_one();
         }
 
+        bool try_swap(container_type& other)
+        {
+            {
+                lock_guard_type lck(mutex_);
+                if (container_.empty())
+                    return false;
+                container_.swap(other);
+            }
+            producer_cv_.notify_one();
+            return true;
+        }
+
         void exit()
         {
             producer_cv_.notify_all();
