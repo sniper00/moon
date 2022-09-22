@@ -1,36 +1,41 @@
+
 # Workflow's name
-name: linux-clang
+name: windows-vs2022
 
 # Run this workflow every time a new commit pushed to your repository
 on: [push, pull_request]
 
 jobs:
-  linux-clang:
-    runs-on: ubuntu-latest
+  windows-vs2022:
+    runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Setup premake
         uses: abel0b/setup-premake@v1
+      - name: setup msbuild
+        uses: microsoft/setup-msbuild@v1
       - name: Build
         run: |
-          premake5 gmake --cc=clang
-          make -j2 config=release
+          premake5.exe vs2022
+          msbuild /m Server.sln /p:configuration="release"
       - name: Test
-        run: chmod +x moon && ./moon test/main_test.lua
+        run: .\moon.exe test/main_test.lua
         if: startsWith(github.ref, 'refs/tags/')
       - name: Publish
+        shell: bash
         run: |
           mkdir publish
           cp -r lualib publish/
           cp -r service publish/
           cp -r example publish/
-          cp moon publish/
+          cp moon.exe publish/
           cd publish
-          tar -zcvf linux-amd64.tar.gz ./*
+          tar -zcvf windows-amd64.tar.gz ./*
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: publish/linux-amd64.tar.gz
+          files: publish/windows-amd64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
