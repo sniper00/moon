@@ -106,7 +106,7 @@ static void usage(void) {
     std::cout << "Usage:\n";
     std::cout << "        moon script [args]\n";
     std::cout << "Examples:\n";
-    std::cout << "        moon main.lua  hello\n";
+    std::cout << "        moon main.lua hello\n";
 }
 
 int main(int argc, char* argv[])
