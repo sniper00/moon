@@ -12,7 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Setup premake
-        uses: abel0b/setup-premake@v1
+        uses: abel0b/setup-premake@v2.1
+        with:
+          version: "5.0.0-beta1"
       - name: Build
         run: |
           premake5 gmake --cc=clang
