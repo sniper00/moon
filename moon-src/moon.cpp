@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 
             thread_count = lua_opt_field<uint32_t>(L, -1, "thread", thread_count);
             logfile = lua_opt_field<std::string>(L, -1, "logfile");
-            enable_stdout = lua_opt_field<bool>(L, -1, "enable_console", enable_stdout);
+            enable_stdout = lua_opt_field<bool>(L, -1, "enable_stdout", enable_stdout);
             loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
         }
 
