@@ -18,19 +18,19 @@ jobs:
           make -j2 config=release
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
-        if: startsWith(github.ref, 'refs/tags/')
-      - name: Publish
-        run: |
-          mkdir publish
-          cp -r lualib publish/
-          cp -r service publish/
-          cp -r example publish/
-          cp moon publish/
-          cd publish
-          tar -zcvf linux-amd64.tar.gz ./*
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: publish/linux-amd64.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Publish
+      #   run: |
+      #     mkdir publish
+      #     cp -r lualib publish/
+      #     cp -r service publish/
+      #     cp -r example publish/
+      #     cp moon publish/
+      #     cd publish
+      #     tar -zcvf linux-amd64.tar.gz ./*
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   with:
+      #     files: publish/linux-amd64.tar.gz
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
