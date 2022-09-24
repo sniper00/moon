@@ -38,8 +38,8 @@ namespace moon
     public:
         using container_type = Container<T>;
         using lock_type = Lock;
-        using producer_cv_type = queue_condition_variable<BlockEmpty>;
-        using consumer_cv_type = queue_condition_variable<BlockFull>;
+        using consumer_cv_type = queue_condition_variable<BlockEmpty>;
+        using producer_cv_type = queue_condition_variable<BlockFull>;
         using lock_guard_type =  std::conditional_t<BlockEmpty || BlockFull,std::unique_lock<lock_type>,std::lock_guard<lock_type>>;
 
         concurrent_queue()
