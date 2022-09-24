@@ -23,7 +23,6 @@ jobs:
           msbuild /m Server.sln /p:configuration="release"
       - name: Test
         run: .\moon.exe test/main_test.lua
-        if: startsWith(github.ref, 'refs/tags/')
       - name: Publish
         shell: bash
         run: |
