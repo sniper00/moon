@@ -178,16 +178,13 @@ namespace moon
         if (mq_.push_back(std::move(msg)) == 1)
         {
             asio::post(io_ctx_, [this]() {
-                if (mq_.size() == 0)
-                {
+                if (!mq_.try_swap(swapmq_))
                     return;
-                }
 
-                service* ser = nullptr;
-                mq_.swap(swapmq_);
+                service* s = nullptr;
                 for (auto& msg : swapmq_)
                 {
-                    handle_one(ser, std::move(msg));
+                    handle_one(s, std::move(msg));
                     --mqsize_;
                 }
 
