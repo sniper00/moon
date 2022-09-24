@@ -3,7 +3,6 @@
 #include <condition_variable>
 #include <vector>
 #include <cassert>
-#include <atomic>
 #include <type_traits>
 
 namespace moon
@@ -36,6 +35,9 @@ namespace moon
     class concurrent_queue
     {
     public:
+
+        static_assert(std::is_nothrow_move_constructible_v<T>);
+
         using container_type = Container<T>;
         using lock_type = Lock;
         using consumer_cv_type = queue_condition_variable<BlockEmpty>;
@@ -43,7 +45,7 @@ namespace moon
         using lock_guard_type =  std::conditional_t<BlockEmpty || BlockFull,std::unique_lock<lock_type>,std::lock_guard<lock_type>>;
 
         concurrent_queue()
-            :max_size_(std::numeric_limits<size_t>::max())
+            :exit_(false), max_size_(std::numeric_limits<size_t>::max())
         {
         }
 
@@ -60,11 +62,9 @@ namespace moon
         {
             size_t n = 0;
             {
-                lock_guard_type lock(mutex_);
-                if (container_.size() >= max_size_)
-                    producer_cv_.wait(lock, [this] {
-                            return container_.size() < max_size_;
-                        });
+                lock_guard_type lk(mutex_);
+                producer_cv_.wait(lk, [this] {return container_.size() < max_size_ || exit_; });
+                if (exit_) return 0;
                 container_.push_back(std::forward<TData>(x));
                 n = container_.size();
             }
@@ -75,8 +75,8 @@ namespace moon
         bool try_pop(T& t)
         {
             {
-                lock_guard_type lck(mutex_);
-                if (container_.empty())
+                std::lock_guard<lock_type> lk(mutex_);
+                if (container_.empty() || exit_)
                     return false;
                 t = std::move(container_.front());
                 container_.pop_front();
@@ -87,13 +87,13 @@ namespace moon
 
         size_t size() const
         {
-            lock_guard_type lck(mutex_);
+            std::lock_guard<lock_type> lk(mutex_);
             return container_.size();
         }
 
         size_t capacity() const
         {
-            lock_guard_type lck(mutex_);
+            std::lock_guard<lock_type> lk(mutex_);
             return container_.capacity();
         }
 
@@ -101,10 +101,8 @@ namespace moon
         {
             {
                 lock_guard_type lck(mutex_);
-                if (container_.empty())
-                    consumer_cv_.wait(lck, [this] {
-                            return !container_.empty();
-                        });
+                consumer_cv_.wait(lck, [this] {return !container_.empty() || exit_;});
+                if (exit_) return;
                 container_.swap(other);
             }
             producer_cv_.notify_one();
@@ -113,8 +111,8 @@ namespace moon
         bool try_swap(container_type& other)
         {
             {
-                lock_guard_type lck(mutex_);
-                if (container_.empty())
+                std::lock_guard<lock_type> lk(mutex_);
+                if (container_.empty() || exit_)
                     return false;
                 container_.swap(other);
             }
@@ -124,10 +122,15 @@ namespace moon
 
         void exit()
         {
+            {
+                std::lock_guard<lock_type> lk(mutex_);
+                exit_ = true;
+            }
             producer_cv_.notify_all();
             consumer_cv_.notify_all();
         }
     private:
+        bool exit_;
         mutable lock_type mutex_;
         producer_cv_type producer_cv_;
         consumer_cv_type consumer_cv_;
