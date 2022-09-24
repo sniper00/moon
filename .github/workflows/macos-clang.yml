@@ -21,7 +21,6 @@ jobs:
           make -j2 config=release
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
-        if: startsWith(github.ref, 'refs/tags/')
       - name: Publish
         run: |
           mkdir publish
