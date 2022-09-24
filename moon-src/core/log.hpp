@@ -20,7 +20,7 @@ namespace moon
 
     class log
     {
-        using blocking_queue = concurrent_queue<buffer, std::mutex, std::vector, true>;
+        using queue_type = concurrent_queue<buffer, std::mutex, std::vector>;
     public:
         log()
             :state_(state::init)
@@ -151,9 +151,7 @@ namespace moon
         void wait()
         {
             if (state_.exchange(state::stopped, std::memory_order_acq_rel) == state::stopped)
-                return
-
-            log_queue_.exit();
+                return;
 
             if (thread_.joinable())
                 thread_.join();
@@ -204,7 +202,7 @@ namespace moon
             return offset;
         }
 
-        void do_write(blocking_queue::container_type& datas)
+        void do_write(queue_type::container_type& datas)
         {
             for (auto& it : datas)
             {
@@ -255,12 +253,18 @@ namespace moon
             while (state_.load(std::memory_order_acquire) == state::init)
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
-            blocking_queue::container_type swaps;
+            queue_type::container_type swaps;
             while (state_.load(std::memory_order_acquire) == state::ready)
             {
-                log_queue_.swap(swaps);
-                do_write(swaps);
-                swaps.clear();
+                if (log_queue_.try_swap(swaps))
+                {
+                    do_write(swaps);
+                    swaps.clear();
+                }
+                else
+                {
+                    std::this_thread::sleep_for(std::chrono::microseconds(50));
+                }
             }
 
             if(log_queue_.try_swap(swaps))
@@ -294,7 +298,7 @@ namespace moon
         int64_t error_count_ = 0;
         std::unique_ptr<std::ofstream > ofs_;
         std::thread thread_;
-        blocking_queue log_queue_;
+        queue_type log_queue_;
     };
 
 #define CONSOLE_INFO(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);
