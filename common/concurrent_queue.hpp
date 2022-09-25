@@ -63,7 +63,5 @@ namespace moon
     private:
         mutable lock_type mutex_;
         container_type container_;
-        size_t max_size_;
     };
-
 }
