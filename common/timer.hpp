@@ -28,20 +28,17 @@ namespace moon
 
             do
             {
-                expire_policy_type v;
+                std::unique_lock lock{ lock_ };
+                if (auto iter = timers_.begin(); iter == timers_.end() || iter->first > now)
                 {
-                    std::lock_guard lock{ lock_ };
-                    if (auto iter = timers_.begin(); iter == timers_.end() || iter->first > now)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        v = std::move(iter->second);
-                        timers_.erase(iter);
-                    }
+                    break;
                 }
-                v();
+                else
+                {
+                    auto nh = timers_.extract(iter);
+                    lock.unlock();
+                    nh.mapped()();
+                }
             } while (true);
             return;
         }
