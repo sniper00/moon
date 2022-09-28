@@ -36,9 +36,6 @@ Moon is a lightweight online game server framework implement with actor model. O
 
 ![image](https://github.com/sniper00/MoonNetLua/raw/master/image/01.png)
 
-## Example
-![image](https://github.com/sniper00/MoonNetLua/raw/master/image/02.png)
-
 # Community
 
 - [![Gitter](https://badges.gitter.im/undefined/community.svg)](https://gitter.im/undefined/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
