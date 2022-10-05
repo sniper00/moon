@@ -212,7 +212,6 @@ extern "C" {
     {
         luaL_Reg l[] = {
             {"new",lcreate},
-            {"release",lrelease },
             {NULL,NULL}
         };
         luaL_newlib(L, l);
