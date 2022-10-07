@@ -297,8 +297,15 @@ static int lmoon_env(lua_State* L)
 static int lmoon_server_stats(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    std::string info = S->get_server()->info();
-    lua_pushlstring(L, info.data(), info.size());
+    std::string_view opt = luaL_optstring(L, 1, "");
+    if(opt == "service.count")
+        lua_pushinteger(L, S->get_server()->service_count());
+    else if(opt == "log.error")
+        lua_pushinteger(L, S->logger()->error_count());
+    else{
+        std::string info = S->get_server()->info();
+        lua_pushlstring(L, info.data(), info.size());
+    }
     return 1;
 }
 
