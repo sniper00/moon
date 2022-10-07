@@ -30,8 +30,13 @@ function core.md5(data) end
 ---@return string
 function core.tostring(sz, len) end
 
+---@alias server_stats_options
+---|>'"service.count"'      # return total services count
+---| '"log.error"'         # return log error count
+
+---@param opt? server_stats_options @ nil return all server stats
 ---@return string @get server stats in json format
-function core.server_stats() end
+function core.server_stats(opt) end
 
 ---if linked mimalloc, call mimalloc's collect
 ---@param force boolean @
