@@ -11,7 +11,6 @@ local NODE = math.tointeger(moon.env("NODE"))
 local function cluster_service()
 
     local json = require("json")
-    local buffer = require("buffer")
     local socket = require("moon.socket")
     local httpc = require("moon.http.client")
 
@@ -183,7 +182,7 @@ local function cluster_service()
         local scope<close> = lock()
 
         c = clusters[header.to_node]
-        if not c then
+        if not c or not c.fd then
             local response = httpc.get(conf.etc_host,{
                 path = conf.etc_path.."?node="..tostring(header.to_node)
             })
@@ -194,11 +193,7 @@ local function cluster_service()
                 return
             end
             c = json.decode(response.content)
-            c.fd = false
             clusters[header.to_node] = c
-        end
-
-        if not c.fd then
             c.fd = connect(header.to_node)
         end
 
@@ -209,6 +204,8 @@ local function cluster_service()
             end
             return
         end
+
+        c.fd = false
 
         if header.session == 0 then
             moon.error("not connected cluster")
