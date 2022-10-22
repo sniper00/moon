@@ -254,12 +254,12 @@ namespace moon
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
             queue_type::container_type swaps;
-            time_t sleep_time = 1<<5;
+            time_t sleep_time = 1<<15;
             while (state_.load(std::memory_order_acquire) == state::ready)
             {
                 if (log_queue_.try_swap(swaps))
                 {
-                    sleep_time = 1<<5;
+                    sleep_time = 1<<15;
                     do_write(swaps);
                     swaps.clear();
                 }
