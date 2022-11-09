@@ -153,7 +153,7 @@ static int add_capsule_obstacle(lua_State* L)
     auto y = moon::lua_check<float>(L, 3);
     auto z = moon::lua_check<float>(L, 4);
     auto r = moon::lua_check<float>(L, 5);
-    auto h = moon::lua_check<float>(L, 5);
+    auto h = moon::lua_check<float>(L, 6);
     auto obstacleId = proxy->nav->add_capsule_obstacle(x, y, z, r, h);
     if (obstacleId > 0)
     {
