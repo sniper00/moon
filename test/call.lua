@@ -29,6 +29,7 @@ if conf and conf.receiver then
 
     command.EXIT = function()
         moon.quit()
+        return true
     end
 
     moon.dispatch('lua',function(sender, session, cmd, ...)
@@ -69,7 +70,7 @@ else
             test_assert.equal(res, 1)
 
             --Let receiver exit:
-            moon.co_call("lua", receiverid, "EXIT")
+            assert(moon.co_call("lua", receiverid, "EXIT"))
             res = moon.co_call("lua", receiverid, "SUB", 100, 99)
             test_assert.equal(res, false)
             test_assert.success()
