@@ -246,7 +246,7 @@ local function cluster_service()
         return moon.pack(false, ...)
     end
 
-    moon.dispatch("lua", function(m)
+    moon.raw_dispatch("lua", function(m)
         moon.async(function(msg)
             local sender, session, buf = moon.decode(msg, "SEB")
             local cmd = unpack_one(buf, true)
@@ -261,7 +261,7 @@ local function cluster_service()
                 moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
             end
         end, m)
-    end, true)
+    end)
 
     moon.shutdown(function()
         moon.quit()

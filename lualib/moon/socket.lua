@@ -128,7 +128,7 @@ local wscallbacks = {}
 
 local _decode = moon.decode
 
-moon.dispatch(
+moon.raw_dispatch(
     "moonsocket",
     function(msg)
         local fd, sdt = _decode(msg, "SR")
@@ -139,7 +139,7 @@ moon.dispatch(
     end
 )
 
-moon.dispatch(
+moon.raw_dispatch(
     "websocket",
     function(msg)
         local fd, sdt = _decode(msg, "SR")
@@ -174,7 +174,7 @@ end
 
 local udp_callbacks = {}
 
-moon.dispatch(
+moon.raw_dispatch(
     "udp",
     function(msg)
         local fd, p, n = _decode(msg, "SC")

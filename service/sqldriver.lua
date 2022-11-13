@@ -108,7 +108,7 @@ if conf.name then
     end
 
     local fd = socket.sync_connect(conf.db_conf.host, conf.db_conf.port, moon.PTYPE_SOCKET_TCP)
-    assert(fd, "connect db postgres failed")
+    assert(fd, string.format("connect failed provider: %s host: %s port: %s", conf.provider, conf.db_conf.host, conf.db_conf.port))
     socket.close(fd)
 
     local command = {}
@@ -128,7 +128,7 @@ if conf.name then
         return moon.pack(false, ...)
     end
 
-    moon.dispatch('lua', function(msg)
+    moon.raw_dispatch('lua', function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd, sz, len = unpack_one(buf, true)
         if cmd == "Q" then
@@ -151,7 +151,7 @@ if conf.name then
         else
             moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
-    end, true)
+    end)
 
     local function wait_all_send()
         while true do
