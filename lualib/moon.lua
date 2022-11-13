@@ -259,11 +259,11 @@ end
 
 ---Creates a new coroutine(from coroutine pool) and start it immediately.
 ---If `func` lacks call `coroutine.yield`, will run syncronously.
----@param func fun()
+---@param fn fun(...)
 ---@return thread
-function moon.async(func, ...)
+function moon.async(fn, ...)
     local co = tremove(co_pool) or co_create(routine)
-    coresume(co, func, ...)
+    coresume(co, fn, ...)
     return co
 end
 
@@ -369,11 +369,9 @@ local function _default_dispatch(msg, PTYPE)
             return
         end
 
-        if not p.israw and p.unpack then
-            local co = tremove(co_pool)
-            if not co then
-                co = co_create(routine)
-            end
+        if not p.israw then
+            local co = tremove(co_pool) or co_create(routine)
+            assert(p.unpack, tostring(p.PTYPE))
             coresume(co, dispatch, sender, session, p.unpack(sz, len))
         else
             dispatch(msg)
@@ -394,16 +392,22 @@ end
 
 local reg_protocol = moon.register_protocol
 
----@alias dispatch_fn fun(sender:integer, session:integer, ...) | fun(m:message_ptr)
-
 ---@param PTYPE string
----@param fn dispatch_fn
----@param israw? boolean
-function moon.dispatch(PTYPE, fn, israw)
+---@param fn fun(sender:integer, session:integer, ...)
+function moon.dispatch(PTYPE, fn)
     local p = protocol[PTYPE]
     if fn then
         p.dispatch = fn
-        p.israw = israw
+    end
+end
+
+---@param PTYPE string
+---@param fn fun(m:message_ptr)
+function moon.raw_dispatch(PTYPE, fn)
+    local p = protocol[PTYPE]
+    if fn then
+        p.dispatch = fn
+        p.israw = true
     end
 end
 
@@ -432,6 +436,7 @@ reg_protocol {
 reg_protocol {
     name = "error",
     PTYPE = moon.PTYPE_ERROR,
+    israw = true,
     pack = function(...)
         return ...
     end,
@@ -472,6 +477,7 @@ end
 reg_protocol {
     name = "system",
     PTYPE = moon.PTYPE_SYSTEM,
+    israw = true,
     pack = function(...)
         return ...
     end,
@@ -528,6 +534,7 @@ local cb_shutdown
 reg_protocol {
     name = "shutdown",
     PTYPE = moon.PTYPE_SHUTDOWN,
+    israw = true,
     dispatch = function()
         if cb_shutdown then
             cb_shutdown()
@@ -554,6 +561,7 @@ end
 reg_protocol {
     name = "timer",
     PTYPE = moon.PTYPE_TIMER,
+    israw = true,
     dispatch = function(msg)
         local timerid = _decode(msg, "S")
         local v = timer_routine[timerid]

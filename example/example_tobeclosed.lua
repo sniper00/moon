@@ -7,7 +7,7 @@ local function new_test(name)
 end
 
 local i = 0
-moon.dispatch("lua", function()
+moon.dispatch("lua", function(sender, session)
     i = i + 1
     if i==2 then
         local c<close> = new_test("dispatch_error")

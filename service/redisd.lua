@@ -160,7 +160,7 @@ if conf.name then
         return moon.pack(false, ...)
     end
 
-    moon.dispatch('lua',function(msg)
+    moon.raw_dispatch('lua',function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd, sz, len = seri.unpack_one(buf, true)
         if cmd == "Q" then
@@ -184,7 +184,7 @@ if conf.name then
         else
             moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
-    end, true)
+    end)
 
     local function wait_all_send()
         while true do

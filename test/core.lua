@@ -4,9 +4,9 @@ local buffer = require("buffer")
 local test_assert = require("test_assert")
 
 do
-	moon.dispatch("text", function(msg)
+	moon.raw_dispatch("text", function(msg)
 		assert(moon.decode(msg, "Z") == "123")
-	end, true)
+	end)
 	local perfabid = moon.make_prefab("123")
 	moon.raw_send("text", moon.id, "", perfabid, 0)
 	moon.raw_send("text", moon.id, "", perfabid, 0)
