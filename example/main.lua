@@ -212,6 +212,8 @@ end
 
 local fn = switch[sid]
 if not fn then
+    moon.error("not implemented")
+    moon.exit(-1)
     return 0
 end
 

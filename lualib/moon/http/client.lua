@@ -302,7 +302,7 @@ M.create_query_string = create_query_string
 
 
 ---@param host string @host:port
----@param options HttpOptions
+---@param options? HttpOptions
 ---@return HttpResponse
 function M.get(host, options)
     options = options or {}

@@ -14,7 +14,7 @@ local listenfd = socket.listen("127.0.0.1", 30002, moon.PTYPE_SOCKET_MOON)
 print(listenfd)
 socket.start(listenfd)
 
-socket.on("accept",function(fd)
+socket.on("accept",function(fd, m)
 	test_assert.assert(socket.set_enable_chunked(fd,"rw"),"set_enable_chunked failed!")
 end)
 
