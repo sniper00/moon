@@ -138,7 +138,7 @@ static const char* reader(lua_State* L, void* ud, size_t* size)
  }
 }
 
-#define toproto(L,i) getproto(s2v(L->top+(i)))
+#define toproto(L,i) getproto(s2v(L->top.p+(i)))
 
 static const Proto* combine(lua_State* L, int n)
 {
