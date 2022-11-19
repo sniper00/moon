@@ -41,7 +41,7 @@ _G["class"] = function(classname, super)
             setmetatable(cls, {__index = super})
             cls.super = super
         else
-            cls = {ctor = function() end,__gc = true}
+            cls = {ctor = function(...) end,__gc = true}
         end
 
         cls.__cname = classname
