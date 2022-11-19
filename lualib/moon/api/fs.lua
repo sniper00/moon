@@ -1,3 +1,5 @@
+---@meta
+
 error("DO NOT REQUIRE THIS FILE")
 
 ---@class fs

@@ -1,3 +1,5 @@
+---@meta
+
 error("DO NOT REQUIRE THIS FILE")
 
 ---@class random
@@ -16,7 +18,7 @@ function random.rand_range(min, max) end
 ---@return table
 function random.rand_range_some(min, max, count) end
 
----double rand range [min,max)
+---float rand range [min,max)
 ---@param min number
 ---@param max number
 ---@return number

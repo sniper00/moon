@@ -1,3 +1,5 @@
+---@meta
+
 error("DO NOT REQUIRE THIS FILE")
 
 ---@class json
@@ -12,29 +14,21 @@ end
 
 ---@param t table
 ---@return string
-function json.pretty_encode(t)
-
-end
+function json.pretty_encode(t) end
 
 ---@param str string|cstring_ptr
 ---@param n? integer
 ---@return table
-function json.decode(str, n)
+function json.decode(str, n) end
 
-end
-
---- For concat sql string
+--- Concat array item to string, table type will encode to json string
 ---@param array any[]
 ---@return buffer_ptr
 ---@overload fun(str:string):buffer_ptr
-function json.concat(array)
-
-end
+function json.concat(array) end
 
 --- concat as redis protocol
 ---@return buffer_ptr
-function json.concat_resp(...)
-
-end
+function json.concat_resp(...) end
 
 return json
