@@ -18,7 +18,7 @@ function socketchannel.channel(opts)
     return setmetatable(obj, socketchannel)
 end
 
-function socketchannel:connect()
+function socketchannel:connect(_)
     local fd, err = socket.connect(self._opts.host, self._opts.port, moon.PTYPE_SOCKET_TCP,self._opts.timeout)
     if not fd or fd ==0 then
         return {code = "SOCKET", err = err}
