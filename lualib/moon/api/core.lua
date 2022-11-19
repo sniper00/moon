@@ -4,6 +4,8 @@ error("DO NOT REQUIRE THIS FILE")
 ---@class buffer_ptr
 
 --- lightuserdata message*
+---@meta
+
 ---@class message_ptr
 
 --- lightuserdata char*

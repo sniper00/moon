@@ -1,3 +1,4 @@
+---@meta
 error("DO NOT REQUIRE THIS FILE")
 
 --- Buffer's memory layout : head part + data part. Avoid memory copy when we write
