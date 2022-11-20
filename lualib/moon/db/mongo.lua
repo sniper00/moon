@@ -13,6 +13,7 @@ local table = table
 local bson_encode =	bson.encode
 local bson_encode_order	= bson.encode_order
 local bson_decode =	bson.decode
+local bson_int64 = bson.int64
 local empty_bson = bson_encode {}
 
 local mongo	= {}
@@ -152,10 +153,7 @@ function mongo.client( conf	)
 		overload = conf.overload,
 	}
 	setmetatable(obj, client_meta)
-	local err = obj.__sock:connect(true)	-- try connect only	once
-	if err then
-		return err
-	end
+	obj.__sock:connect(true)	-- try connect only	once
 	return obj
 end
 
@@ -491,7 +489,10 @@ end
 
 function mongo_collection:findOne(query, projection)
 	local cursor = self:find(query, projection)
-	return cursor:hasNext() and cursor:next()
+	if cursor:hasNext() then
+		return cursor:next()
+	end
+	return nil
 end
 
 function mongo_collection:find(query, projection)
@@ -688,7 +689,7 @@ function mongo_cursor:hasNext()
 		else
 			if self.__cursor  and self.__cursor > 0 then
 				local name = self.__collection.name
-				response = database:runCommand("getMore", bson.int64(self.__cursor), "collection", name, "batchSize", self.__limit)
+				response = database:runCommand("getMore", bson_int64(self.__cursor), "collection", name)
 			else
 				-- no more
 				self.__document	= nil
@@ -721,6 +722,10 @@ function mongo_cursor:hasNext()
 			self.__limit = limit
 		end
 
+		if cursor.id == 0 and #self.__document == 0 then -- nomore
+			return false
+		end
+
 		return true
 	end
 
@@ -741,9 +746,9 @@ function mongo_cursor:next()
 end
 
 function mongo_cursor:close()
-	if self.__cursor then
+	if self.__cursor and self.__cursor > 0 then
 		local coll = self.__collection
-		coll.database:send_command("killCursors", coll.name, "cursors", {self.__cursor})
+		coll.database:send_command("killCursors", coll.name, "cursors", {bson_int64(self.__cursor)})
 		self.__cursor = nil
 	end
 end
