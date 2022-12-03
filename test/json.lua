@@ -198,11 +198,10 @@ do
 end
 
 do
-    local null_as_userdata = true
     local t = {nil,nil,nil, 100}
     assert(string.sub(json.encode(t),1,1)=="[")
-    assert(#json.decode(json.encode(t), null_as_userdata) == 4)
-    local t2 = json.decode(json.encode(t), null_as_userdata)
+    assert(#json.decode(json.encode(t)) == 4)
+    local t2 = json.decode(json.encode(t))
     assert(t2[1]==json.null)
     assert(t2[2]==json.null)
     assert(t2[3]==json.null)
@@ -211,8 +210,7 @@ end
 
 do
     local str = io.readfile([[twitter.json]])
-    local null_as_userdata = true
-    local t = json.decode(str, null_as_userdata)
+    local t = json.decode(str)
     local empty_as_array = true
     local pertty = true
     io.writefile("twitter-out.json", json.encode(t, empty_as_array, pertty))
