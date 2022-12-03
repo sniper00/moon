@@ -38,7 +38,10 @@ namespace moon
 
         virtual void read(size_t, std::string_view, int32_t)
         {
-            assert(false);
+            CONSOLE_ERROR(logger(), "unsupport read operation for PTYPE %d", (int)type_);
+            asio::post(socket_.get_executor(), [this, self = shared_from_this()] {
+                error(make_error_code(error::invalid_read_operation));
+            });
         };
 
         virtual bool send(buffer_ptr_t data)
