@@ -3,6 +3,7 @@
 error("DO NOT REQUIRE THIS FILE")
 
 ---@class json
+---@field null lightuserdata @ Represents json "null" values
 local json = {}
 
 ---@param t table|number|string|boolean
