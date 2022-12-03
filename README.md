@@ -9,7 +9,7 @@
 [![windows-vs2022](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml)
 
 # Demo
-- [BallGame](https://github.com/sniper00/BallGame.git)
+- [MoonDemo](https://github.com/sniper00/MoonDemo.git)
 
 # Moon
 Moon is a lightweight online game server framework implement with actor model. One thread may have 1-N luaVM, they use message queue communication. There are many features for game server development:
