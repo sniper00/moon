@@ -137,5 +137,6 @@ namespace moon
         }
     }
 
+    using service_ptr_t = std::unique_ptr<service>;
 }
 

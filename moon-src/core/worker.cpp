@@ -75,7 +75,7 @@ namespace moon
                 uint32_t serviceid = 0;
                 do
                 {
-                    if (counter >= worker::MAX_SERVICE)
+                    if (counter >= WORKER_MAX_SERVICE)
                     {
                         serviceid = 0;
                         CONSOLE_ERROR(server_->logger()
@@ -84,7 +84,7 @@ namespace moon
                     }
 
                     ++nextid_;
-                    if (nextid_ == MAX_SERVICE)
+                    if (nextid_ == WORKER_MAX_SERVICE)
                     {
                         nextid_ = 1;
                     }
