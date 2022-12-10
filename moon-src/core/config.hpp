@@ -4,12 +4,9 @@
 
 namespace moon
 {
-    constexpr int32_t WORKER_ID_SHIFT = 24;
-    constexpr int32_t BUFFER_HEAD_RESERVED = 16;//max : websocket header max len 14byte
-
-    DECLARE_UNIQUE_PTR(service);
-
-    using buffer_ptr_t = std::shared_ptr<buffer>;
+    constexpr uint32_t WORKER_ID_SHIFT = 24;// support 255 worker threads.
+    constexpr uint32_t WORKER_MAX_SERVICE = (1<<24)-1;// max service count per worker thread.
+    constexpr uint32_t BUFFER_HEAD_RESERVED = 16;//max : websocket header max len 14 bytes.
 
     constexpr uint8_t PTYPE_UNKNOWN = 0;
     constexpr uint8_t PTYPE_SYSTEM = 1;
@@ -22,10 +19,7 @@ namespace moon
     constexpr uint8_t PTYPE_SOCKET_TCP = 8; //
     constexpr uint8_t PTYPE_SOCKET_UDP = 9;//
     constexpr uint8_t PTYPE_SOCKET_WS = 10;   // websocket
-    constexpr uint8_t PTYPE_SOCKET_MOON = 11;
-
-    //network
-    using message_size_t = uint16_t;
+    constexpr uint8_t PTYPE_SOCKET_MOON = 11; //
 
     constexpr  std::string_view STR_LF = "\n"sv;
     constexpr  std::string_view STR_CRLF = "\r\n"sv;
@@ -84,7 +78,10 @@ namespace moon
         std::string params;
     };
 
-    constexpr uint32_t BOOTSTRAP_ADDR = 0x01000001;
+    constexpr uint32_t BOOTSTRAP_ADDR = 0x01000001;//The first service's id
+
+    using message_size_t = uint16_t;//PTYPE_SOCKET_MOON message length type
+    using buffer_ptr_t = std::shared_ptr<buffer>;
 }
 
 

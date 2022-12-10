@@ -13,8 +13,6 @@ namespace moon
 
         using asio_work_type = asio::executor_work_guard<asio::io_context::executor_type>;
     public:
-        static constexpr uint32_t MAX_SERVICE = 0xFFFFFF;
-
         friend class server;
 
         friend class socket;
@@ -54,7 +52,7 @@ namespace moon
         void stop();
 
         void wait();
-    private:
+
         void handle_one(service*& ser, message&& msg);
 
         service* find_service(uint32_t serviceid) const;

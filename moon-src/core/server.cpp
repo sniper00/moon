@@ -179,32 +179,25 @@ namespace moon
 
     worker* server::get_worker(uint32_t workerid, uint32_t serviceid) const
     {
-        if (workerid == 0)
-        {
-            workerid = worker_id(serviceid);
-        }
-
-        if ((workerid <= 0 || workerid > static_cast<uint32_t>(workers_.size())))
+        workerid = workerid? workerid: worker_id(serviceid);
+        if ((workerid == 0 || workerid > static_cast<uint32_t>(workers_.size())))
         {
             return nullptr;
         }
-
-        --workerid;
-        return workers_[workerid].get();
+        return workers_[workerid-1].get();
     }
 
     uint32_t server::timeout(int64_t interval, uint32_t serviceid)
     {
         auto workerid = worker_id(serviceid);
         assert(workerid > 0);
-        --workerid;
         if (interval<=0)
         {
-            auto timerid = timer_[workerid]->make_timerid();
+            auto timerid = timer_[workerid-1]->make_timerid();
             on_timer(serviceid, timerid);
             return timerid;
         }
-        return timer_[workerid]->add(now_+ interval, serviceid, this);
+        return timer_[workerid-1]->add(now_+ interval, serviceid, this);
     }
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)
@@ -239,8 +232,8 @@ namespace moon
         }
         else
         {
-            auto content = moon::format("worker %u not found.", serviceid);
-            response(sender, "router::remove_service "sv, content, sessionid, PTYPE_ERROR);
+            auto content = moon::format("invalid service id %u.", serviceid);
+            response(sender, "server::remove_service "sv, content, sessionid, PTYPE_ERROR);
         }
     }
 

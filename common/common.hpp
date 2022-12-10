@@ -121,18 +121,6 @@ using namespace std::literals::string_view_literals;
 
 #define VA_ARGS_NUM(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
 
-#define DECLARE_SHARED_PTR(classname)\
-class classname;\
-using classname##_ptr_t = std::shared_ptr<classname>;
-
-#define DECLARE_UNIQUE_PTR(classname)\
-class classname;\
-using classname##_ptr_t = std::unique_ptr<classname>;
-
-#define DECLARE_WEAK_PTR(classname)\
-class classname;\
-using classname##_wptr_t = std::weak_ptr<classname>;
-
 #define thread_sleep(x)  std::this_thread::sleep_for(std::chrono::milliseconds(x));
 
 namespace moon
