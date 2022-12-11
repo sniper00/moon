@@ -28,7 +28,7 @@ function json.decode(str, n) end
 ---@overload fun(str:string):buffer_ptr
 function json.concat(array) end
 
---- concat as redis protocol
+--- concat params as redis protocol, table type will encode to json string
 ---@return buffer_ptr
 function json.concat_resp(...) end
 
