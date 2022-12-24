@@ -2,49 +2,6 @@
 
 local MOON_ENABLE_MIMALLOC = false
 
-local function detect_visualstudio()
-    local vswhere = os.outputof([[echo %ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe]])
-    if not os.isfile(vswhere) then
-        return false
-    end
-
-    local cmd = string.format('"%s" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath', vswhere)
-    local res = os.outputof(cmd)
-    if not res then
-        --print("Failed", cmd)
-        return false
-    end
-    local BUILDVCTOOLS = res..[[\Common7\IDE\devenv.com]]
-    if not os.isfile(BUILDVCTOOLS) then
-        --print("Failed: Can not find dir", BUILDVCTOOLS)
-        return false
-    end
-    return BUILDVCTOOLS
-end
-
-if MOON_ENABLE_MIMALLOC then
-    os.execute("git submodule init")
-    os.execute("git submodule update")
-    local cwd = os.getcwd()
-    os.mkdir("./third/mimalloc/build")
-    os.chdir("./third/mimalloc/build")
-    os.remove("CMakeCache.txt")
-    os.execute("cmake -D MI_BUILD_STATIC=ON ..")
-    if os.host() == "windows" then
-        local devenv = detect_visualstudio()
-        print("BUILDVCTOOLS", devenv)
-        io.writefile("mimalloc-static.vcxproj",(string.gsub(io.readfile("mimalloc-static.vcxproj"), "MultiThreadedDLL","MultiThreaded")))
-        io.writefile("mimalloc-static.vcxproj",(string.gsub(io.readfile("mimalloc-static.vcxproj"), "MultiThreadedDebugDLL","MultiThreadedDebug")))
-        --print(string.format('"%s" libmimalloc.sln /Project mimalloc-static /Rebuild Release', devenv))
-        os.execute(string.format('"%s" libmimalloc.sln /Project mimalloc-static /Rebuild Release', devenv))
-        assert(os.copyfile("Release/mimalloc-static.lib", "./mimalloc.lib"))
-    else
-        os.execute("make clean")
-        os.execute("make mimalloc-static")
-    end
-    os.chdir(cwd)
-end
-
 workspace "Server"
     configurations { "Debug", "Release" }
     flags{"NoPCH","RelativeLinks"}
@@ -89,6 +46,19 @@ project "lua"
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
 
+if MOON_ENABLE_MIMALLOC then
+os.execute("git submodule init")
+os.execute("git submodule update")
+
+project "mimalloc"
+    location "build/projects/%{prj.name}"
+    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+    targetdir "build/bin/%{cfg.buildcfg}"
+    kind "StaticLib"
+    language "C"
+    includedirs {"./third/mimalloc/include"}
+    files {"./third/mimalloc/src/static.c"}
+end
 
 project "moon"
     location "build/projects/%{prj.name}"
@@ -113,7 +83,6 @@ project "moon"
     }
 
     if MOON_ENABLE_MIMALLOC then
-        libdirs{"third/mimalloc/build"}
         links{"mimalloc"}
         defines {"MOON_ENABLE_MIMALLOC"}
         includedirs {"./third/mimalloc/include"}
