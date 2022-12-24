@@ -1,6 +1,6 @@
 ---@diagnostic disable: undefined-global
 
-local MOON_ENABLE_MIMALLOC = false
+local MOON_ENABLE_MIMALLOC = true
 
 workspace "Server"
     configurations { "Debug", "Release" }
