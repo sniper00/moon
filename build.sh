@@ -6,8 +6,8 @@ MAJOR=$(echo __GNUC__ | $compiler -E -xc - | tail -n 1)
 MINOR=$(echo __GNUC_MINOR__ | $compiler -E -xc - | tail -n 1)
 PATCHLEVEL=$(echo __GNUC_PATCHLEVEL__ | $compiler -E -xc - | tail -n 1)
 
-if (($MAJOR<8)); then
-    echo "require gcc 8.x or higher"
+if (($MAJOR<9)); then
+    echo "require gcc 9.x or higher"
     exit
 fi
 
