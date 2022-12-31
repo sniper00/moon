@@ -109,7 +109,8 @@ static int lua_ikcp_poll_read(lua_State* L) {
     ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
     if (kcp == NULL) { return luaL_error(L, "null kcp pointer"); }
     box* ud = (box*)kcp->user;
-    int len = ikcp_recv(kcp, ud->rbuf.prepare(2048), 2048);
+    auto space = ud->rbuf.prepare(2048);
+    int len = ikcp_recv(kcp, space.first, static_cast<int>(space.second));
     if (len > 0)
         ud->rbuf.commit(len);
 

@@ -52,16 +52,17 @@ namespace moon
 
         struct udp_context
         {
+            static constexpr size_t READ_BUFFER_SIZE = size_t{ 2048 } - addr_v6_size;
             udp_context(uint32_t o, asio::io_context& ioc, asio::ip::udp::endpoint ep)
                 :owner(o)
-                , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
+                , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
                 , sock(ioc, ep)
             {
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
-                , msg(size_t{ 1024 } - addr_v6_size, static_cast<uint32_t>(addr_v6_size))
+                , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
                 , sock(ioc, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
             {
             }

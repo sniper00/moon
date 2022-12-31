@@ -584,8 +584,9 @@ void socket::do_receive(const udp_context_ptr_t& ctx)
 
     auto buf = ctx->msg.get_buffer();
     buf->clear();
+    auto space = buf->prepare(udp_context::READ_BUFFER_SIZE);
     ctx->sock.async_receive_from(
-        asio::buffer(buf->data() + buf->size(), buf->writeablesize()), ctx->from_ep,
+        asio::buffer(space.first, space.second), ctx->from_ep,
         [this, ctx](std::error_code ec, std::size_t bytes_recvd)
         {
             if (!ec && bytes_recvd >0)
