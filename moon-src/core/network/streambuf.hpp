@@ -64,7 +64,8 @@ namespace moon
         mutable_buffers_type prepare(std::size_t n)
         {
             if (nullptr == buffer_) return asio::buffer(asio::mutable_buffer(nullptr, 0));
-            return asio::buffer(buffer_->prepare(n), n);
+            auto space = buffer_->prepare(n);
+            return asio::buffer(space.first, space.second);
         }
 
         void commit(std::size_t n)

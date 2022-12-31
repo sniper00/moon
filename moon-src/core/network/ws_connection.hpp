@@ -157,16 +157,12 @@ namespace moon
         }
 
     protected:
-        void check_recv_buffer(size_t size)
+        asio::mutable_buffer prepare_buffer(size_t size)
         {
             if (nullptr == recv_buf_)
-            {
                 recv_buf_ = message::create_buffer(size);
-            }
-            else
-            {
-                recv_buf_->prepare(size);
-            }
+            auto space = recv_buf_->prepare(size);
+            return asio::buffer(space.first, space.second);
         }
 
         void read_header()
@@ -183,9 +179,10 @@ namespace moon
 
                 size_t num_additional_bytes = sbuf->size() - bytes_transferred;
                 auto ec = handshake(sbuf, bytes_transferred);
+                sbuf->consume(bytes_transferred);
                 if (!ec)
                 {
-                    check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
+                    prepare_buffer(std::max(DEFAULT_RECV_BUFFER_SIZE, num_additional_bytes));
                     if (num_additional_bytes > 0)
                     {
                         auto data = reinterpret_cast<const char*>(sbuf->data().data());
@@ -291,7 +288,6 @@ namespace moon
                         msg.write_data(address());
                         msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_connect));
                         handle_message(std::move(msg));
-                        check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
                         read_some();
                     });
                 }
@@ -304,7 +300,7 @@ namespace moon
 
         void read_some()
         {
-            socket_.async_read_some(asio::buffer(recv_buf_->data() + recv_buf_->size(), recv_buf_->writeablesize()),
+            socket_.async_read_some(prepare_buffer(DEFAULT_RECV_BUFFER_SIZE),
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -345,8 +341,6 @@ namespace moon
             {
                 return make_error_code(moon::error::ws_bad_http_header);
             }
-
-            buf->consume(n);
 
             if (version<"1.0" || version>"1.1")
             {
@@ -444,12 +438,11 @@ namespace moon
 
             if (size < 3)
             {
-                check_recv_buffer(10);
                 return std::error_code();
             }
 
             size_t need = 2;
-            ws::frame_header fh;
+            ws::frame_header fh{};
 
             fh.payload_len = tmp[1] & 0x7F;
             switch (fh.payload_len)
@@ -475,7 +468,7 @@ namespace moon
             //need more data
             if (size < need)
             {
-                check_recv_buffer(need);
+                prepare_buffer(need);
                 return std::error_code();
             }
 
@@ -562,7 +555,7 @@ namespace moon
             if (size < need + reallen)
             {
                 //need more data
-                check_recv_buffer(static_cast<size_t>(need + reallen - size));
+                prepare_buffer(static_cast<size_t>(need + reallen - size));
                 return std::error_code();
             }
 
@@ -613,7 +606,10 @@ namespace moon
 
             handle_message(std::move(msg));
 
-            check_recv_buffer(DEFAULT_RECV_BUFFER_SIZE);
+            if (nullptr == recv_buf_) {
+                return std::error_code();
+            }
+
             return decode_frame();
         }
 

@@ -201,14 +201,14 @@ namespace moon
             if (nullptr == Indata || 0 == count)
                 return;
             size_t n = sizeof(T) * count;
-            auto* buff = reinterpret_cast<T*>(prepare(n));
-            memcpy(buff, Indata, n);
+            auto space = prepare(n);
+            memcpy(space.first, Indata, space.second);
             writepos_ += n;
         }
 
         void write_back(char c)
         {
-            *prepare(1) = c;
+            *(prepare(1).first) = c;
             ++writepos_;
         }
 
@@ -241,7 +241,8 @@ namespace moon
         bool write_chars(T value)
         {
             static constexpr size_t MAX_NUMBER_2_STR = 44;
-            auto* b = prepare(MAX_NUMBER_2_STR);
+            auto space = prepare(MAX_NUMBER_2_STR);
+            auto* b = space.first;
 #ifndef _MSC_VER//std::to_chars in C++17: gcc and clang only integral types supported
             if constexpr (std::is_floating_point_v<T>)
             {
@@ -400,14 +401,17 @@ namespace moon
             return headreserved_;
         }
 
-        pointer prepare(size_t need)
+        std::pair<pointer, size_t> prepare(size_t need)
         {
-            if (writeablesize() >= need)
+            assert(capacity_ >= writepos_);
+            size_t writeable = capacity_ - writepos_;
+
+            if (writeable >= need)
             {
-                return (data_ + writepos_);
+                return std::pair{data_ + writepos_, need};
             }
 
-            if (writeablesize() + readpos_ < need + headreserved_)
+            if (writeable + readpos_ < need + headreserved_)
             {
                 auto required_size = writepos_ + need;
                 required_size = next_pow2(required_size);
@@ -431,15 +435,8 @@ namespace moon
                 readpos_ = headreserved_;
                 writepos_ = readpos_ + readable;
             }
-            return (data_ + writepos_);
+            return std::pair{data_ + writepos_, need};
         }
-
-        size_t writeablesize() const noexcept
-        {
-            assert(capacity_ >= writepos_);
-            return capacity_ - writepos_;
-        }
-
     private:
         size_t next_pow2(size_t x)
         {
