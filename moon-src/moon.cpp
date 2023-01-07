@@ -225,6 +225,7 @@ int main(int argc, char* argv[])
         int exitcode = server_->run();
         if (exitcode >= 0)
         {
+            server_.reset();
             print_mem_stats();
             return 0;
         }

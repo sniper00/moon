@@ -7,11 +7,8 @@ error("DO NOT REQUIRE THIS FILE")
 local json = {}
 
 ---@param t table|number|string|boolean
----@param empty_as_array? boolean @default true
----@param format? boolean @default true, pretty
 ---@return string
-function json.encode(t, empty_as_array, format)
-end
+function json.encode(t) end
 
 ---@param t table
 ---@return string
@@ -31,5 +28,18 @@ function json.concat(array) end
 --- concat params as redis protocol, table type will encode to json string
 ---@return buffer_ptr
 function json.concat_resp(...) end
+
+---Set option empty as array. default true.
+---@param opt boolean 
+function json.encode_empty_as_array(opt) end
+
+---Set option encode number key. default true.
+---@param opt boolean 
+function json.encode_number_key(opt) end
+
+---Set option concat buffer size.
+---@param buffer_size integer @default 512
+---@param buffer_head_size integer @default 16
+function json.concat_buffer_size(buffer_size, buffer_head_size) end
 
 return json
