@@ -211,9 +211,7 @@ end
 do
     local str = io.readfile([[twitter.json]])
     local t = json.decode(str)
-    local empty_as_array = true
-    local pertty = true
-    io.writefile("twitter-out.json", json.encode(t, empty_as_array, pertty))
+    io.writefile("twitter-out.json", json.pretty_encode(t))
 end
 
 test_assert.success()

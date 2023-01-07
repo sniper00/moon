@@ -164,7 +164,7 @@ do
     --optimize lua GC: Auto encode table as json, an return ligthtuserdata, then use socket api send it.
     local pointer = json.concat(sql)
     local buffer = require("buffer")
-    print(buffer.str(pointer))
+    print(buffer.unpack(pointer))
     buffer.delete(pointer)
     --insert into shop(id, details) values (101,'{"price":120.3,"name":"hello"}');
 end
@@ -176,7 +176,7 @@ do
         }
     })
     local buffer = require("buffer")
-    print(buffer.str(pointer))
+    print(buffer.unpack(pointer))
     buffer.delete(pointer)
 end
 
