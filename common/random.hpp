@@ -7,22 +7,25 @@
 
 namespace moon
 {
+    inline std::mt19937& random_generator()
+    {
+        static thread_local std::random_device rd;
+        static thread_local std::mt19937 gen(rd());
+        return gen;
+    }
+
     inline unsigned int rand()
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<unsigned int> dis(1, std::numeric_limits<unsigned int>::max());
-        return dis(gen);
+        return dis(random_generator());
     }
 
     ///[min.max]
     template<typename IntType>
     inline IntType rand_range(IntType min, IntType max)
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<IntType> dis(min, max);
-        return dis(gen);
+        return dis(random_generator());
     }
 
     inline const unsigned char* randkey(size_t len = 8)
@@ -48,10 +51,8 @@ namespace moon
     template< class RealType = double >
     inline RealType randf_range(RealType min, RealType max)
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::uniform_real_distribution<RealType> dis(min, max);
-        return dis(gen);
+        return dis(random_generator());
     }
 
     template< class RealType = double >
@@ -77,8 +78,7 @@ namespace moon
         }
 
         auto dist = std::discrete_distribution<int>(w.begin(), w.end());
-        auto g = std::mt19937(std::random_device{}());
-        int index = dist(g);
+        int index = dist(random_generator());
         return v[index];
     }
 };
