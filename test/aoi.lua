@@ -1,4 +1,5 @@
 local moon = require("moon")
+local test_assert = require("test_assert")
 local aoi = require("aoi")
 
 local AOI_WATCHER = 1
@@ -40,7 +41,7 @@ local function test(space)
 	aoi_erase(space, 2)
 	aoi_insert(space,2,42,5,0,0,0,AOI_MARHER)
 
-	moon.exit(-1)
+	test_assert.success()
 end
 
 local function run()
