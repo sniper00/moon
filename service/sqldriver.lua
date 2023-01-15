@@ -35,7 +35,7 @@ if conf.name then
                     return db
                 end
             else
-                db = provider.connect(conf.db_conf)
+                db = provider.connect(conf.opts)
                 if rawget(db, "code") then
                     if sessionid == 0 then
                         ---if execute operation print error, then reconnect
@@ -48,7 +48,7 @@ if conf.name then
                     db = nil
                     ---sleep then reconnect
                     moon.sleep(1000)
-                    moon.error("db reconnecting...", table.tostring(conf.db_conf))
+                    moon.error("db reconnecting...", table.tostring(conf.opts))
                 end
             end
         end
@@ -107,8 +107,8 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.db_conf.host, conf.db_conf.port, moon.PTYPE_SOCKET_TCP)
-    assert(fd, string.format("connect failed provider: %s host: %s port: %s", conf.provider, conf.db_conf.host, conf.db_conf.port))
+    local fd = socket.sync_connect(conf.opts.host, conf.opts.port, moon.PTYPE_SOCKET_TCP)
+    assert(fd, string.format("connect failed provider: %s host: %s port: %s", conf.provider, conf.opts.host, conf.opts.port))
     socket.close(fd)
 
     local command = {}

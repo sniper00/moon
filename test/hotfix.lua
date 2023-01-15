@@ -1,5 +1,5 @@
 local moon = require("moon")
-local conf = ...
+local test_assert = require("test_assert")
 local reload = require "hardreload"
 local require = reload.require
 -- reload.postfix = "_update"	-- for test
@@ -38,6 +38,7 @@ source["old"] = [[
         tmp(self)
         print("before", self.n, self.m, a-b)
         moon.sleep(1000)
+        return a - b
     end
 
     return M
@@ -73,6 +74,7 @@ source["new"] = [[
         tmp(self)
         print("after", self.n, self.m, a + b)
         moon.sleep(1000)
+        return a + b
     end
 
     return M
@@ -90,9 +92,10 @@ moon.async(function ()
     for k,v in pairs(reload_module) do
         print(k,v)
     end
-    rmd:func()--- output: before    1000    hello   -100
+    assert(rmd:func() == -100) --- output: before    1000    hello   -100
     print("Hot Fix Result",reload.reload_simple("old", "new"))
-    rmd:func()--- outpur: after     1       hello   300
+    assert(rmd:func() == 300) --- outpur: after     1       hello   300
+    test_assert.success()
 end)
 
 

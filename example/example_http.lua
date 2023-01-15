@@ -31,7 +31,7 @@ end)
 http_server.listen("127.0.0.1",8001)
 print("http_server start", "127.0.0.1",8001)
 
-
+--- use http proxy
 -- moon.async(function ()
 --     print_r(httpc.get("www.google.com:443"),{
 --         proxy = "127.0.0.1:8443"

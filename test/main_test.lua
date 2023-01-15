@@ -24,11 +24,11 @@ local test_case =
         name = "call",
         file = "call.lua"
     }
-    -- ,
-    -- {
-    --     name = "redis",
-    --     file = "redis.lua"
-    -- }
+    ,
+    {
+        name = "redis",
+        file = "redis.lua"
+    }
     ,
     {
         name = "large_package",
@@ -51,6 +51,14 @@ local test_case =
     {
         name = "json",
         file = "json.lua"
+    },
+    {
+        name = "hotfix",
+        file = "hotfix.lua"
+    },
+    {
+        name = "aoi",
+        file = "aoi.lua"
     }
 }
 

@@ -1,6 +1,6 @@
 local moon = require("moon")
 local socket = require("moon.socket")
-local conf = ... or {}
+local conf = ...
 
 local function run_slave()
     local command = {}
