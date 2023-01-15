@@ -9,10 +9,10 @@ local tbinsert = table.insert
 local conf = ...
 
 if conf.name then
-    local function connect(db_conf, auto_reconnect)
+    local function connect(opts, auto_reconnect)
         local db, err
         repeat
-            db, err = redis.connect(db_conf)
+            db, err = redis.connect(opts)
             if not db then
                 moon.error(err)
                 break
@@ -39,7 +39,7 @@ if conf.name then
         repeat
             local err,res
             if not db then
-                db, err = connect(conf, auto_reconnect)
+                db, err = connect(conf.opts, auto_reconnect)
                 if not db then
                     if sessionid == 0 then
                         moon.error(err)
@@ -139,7 +139,7 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.host,conf.port,moon.PTYPE_SOCKET_TCP)
+    local fd = socket.sync_connect(conf.opts.host,conf.opts.port,moon.PTYPE_SOCKET_TCP)
     assert(fd, "connect db redis failed")
     socket.close(fd)
 

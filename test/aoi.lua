@@ -44,9 +44,8 @@ local function test(space)
 end
 
 local function run()
-	local space = aoi.create(-256,-256, 512, 8)
+	local space = aoi.new(-256,-256, 512, 8)
 	test(space)
-	aoi.release(space)
 end
 
 run()

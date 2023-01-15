@@ -1,7 +1,38 @@
 local moon = require("moon")
 local socket = require("moon.socket")
+local seri = require("seri")
+local binunpack = seri.unpack
+local binpack = seri.pack
 
-local conf = ... or {}
+local conf = ...
+
+conf.host = "127.0.0.1"
+conf.port = 33888
+conf.count = 1000
+conf.client_num = 1000
+
+if conf.name == "server" then
+    socket.on("accept",function(fd, msg)
+        --print("accept ", fd, moon.decode(msg, "Z"))
+    end)
+    
+    socket.on("message",function(fd, msg)
+        socket.write(fd, moon.decode(msg, "Z"))
+    end)
+    
+    socket.on("close",function(fd, msg)
+        --print("close ", fd, moon.decode(msg, "Z"))
+    end)
+    
+    local listenfd  = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET_MOON)
+    socket.start(listenfd)
+    
+    print(string.format([[
+        network benchmark run at %s %d with %d clients, per client send %s message.
+    ]], conf.host, conf.port, conf.client_num, conf.count))
+
+    return
+end
 
 local total,count,client_num,send_count
 
@@ -32,7 +63,7 @@ socket.on("connect",function(fd,msg)
             socket.write(k,send_data)
         end
         start_time = millseconds()
-        print("start....")
+        print("running ....")
     end
 end)
 
@@ -72,6 +103,10 @@ socket.on("message",function(fd, msg)
         end
 
         print(string.format("%.02f requests per second",qps))
+
+        moon.kill(moon.queryservice("server"))
+
+        moon.exit(0)
     end
 end)
 
@@ -81,16 +116,23 @@ end)
 
 
 total = conf.client_num * conf.count
-print(total)
 client_num = conf.client_num
 send_count = conf.count
 
 moon.async(function()
-    moon.sleep(10)
+    moon.new_service("lua", {
+        name = "server",
+        file = "tcp_benchmark.lua",
+    })
+
     for _=1,conf.client_num do
-        local fd = socket.connect(conf.host,conf.port,moon.PTYPE_SOCKET_MOON)
+        socket.connect(conf.host,conf.port,moon.PTYPE_SOCKET_MOON)
     end
 end)
+
+
+
+
 
 
 
