@@ -8,28 +8,27 @@
 
 [![windows-vs2022](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml)
 
-# Demo
-- [MoonDemo](https://github.com/sniper00/MoonDemo.git)
-
 # Moon
-Moon is a lightweight online game server framework implement with actor model. One thread may have 1-N luaVM, they use message queue communication. There are many features for game server development:
+Moon is a lightweight online game server framework implement with actor model. One thread may have 1-N service(luaVM), they use message queue for communication. There are many features for game server development:
 
 - Less core code, easy to learn
 - Cross-platform (Windows, Linux, MacOS)
 - Optimized networking
-   - tcp
-   - websockets
-   - http
+   - Tcp
+   - Websockets
+   - Http
 - Lua coroutine based asynchronous
-   - coroutine-socket
-   - timer
-   - inter luaVM communication
-   - inter cluster(process) communication
-   - redis/mysql/pgsql/mongodb async driver
+   - Coroutine-socket
+   - Timer
+   - Service-to-service communication
+   - Interprocess(cluster) communication
+   - Redis/Mysql/Pgsql/Mongodb async client driver
 - High performance and optimized Lua Json library
 - Lua protobuf library
 - Lua filesystem
 - Recast Navigation
+- Lua zset library for ranklist
+
 # OverView
 
 ## Framework
@@ -58,12 +57,19 @@ Moon is a lightweight online game server framework implement with actor model. O
 https://github.com/sniper00/moon/releases
 
 ```shell
-# run echo server
-./moon example/helloworld.lua
-# another terminal run client(coroutine socket writed)
-./moon example/helloworld_client.lua
-# input any string
+# This is an example show put different services in one process
+./moon example/main_game.lua
+
+# Run test
+./moon test/main_test.lua
+
+# Run script in the example directory, e:
+./moon example/example_timer.lua
+
 ```
+
+## Demo
+- [MoonDemo](https://github.com/sniper00/MoonDemo.git)
 
 ## Manual Build
 
