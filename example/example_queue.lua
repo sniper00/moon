@@ -7,7 +7,7 @@ local tb = {}
 for i=1,1000 do
 	local co = coroutine.create(function(v)
 		print("lock", v)
-		local scope_lock<close> = lock(v)
+		local scope_lock<close> = lock()
 		if 1==v then
 			print(coroutine.yield(v), v)
 		end
