@@ -1,6 +1,6 @@
 local moon = require("moon")
 local http = require("http")
-local seri = require("seri")
+local buffer = require("buffer")
 ---@type fs
 local fs = require("fs")
 local socket = require("moon.socket")
@@ -240,10 +240,10 @@ local function request_handler(fd, request)
             response:write(static_src.bin)
             if not M.keepalive or request.header["connection"] == "close" then
                 response:write_header("Connection", "close")
-                socket.write_then_close(fd, seri.concat(response:tb()))
+                socket.write_then_close(fd, buffer.concat(response:tb()))
                 return
             else
-                socket.write(fd, seri.concat(response:tb()))
+                socket.write(fd, buffer.concat(response:tb()))
                 return true
             end
         end
@@ -273,9 +273,9 @@ local function request_handler(fd, request)
 
     if not M.keepalive or request.header["connection"] == "close" then
         response:write_header("Connection", "close")
-        socket.write_then_close(fd, seri.concat(response:tb()))
+        socket.write_then_close(fd, buffer.concat(response:tb()))
     else
-        socket.write(fd, seri.concat(response:tb()))
+        socket.write(fd, buffer.concat(response:tb()))
         return true
     end
 end
@@ -380,7 +380,7 @@ function M.start(fd, timeout, pre)
             if request.protocol_error then
                 local res = http_response.new()
                 res.status_code = 400
-                socket.write_then_close(fd, seri.concat(res:tb()))
+                socket.write_then_close(fd, buffer.concat(res:tb()))
                 if M.error then
                     M.error(fd, request.protocol_error)
                 else
@@ -415,6 +415,7 @@ function M.listen(host,port,timeout)
     end)
 end
 
+---@param path string
 ---@param cb fun(request: HttpServerRequest, response: HttpServerResponse)
 function M.on( path, cb )
     routers[path] = cb

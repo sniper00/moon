@@ -1,7 +1,7 @@
 -- This file is modified version from https://github.com/cloudwu/skynet/blob/master/lualib/skynet/db/redis.lua
 
 local moon = require "moon"
-local seri = require("seri")
+local buffer = require "buffer"
 local socket = require "moon.socket"
 
 local tostring = tostring
@@ -167,7 +167,7 @@ local function request(fd, req, res, israw)
 	if israw then
 		socket.write_message(fd,  req)
 	else
-		socket.write(fd,  seri.concat(req))
+		socket.write(fd,  buffer.concat(req))
 	end
 	if not res then
 		return true

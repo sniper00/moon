@@ -5,6 +5,8 @@
 
 using namespace moon;
 
+constexpr int MAX_DEPTH = 32;
+
 static buffer* get_pointer(lua_State* L, int index) {
     auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, index));
     if (buf == NULL)
@@ -215,11 +217,123 @@ static int unsafe_delete(lua_State* L)
 
 static int unsafe_new(lua_State* L)
 {
-    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, 256));
+    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, 256 - BUFFER_HEAD_RESERVED));
     uint32_t headreserved = static_cast<uint32_t>(luaL_optinteger(L, 2, BUFFER_HEAD_RESERVED));
     buffer* buf = new buffer(capacity, headreserved);
     lua_pushlightuserdata(L, buf);
     return 1;
+}
+
+static void concat_one(lua_State *L, buffer* b, int index, int depth);
+
+static int concat_table_array(lua_State *L, buffer* buf, int index, int depth) {
+    int array_size = (int)lua_rawlen(L, index);
+    int i;
+    for (i = 1; i <= array_size; i++) {
+        lua_rawgeti(L, index, i);
+        concat_one(L, buf, -1, depth);
+        lua_pop(L, 1);
+    }
+    return array_size;
+}
+
+static void concat_table(lua_State*L, buffer* buf, int index, int depth)
+{
+    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    if (index < 0) {
+        index = lua_gettop(L) + index + 1;
+    }
+    concat_table_array(L, buf, index, depth);
+}
+
+static void concat_one(lua_State *L, buffer* b, int index, int depth)
+{
+    if (depth > MAX_DEPTH) {
+        throw std::logic_error{"buffer.concat too depth table"};
+        return;
+    }
+    int type = lua_type(L, index);
+    switch (type) {
+    case LUA_TNIL:
+        break;
+    case LUA_TNUMBER:
+    {
+        if (lua_isinteger(L, index))
+            b->write_chars(lua_tointeger(L, index));
+        else
+            b->write_chars(lua_tonumber(L, index));
+        break;
+    }
+    case LUA_TBOOLEAN:
+    {
+        int n = lua_toboolean(L, index);
+        const char* s = n ? "true" : "false";
+        b->write_back(s, std::strlen(s));
+        break;
+    }
+    case LUA_TSTRING: {
+        size_t sz = 0;
+        const char *str = lua_tolstring(L, index, &sz);
+        b->write_back(str, sz);
+        break;
+    }
+    case LUA_TTABLE: {
+        if (index < 0)
+        {
+            index = lua_gettop(L) + index + 1;
+        }
+        concat_table(L, b, index, depth + 1);
+        break;
+    }
+    default:
+        throw std::logic_error{std::string("table.concat unsupport type :")+lua_typename(L, type)};
+    }
+}
+
+static int concat(lua_State* L)
+{
+    int n = lua_gettop(L);
+    if (0 == n)
+    {
+        return 0;
+    }
+    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
+    try
+    {
+        for (int i = 1; i <= n; i++) {
+            concat_one(L, buf, i, 0);
+        }
+        lua_pushlightuserdata(L, buf);
+        return 1;
+    }
+    catch(const std::exception& e)
+    {
+        delete buf;
+        lua_pushstring(L, e.what());
+    }
+    return lua_error(L);
+}
+
+static int concat_string(lua_State *L)
+{
+    int n = lua_gettop(L);
+    if (0 == n)
+        return 0;
+
+    try
+    {
+        buffer buf;
+        for (int i = 1; i <= n; i++) {
+            concat_one(L, &buf, i, 0);
+        }
+        lua_pushlstring(L, buf.data(), buf.size());
+        return 1;
+    }
+    catch(const std::exception& e)
+    {
+        lua_pushstring(L, e.what());
+    }
+    return lua_error(L);
 }
 
 extern "C" {
@@ -239,6 +353,8 @@ extern "C" {
             , {"prepare", prepare}
             , {"has_flag", has_flag}
             , {"set_flag", set_flag}
+            , {"concat",concat }
+            , {"concat_string",concat_string }
             , {NULL, NULL}
         };
         luaL_newlib(L, l);

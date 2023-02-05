@@ -1,12 +1,11 @@
 local moon = require("moon")
-local seri = require ("seri")
-local cbuffer = require("buffer")
+local buffer = require("buffer")
 local socket = require("moon.socket")
 
-local concat = seri.concat
-local bsize = cbuffer.size
-local wfront = cbuffer.write_front
-local wback = cbuffer.write_back
+local concat = buffer.concat
+local bsize = buffer.size
+local wfront = buffer.write_front
+local wback = buffer.write_back
 
 local socket_error = setmetatable({}, {__tostring = function() return "[Error: socket]" end })	-- alias for error object
 
@@ -177,9 +176,9 @@ local function send_startup_message(self)
         NULL
     }
 
-    local str = seri.concats(data)
+    local str = buffer.concat_string(data)
 
-    socket.write(self.sock, seri.concats(encode_int(#str + 4), data))
+    socket.write(self.sock, buffer.concat_string(encode_int(#str + 4), data))
 end
 
 local function parse_error(err_msg)
