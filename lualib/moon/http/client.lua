@@ -1,5 +1,5 @@
 local http = require("http")
-local seri = require("seri")
+local buffer = require("buffer")
 local moon = require("moon")
 local json = require("json")
 local socket = require("moon.socket")
@@ -163,7 +163,7 @@ local function do_request(baseaddress, options, req, method)
         end
     end
 
-    if not socket.write(fd, seri.concat(req)) then
+    if not socket.write(fd, buffer.concat(req)) then
         return false, "CLOSED"
     end
 

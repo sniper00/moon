@@ -1,10 +1,10 @@
+#include <cmath>
 #include "lua.hpp"
 #include "config.hpp"
 #include "common/buffer.hpp"
 #include "common/buffer_view.hpp"
 
 using namespace moon;
-static constexpr int32_t HEAP_BUFFER = 1;
 
 #define TYPE_NIL 0
 #define TYPE_BOOLEAN 1
@@ -29,11 +29,6 @@ static constexpr int32_t HEAP_BUFFER = 1;
 
 #define BLOCK_SIZE 128
 #define MAX_DEPTH 32
-
-static void wb_free(buffer* b) {
-    if (b->has_flag(HEAP_BUFFER))
-        delete b;
-}
 
 static inline void wb_nil(buffer* buf)
 {
@@ -213,9 +208,7 @@ static int wb_table(lua_State* L, buffer* buf, int index, int depth)
 
 static void pack_one(lua_State *L, buffer* b, int index, int depth) {
     if (depth > MAX_DEPTH) {
-        wb_free(b);
-        luaL_error(L, "serialize can't pack too depth table");
-        return;
+        throw std::logic_error{"serialize can't pack too depth table"};
     }
     int type = lua_type(L, index);
     switch (type) {
@@ -230,8 +223,7 @@ static void pack_one(lua_State *L, buffer* b, int index, int depth) {
         else {
             lua_Number n = lua_tonumber(L, index);
             if (std::isnan(n)) {
-                wb_free(b);
-                luaL_error(L, "serialize can't pack 'nan' number value");
+                throw std::logic_error{"serialize can't pack 'nan' number value"};
             }
             wb_real(b, n);
         }
@@ -254,14 +246,12 @@ static void pack_one(lua_State *L, buffer* b, int index, int depth) {
             index = lua_gettop(L) + index + 1;
         }
         if (wb_table(L, b, index, depth + 1)) {
-            wb_free(b);
-            lua_error(L);
+            throw std::logic_error{lua_tostring(L, -1)};
         }
         break;
     }
     default:
-        wb_free(b);
-        luaL_error(L, "Unsupport type %s to serialize", lua_typename(L, type));
+        throw std::logic_error{std::string("serialize can't pack unsupport type :")+lua_typename(L, type)};
     }
 }
 
@@ -422,34 +412,45 @@ static int pack(lua_State* L)
 {
     int n = lua_gettop(L);
     if (0 == n)
-    {
         return 0;
-    }
-    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
-    buf->set_flag(HEAP_BUFFER);
 
-    for (int i = 1; i <= n; i++) {
-        pack_one(L, buf, i, 0);
+    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
+    try
+    {
+        for (int i = 1; i <= n; i++) {
+            pack_one(L, buf, i, 0);
+        }
+        lua_pushlightuserdata(L, buf);
+        return 1;
     }
-    buf->clear_flag(HEAP_BUFFER);
-    lua_pushlightuserdata(L, buf);
-    return 1;
+    catch(const std::exception& e)
+    {
+        delete buf;
+        lua_pushstring(L, e.what());
+    }
+    return lua_error(L);
 }
 
 static int packsafe(lua_State* L)
 {
     int n = lua_gettop(L);
     if (0 == n)
-    {
         return 0;
-    }
 
-    buffer buf;
-    for (int i = 1; i <= n; i++) {
-        pack_one(L, &buf, i, 0);
+    try
+    {
+        buffer buf;
+        for (int i = 1; i <= n; i++) {
+            pack_one(L, &buf, i, 0);
+        }
+        lua_pushlstring(L, buf.data(), buf.size());
+        return 1;
     }
-    lua_pushlstring(L, buf.data(), buf.size());
-    return 1;
+    catch(const std::exception& e)
+    {
+        lua_pushstring(L, e.what());
+    }
+    return lua_error(L);
 }
 
 static int unpack(lua_State* L)
@@ -534,150 +535,6 @@ static int peek_one(lua_State* L)
     return 3;
 }
 
-static void concat_one(lua_State *L, buffer* b, int index, int depth);
-
-static int concat_table_array(lua_State *L, buffer* buf, int index, int depth) {
-    int array_size = (int)lua_rawlen(L, index);
-    int i;
-    for (i = 1; i <= array_size; i++) {
-        lua_rawgeti(L, index, i);
-        concat_one(L, buf, -1, depth);
-        lua_pop(L, 1);
-    }
-    return array_size;
-}
-
-static void concat_table(lua_State*L, buffer* buf, int index, int depth)
-{
-    luaL_checkstack(L, LUA_MINSTACK, NULL);
-    if (index < 0) {
-        index = lua_gettop(L) + index + 1;
-    }
-    concat_table_array(L, buf, index, depth);
-}
-
-static void concat_one(lua_State *L, buffer* b, int index, int depth)
-{
-    if (depth > MAX_DEPTH) {
-        wb_free(b);
-        luaL_error(L, "serialize can't concat too depth table");
-        return;
-    }
-    int type = lua_type(L, index);
-    switch (type) {
-    case LUA_TNIL:
-        break;
-    case LUA_TNUMBER:
-    {
-        if (lua_isinteger(L, index))
-            b->write_chars(lua_tointeger(L, index));
-        else
-            b->write_chars(lua_tonumber(L, index));
-        break;
-    }
-    case LUA_TBOOLEAN:
-    {
-        int n = lua_toboolean(L, index);
-        const char* s = n ? "true" : "false";
-        b->write_back(s, std::strlen(s));
-        break;
-    }
-    case LUA_TSTRING: {
-        size_t sz = 0;
-        const char *str = lua_tolstring(L, index, &sz);
-        b->write_back(str, sz);
-        break;
-    }
-    case LUA_TTABLE: {
-        if (index < 0)
-        {
-            index = lua_gettop(L) + index + 1;
-        }
-        concat_table(L, b, index, depth + 1);
-        break;
-    }
-    default:
-        wb_free(b);
-        luaL_error(L, "Unsupport type %s to concat", lua_typename(L, type));
-    }
-}
-
-static int concat(lua_State* L)
-{
-    int n = lua_gettop(L);
-    if (0 == n)
-    {
-        return 0;
-    }
-    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
-    buf->set_flag(HEAP_BUFFER);
-    for (int i = 1; i <= n; i++) {
-        concat_one(L, buf, i, 0);
-    }
-    buf->clear_flag(HEAP_BUFFER);
-    lua_pushlightuserdata(L, buf);
-    return 1;
-}
-
-static int concatsafe(lua_State *L)
-{
-    int n = lua_gettop(L);
-    if (0 == n)
-    {
-        return 0;
-    }
-
-    buffer buf;
-    for (int i = 1; i <= n; i++) {
-        concat_one(L, &buf, i, 0);
-    }
-    lua_pushlstring(L, buf.data(), buf.size());
-    return 1;
-}
-
-static int sep_concat(lua_State* L)
-{
-    int n = lua_gettop(L);
-    if (n < 1)
-    {
-        return 0;
-    }
-
-    size_t len;
-    const char* sep = luaL_checklstring(L, 1, &len);
-    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
-    buf->set_flag(HEAP_BUFFER);
-    for (int i = 2; i <= n; i++) {
-        concat_one(L, buf, i, 0);
-        if(i!=n)
-            buf->write_back(sep, len);
-    }
-    buf->clear_flag(HEAP_BUFFER);
-    lua_pushlightuserdata(L, buf);
-    return 1;
-}
-
-static int sep_concatsafe(lua_State *L)
-{
-    int n = lua_gettop(L);
-    if (n < 1)
-    {
-        return 0;
-    }
-
-    size_t len;
-    const char* sep = luaL_checklstring(L, 1, &len);
-
-    buffer buf;
-    for (int i = 2; i <= n; i++) {
-        concat_one(L, &buf, i, 0);
-        if (i != n)
-            buf.write_back(sep, len);
-    }
-    lua_pushlstring(L, buf.data(), buf.size());
-    return 1;
-}
-
 extern "C" {
     int LUAMOD_API  luaopen_serialize(lua_State *L)
     {
@@ -686,10 +543,6 @@ extern "C" {
             {"packs",packsafe },
             {"unpack",unpack},
             {"unpack_one",peek_one},
-            {"concat",concat },
-            {"concats",concatsafe },
-            {"sep_concat",sep_concat },
-            {"sep_concats",sep_concatsafe },
             {NULL,NULL},
         };
         luaL_newlib(L, l);

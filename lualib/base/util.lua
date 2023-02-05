@@ -1,12 +1,9 @@
-
-local math_floor = math.floor
-local strfmt     = string.format
-local strlen        = string.len
-local dbgtrace   = debug.traceback
-local strrep        = string.rep
-local strsplit      = string.split
-local strtrim       = string.trim
-local tsort         = table.sort
+local strlen   = string.len
+local dbgtrace = debug.traceback
+local strrep   = string.rep
+local strsplit = string.split
+local strtrim  = string.trim
+local tsort    = table.sort
 local tbconcat = table.concat
 local tbinsert = table.insert
 
@@ -29,37 +26,63 @@ local function _dump_key(v)
     return tostring(v)
 end
 
-_G["print_r"] = function (value, desciption, nesting, _print)
-    if type(nesting) ~= "number" then nesting = 10 end
-    _print = _print or print
+local MAX_NESTING <const> = 32
 
+_G["print_r"] = function(any, isreturn)
     local lookup = {}
     local result = {}
-    local traceback = strsplit(dbgtrace("", 2), "\n")
-    tbinsert(result,"\ndump from: " .. strtrim(traceback[2]).."\n")
 
-    local function _dump(_value, _desciption, _indent, nest, keylen)
-        _desciption = _desciption or "<var>"
-        local spc = ""
+    if not isreturn then
+        local traceback = strsplit(dbgtrace("", 2), "\n")
+        tbinsert(result, "dump from: " .. strtrim(traceback[2]) .. "\n")
+    end
+
+    local function _dump(key, value, indent, nest, keylen)
+        local space = ""
         if type(keylen) == "number" then
-            spc = strrep(" ", keylen - strlen(_dump_key(_desciption)))
+            space = strrep(" ", keylen - strlen(_dump_key(key)))
         end
-        if type(_value) ~= "table" then
-            result[#result + 1] = strfmt("%s%s%s = %s,", _indent, _dump_key(_desciption),
-            spc, _dump_value(_value))
-        elseif lookup[tostring(_value)] then
-            result[#result + 1] = strfmt("%s%s%s = '*REF*',", _indent, _dump_key(_desciption), spc)
+
+        if type(value) ~= "table" then
+            if key then
+                result[#result + 1] = indent
+                result[#result + 1] = _dump_key(key)
+                result[#result + 1] = space
+                result[#result + 1] = " = "
+            end
+            result[#result + 1] = _dump_value(value)
+            result[#result + 1] = ",\n"
+        elseif lookup[tostring(value)] then
+            if key then
+                result[#result + 1] = indent
+                result[#result + 1] = _dump_key(key)
+                result[#result + 1] = space
+                result[#result + 1] = " = "
+            end
+            result[#result + 1] = "'*REF*'"
+            result[#result + 1] = ",\n"
         else
-            lookup[tostring(_value)] = true
-            if nest > nesting then
-                result[#result + 1] = strfmt("%s%s = '*MAX NESTING*',", _indent, _dump_key(_desciption))
+            lookup[tostring(value)] = true
+            if nest > MAX_NESTING then
+                result[#result + 1] = indent
+                result[#result + 1] = _dump_key(key)
+                result[#result + 1] = " = "
+                result[#result + 1] = "'*MAX NESTING*'"
+                result[#result + 1] = ",\n"
             else
-                result[#result + 1] = strfmt("%s%s = {", _indent, _dump_key(_desciption))
-                local indent2 = _indent .. "    "
+                if key then
+                    result[#result + 1] = indent
+                    result[#result + 1] = _dump_key(key)
+                    result[#result + 1] = " = {\n"
+                else
+                    result[#result + 1] = "{\n"
+                end
+
+                local indent2 = indent .. "    "
                 local keys = {}
                 keylen = 0
                 local values = {}
-                for k, v in pairs(_value) do
+                for k, v in pairs(value) do
                     keys[#keys + 1] = k
                     local vk = _dump_value(k)
                     local vkl = strlen(vk)
@@ -74,12 +97,21 @@ _G["print_r"] = function (value, desciption, nesting, _print)
                     end
                 end)
                 for _, k in ipairs(keys) do
-                    _dump(values[k], k, indent2, nest + 1, keylen)
+                    _dump(k, values[k], indent2, nest + 1, keylen)
                 end
-                result[#result + 1] = strfmt("%s},", _indent)
+                result[#result + 1] = indent .. "},\n"
             end
         end
     end
-    _dump(value, desciption, " ", 1)
-    _print(tbconcat(result,"\n"))
+
+    _dump(nil, any, "", 1)
+
+    local last = result[#result]
+    result[#result] = string.sub(last, 1, #last - 2) .. '\n'
+
+    if isreturn then
+        return tbconcat(result)
+    else
+        print(tbconcat(result))
+    end
 end

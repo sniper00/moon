@@ -54,16 +54,11 @@ do
 	end
 
 	do
-		local pbuffer = seri.concat(1,2,3,4)
+		local pbuffer = buffer.concat(1,2,3,4)
 		assert(buffer.unpack(pbuffer) == "1234")
 		buffer.delete(pbuffer)
 	end
 
-	do
-		local pbuffer = seri.sep_concat(',', 1,2,3,4)
-		assert(buffer.unpack(pbuffer) == "1,2,3,4")
-		buffer.delete(pbuffer)
-	end
 end
 
 do
