@@ -167,16 +167,9 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
                 }
             }
 
-            if (sessionid != 0)
-            {
-                response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", e.message().data(), e.value()),
-                    "SOCKET_ERROR"sv,
-                    sessionid, PTYPE_ERROR);
-            }
-            else
-            {
-                CONSOLE_WARN(server_->logger(), "socket::accept %s(%d)", e.message().data(), e.value());
-            }
+            response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", e.message().data(), e.value()),
+                "SOCKET_ERROR"sv,
+                sessionid, PTYPE_ERROR);
         }
 
         if (sessionid == 0)
@@ -238,10 +231,11 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                     asio::async_connect(c->socket(), results,
                         [this, c, host, port, owner, sessionid, timer](const asio::error_code& ec, const asio::ip::tcp::endpoint&)
                         {
+                            size_t cancelled_timer = 1;
                             if (timer)
                             {
                                 try {
-                                    timer->cancel();
+                                    cancelled_timer = timer->cancel();
                                 }
                                 catch (...) {
                                 }
@@ -256,7 +250,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                             }
                             else
                             {
-                                if(c->socket().is_open())
+                                if(cancelled_timer>0)
                                     response(0, owner, std::string_view{}, moon::format("connect %s:%d: %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
                             }
                         });
@@ -498,7 +492,7 @@ size_t socket::encode_endpoint(char* buf, const asio::ip::address& addr, asio::i
 
 connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
 {
-    connection_ptr_t connection;
+            connection_ptr_t connection;
     switch (type)
     {
     case PTYPE_SOCKET_MOON:
@@ -522,16 +516,22 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     }
     connection->logger(server_->logger());
     return connection;
-}
+    }
 
-void socket::response(uint32_t sender, uint32_t receiver, std::string_view data, std::string_view header, int32_t sessionid, uint8_t type)
+void socket::response(uint32_t sender, uint32_t receiver, std::string_view content, std::string_view header, int32_t sessionid, uint8_t type)
 {
     if (0 == sessionid)
+    {
+        CONSOLE_ERROR(server_->logger()
+            , "%s:%s"
+            , std::string(header).data()
+            , std::string(content).data());
         return;
+    }
     response_.set_sender(sender);
     response_.set_receiver(0);
     response_.get_buffer()->clear();
-    response_.get_buffer()->write_back(data.data(), data.size());
+    response_.write_data(content);
     response_.set_header(header);
     response_.set_sessionid(sessionid);
     response_.set_type(type);
