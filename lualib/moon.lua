@@ -113,7 +113,8 @@ local function coresume(co, ...)
     return ok, err
 end
 
---- map current running coroutine with a integer sesssion id, used to resume it later.
+--- 给当前协程映射一个会话ID, 用于稍后`resume`关联的协程。
+--- 可选参数`receiver`用于`moon.co_call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
 ---@param receiver? integer @ receiver's service id
 ---@return integer @ session id
 function moon.make_session(receiver)
@@ -142,7 +143,7 @@ function moon.cancel_session(sessionid)
 end
 
 ---
----向指定服务发送消息,消息内容会根据协议类型进行打包
+--- 向指定服务发送消息,消息内容会根据协议类型调用对应的`pack`函数。
 ---@param PTYPE string @protocol type. e. "lua"
 ---@param receiver integer @receiver's service id
 function moon.send(PTYPE, receiver, ...)
@@ -153,10 +154,10 @@ function moon.send(PTYPE, receiver, ...)
     _send(receiver, p.pack(...), "", 0, p.PTYPE)
 end
 
----向指定服务发送消息，消息内容不进行协议打包
+--- 向指定服务发送消息, 不会调用对应的`pack`函数。
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
----@param header string @Message Header
+---@param header? string @Message Header
 ---@param data? string|buffer_ptr|integer @消息内容
 ---@param sessionid? integer
 function moon.raw_send(PTYPE, receiver, header, data, sessionid)
@@ -170,14 +171,16 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
     _send(receiver, data, header, sessionid, p.PTYPE)
 end
 
+---@class service_conf
+---@field name string service's name.
+---@field file string service's bootstrap lua script file.
+---@field unique? boolean Identifies whether the service is unique. Default false.  Unique service can use moon.queryservice(name) get service's id.
+---@field threadid? integer Create service in the specified worker thread. Default 0, add to the thread with least number of services.
+
 ---@async
 --- Create a service
 ---@param stype string @service type, options 'lua'
----@param config table @service's config in key-value format
---- - name: string. service's name.
---- - file: string. service's bootstrap file(lua script).
---- - unique: boolean. Identifies whether the service is unique. Unique service can use moon.queryservice(name) get service's id.
---- - threadid: integer. Create service in the specified worker thread。Default 0, add to the thread with least number of services。
+---@param config service_conf @service's config in key-value format
 ---@return integer @ return service's id, if values is 0, means create service failed
 function moon.new_service(stype, config)
     local sessionid = make_session()
@@ -205,7 +208,7 @@ function moon.quit()
     moon.kill(_addr)
 end
 
----根据服务name获取服务id,注意只能查询创建时配置unique=true的服务
+--- 根据服务`name`获取 **`唯一服务`** 的ID
 ---@param name string
 ---@return integer @ 0 表示服务不存在
 function moon.queryservice(name)
@@ -223,14 +226,17 @@ function moon.env_unpacked(name)
     return seri.unpack(core.env(name))
 end
 
---- Get server timestamp in seconds
---- @return integer
+--- 获取服务器当前时间
+--- @return integer @ Unix timestamp in seconds
 function moon.time()
     return _now(1000)
 end
 
---- Return command line arguments.
---- e. `moon main.lua arg1 arg2 arg3` return `{arg1, arg2, arg3}`
+--- 获取进程启动时的命令行参数. 如:
+--- ```
+--- ./moon main.lua arg1 arg2 arg3
+--- return {arg1, arg2, arg3}
+--- ```
 ---@return string[]
 function moon.args()
     return load(moon.env("ARG"))()
@@ -257,8 +263,8 @@ local function routine(fn, ...)
     end
 end
 
----Creates a new coroutine(from coroutine pool) and start it immediately.
----If `func` lacks call `coroutine.yield`, will run syncronously.
+---Creates a new coroutine(or resue from coroutine pool) and start it immediately.
+---If `fn` lacks call `coroutine.yield`, will run syncronously.
 ---@param fn fun(...)
 ---@return thread
 function moon.async(fn, ...)
@@ -296,7 +302,7 @@ end
 ---@async
 --- Send message to target service (id=receiver), and use `coroutine.yield()` wait response
 ---  - If success, return values are params of `moon.response(id,response, params...)`
----  - If failed, return `false` and `error message(string)`
+---  - If failed, return `false` and `error-message(string)`
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
 ---@return ...
@@ -548,9 +554,9 @@ reg_protocol {
     end
 }
 
----注册进程退出信号回掉,注册此回掉后, 除非调用moon.quit, 否则服务不会退出。
----在回掉函数中可以处理异步逻辑（如带协程的数据库访问操作，收到退出信号后，保存数据）。
----注意：处理完成后必须要调用moon.quit,使服务自身退出,否则server进程将无法正常退出。
+--- 注册进程退出信号处理函数, 需要在处理函数中主动调用`moon.quit`, 否则服务不会退出。
+--- 可以开启新的协程执行异步逻辑: 如服务器安全关闭流程, 等待服务按指定顺序关闭, 保存数据等。
+--- **对于唯一服务一般需要注册此函数来处理退出流程，或者使用`moon.kill`强制关闭**
 ---@param callback fun()
 function moon.shutdown(callback)
     cb_shutdown = callback
