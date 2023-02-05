@@ -28,22 +28,4 @@ function seri.unpack(data, len) end
 ---@return any, cstring_ptr, integer @return lua object, char*, charlen
 function seri.unpack_one(buf, isseek) end
 
---- Concat lua objects to string, and return buffer*
----@return buffer_ptr
-function seri.concat(...) end
-
---- Concat lua objects to string
----@return string
-function seri.concats(...) end
-
---- Concat lua objects to string, and return buffer*
----@param sep string
----@return buffer_ptr
-function seri.sep_concat(sep, ...) end
-
---- Concat lua objects to string
----@param sep string
----@return string
-function seri.sep_concats(sep, ...) end
-
 return seri
