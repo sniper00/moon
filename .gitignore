@@ -15,8 +15,7 @@
 *.idb
 .vs/
 .vscode/
-build/
+build/bin/
+build/obj/
 exmaple/log/
 
-Server.sln
-Makefile

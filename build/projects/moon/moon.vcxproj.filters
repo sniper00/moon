@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="core">
+      <UniqueIdentifier>{4E40957C-3A77-960D-E363-7C10CF79120F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\network">
+      <UniqueIdentifier>{E7286B43-D38B-FAE7-7C11-339E6853C66A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="services">
+      <UniqueIdentifier>{C98C7E0E-B559-D919-DE72-C7C1CA9E0EA8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\moon-src\core\config.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\log.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\message.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\base_connection.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\const_buffers_holder.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\error.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\moon_connection.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\socket.h">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\stream_connection.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\streambuf.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\ws_connection.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\server.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\service.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\worker.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\services\lua_service.h">
+      <Filter>services</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\moon-src\core\network\socket.cpp">
+      <Filter>core\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\moon-src\core\server.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\moon-src\core\worker.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\moon-src\moon.cpp" />
+    <ClCompile Include="..\..\..\moon-src\services\lua_service.cpp">
+      <Filter>services</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

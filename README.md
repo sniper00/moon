@@ -75,32 +75,19 @@ https://github.com/sniper00/moon/releases
 
 1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support for C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
 
-2. Moon uses [premake5](http://premake.github.io/) to build platform specific projects. Download it and make sure it's available on your path.
-
-3. Clone source code
+2. Clone source code 
 
 ```
-    git clone https://github.com/sniper00/moon.git
+    git clone --recursive https://github.com/sniper00/moon.git
 ``` 
 
-4. If want link mimalloc, edit premake5.lua `local MOON_ENABLE_MIMALLOC = true`
+3. Build
+    - windows run `build.bat`
+    - linux:`make config=release`
+    - maxos: [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
 
-5. Build
-    - windows run `build.bat`。
-    - linux:
-        ```shell
-            chmod +x build.sh
-            chmod +x premake5
-            ./build.sh
-        ```
-    - macosx:
-        ```shell
-            ./premake5 gmake --cc=clang
-            make clean config=release
-            make config=release
-        ```
 
-    **If failed，[See detail steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**。
+4. If you want modify premake5 build file [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
 
 ## Friend Open Source
 - [NoahGameFrame](https://github.com/ketoo/NoahGameFrame)

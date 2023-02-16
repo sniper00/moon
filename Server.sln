@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crypt", "build\projects\crypt\crypt.vcxproj", "{D70E3F0F-4323-67C0-0CA5-0A20787863F1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "build\projects\lua\lua.vcxproj", "{C78D880B-3397-887C-BC12-9F7C281B947C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lualib", "build\projects\lualib\lualib.vcxproj", "{BE65480C-AA07-73E2-93C2-86367F03FA32}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mimalloc", "build\projects\mimalloc\mimalloc.vcxproj", "{7381B8AB-5F4E-13B7-8867-015F74934845}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mongo", "build\projects\mongo\mongo.vcxproj", "{C52EF20F-3143-1AC1-FAC4-BD20669816F2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "moon", "build\projects\moon\moon.vcxproj", "{BEBB9A7C-AAF2-9B0D-53DF-81103FF5170F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pb", "build\projects\pb\pb.vcxproj", "{17795900-0305-880B-6CB3-880B585E880B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sharetable", "build\projects\sharetable\sharetable.vcxproj", "{A0B25E19-8C6A-A066-F571-79C2E1483B57}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Debug|x64.ActiveCfg = Debug|x64
+		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Debug|x64.Build.0 = Debug|x64
+		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Release|x64.ActiveCfg = Release|x64
+		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Release|x64.Build.0 = Release|x64
+		{C78D880B-3397-887C-BC12-9F7C281B947C}.Debug|x64.ActiveCfg = Debug|x64
+		{C78D880B-3397-887C-BC12-9F7C281B947C}.Debug|x64.Build.0 = Debug|x64
+		{C78D880B-3397-887C-BC12-9F7C281B947C}.Release|x64.ActiveCfg = Release|x64
+		{C78D880B-3397-887C-BC12-9F7C281B947C}.Release|x64.Build.0 = Release|x64
+		{BE65480C-AA07-73E2-93C2-86367F03FA32}.Debug|x64.ActiveCfg = Debug|x64
+		{BE65480C-AA07-73E2-93C2-86367F03FA32}.Debug|x64.Build.0 = Debug|x64
+		{BE65480C-AA07-73E2-93C2-86367F03FA32}.Release|x64.ActiveCfg = Release|x64
+		{BE65480C-AA07-73E2-93C2-86367F03FA32}.Release|x64.Build.0 = Release|x64
+		{7381B8AB-5F4E-13B7-8867-015F74934845}.Debug|x64.ActiveCfg = Debug|x64
+		{7381B8AB-5F4E-13B7-8867-015F74934845}.Debug|x64.Build.0 = Debug|x64
+		{7381B8AB-5F4E-13B7-8867-015F74934845}.Release|x64.ActiveCfg = Release|x64
+		{7381B8AB-5F4E-13B7-8867-015F74934845}.Release|x64.Build.0 = Release|x64
+		{C52EF20F-3143-1AC1-FAC4-BD20669816F2}.Debug|x64.ActiveCfg = Debug|x64
+		{C52EF20F-3143-1AC1-FAC4-BD20669816F2}.Debug|x64.Build.0 = Debug|x64
+		{C52EF20F-3143-1AC1-FAC4-BD20669816F2}.Release|x64.ActiveCfg = Release|x64
+		{C52EF20F-3143-1AC1-FAC4-BD20669816F2}.Release|x64.Build.0 = Release|x64
+		{BEBB9A7C-AAF2-9B0D-53DF-81103FF5170F}.Debug|x64.ActiveCfg = Debug|x64
+		{BEBB9A7C-AAF2-9B0D-53DF-81103FF5170F}.Debug|x64.Build.0 = Debug|x64
+		{BEBB9A7C-AAF2-9B0D-53DF-81103FF5170F}.Release|x64.ActiveCfg = Release|x64
+		{BEBB9A7C-AAF2-9B0D-53DF-81103FF5170F}.Release|x64.Build.0 = Release|x64
+		{17795900-0305-880B-6CB3-880B585E880B}.Debug|x64.ActiveCfg = Debug|x64
+		{17795900-0305-880B-6CB3-880B585E880B}.Debug|x64.Build.0 = Debug|x64
+		{17795900-0305-880B-6CB3-880B585E880B}.Release|x64.ActiveCfg = Release|x64
+		{17795900-0305-880B-6CB3-880B585E880B}.Release|x64.Build.0 = Release|x64
+		{A0B25E19-8C6A-A066-F571-79C2E1483B57}.Debug|x64.ActiveCfg = Debug|x64
+		{A0B25E19-8C6A-A066-F571-79C2E1483B57}.Debug|x64.Build.0 = Debug|x64
+		{A0B25E19-8C6A-A066-F571-79C2E1483B57}.Release|x64.ActiveCfg = Release|x64
+		{A0B25E19-8C6A-A066-F571-79C2E1483B57}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

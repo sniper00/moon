@@ -1,0 +1,165 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{BE65480C-AA07-73E2-93C2-86367F03FA32}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>lualib</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>..\..\bin\Debug\</OutDir>
+    <IntDir>..\..\obj\lualib\Debug\</IntDir>
+    <TargetName>lualib</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>..\..\bin\Release\</OutDir>
+    <IntDir>..\..\obj\lualib\Release\</IntDir>
+    <TargetName>lualib</TargetName>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..;..\..\..\third;..\..\..\third\lua;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..;..\..\..\third;..\..\..\third\lua;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\third\fastlz\fastlz.h" />
+    <ClInclude Include="..\..\..\third\kcp\ikcp.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourAlloc.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourAssert.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourCommon.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourMath.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourNavMesh.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourNavMeshBuilder.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourNavMeshQuery.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourNode.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Detour\Include\DetourStatus.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourCrowd.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourLocalBoundary.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourObstacleAvoidance.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourPathCorridor.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourPathQueue.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourCrowd\Include\DetourProximityGrid.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourTileCache\Include\DetourTileCache.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\DetourTileCache\Include\DetourTileCacheBuilder.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\Recast.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\RecastAlloc.h" />
+    <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\RecastAssert.h" />
+    <ClInclude Include="..\..\..\third\yyjson\yyjson.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\lualib-src\lua_aoi.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_buffer.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_fs.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_http.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_json.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_kcp.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_moon.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_navmesh.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_random.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_serialize.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_socket.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_uuid.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_zset.cpp" />
+    <ClCompile Include="..\..\..\third\fastlz\fastlz.c" />
+    <ClCompile Include="..\..\..\third\kcp\ikcp.c" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourAlloc.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourAssert.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourCommon.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourNavMesh.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourNavMeshBuilder.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourNavMeshQuery.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourNode.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourCrowd.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourLocalBoundary.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourObstacleAvoidance.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourPathCorridor.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourPathQueue.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourCrowd\Source\DetourProximityGrid.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourTileCache\Source\DetourTileCache.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\DetourTileCache\Source\DetourTileCacheBuilder.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\Recast.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastAlloc.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastArea.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastAssert.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastContour.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastFilter.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastLayers.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastMesh.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastMeshDetail.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastRasterization.cpp" />
+    <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastRegion.cpp" />
+    <ClCompile Include="..\..\..\third\yyjson\yyjson.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
