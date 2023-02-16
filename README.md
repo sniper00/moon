@@ -52,9 +52,9 @@ Moon is a lightweight online game server framework implement with actor model. O
 
 # Quick Start
 
-## Download Pre-Built Binaries
+[Download Pre-Built Binaries](https://github.com/sniper00/moon/releases)
 
-https://github.com/sniper00/moon/releases
+
 
 ```shell
 # This is an example show put different services in one process
@@ -68,10 +68,10 @@ https://github.com/sniper00/moon/releases
 
 ```
 
-## Demo
+# Demo
 - [MoonDemo](https://github.com/sniper00/MoonDemo.git)
 
-## Build
+# Build
 
 1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support for C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
 
@@ -89,6 +89,6 @@ https://github.com/sniper00/moon/releases
 
 4. If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
 
-## Friend Open Source
+# Friend Open Source
 - [NoahGameFrame](https://github.com/ketoo/NoahGameFrame)
 - [hive](https://github.com/hero1s/hive)
