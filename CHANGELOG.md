@@ -1,3 +1,11 @@
+# v0.7 (2023-01-15)
+- Static link mimalloc default
+- Add lua json config options
+- Set BUFFER_HEAD_RESERVED 16 bytes
+- Add moon.raw_dispatch
+- Add default param for bootstrap service
+- JSON "null" values are represented as lightuserdata
+
 # v0.6 (2022-09-06)
 - break changes
 ```
