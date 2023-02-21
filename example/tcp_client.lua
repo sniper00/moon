@@ -40,10 +40,14 @@ moon.async(function()
         return
     end
 
-    print(fd,"Please input:")
+    print(fd,"Please input('quit' for exit):")
     repeat
         local input = io.read()
         if input then
+            if input == "exit" or input == "quit" then
+                moon.exit(0)
+                return
+            end
             send(fd, input)
             local rdata = session_read(fd)
             print("recv", rdata)

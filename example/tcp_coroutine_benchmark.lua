@@ -2,74 +2,44 @@ local moon = require("moon")
 local socket = require("moon.socket")
 local conf = ...
 
-local function run_slave()
-    local command = {}
+conf.host = conf.host or "127.0.0.1"
+conf.port = conf.port or 6770
+conf.count = conf.count or 1
 
-    command.START =  function(fd)
-        moon.async(function()
-            while true do
-                local n = socket.read(fd,"\r\n")
-                if not n then
-                    --print(fd,"closed")
-                    return
-                end
-                local v =1
-                for _=1, 1000 do
-                    v = v + 1
-                end
-                if n == "PING" then
-                    socket.write(fd, "+PONG\r\n")
-                end
+local function handle_connection(fd)
+    moon.async(function()
+        while true do
+            local n, err = socket.read(fd,"\r\n")
+            if not n then
+                print(fd,"closed", err)
+                return
             end
-        end)
-    end
-
-    moon.dispatch('lua',function(sender, session, cmd, ...)
-        local f = command[cmd]
-        if f then
-            moon.response('lua',sender,session,f(...))
-        else
-            error(string.format("Unknown command %s", tostring(cmd)))
+            if n == "PING" then
+                socket.write(fd, "+PONG\r\n")
+            elseif n== "save" then
+                socket.write(fd, "*2\r\n$4\r\nsave\r\n$23\r\n3600 1 300 100 60 10000\r\n")
+            elseif n== "appendonly" then
+                socket.write(fd, "*2\r\n$10\r\nappendonly\r\n$3\r\nyes\r\n")
+            end
         end
     end)
 end
 
-
-local function run_master(conf)
-    local listenfd  = socket.listen(conf.host,conf.port,moon.PTYPE_SOCKET_TCP)
+moon.async(function()
+    local listenfd  = socket.listen(conf.host, conf.port, moon.PTYPE_SOCKET_TCP)
 
     print(string.format([[
 
         network text benchmark run at %s %d with %d slaves.
-        run benchmark use: redis-benchmark -t ping -p %d -c 1000 -n 100000
+        run benchmark use: redis-benchmark -t ping -p %d -c 100 -n 100000
     ]], conf.host, conf.port, conf.count, conf.port))
 
-    local slave = {}
+    while true do
+        local fd = socket.accept(listenfd)
+        handle_connection(fd)
+    end
+end)
 
-    moon.async(function()
-        for _=1,conf.count do
-            local sid = moon.new_service("lua",{name="slave",file="start_by_config/network_text_benchmark.lua"})
-            table.insert(slave,sid)
-        end
-
-        local balance = 1
-        while true do
-            if balance>#slave then
-                balance = 1
-            end
-            local fd = socket.accept(listenfd,slave[balance])
-            moon.co_call("lua",slave[balance],"START", fd)
-            balance = balance + 1
-        end
-    end)
-
-    moon.shutdown(function()
-        socket.close(listenfd)
-    end)
-end
-
-if conf.master then
-    run_master(conf)
-else
-    run_slave()
-end
+moon.shutdown(function()
+    moon.quit()
+end)
