@@ -1,6 +1,6 @@
 local moon = require("moon")
 local test_assert = require("test_assert")
-local reload = require "hardreload"
+local reload = require "hotfix"
 local require = reload.require
 -- reload.postfix = "_update"	-- for test
 
@@ -16,6 +16,12 @@ source["old"] = [[
     local a = 100
     local b = 200
 
+    local switch = {}
+
+    switch[1] = function()
+        moon.warn("f1", b)
+    end
+
     local M = {}
 
     M.__index = M
@@ -30,6 +36,7 @@ source["old"] = [[
 
     ---Function type upvalue will replaced by new version
     local function tmp(self)
+        switch[1]()
         self.n=self.n+1000
     end
 
@@ -54,6 +61,12 @@ source["new"] = [[
     local a = 1
     local b = 2
 
+    local switch = {}
+
+    switch[1] = function()
+        moon.warn("f1", b)
+    end
+
     local M = {}
 
     M.__index = M
@@ -67,6 +80,7 @@ source["new"] = [[
     end
 
     local function tmp(self)
+        switch[1]()
         self.n=self.n-999
     end
 
@@ -93,7 +107,7 @@ moon.async(function ()
         print(k,v)
     end
     assert(rmd:func() == -100) --- output: before    1000    hello   -100
-    print("Hot Fix Result",reload.reload_simple("old", "new"))
+    print("Hot Fix Result",reload.update("old", "new"))
     assert(rmd:func() == 300) --- outpur: after     1       hello   300
     test_assert.success()
 end)
