@@ -16,10 +16,9 @@ for /f "usebackq tokens=*" %%i in (`!vswherestr!`) do (
   )
   git pull
   echo.!BUILDVCTOOLS! | findstr /C:"2022" >nul &&(
-      "premake5.exe" "vs2022"
+      "!BUILDVCTOOLS!\devenv.com" "Server.sln" /Rebuild "Release"
   ) || (
       echo Error: Cannot find vs2022
       exit /b 2
   )
-  "!BUILDVCTOOLS!\devenv.com" "Server.sln" /Rebuild "Release"
 )
