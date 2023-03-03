@@ -3,7 +3,7 @@
 SETLOCAL EnableDelayedExpansion
 
 if not exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
-  echo "WARNING: You need VS 2017 version 15.2 or later (for vswhere.exe)"
+  echo "WARNING: You need VS 2022 (for vswhere.exe)"
 )
 
 set vswherestr=^"!ProgramFiles(x86)!\Microsoft Visual Studio\Installer\vswhere.exe^" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
