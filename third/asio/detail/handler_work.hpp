@@ -36,6 +36,7 @@ class io_context;
 
 #if !defined(ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
+class any_completion_executor;
 class any_io_executor;
 
 #endif // !defined(ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
@@ -94,11 +95,16 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler& handler)
   {
+#if defined(ASIO_NO_DEPRECATED)
+    asio::prefer(executor_,
+        execution::allocator((get_associated_allocator)(handler))
+      ).execute(ASIO_MOVE_CAST(Function)(function));
+#else // defined(ASIO_NO_DEPRECATED)
     execution::execute(
         asio::prefer(executor_,
-          execution::blocking.possibly,
           execution::allocator((get_associated_allocator)(handler))),
         ASIO_MOVE_CAST(Function)(function));
+#endif // defined(ASIO_NO_DEPRECATED)
   }
 
 private:
@@ -360,9 +366,11 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler&)
   {
-    execution::execute(
-        asio::prefer(executor_, execution::blocking.possibly),
-        ASIO_MOVE_CAST(Function)(function));
+#if defined(ASIO_NO_DEPRECATED)
+    executor_.execute(ASIO_MOVE_CAST(Function)(function));
+#else // defined(ASIO_NO_DEPRECATED)
+    execution::execute(executor_, ASIO_MOVE_CAST(Function)(function));
+#endif // defined(ASIO_NO_DEPRECATED)
   }
 
 private:
@@ -377,10 +385,8 @@ class handler_work_base<
     Executor, CandidateExecutor,
     IoContext, PolymorphicExecutor,
     typename enable_if<
-      is_same<
-        Executor,
-        any_io_executor
-      >::value
+      is_same<Executor, any_completion_executor>::value
+        || is_same<Executor, any_io_executor>::value
     >::type>
 {
 public:
@@ -435,9 +441,11 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler&)
   {
-    execution::execute(
-        asio::prefer(executor_, execution::blocking.possibly),
-        ASIO_MOVE_CAST(Function)(function));
+#if defined(ASIO_NO_DEPRECATED)
+    executor_.execute(ASIO_MOVE_CAST(Function)(function));
+#else // defined(ASIO_NO_DEPRECATED)
+    execution::execute(executor_, ASIO_MOVE_CAST(Function)(function));
+#endif // defined(ASIO_NO_DEPRECATED)
   }
 
 private:
