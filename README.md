@@ -15,6 +15,7 @@ Moon is a lightweight online game server framework implement with actor model. O
 - Cross-platform (Windows, Linux, MacOS)
 - Optimized networking
    - Tcp
+   - Udp/Kcp
    - Websockets
    - Http
 - Lua coroutine based asynchronous
@@ -22,7 +23,7 @@ Moon is a lightweight online game server framework implement with actor model. O
    - Timer
    - Service-to-service communication
    - Interprocess(cluster) communication
-   - Redis/Mysql/Pgsql/Mongodb async client driver
+   - Redis/PostgreSQL/Mongodb/Mysql async client driver
 - High performance and optimized Lua Json library
 - Lua protobuf library
 - Lua filesystem
