@@ -113,7 +113,7 @@ local function coresume(co, ...)
     return ok, err
 end
 
---- 给当前协程映射一个会话ID, 用于稍后`resume`关联的协程。
+--- 给当前协程映射一个session id, 用于稍后`resume`关联的协程。
 --- 可选参数`receiver`用于`moon.co_call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
 ---@param receiver? integer @ receiver's service id
 ---@return integer @ session id
@@ -143,7 +143,7 @@ function moon.cancel_session(sessionid)
 end
 
 ---
---- 向指定服务发送消息,消息内容会根据协议类型调用对应的`pack`函数。
+---向指定服务发送消息,消息内容会根据`PTYPE`类型调用对应的`pack`函数。
 ---@param PTYPE string @protocol type. e. "lua"
 ---@param receiver integer @receiver's service id
 function moon.send(PTYPE, receiver, ...)
@@ -154,7 +154,7 @@ function moon.send(PTYPE, receiver, ...)
     _send(receiver, p.pack(...), "", 0, p.PTYPE)
 end
 
---- 向指定服务发送消息, 不会调用对应的`pack`函数。
+---向指定服务发送消息, 不会调用对应的`pack`函数。
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
 ---@param header? string @Message Header
@@ -172,23 +172,24 @@ function moon.raw_send(PTYPE, receiver, header, data, sessionid)
 end
 
 ---@class service_conf
----@field name string service's name.
----@field file string service's bootstrap lua script file.
----@field unique? boolean Identifies whether the service is unique. Default false.  Unique service can use moon.queryservice(name) get service's id.
----@field threadid? integer Create service in the specified worker thread. Default 0, add to the thread with least number of services.
+---@field name string 表示服务的名称.
+---@field file string 表示服务的启动脚本文件路径.
+---@field type string 表示服务的类型, 暂时只支持`lua`类型的服务, 默认值为`lua`.
+---@field unique? boolean 表示服务是否为唯一服务, 是一个可选的布尔型变量, 默认值为 false。如果设置为 true, 则可以使用 `moon.queryservice(name)` 函数查询服务的 ID
+---@field threadid? integer 表示服务运行的工作线程 ID, 是一个可选的整数型变量，默认值为 0。如果设置为非零值, 则会在指定的工作线程中创建服务。否则服务会被添加到当前具有最少服务数的工作线程中。
 
+--- 创建一个服务
 ---@async
---- Create a service
----@param stype string @service type, options 'lua'
----@param config service_conf @service's config in key-value format
----@return integer @ return service's id, if values is 0, means create service failed
+---@param stype string @ 表示服务的类型, 暂时只支持`lua`类型的服务。
+---@param config service_conf @创建服务的配置, 除了基本配置, 也可以用来传递额外的参数到新创建的服务中。
+---@return integer @ 返回创建的服务ID, 如果ID为0则表示服务创建失败。
 function moon.new_service(stype, config)
     local sessionid = make_session()
     _newservice(stype, sessionid, config)
     return math.tointeger(co_yield())
 end
 
----kill self
+--- 使当前服务退出
 function moon.quit()
     local running = co_running()
     for k, co in pairs(session_id_coroutine) do
@@ -218,22 +219,24 @@ function moon.queryservice(name)
     return name
 end
 
+---把lua对象打包成字符串保存到moon的env中
 function moon.env_packed(name, ...)
     return core.env(name, seri.packs(...))
 end
 
+---获取moon的env中保存的lua对象
 function moon.env_unpacked(name)
     return seri.unpack(core.env(name))
 end
 
---- 获取服务器当前时间
+---获取服务器UTC时间戳
 --- @return integer @ Unix timestamp in seconds
 function moon.time()
     return _now(1000)
 end
 
 --- 获取进程启动时的命令行参数. 如:
---- ```
+--- ```shell
 --- ./moon main.lua arg1 arg2 arg3
 --- return {arg1, arg2, arg3}
 --- ```
@@ -263,16 +266,32 @@ local function routine(fn, ...)
     end
 end
 
----Creates a new coroutine(or resue from coroutine pool) and start it immediately.
----If `fn` lacks call `coroutine.yield`, will run syncronously.
----@param fn fun(...)
----@return thread
+---创建一个新的协程并立即开始执行, 带有`async`标记的函数都需要在`moon.async`调用。如果 fn 函数没有调用 coroutine.yield, 则会同步执行。
+--- ```lua
+--- local function foo(a, b)
+---    print("start foo", a, b)
+---     moon.sleep(1000)
+---     print("end foo", a, b)
+--- end
+--- local function bar(a, b)
+---     print("start bar", a, b)
+---     moon.sleep(500)
+---     print("end bar", a, b)
+--- end
+--- moon.async(foo, 1, 2)
+--- moon.async(bar, 3, 4)
+--- ```
+---
+---@param fn fun(...) @需要异步执行的函数
+---@param ... any @可选参数，传递给 fn 函数
+---@return thread @新创建的协程
 function moon.async(fn, ...)
     local co = tremove(co_pool) or co_create(routine)
     coresume(co, fn, ...)
     return co
 end
 
+---异步唤醒一个协程，可以传递额外的参数
 function moon.wakeup(co, ...)
     local args = { ... }
     moon.timeout(0, function()
@@ -286,12 +305,14 @@ function moon.wakeup(co, ...)
 end
 
 ---return count of running coroutine and total coroutine in coroutine pool
+---@return integer,integer
 function moon.coroutine_num()
     return co_num, #co_pool
 end
 
 ------------------------------------------
 
+---获取指定线程中所有的服务name和id, json格式
 ---@return string
 function moon.scan_services(workerid)
     local sessionid = make_session()
@@ -299,10 +320,10 @@ function moon.scan_services(workerid)
     return co_yield()
 end
 
+--- 向目标服务发送消息, 然后等待返回值, 接收方必须调用`moon.response`返回结果
+---  - 如果请求成功, 返回值为`moon.response(id, response, params...)`中`params`部分。
+---  - 如果请求失败, 返回false和错误消息字符串
 ---@async
---- Send message to target service (id=receiver), and use `coroutine.yield()` wait response
----  - If success, return values are params of `moon.response(id,response, params...)`
----  - If failed, return `false` and `error-message(string)`
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
 ---@return ...
@@ -322,7 +343,7 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
---- Response message to the sender of `moon.co_call`
+--- 用来响应moon.co_call的请求
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
 ---@param sessionid integer
@@ -387,6 +408,7 @@ end
 
 core.callback(_default_dispatch)
 
+---注册消息协议
 function moon.register_protocol(t)
     local PTYPE = t.PTYPE
     if protocol[PTYPE] then
@@ -398,6 +420,7 @@ end
 
 local reg_protocol = moon.register_protocol
 
+---设置指定协议类型的消息处理函数
 ---@param PTYPE string
 ---@param fn fun(sender:integer, session:integer, ...)
 function moon.dispatch(PTYPE, fn)
@@ -407,6 +430,7 @@ function moon.dispatch(PTYPE, fn)
     end
 end
 
+---设置指定协议类型的消息处理函数,不再调用unpack
 ---@param PTYPE string
 ---@param fn fun(m:message_ptr)
 function moon.raw_dispatch(PTYPE, fn)
@@ -583,11 +607,15 @@ reg_protocol {
     end
 }
 
+---移除一个定时器
 ---@param timerid integer @
 function moon.remove_timer(timerid)
     timer_routine[timerid] = false
 end
 
+---创建一个定时器
+---@param mills integer @等待的毫秒数
+---@param fn fun() @调用的函数
 function moon.timeout(mills, fn)
     local timer_session = _timeout(mills)
     timer_routine[timer_session] = fn
