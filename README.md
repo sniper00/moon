@@ -58,15 +58,14 @@ Moon is a lightweight online game server framework implement with actor model. O
 
 
 ```shell
-# This is an example show put different services in one process
-./moon example/main_game.lua
-
 # Run test
 ./moon test/main_test.lua
 
 # Run script in the example directory, e:
 ./moon example/example_timer.lua
 
+# This is a guessing game, example/GuessGame.md
+./moon example/main_game.lua
 ```
 
 # Demo

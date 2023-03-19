@@ -1,140 +1,106 @@
-local socket = require "moon.socket"
----__init__
+---__init__---  初始化进程配置标识
 if _G["__init__"] then
-    local arg = ...
+    local arg = ... ---这里可以获取命令行参数
     return {
-        thread = 16,
+        thread = 8, ---启动8条线程
         enable_stdout = true,
-        logfile = string.format("log/moon-%s-%s.log", arg[1], os.date("%Y-%m-%d-%H-%M-%S")),
-        loglevel = "DEBUG",
+        logfile = string.format("log/game-%s.log", os.date("%Y-%m-%d-%H-%M-%S")),
+        loglevel = "DEBUG", ---默认日志等级
     }
 end
 
--- custom lua module search dir
+-- Define lua module search dir, all services use same lua search path
 local path = table.concat({
-    "../lualib/?.lua",
-    "../service/?.lua",
-},";")
+    "./?.lua",
+    "./?/init.lua",
+    "../lualib/?.lua",   -- moon lualib 搜索路径
+    "../service/?.lua",  -- moon 自带的服务搜索路径，需要用到redisd服务
+    -- Append your lua module search path
+}, ";")
 
-package.path = path.. ";"
+package.path = path .. ";"
 
 local moon = require("moon")
 
+--保存为env所有服务共享PATH配置
 moon.env("PATH", string.format("package.path='%s'", package.path))
 
-local arg = moon.args()
+local socket = require "moon.socket"
 
-local sid = math.tointeger(arg[1])
+--初始化服务配置
+local db_conf= {host = "127.0.0.1", port = 6379, timeout = 1000}
 
-local params = {
-    gate = {host = "127.0.0.1", port = 12345},
-    db = {
-        redis = { host = "127.0.0.1", port = 6379, db = 0, timeout = 1000},
-        pg =  { user = "postgres", password = "123456", host = "127.0.0.1", port = 5432, connect_timeout = 1000, database = "postgres" }
-    }
-}
+local gate_host = "0.0.0.0"
+local gate_port = 8889
+local client_timeout = 300
 
 local services = {
-    -- {
-    --     unique = true,
-    --     name = "mysql",
-    --     file = "../service/sqldriver.lua",
-    --     provider = "moon.db.mysql",
-    --     opts = params.mysql,
-    --     poolsize = 5,
-    --     threadid = 1
-    -- },
-    -- {
-    --     unique = true,
-    --     name = "game_db",
-    --     file = "../service/sqldriver.lua",
-    --     provider = "moon.db.pg",
-    --     opts = params.db.pg,
-    --     poolsize = 5,
-    --     threadid = 2
-    -- },
-    -- {
-    --     unique = true,
-    --     name = "game_redis",
-    --     file = "../service/redisd.lua",
-    --     opts = params.db.redis,
-    --     poolsize = 5,
-    --     threadid = 3
-    -- },
     {
         unique = true,
-        name = "sharetable",
-        file = "../service/sharetable.lua",
-        dir = "table",
-        threadid = 4
+        name = "db",
+        file = "../service/redisd.lua",
+        threadid = 1, ---独占线程
+        poolsize = 5, ---连接池
+        opts = db_conf
     },
     {
         unique = true,
-        name = "gate",
-        file = "game/service_gate.lua",
-        threadid = 5,
-        host = params.gate.host,
-        port = params.gate.port
+        name = "center",
+        file = "game/service_center.lua",
+        threadid = 2,
     },
 }
 
-for i=1,10 do
-    table.insert(services, {
-        unique = true,
-        name = "sence"..i,
-        file = "game/service_sence.lua",
-    })
-end
-
-local addrs = {}
-moon.async(function()
-    local fd = socket.connect(params.db.pg.host, params.db.pg.port, moon.PTYPE_SOCKET_TCP, 1000)
-    if fd then
-        socket.close(fd)
-        table.insert(services,{
-            unique = true,
-            name = "game_db",
-            file = "../service/sqldriver.lua",
-            provider = "moon.db.pg",
-            opts = params.db.pg,
-            poolsize = 5,
-            threadid = 2
-        })
-    end
-
-    fd = socket.connect(params.db.redis.host, params.db.redis.port, moon.PTYPE_SOCKET_TCP, 1000)
-    if fd then
-        socket.close(fd)
-        table.insert(services,{
-            unique = true,
-            name = "game_redis",
-            file = "../service/redisd.lua",
-            opts = params.db.redis,
-            poolsize = 5,
-            threadid = 3
-        })
-    end
-
-    for _, conf in ipairs(services) do
-        local service_type = conf.service_type or "lua"
-        local addr = moon.new_service(service_type, conf)
-        if 0 == addr then
-            moon.exit(-1)
+moon.async(function ()
+    for _, one in ipairs(services) do
+        local id = moon.new_service("lua", one)
+        if 0 == id then
+            moon.exit(-1) ---如果唯一服务创建失败，立刻退出进程
             return
         end
-        table.insert(addrs, addr)
     end
 
-    moon.sleep(5000)
+    local listenfd = socket.listen(gate_host, gate_port, moon.PTYPE_SOCKET_TCP)
+    if 0 == listenfd then
+        moon.exit(-1) ---监听端口失败，立刻退出进程
+        return
+    end
 
-    moon.exit(0)
+    print("server start", gate_host, gate_port)
+
+    while true do
+        local id = moon.new_service("lua", {
+            name = "user",
+            file = "game/service_user.lua"
+        })
+
+        local fd, err = socket.accept(listenfd, id)
+        if not fd then
+            print("accept",err)
+            moon.kill(id)
+        else
+            moon.send("lua", id,"start", fd, client_timeout)
+        end
+    end
+
 end)
 
-moon.shutdown(function()
-    moon.async(function()
-        for _, addr in ipairs(addrs) do
-            moon.kill(addr)
+moon.shutdown(function ()
+    moon.async(function (...)
+        assert(moon.co_call("lua", moon.queryservice("center"), "shutdown"))
+        moon.raw_send("system", moon.queryservice("db"), "wait_save")
+
+        ---wait all service quit
+        while true do
+            local size = moon.server_stats("service.count")
+            if size == 1 then
+                break
+            end
+            moon.sleep(200)
+            print("bootstrap wait all service quit, now count:", size)
         end
+
         moon.quit()
     end)
 end)
+
