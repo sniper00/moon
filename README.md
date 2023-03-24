@@ -9,7 +9,7 @@
 [![windows-vs2022](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml)
 
 # Moon
-Moon is a lightweight online game server framework implement with actor model. One thread may have 1-N service(luaVM), they use message queue for communication. There are many features for game server development:
+Moon is a lightweight game server framework based on the actor model. One worker thread can have one or multiple actors (services), which communicate with each other through message queues. There are many features for game server development:
 
 - Less core code, easy to learn
 - Cross-platform (Windows, Linux, MacOS)
@@ -18,11 +18,11 @@ Moon is a lightweight online game server framework implement with actor model. O
    - Udp/Kcp
    - Websockets
    - Http
-- Lua coroutine based asynchronous
+- Asynchronous based on Lua coroutines
    - Coroutine-socket
    - Timer
-   - Service-to-service communication
-   - Interprocess(cluster) communication
+   - Inter-service communication
+   - Inter-process communication
    - Redis/PostgreSQL/Mongodb/Mysql async client driver
 - High performance and optimized Lua Json library
 - Lua protobuf library
@@ -73,7 +73,7 @@ Moon is a lightweight online game server framework implement with actor model. O
 
 # Build
 
-1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support for C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
 
 2. Clone source code 
 
