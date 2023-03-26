@@ -139,7 +139,7 @@ namespace moon
         thr_self(&tid);
         return static_cast<size_t>(tid);
 #else //Default to standard C++11 (OSX and other Unix)
-        return static_cast<size_t>(std::hash<std::thread::id>()(std::this_thread::get_id()));
+        return static_cast<size_t>(std::hash<std::thread::id>()(std::this_thread::get_id()))%10000000;
 #endif
     }
 
