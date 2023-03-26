@@ -190,19 +190,15 @@ int main(int argc, char* argv[])
         server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
-        {
-            auto p = fs::current_path();
-            p /= "lualib";
-            if (!fs::exists(p))
-            {
-                p = directory::module_path();
-                p /= "lualib";
-            }
-            std::string lualibdir = p.string();
-            moon::replace(lualibdir, "\\", "/");
-            server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path\n", lualibdir.data()));
-        }
+        //Search and set the `lualib` path.
+        auto libpath = fs::current_path() / "lualib";
+        if (!fs::exists(libpath))
+            libpath = directory::module_path() / "lualib";
+        std::string lualibdir = libpath.string();
+        moon::replace(lualibdir, "\\", "/");
+        server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path;", lualibdir.data()));
 
+        //Change the working directory to the directory where the opened file is located.
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());
         directory::working_directory = fs::current_path();
 
@@ -219,7 +215,10 @@ int main(int argc, char* argv[])
         conf->name = "bootstrap";
         conf->source = fs::path(bootstrap).filename().string();
         conf->memlimit = std::numeric_limits<size_t>::max();
-        conf->params = "return {}";
+        auto path = server_->get_env("PATH");
+        if (path)
+            conf->params.append(*path);
+        conf->params.append("return {}");
         server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 

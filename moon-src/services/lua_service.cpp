@@ -79,28 +79,18 @@ lua_service::~lua_service()
 
 static int protect_init(lua_State* L)
 {
-    const char* source = (const char*)lua_touserdata(L, 1);
-    const char* initialize_string = (const char*)lua_touserdata(L, 2);
+    const moon::service_conf* conf = (const moon::service_conf*)lua_touserdata(L, 1);
 
     luaL_openlibs(L);
     open_custom_libs(L);
 
-    if ((luaL_loadfile(L, source)) != LUA_OK)
-    {
-        lua_pushfstring(L, "loadfile %s", lua_tostring(L, -1));
+    if ((luaL_loadfile(L, conf->source.data())) != LUA_OK)
         return 1;
-    }
 
-    int nparam = lua_gettop(L);
-    if ((luaL_dostring(L, initialize_string)) != LUA_OK)
-    {
-        lua_pushfstring(L, "initialize %s", lua_tostring(L, -1));
+    if ((luaL_dostring(L, conf->params.data())) != LUA_OK)
         return 1;
-    }
 
-    nparam = lua_gettop(L) - nparam;
-
-    lua_call(L, nparam, 0);
+    lua_call(L, 1, 0);
     return 0;
 };
 
@@ -116,20 +106,14 @@ bool lua_service::init(const moon::service_conf& conf)
     lua_gc(L, LUA_GCSTOP, 0);
     lua_gc(L, LUA_GCGEN, 0, 0);
 
-    std::string initialize_string;
-    auto lua_path = server_->get_env("PATH");
-    if (lua_path)
-        initialize_string.append(*lua_path);
-    initialize_string.append(conf.params);
 
     lua_pushcfunction(L, traceback);
     int trace_fn = lua_gettop(L);
 
     lua_pushcfunction(L, protect_init);
-    lua_pushlightuserdata(L, (void*)conf.source.data());
-    lua_pushlightuserdata(L, initialize_string.data());
+    lua_pushlightuserdata(L,(void*)&conf);
 
-    if (lua_pcall(L, 2, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1)
+    if (lua_pcall(L, 1, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1)
     {
         CONSOLE_ERROR(logger(), "new_service lua_error:\n%s.", lua_tostring(L, -1));
         return false;
