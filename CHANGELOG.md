@@ -1,3 +1,17 @@
+# 2023-03-27
+- Add windows and linux build file
+- Update recastnavigation version
+- Update hotfix lib
+- Update asio version
+- Pretty print thread ID on MACOS system
+- Break changes
+```
+seri.concat -> buffer.concat
+moon.co_call -> moon.call
+remove moon.new_service's first param
+remove seri.sep_concat
+```
+
 # v0.7 (2023-01-15)
 - Static link mimalloc default
 - Add lua json config options
