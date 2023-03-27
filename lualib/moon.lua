@@ -114,7 +114,7 @@ local function coresume(co, ...)
 end
 
 --- 给当前协程映射一个session id, 用于稍后`resume`关联的协程。
---- 可选参数`receiver`用于`moon.co_call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
+--- 可选参数`receiver`用于`moon.call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
 ---@param receiver? integer @ receiver's service id
 ---@return integer @ session id
 function moon.make_session(receiver)
@@ -174,18 +174,16 @@ end
 ---@class service_conf
 ---@field name string 表示服务的名称.
 ---@field file string 表示服务的启动脚本文件路径.
----@field type string 表示服务的类型, 暂时只支持`lua`类型的服务, 默认值为`lua`.
 ---@field unique? boolean 表示服务是否为唯一服务, 是一个可选的布尔型变量, 默认值为 false。如果设置为 true, 则可以使用 `moon.queryservice(name)` 函数查询服务的 ID
 ---@field threadid? integer 表示服务运行的工作线程 ID, 是一个可选的整数型变量，默认值为 0。如果设置为非零值, 则会在指定的工作线程中创建服务。否则服务会被添加到当前具有最少服务数的工作线程中。
 
 --- 创建一个服务
 ---@async
----@param stype string @ 表示服务的类型, 暂时只支持`lua`类型的服务。
 ---@param config service_conf @创建服务的配置, 除了基本配置, 也可以用来传递额外的参数到新创建的服务中。
 ---@return integer @ 返回创建的服务ID, 如果ID为0则表示服务创建失败。
-function moon.new_service(stype, config)
+function moon.new_service(config)
     local sessionid = make_session()
-    _newservice(stype, sessionid, config)
+    _newservice(sessionid, config)
     return math.tointeger(co_yield())
 end
 
@@ -328,14 +326,14 @@ end
 ---@param receiver integer @receiver service's id
 ---@return ...
 ---@nodiscard
-function moon.co_call(PTYPE, receiver, ...)
+function moon.call(PTYPE, receiver, ...)
     local p = protocol[PTYPE]
     if not p then
         error(string.format("moon call unknown PTYPE[%s] message", PTYPE))
     end
 
     if receiver == 0 then
-        error("moon co_call receiver == 0")
+        error("moon call receiver == 0")
     end
 
     local sessionid = make_session(receiver)
@@ -343,7 +341,7 @@ function moon.co_call(PTYPE, receiver, ...)
     return co_yield()
 end
 
---- 用来响应moon.co_call的请求
+--- 用来响应moon.call的请求
 ---@param PTYPE string @protocol type
 ---@param receiver integer @receiver service's id
 ---@param sessionid integer

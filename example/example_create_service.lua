@@ -30,7 +30,7 @@ else
 
     moon.async(function()
         -- 动态创建服务, 配置同时可以用来传递一些信息
-        moon.new_service("lua", {
+        moon.new_service( {
             name = "create_service",
             file = "example_create_service.lua",
             message = "Hello create_service",
@@ -39,7 +39,7 @@ else
         })
 
         -- 动态创建服务，获得服务ID，方便用来通信
-        local serviceid =  moon.new_service("lua", {
+        local serviceid =  moon.new_service( {
             name = "create_service",
             file = "example_create_service.lua",
             slave = true,

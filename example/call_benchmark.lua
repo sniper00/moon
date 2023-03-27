@@ -14,7 +14,7 @@ if arg and arg.runner then
     else
         moon.dispatch("lua", function(sender, session, ...)
             for i=1,onecount do
-                local ok,err= moon.co_call("lua", arg.target, "hello")
+                local ok,err= moon.call("lua", arg.target, "hello")
                 assert(ok, err)
             end
             moon.send("lua", arg.main, moon.clock())
@@ -37,14 +37,14 @@ else
     moon.async(function()
         local sender_addrs = {}
         for i=1,nsender do
-            local receiver = moon.new_service("lua", {
+            local receiver = moon.new_service({
                 name="test",
                 file = "call_benchmark.lua",
                 runner = true,
                 type = "receiver"
             })
 
-            local addr = moon.new_service("lua", {
+            local addr = moon.new_service({
                 name="test",
                 file = "call_benchmark.lua",
                 runner = true,

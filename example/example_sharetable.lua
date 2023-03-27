@@ -70,7 +70,7 @@ else
 
         io.writefile("./table/"..name..".lua", content_old)
 
-        moon.new_service("lua",{
+        moon.new_service({
             unique = true,
             name = "sharetable",
             file = "../service/sharetable.lua",
@@ -78,7 +78,6 @@ else
         })
 
         agent =  moon.new_service(
-            "lua",
             {
                 name = "agent",
                 file = "example_sharetable.lua",
@@ -86,13 +85,15 @@ else
             }
         )
 
-        print(moon.co_call("lua", agent, "LOAD"))
+        require("fs").mkdir("./table")
+
+        print(moon.call("lua", agent, "LOAD"))
 
         io.writefile("./table/"..name..".lua", content_new)
         print(sharetable.loadfile(name..".lua"))
         require("fs").remove("./table/"..name..".lua")
 
-        print(moon.co_call("lua", agent, "UPDATE"))
+        print(moon.call("lua", agent, "UPDATE"))
 
         moon.kill(agent)
         moon.sleep(1000)

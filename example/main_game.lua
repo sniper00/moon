@@ -53,7 +53,7 @@ local services = {
 
 moon.async(function ()
     for _, one in ipairs(services) do
-        local id = moon.new_service("lua", one)
+        local id = moon.new_service( one)
         if 0 == id then
             moon.exit(-1) ---如果唯一服务创建失败，立刻退出进程
             return
@@ -69,7 +69,7 @@ moon.async(function ()
     print("server start", gate_host, gate_port)
 
     while true do
-        local id = moon.new_service("lua", {
+        local id = moon.new_service( {
             name = "user",
             file = "game/service_user.lua"
         })
@@ -87,7 +87,7 @@ end)
 
 moon.shutdown(function ()
     moon.async(function (...)
-        assert(moon.co_call("lua", moon.queryservice("center"), "shutdown"))
+        assert(moon.call("lua", moon.queryservice("center"), "shutdown"))
         moon.raw_send("system", moon.queryservice("db"), "wait_save")
 
         ---wait all service quit

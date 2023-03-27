@@ -120,7 +120,7 @@ client_num = conf.client_num
 send_count = conf.count
 
 moon.async(function()
-    moon.new_service("lua", {
+    moon.new_service( {
         name = "server",
         file = "tcp_benchmark.lua",
     })

@@ -65,7 +65,7 @@ else
     kcp.listen("127.0.0.1", 12347, on_connect, on_close)
 
     moon.async(function ()
-        moon.new_service("lua",  {
+        moon.new_service(  {
             name = "receiver",
             file = "example_kcp.lua",
             client = true

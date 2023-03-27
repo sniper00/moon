@@ -13,7 +13,7 @@ if conf and conf.slave then
 else
     moon.async(function()
         while true do
-            moon.new_service("lua", {
+            moon.new_service( {
                 name = "create_service",
                 file = "create_service_benchmark.lua",
                 message = "Hello create_service",

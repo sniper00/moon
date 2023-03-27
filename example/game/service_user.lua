@@ -40,7 +40,7 @@ function client_command.login(name)
     client.name = name
     client.score = redisd.call(moon.queryservice("db"), "HGET", client.name, "score") or 0
     command.send_to_client("登录成功, 当前积分:"..client.score)
-    client.addr_room = moon.co_call("lua", addr_center, "online", client)
+    client.addr_room = moon.call("lua", addr_center, "online", client)
 end
 
 function client_command.score()

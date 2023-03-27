@@ -176,21 +176,21 @@ local sharetable =  setmetatable ( {} , {
 })
 
 function sharetable.loadfile(filename, ...)
-	return moon.co_call( "lua", sharetable.address, "loadfile", filename, ...)
+	return moon.call( "lua", sharetable.address, "loadfile", filename, ...)
 end
 
 function sharetable.loadstring(filename, source, ...)
-	return moon.co_call( "lua", sharetable.address, "loadstring", filename, source, ...)
+	return moon.call( "lua", sharetable.address, "loadstring", filename, source, ...)
 end
 
 function sharetable.clients()
-	return moon.co_call( "lua", sharetable.address, "clients")
+	return moon.call( "lua", sharetable.address, "clients")
 end
 
 local RECORD = {}
 ---filename: xxx.lua
 function sharetable.query(filename)
-	local newptr, err = moon.co_call( "lua", sharetable.address, "query", filename)
+	local newptr, err = moon.call( "lua", sharetable.address, "query", filename)
 	if newptr then
 		local t = core.clone(newptr)
 		local map = RECORD[filename]
@@ -206,7 +206,7 @@ end
 
 ---@param filelist? string[] @ {xxx.lua,yyy.lua,zzz.lua}
 function sharetable.queryall(filelist)
-    local conf_ptr,err = moon.co_call( "lua", sharetable.address, "queryall", filelist)
+    local conf_ptr,err = moon.call( "lua", sharetable.address, "queryall", filelist)
     assert(conf_ptr,err)
     local tbconf = {}
     for filename, newptr in pairs(conf_ptr) do

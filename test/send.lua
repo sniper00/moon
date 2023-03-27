@@ -43,7 +43,6 @@ else
 
     moon.async(function ()
         receiver = moon.new_service(
-            "lua",
             {
                 name = "test_send",
                 file = "send.lua",

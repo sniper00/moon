@@ -13,7 +13,7 @@ local max_player_number = 2
 --简单的匹配策略
 local function update_match()
     if #match_queue >= max_player_number then
-        local addr_room = moon.new_service("lua", {
+        local addr_room = moon.new_service( {
             name = "room",
             file = "game/service_room.lua"
         })

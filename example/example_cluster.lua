@@ -212,8 +212,7 @@ moon.async(function ()
     moon.env("NODE",  "1")
 
     for _, cfg in ipairs(services) do
-        local service_type = conf.service_type or "lua"
-        local addr = moon.new_service(service_type, cfg)
+        local addr = moon.new_service(cfg)
         if 0 == addr then
             moon.exit(-1)
             return
@@ -221,7 +220,7 @@ moon.async(function ()
         table.insert(addrs, addr)
 
         if cfg.name == "cluster" then
-            print(moon.co_call("lua", moon.queryservice("cluster"), "Start"))
+            print(moon.call("lua", moon.queryservice("cluster"), "Start"))
         end
     end
 end)
