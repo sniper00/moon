@@ -16,10 +16,9 @@ function fs.listdir(dir, depth, ext) end
 
 function fs.isdir(dir) end
 
----@param dir1 string
----@param dir2 string
+---Join one or more path
 ---@return string
-function fs.join(dir1, dir2) end
+function fs.join(...) end
 
 ---@param dir string
 function fs.exists(dir) end

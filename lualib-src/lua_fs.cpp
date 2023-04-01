@@ -50,12 +50,20 @@ static int lfs_isdir(lua_State* L)
 
 static int lfs_join(lua_State* L)
 {
+    int n = lua_gettop(L);
+    if (0 == n)
+        return 0;
+
     try
     {
-        fs::path dir1 = fs::path{ lua_check<std::string_view>(L, 1) };
-        fs::path dir2 = fs::path{ lua_check<std::string_view>(L, 2) };
-        dir1 /= dir2;
-        std::string s = dir1.string();
+        fs::path dir;
+        for (int i = 1; i <= n; i++) 
+        {
+            if (lua_type(L, i) != LUA_TSTRING)
+                throw std::runtime_error("neen string path");
+            dir /= fs::path{lua_tostring(L,i)};
+        }
+        std::string s = dir.string();
         lua_pushlstring(L, s.data(), s.size());
         return 1;
     }
