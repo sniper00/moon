@@ -94,7 +94,7 @@ namespace moon
 
                 net2host(header_);
 
-                bool fin = (header_ != std::numeric_limits<message_size_t>::max());
+                bool fin = (header_ != MESSAGE_CONTINUED_FLAG);
                 if (!fin && !enum_has_any_flag(flag_, enable_chunked::receive)) {
                     error(make_error_code(moon::error::read_message_too_big));
                     return;
