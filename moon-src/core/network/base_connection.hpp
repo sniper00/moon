@@ -69,10 +69,8 @@ namespace moon
                 }
             }
 
-            if (!sending_)
-            {
-                post_send();
-            }
+            post_send();
+
             return true;
         }
 
@@ -175,7 +173,7 @@ namespace moon
 
         void post_send()
         {
-            if (queue_.size() == 0)
+            if (sending_ || queue_.size() == 0)
                 return;
 
             for (const auto& buf : queue_)

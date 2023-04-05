@@ -11,11 +11,13 @@ local PORT = conf.port or 12345
 socket.on("accept",function(fd, msg)
     print("accept ", fd, moon.decode(msg, "Z"))
     -- 设置read超时，单位秒
-    socket.settimeout(fd, 10)
-    -- 该协议默认只支持最大长度32KB的数据收发
-    -- 设置标记可以把超多32KB的数据拆分成多个包
-    -- 可以单独设置独写的标记，r:表示读。w:表示写
+    socket.settimeout(fd, 60)
+    -- 该协议默认只支持最大长度65534字节的数据收发
+    -- 可以设置标记允许对超过这个长度的数据包进行分包 r:表示读。w:表示写
+    -- 为了防止缓冲区攻击,尽量不要允许客户端上行消息分包
     socket.set_enable_chunked(fd, "w")
+
+    -- socket.set_enable_chunked(fd, "rw")
 end)
 
 socket.on("message",function(fd, msg)

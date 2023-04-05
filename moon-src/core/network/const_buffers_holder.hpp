@@ -29,7 +29,8 @@ namespace moon
             headers_.emplace_front(header);
             message_size_t& value = headers_.front();
             buffers_.emplace_back(reinterpret_cast<const char*>(&value), sizeof(value));
-            buffers_.emplace_back(data, len);
+            if(len>0)
+                buffers_.emplace_back(data, len);
         }
 
         const auto& buffers() const

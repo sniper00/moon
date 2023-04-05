@@ -92,8 +92,8 @@ namespace moon
                 switch (static_cast<error>(ev))
                 {
                 default:
-                case error::read_message_too_big:  return "The socket read message  exceeded the locally configured limit";
-                case error::write_message_too_big: return "The socket write message  exceeded the locally configured limit";
+                case error::read_message_too_big:  return "The socket read message exceeded the locally configured limit";
+                case error::write_message_too_big: return "The socket write message exceeded the locally configured limit";
                 case error::read_timeout:  return "Socket read timeout";
                 case error::send_queue_too_big: return "The socket send message queue size exceeded configured(config.hpp) limit";
                 case error::invalid_read_operation: return "invalid read operation";
