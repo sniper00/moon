@@ -16,6 +16,8 @@ for /f "usebackq tokens=*" %%i in (`!vswherestr!`) do (
   )
   git pull
   echo.!BUILDVCTOOLS! | findstr /C:"2022" >nul &&(
+	git submodule init
+	git submodule update
       "!BUILDVCTOOLS!\devenv.com" "Server.sln" /Rebuild "Release"
   ) || (
       echo Error: Cannot find vs2022
