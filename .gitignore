@@ -18,4 +18,5 @@
 build/bin/
 build/obj/
 exmaple/log/
+test/twitter-out.json
 
