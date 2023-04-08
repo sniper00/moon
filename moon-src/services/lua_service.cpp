@@ -198,7 +198,7 @@ void lua_service::dispatch(message* msg)
         else
         {
             msg->set_sessionid(-msg->sessionid());
-            server_->response(msg->sender(), "dispatch "sv, error, msg->sessionid(), PTYPE_ERROR);
+            server_->response(msg->sender(), error, msg->sessionid(), PTYPE_ERROR);
         }
     }
     catch (const std::exception& e)

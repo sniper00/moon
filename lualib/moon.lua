@@ -151,24 +151,21 @@ function moon.send(PTYPE, receiver, ...)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-    _send(receiver, p.pack(...), "", 0, p.PTYPE)
+    _send(receiver, p.pack(...), 0, p.PTYPE)
 end
 
 ---向指定服务发送消息, 不会调用对应的`pack`函数。
 ---@param PTYPE string @协议类型
 ---@param receiver integer @接收者服务id
----@param header? string @Message Header
----@param data? string|buffer_ptr|integer @消息内容
+---@param data? string|buffer_ptr @消息内容
 ---@param sessionid? integer
-function moon.raw_send(PTYPE, receiver, header, data, sessionid)
+function moon.raw_send(PTYPE, receiver, data, sessionid)
     local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-
-    header = header or ''
     sessionid = sessionid or 0
-    _send(receiver, data, header, sessionid, p.PTYPE)
+    _send(receiver, data, sessionid, p.PTYPE)
 end
 
 ---@class service_conf
@@ -337,7 +334,7 @@ function moon.call(PTYPE, receiver, ...)
     end
 
     local sessionid = make_session(receiver)
-    _send(receiver, p.pack(...), "", sessionid, p.PTYPE)
+    _send(receiver, p.pack(...), sessionid, p.PTYPE)
     return co_yield()
 end
 
@@ -356,7 +353,7 @@ function moon.response(PTYPE, receiver, sessionid, ...)
         error("moon response receiver == 0")
     end
 
-    _send(receiver, p.pack(...), '', sessionid, p.PTYPE)
+    _send(receiver, p.pack(...), sessionid, p.PTYPE)
 end
 
 ------------------------------------
@@ -469,14 +466,12 @@ reg_protocol {
         return ...
     end,
     dispatch = function(msg)
-        local sessionid, content, data = _decode(msg, "EHZ")
-        if data and #data > 0 then
-            content = content .. ":" .. data
-        end
+        local sessionid, data = _decode(msg, "EZ")
+        data = data or ""
         local co = session_id_coroutine[sessionid]
         if co then
             session_id_coroutine[sessionid] = nil
-            coresume(co, false, content)
+            coresume(co, false, data)
             return
         end
     end
@@ -484,14 +479,13 @@ reg_protocol {
 
 local system_command = {}
 
-system_command._service_exit = function(sender, msg)
-    local data = _decode(msg, "Z")
+system_command._service_exit = function(sender, what)
     for k, v in pairs(session_watcher) do
         if v == sender then
             local co = session_id_coroutine[k]
             if co then
                 session_id_coroutine[k] = nil
-                coresume(co, false, data)
+                coresume(co, false, what)
                 return
             end
         end
@@ -507,13 +501,14 @@ reg_protocol {
     PTYPE = moon.PTYPE_SYSTEM,
     israw = true,
     pack = function(...)
-        return ...
+        return table.concat({...},",")
     end,
     dispatch = function(msg)
-        local sender, header = _decode(msg, "SH")
-        local func = system_command[header]
+        local sender, data = _decode(msg, "SZ")
+        local params = string.split(data, ',')
+        local func = system_command[params[1]]
         if func then
-            func(sender, msg)
+            func(sender, table.unpack(params,2))
         end
     end
 }

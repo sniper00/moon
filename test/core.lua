@@ -7,14 +7,7 @@ do
 	moon.raw_dispatch("text", function(msg)
 		assert(moon.decode(msg, "Z") == "123")
 	end)
-	local perfabid = moon.make_prefab("123")
-	moon.raw_send("text", moon.id, "", perfabid, 0)
-	moon.raw_send("text", moon.id, "", perfabid, 0)
-	moon.raw_send("text", moon.id, "", perfabid, 0)
-	moon.raw_send("text", moon.id, "", perfabid, 0)
-
-	assert(moon.make_prefab("123"))
-	assert(moon.make_prefab(seri.pack("1", 2, 3, { a = 1, b = 2 }, nil)))
+	moon.raw_send("text", moon.id, "123", 0)
 
 	moon.env("1", "2")
 	assert(moon.env("1") == "2")

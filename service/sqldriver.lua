@@ -145,7 +145,7 @@ if conf.name then
             else
                 moon.async(function()
                     local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
-                    moon.raw_send("lua", sender, "", unsafe_buf, sessionid)
+                    moon.raw_send("lua", sender, unsafe_buf, sessionid)
                 end)
             end
         else
@@ -193,7 +193,7 @@ else
         hash = hash or 1
         local buf = concat(sql)
         assert(wfront(buf, packstr("Q", hash)))
-        raw_send("lua", db, "", buf, 0)
+        raw_send("lua", db, buf, 0)
     end
 
     function client.query(db, sql, hash)
@@ -201,7 +201,7 @@ else
         local sessionid = moon.make_session(db)
         local buf = concat(sql)
         assert(wfront(buf, packstr("Q", hash)))
-        raw_send("lua", db, "", buf, sessionid)
+        raw_send("lua", db, buf, sessionid)
         return yield()
     end
 

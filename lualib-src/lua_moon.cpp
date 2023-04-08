@@ -139,38 +139,16 @@ static int lmoon_cpu(lua_State* L)
     return 1;
 }
 
-static int lmoon_make_prefab(lua_State* L)
-{
-    lua_service* S = lua_service::get(L);
-    intptr_t id = S->get_worker()->make_prefab(moon_to_buffer(L, 1));
-    luaL_argcheck(L, id != 0, 1, "do not use same buffer pointer twice");
-    lua_pushinteger(L, id);
-    return 1;
-}
-
 static int lmoon_send(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     uint32_t receiver = (uint32_t)luaL_checkinteger(L, 1);
     luaL_argcheck(L, receiver > 0, 1, "receiver must > 0");
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 5);
-    luaL_argcheck(L, type > 0, 5, "PTYPE must > 0");
+    int32_t sessionid = (int32_t)luaL_checkinteger(L, 3);
+    uint8_t type = (uint8_t)luaL_checkinteger(L, 4);
+    luaL_argcheck(L, type > 0, 4, "PTYPE must > 0");
 
-    std::string_view header = lua_check<std::string_view>(L, 3);
-    int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
-
-    if (lua_type(L, 2) == LUA_TNUMBER)
-    {
-        intptr_t prefabid = (intptr_t)lua_tointeger(L, 2);
-        if (!S->get_worker()->send_prefab(S->id(), receiver, prefabid, header, sessionid, type))
-        {
-            return luaL_error(L, "can not find prefab data. id %" PRId64, prefabid);
-        }
-    }
-    else
-    {
-        S->get_server()->send(S->id(), receiver, moon_to_buffer(L, 2), header, sessionid, type);
-    }
+    S->get_server()->send(S->id(), receiver, moon_to_buffer(L, 2), sessionid, type);
     return 0;
 }
 
@@ -361,31 +339,9 @@ static int message_decode(lua_State* L)
         case 'E':
             lua_pushinteger(L, m->sessionid());
             break;
-        case 'H':
-        {
-            std::string_view header = m->header();
-            if (!header.empty())
-            {
-                lua_pushlstring(L, header.data(), header.size());
-            }
-            else
-            {
-                lua_pushnil(L);
-            }
-            break;
-        }
         case 'Z':
-        {
-            if (m->data()!=nullptr)
-            {
-                lua_pushlstring(L, m->data(), m->size());
-            }
-            else
-            {
-                lua_pushnil(L);
-            }
+            m->data()!=nullptr?lua_pushlstring(L, m->data(), m->size()):lua_pushnil(L);
             break;
-        }
         case 'N':
         {
             lua_pushinteger(L, m->size());
@@ -425,7 +381,6 @@ static int message_clone(lua_State* L)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     message* nm = new message((const buffer_ptr_t&)*m);
     nm->set_broadcast(m->broadcast());
-    nm->set_header(m->header());
     nm->set_receiver(m->receiver());
     nm->set_sender(m->sender());
     nm->set_sessionid(m->sessionid());
@@ -449,15 +404,12 @@ static int message_redirect(lua_State* L)
     message* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
-    size_t len = 0;
-    const char* sz = luaL_checklstring(L, 2, &len);
-    m->set_header(std::string_view{ sz, len });
-    m->set_receiver((uint32_t)luaL_checkinteger(L, 3));
-    m->set_type((uint8_t)luaL_checkinteger(L, 4));
-    if (top > 4)
+    m->set_receiver((uint32_t)luaL_checkinteger(L, 2));
+    m->set_type((uint8_t)luaL_checkinteger(L, 3));
+    if (top > 3)
     {
-        m->set_sender((uint32_t)luaL_checkinteger(L, 5));
-        m->set_sessionid((int32_t)luaL_checkinteger(L, 6));
+        m->set_sender((uint32_t)luaL_checkinteger(L, 4));
+        m->set_sessionid((int32_t)luaL_checkinteger(L, 5));
     }
     return 0;
 }
@@ -483,7 +435,6 @@ extern "C" {
         { "log", lmoon_log},
         { "loglevel", lmoon_loglevel},
         { "cpu", lmoon_cpu},
-        { "make_prefab", lmoon_make_prefab},
         { "send", lmoon_send},
         { "new_service", lmoon_new_service},
         { "kill", lmoon_kill},

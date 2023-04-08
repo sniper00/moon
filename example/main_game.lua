@@ -86,7 +86,7 @@ moon.async(function ()
 end)
 
 moon.shutdown(function ()
-    moon.async(function (...)
+    moon.async(function ()
         assert(moon.call("lua", moon.queryservice("center"), "shutdown"))
         moon.raw_send("system", moon.queryservice("db"), "wait_save")
 

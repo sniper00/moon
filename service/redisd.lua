@@ -177,7 +177,7 @@ if conf.name then
                 else
                     if sessionid ~= 0 then
                         local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
-                        moon.raw_send("lua", sender, "", unsafe_buf, sessionid)
+                        moon.raw_send("lua", sender, unsafe_buf, sessionid)
                     end
                 end
             end)
@@ -230,7 +230,7 @@ else
         local sessionid = moon.make_session(db)
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", 1)))
-        raw_send("lua", db, "", buf, sessionid)
+        raw_send("lua", db, buf, sessionid)
         return yield()
     end
 
@@ -241,7 +241,7 @@ else
         hash = hash or 1
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", hash)))
-        raw_send("lua", db,"", buf, sessionid)
+        raw_send("lua", db, buf, sessionid)
         return yield()
     end
 
@@ -250,7 +250,7 @@ else
     function client.send(db, ...)
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", 1)))
-        raw_send("lua", db, "", buf, 0)
+        raw_send("lua", db, buf, 0)
     end
 
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
@@ -259,7 +259,7 @@ else
         hash = hash or 1
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", hash)))
-        raw_send("lua", db, "", buf, 0)
+        raw_send("lua", db, buf, 0)
     end
     return client
 end

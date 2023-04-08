@@ -37,7 +37,6 @@ namespace moon
             , sender_(std::exchange(other.sender_, 0))
             , receiver_(std::exchange(other.receiver_, 0))
             , sessionid_(std::exchange(other.sessionid_, 0))
-            , header_(std::move(other.header_))
             , data_(std::move(other.data_))
         {
         }
@@ -50,7 +49,6 @@ namespace moon
                 sender_ = std::exchange(other.sender_, 0);
                 receiver_ = std::exchange(other.receiver_, 0);
                 sessionid_ = std::exchange(other.sessionid_, 0);
-                header_ = std::move(other.header_);
                 data_ = std::move(other.data_);
             }
             return *this;
@@ -74,34 +72,6 @@ namespace moon
         uint32_t receiver() const
         {
             return receiver_;
-        }
-
-        void set_header(std::string_view header)
-        {
-            if (header.size() != 0)
-            {
-                if (!header_)
-                {
-                    header_ = std::make_unique<std::string>(header);
-                }
-                else
-                {
-                    header_->clear();
-                    header_->assign(header);
-                }
-            }
-        }
-
-        std::string_view header() const
-        {
-            if (nullptr == header_)
-            {
-                return std::string_view{};
-            }
-            else
-            {
-                return std::string_view{ *header_ };
-            }
         }
 
         void set_sessionid(int32_t v)
@@ -168,7 +138,6 @@ namespace moon
         uint32_t sender_ = 0;
         uint32_t receiver_ = 0;
         int32_t sessionid_ = 0;
-        std::unique_ptr<std::string> header_;
         buffer_ptr_t data_;
     };
 };

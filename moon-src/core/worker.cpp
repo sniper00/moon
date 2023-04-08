@@ -117,7 +117,7 @@ namespace moon
 
                 if (0 != conf->session)
                 {
-                    server_->response(conf->creator, std::string_view{}, std::to_string(serviceid), conf->session);
+                    server_->response(conf->creator, std::to_string(serviceid), conf->session);
                 }
                 return;
             } while (false);
@@ -130,7 +130,7 @@ namespace moon
 
             if (0 != conf->session)
             {
-                server_->response(conf->creator, std::string_view{}, "0"sv, conf->session);
+                server_->response(conf->creator, "0"sv, conf->session);
             }
         });
     }
@@ -140,19 +140,19 @@ namespace moon
         asio::post(io_ctx_, [this, serviceid, sender, sessionid]() {
             if (auto s = find_service(serviceid); nullptr != s)
             {
+                auto name = s->name();
+                auto id = s->id();
                 count_.fetch_sub(1, std::memory_order_release);
-
-                auto content = moon::format(R"({"name":"%s","serviceid":%08X,"errmsg":"service destroy"})", s->name().data(), s->id());
-                server_->response(sender, "service destroy"sv, content, sessionid);
+                server_->response(sender, "service destroy"sv, sessionid);
                 services_.erase(serviceid);
                 if (services_.empty()) shared(true);
 
                 if (server_->get_state() == state::ready)
                 {
-                    std::string_view header{ "_service_exit" };
+                    auto content = moon::format("_service_exit,name:%s serviceid:%08X", name.data(), id);
                     auto buf = message::create_buffer();
                     buf->write_back(content.data(), content.size());
-                    server_->broadcast(serviceid, buf, header, PTYPE_SYSTEM);
+                    server_->broadcast(serviceid, buf, PTYPE_SYSTEM);
                 }
 
                 if (serviceid == BOOTSTRAP_ADDR)
@@ -162,7 +162,7 @@ namespace moon
             }
             else
             {
-                server_->response(sender, "worker::remove_service "sv, moon::format("service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
+                server_->response(sender, moon::format("service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
             }
          });
     }
@@ -189,7 +189,6 @@ namespace moon
                 }
 
                 swapmq_.clear();
-                prefabs_.clear();
             });
         }
     }
@@ -207,27 +206,6 @@ namespace moon
             return iter->second.get();
         }
         return nullptr;
-    }
-
-    intptr_t worker::make_prefab(moon::buffer_ptr_t buf)
-    {
-        intptr_t  prefabid = (intptr_t)(buf.get());
-        auto iter = prefabs_.emplace(prefabid, std::move(buf));
-        if (iter.second)
-        {
-            return iter.first->first;
-        }
-        return 0;
-    }
-
-    bool worker::send_prefab(uint32_t sender, uint32_t receiver, intptr_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const
-    {
-        if (auto iter = prefabs_.find(prefabid); iter != prefabs_.end())
-        {
-            server_->send(sender, receiver, iter->second, header, sessionid, type);
-            return true;
-        }
-        return false;
     }
 
     void worker::shared(bool v)
@@ -276,7 +254,7 @@ namespace moon
                         , hexdata.data());
 
                     msg.set_sessionid(-msg.sessionid());
-                    server_->response(sender, "worker::handle_one "sv, str, msg.sessionid(), PTYPE_ERROR);
+                    server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);
                 }
                 return;
             }

@@ -122,7 +122,7 @@ namespace moon
     private:
         connection_ptr_t make_connection(uint32_t serviceid, uint8_t type);
 
-        void response(uint32_t sender, uint32_t receiver, std::string_view data, std::string_view header, int32_t sessionid, uint8_t type);
+        void response(uint32_t sender, uint32_t receiver, std::string_view data, int32_t sessionid, uint8_t type);
 
         void add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t& c, int32_t  sessionid);
 

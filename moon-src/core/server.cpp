@@ -232,8 +232,8 @@ namespace moon
         }
         else
         {
-            auto content = moon::format("invalid service id %u.", serviceid);
-            response(sender, "server::remove_service "sv, content, sessionid, PTYPE_ERROR);
+            auto content = moon::format("remove_service: invalid service id %u.", serviceid);
+            response(sender, content, sessionid, PTYPE_ERROR);
         }
     }
 
@@ -259,7 +259,7 @@ namespace moon
 
             if (!content.empty())
                 content.back() = ']';
-            response(sender, std::string_view{}, content, sessionid);
+            response(sender, content, sessionid);
          });
     }
 
@@ -275,28 +275,23 @@ namespace moon
         return true;
     }
 
-    bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, std::string_view header, int32_t sessionid, uint8_t type) const
+    bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, int32_t sessionid, uint8_t type) const
     {
         sessionid = -sessionid;
         message m = message{ std::move(data) };
         m.set_sender(sender);
         m.set_receiver(receiver);
-        if (header.size() != 0)
-        {
-            m.set_header(header);
-        }
         m.set_type(type);
         m.set_sessionid(sessionid);
         return send_message(std::move(m));
     }
 
-    void server::broadcast(uint32_t sender, const buffer_ptr_t& buf, std::string_view header, uint8_t type) const
+    void server::broadcast(uint32_t sender, const buffer_ptr_t& buf, uint8_t type) const
     {
         for (auto& w : workers_)
         {
             auto m = message{ buf };
             m.set_broadcast(true);
-            m.set_header(header);
             m.set_sender(sender);
             m.set_type(type);
             w->send(std::move(m));
@@ -356,23 +351,19 @@ namespace moon
         return unique_services_.try_set(std::move(name), v);
     }
 
-    void server::response(uint32_t to, std::string_view header, std::string_view content, int32_t sessionid, uint8_t mtype) const
+    void server::response(uint32_t to, std::string_view content, int32_t sessionid, uint8_t mtype) const
     {
         if (to == 0 || sessionid == 0)
         {
             if (get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
-                CONSOLE_DEBUG(logger()
-                    , "server::response %s:%s"
-                    , std::string(header).data()
-                    , std::string(content).data());
+                CONSOLE_DEBUG(logger(), "server::response %s" , std::string(content).data());
             }
             return;
         }
 
         auto m = message{ content.size() };
         m.set_receiver(to);
-        m.set_header(header);
         m.set_type(mtype);
         m.set_sessionid(sessionid);
         m.write_data(content);

@@ -63,28 +63,6 @@ function core.loglevel(lv) end
 ---@return integer
 function core.cpu() end
 
----make a prefab message
----@param data string|buffer_ptr
----@return integer @prefab id
-function core.make_prefab(data) end
-
----send prefab message
----@param receiver integer
----@param prefabid integer
----@param header string
----@param sessionid integer
----@param type integer
-function core.send_prefab(receiver, prefabid, header, sessionid, type) end
-
--- --- send message from `sender` to `receiver`
--- ---@param receiver integer
--- ---@param data string|userdata @ message
--- ---@param header string
--- ---@param sessionid integer
--- function core.send(receiver, data, header, sessionid)
---     ignore_param(receiver, data, header, sessionid)
--- end
-
 --- remove a service
 function core.kill(addr) end
 
@@ -128,7 +106,6 @@ function core.now() end
 --- - 'S' message:sender()
 --- - 'R' message:receiver()
 --- - 'E' message:sessionid()
---- - 'H' message:header()
 --- - 'Z' message:bytes()
 --- - 'N' message:size()
 --- - 'B' message:buffer()
@@ -149,7 +126,7 @@ function core.clone(msg) end
 function core.release(msg) end
 
 ---redirect a message to other service
-function core.redirect(msg, header, receiver, mtype, sender, sessionid) end
+function core.redirect(msg, receiver, mtype, sender, sessionid) end
 
 ---get error log count
 ---@return integer

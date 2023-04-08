@@ -145,7 +145,6 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
                 ctx->reset_reserve();
                 auto ec = asio::error::make_error_code(asio::error::no_descriptors);
                 response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", ec.message().data(), ec.value()),
-                    "SOCKET_ERROR"sv,
                     sessionid, PTYPE_ERROR);
             }
             else
@@ -168,7 +167,6 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
             }
 
             response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", e.message().data(), e.value()),
-                "SOCKET_ERROR"sv,
                 sessionid, PTYPE_ERROR);
         }
 
@@ -222,7 +220,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                                 if (c->fd() == 0)
                                 {
                                     c->close();
-                                    response(0, owner, std::string_view{}, moon::format("connect %s:%d: timeout", host.data(), port), sessionid, PTYPE_ERROR);
+                                    response(0, owner, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
                                 }
                             }
                             });
@@ -246,18 +244,18 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                                 c->fd(server_->nextfd());
                                 connections_.emplace(c->fd(), c);
                                 c->start(false);
-                                response(0, owner, std::to_string(c->fd()), std::string_view{}, sessionid, PTYPE_TEXT);
+                                response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_TEXT);
                             }
                             else
                             {
                                 if(cancelled_timer>0)
-                                    response(0, owner, std::string_view{}, moon::format("connect %s:%d: %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                                    response(0, owner, moon::format("connect %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
                             }
                         });
                 }
                 else
                 {
-                    response(0, owner, std::string_view{}, moon::format("resolve %s:%d: %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                    response(0, owner, moon::format("resolve %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
                 }
             });
     }
@@ -273,7 +271,7 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim,
     }
 
     asio::post(ioc_, [this, owner, sessionid]() {
-        response(0, owner, "read an invalid socket", "closed", sessionid, PTYPE_ERROR);
+        response(0, owner, "socket.read: closed", sessionid, PTYPE_ERROR);
     });
 }
 
@@ -518,13 +516,12 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     return connection;
     }
 
-void socket::response(uint32_t sender, uint32_t receiver, std::string_view content, std::string_view header, int32_t sessionid, uint8_t type)
+void socket::response(uint32_t sender, uint32_t receiver, std::string_view content, int32_t sessionid, uint8_t type)
 {
     if (0 == sessionid)
     {
         CONSOLE_ERROR(server_->logger()
-            , "%s:%s"
-            , std::string(header).data()
+            , "%s"
             , std::string(content).data());
         return;
     }
@@ -532,7 +529,6 @@ void socket::response(uint32_t sender, uint32_t receiver, std::string_view conte
     response_.set_receiver(0);
     response_.get_buffer()->clear();
     response_.write_data(content);
-    response_.set_header(header);
     response_.set_sessionid(sessionid);
     response_.set_type(type);
 
@@ -548,7 +544,7 @@ void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, con
         if (sessionid != 0)
         {
             asio::dispatch(from->ioc_, [from, ctx, sessionid, fd = c->fd()]{
-                    from->response(ctx->fd, ctx->owner, std::to_string(fd), std::string_view{}, sessionid, PTYPE_TEXT);
+                    from->response(ctx->fd, ctx->owner, std::to_string(fd), sessionid, PTYPE_TEXT);
                 });
         }
     });

@@ -39,10 +39,6 @@ namespace moon
 
         bool shared() const;
 
-        intptr_t make_prefab(moon::buffer_ptr_t buf);
-
-        bool send_prefab(uint32_t sender, uint32_t receiver, intptr_t prefabid, std::string_view header, int32_t sessionid, uint8_t type) const;
-
         moon::socket& socket() { return *socket_; }
 
         uint32_t alive();
@@ -72,7 +68,6 @@ namespace moon
         queue_type::container_type swapmq_;
         std::unique_ptr<moon::socket> socket_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
-        std::unordered_map<intptr_t, moon::buffer_ptr_t> prefabs_;
     };
 };
 

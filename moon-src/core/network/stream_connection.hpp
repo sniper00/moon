@@ -97,16 +97,15 @@ namespace moon
             {
                 if (e == moon::error::read_timeout)
                 {
-                    response_.set_header("TIMEOUT");
+                    response_.write_data(moon::format("TIMEOUT %s.(%d)", e.message().data(), e.value()));
                 }
                 else if (e == asio::error::eof)
                 {
-                    response_.set_header("EOF");
+                    response_.write_data(moon::format("EOF %s.(%d)", e.message().data(), e.value()));
                 }
                 else
                 {
-                    response_.set_header("SOCKET_ERROR");
-                    response_.write_data(moon::format("%s.(%d)", e.message().data(), e.value()));
+                    response_.write_data(moon::format("SOCKET_ERROR %s.(%d)", e.message().data(), e.value()));
                 }
             }
 
