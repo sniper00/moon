@@ -340,7 +340,10 @@ static int message_decode(lua_State* L)
             lua_pushinteger(L, m->sessionid());
             break;
         case 'Z':
-            m->data()!=nullptr?lua_pushlstring(L, m->data(), m->size()):lua_pushnil(L);
+            if(m->data()!=nullptr)
+                lua_pushlstring(L, m->data(), m->size());
+            else
+                lua_pushnil(L);
             break;
         case 'N':
         {
