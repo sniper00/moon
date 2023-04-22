@@ -68,7 +68,7 @@ namespace moon
     template<typename Enum>
     inline bool enum_has_any_flag(Enum flags, Enum contains)
     {
-        using under_type = std::underlying_type<enable_chunked>::type;
+        using under_type = std::underlying_type<Enum>::type;
         return (static_cast<under_type>(flags) & static_cast<under_type>(contains))!= 0;
     }
 

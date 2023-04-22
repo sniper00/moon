@@ -245,16 +245,12 @@ else
         return yield()
     end
 
-    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
-    --- - if failed return false and error message.
     function client.send(db, ...)
         local buf = concat_resp(...)
         assert(wfront(buf, packstr("Q", 1)))
         raw_send("lua", db, buf, 0)
     end
 
-    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
-    --- - if failed return false and error message.
     function client.hash_send(hash, db, ...)
         hash = hash or 1
         local buf = concat_resp(...)
