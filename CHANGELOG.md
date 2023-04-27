@@ -1,3 +1,14 @@
+# v0.8 2023-04-27
+- Optimize send over 64byte socket message
+- fs.join support one or more param
+- Remove service message's `header` field
+- Break changes
+```
+remove moon.raw_send's `header` param
+remove moon.make_prefab
+now moon.send unsupport send prefab message
+```
+
 # 2023-03-27
 - Add windows and linux build file
 - Update recastnavigation version
