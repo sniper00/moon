@@ -190,13 +190,14 @@ int main(int argc, char* argv[])
         server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
-        //Search and set the `lualib` path.
-        auto libpath = fs::current_path() / "lualib";
-        if (!fs::exists(libpath))
-            libpath = directory::module_path() / "lualib";
-        std::string lualibdir = libpath.string();
-        moon::replace(lualibdir, "\\", "/");
-        server_->set_env("PATH", moon::format("package.path='%s/?.lua;'..package.path;", lualibdir.data()));
+        //By default, lualib and service directories are added to the lua search path
+        auto search_path = fs::absolute(fs::current_path());
+        if (!fs::exists(search_path/"lualib"))
+            search_path = fs::absolute(directory::module_path());
+        MOON_CHECK(fs::exists(search_path/"lualib"), "can not find moon lualib path.");
+        auto strpath = search_path.string();
+        moon::replace(strpath, "\\", "/");
+        server_->set_env("PATH", moon::format("package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;", strpath.data(), strpath.data()));
 
         //Change the working directory to the directory where the opened file is located.
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());

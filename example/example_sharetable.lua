@@ -1,15 +1,4 @@
--- custom lua module search dir
-local path = table.concat({
-    "../lualib/?.lua",
-    "../service/?.lua",
-},";")
-
-package.path = path.. ";"
-
 local moon = require("moon")
-
-moon.env("PATH", string.format("package.path='%s'", package.path))
-
 local sharetable = require("sharetable")
 local conf = ...
 

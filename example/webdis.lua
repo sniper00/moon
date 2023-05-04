@@ -1,6 +1,6 @@
 local moon = require("moon")
 local json = require("json")
-local redisd = require("service.redisd")
+local redisd = require("redisd")
 
 local http_server = require("moon.http.server")
 
