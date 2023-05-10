@@ -5,8 +5,8 @@ error("DO NOT REQUIRE THIS FILE")
 ---@class zset
 local zset = {}
 
----@param maxcount integer
----@param reverse? boolean @ Default sort the scores from high to low. if reverse is true: sort the scores from low to high.
+---@param maxcount integer @ Maximum number of elements participating in the sorting. If the score for the same key might decrease when sorted in descending order or increase when sorted in ascending order, maxcount needs to be multiplied by 2.
+---@param reverse? boolean @ Default order is descending. If set to true, it will be sorted in ascending order.
 ---@return zset
 function zset.new(maxcount, reverse) end
 
