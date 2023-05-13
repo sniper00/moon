@@ -194,7 +194,7 @@ PB_API size_t pb_addfixed64  (pb_Buffer *b, uint64_t v);
 
 PB_API size_t pb_addslice  (pb_Buffer *b, pb_Slice s);
 PB_API size_t pb_addbytes  (pb_Buffer *b, pb_Slice s);
-PB_API size_t pb_addlength (pb_Buffer *b, size_t len);
+PB_API size_t pb_addlength (pb_Buffer *b, size_t len, size_t prealloc);
 
 
 /* type info database state and name table */
@@ -743,18 +743,22 @@ PB_API size_t pb_addslice(pb_Buffer *b, pb_Slice s) {
     return len;
 }
 
-PB_API size_t pb_addlength(pb_Buffer *b, size_t len) {
+PB_API size_t pb_addlength(pb_Buffer *b, size_t len, size_t prealloc) {
     char buff[10], *s;
-    size_t bl, ml;
+    size_t bl, ml, rl = 0;
     if ((bl = pb_bufflen(b)) < len)
         return 0;
     ml = pb_write64(buff, bl - len);
-    if (pb_prepbuffsize(b, ml) == NULL) return 0;
-    s = pb_buffer(b) + len;
-    memmove(s+ml, s, bl - len);
+    s = pb_buffer(b) + len - prealloc;
+    assert(ml >= prealloc);
+    if (ml > prealloc) {
+        if (pb_prepbuffsize(b, (rl = ml - prealloc)) == NULL) return 0;
+        s = pb_buffer(b) + len - prealloc;
+        memmove(s+ml, s+prealloc, bl - len);
+    }
     memcpy(s, buff, ml);
-    pb_addsize(b, ml);
-    return ml;
+    pb_addsize(b, rl);
+    return ml + (bl - len);
 }
 
 PB_API size_t pb_addbytes(pb_Buffer *b, pb_Slice s) {
@@ -1090,7 +1094,7 @@ PB_API pb_Name *pb_newname(pb_State *S, pb_Slice s, pb_Cache *cache) {
 PB_API const pb_Name *pb_name(const pb_State *S, pb_Slice s, pb_Cache *cache) {
     pb_NameEntry *entry = NULL;
     pb_CacheSlot *slot;
-    if (s.p == NULL) return NULL;
+    if (S == NULL || s.p == NULL) return NULL;
     if (cache == NULL)
         entry = pbN_getname(S, s, pbN_calchash(s));
     else {
@@ -1129,10 +1133,12 @@ PB_API void pb_init(pb_State *S) {
 }
 
 PB_API void pb_free(pb_State *S) {
-    const pb_TypeEntry *te = NULL;
+    const pb_Entry *e = NULL;
     if (S == NULL) return;
-    while (pb_nextentry(&S->types, (const pb_Entry**)&te))
+    while (pb_nextentry(&S->types, &e)) {
+        pb_TypeEntry *te = (pb_TypeEntry*)e;
         if (te->value != NULL) pb_deltype(S, te->value);
+    }
     pb_freetable(&S->types);
     pb_freepool(&S->typepool);
     pb_freepool(&S->fieldpool);
@@ -1169,7 +1175,7 @@ PB_API pb_Field** pb_sortfield(pb_Type* t) {
         int index = 0;
         unsigned int i = 0;
         const pb_Field* f = NULL;
-        pb_Field** list = malloc(sizeof(pb_Field*) * t->field_count);
+        pb_Field** list = (pb_Field**)malloc(sizeof(pb_Field*) * t->field_count);
 
         assert(list);
         while (pb_nextfield(t, &f)) {
@@ -1263,10 +1269,10 @@ PB_API void pb_delsort(pb_Type *t) {
 }
 
 PB_API void pb_deltype(pb_State *S, pb_Type *t) {
-    pb_FieldEntry *nf = NULL;
-    pb_OneofEntry *ne = NULL;
+    const pb_Entry *e = NULL;
     if (S == NULL || t == NULL) return;
-    while (pb_nextentry(&t->field_names, (const pb_Entry**)&nf)) {
+    while (pb_nextentry(&t->field_names, &e)) {
+        const pb_FieldEntry *nf = (const pb_FieldEntry*)e;
         if (nf->value != NULL) {
             pb_FieldEntry *of = (pb_FieldEntry*)pb_gettable(
                     &t->field_tags, nf->value->number);
@@ -1275,10 +1281,14 @@ PB_API void pb_deltype(pb_State *S, pb_Type *t) {
             pbT_freefield(S, nf->value);
         }
     }
-    while (pb_nextentry(&t->field_tags, (const pb_Entry**)&nf))
+    while (pb_nextentry(&t->field_tags, &e)) {
+        pb_FieldEntry *nf = (pb_FieldEntry*)e;
         if (nf->value != NULL) pbT_freefield(S, nf->value);
-    while (pb_nextentry(&t->oneof_index, (const pb_Entry**)&ne))
-        pb_delname(S, ne->name);
+    }
+    while (pb_nextentry(&t->oneof_index, &e)) {
+        pb_OneofEntry *oe = (pb_OneofEntry*)e;
+        pb_delname(S, oe->name);
+    }
     pb_freetable(&t->field_tags);
     pb_freetable(&t->field_names);
     pb_freetable(&t->oneof_index);
@@ -1323,7 +1333,10 @@ PB_API void pb_delfield(pb_State *S, pb_Type *t, pb_Field *f) {
     tf = (pb_FieldEntry*)pb_gettable(&t->field_tags, (pb_Key)f->number);
     if (nf && nf->value == f) nf->entry.key = 0, nf->value = NULL, ++count;
     if (tf && tf->value == f) tf->entry.key = 0, tf->value = NULL, ++count;
-    if (count) pbT_freefield(S, f), --t->field_count;
+    if (count) {
+        if (f->oneof_idx) --t->oneof_field; 
+        pbT_freefield(S, f), --t->field_count;
+    }
     pb_delsort(t);
 }
 
