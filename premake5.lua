@@ -23,6 +23,8 @@ workspace "Server"
         characterset "MBCS"
         systemversion "latest"
         warnings "Extra"
+        cdialect "C11"
+        buildoptions{"/experimental:c11atomics"}
 
     filter { "system:linux" }
         warnings "High"
@@ -47,17 +49,17 @@ project "lua"
         defines {"LUA_USE_MACOSX"}
 
 if MOON_ENABLE_MIMALLOC then
-os.execute("git submodule init")
-os.execute("git submodule update")
+    os.execute("git submodule init")
+    os.execute("git submodule update")
 
-project "mimalloc"
-    location "build/projects/%{prj.name}"
-    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
-    targetdir "build/bin/%{cfg.buildcfg}"
-    kind "StaticLib"
-    language "C"
-    includedirs {"./third/mimalloc/include"}
-    files {"./third/mimalloc/src/static.c"}
+    project "mimalloc"
+        location "build/projects/%{prj.name}"
+        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+        targetdir "build/bin/%{cfg.buildcfg}"
+        kind "StaticLib"
+        language "C"
+        includedirs {"./third/mimalloc/include"}
+        files {"./third/mimalloc/src/static.c"}
 end
 
 project "moon"

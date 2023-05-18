@@ -73,7 +73,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 # Build
 
-1. Make sure your compiler(msvc2019, gcc 9.3+, clang 9.0+) support C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+1. Make sure your compiler(vs2022 17.5+, gcc 9.3+, clang 9.0+) support C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
 
 2. Clone source code 
 

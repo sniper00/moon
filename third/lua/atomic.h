@@ -6,11 +6,7 @@
 #define STD_ std::
 #define atomic_value_type_(p, v) decltype((p)->load())(v) 
 #else
-#if defined(_MSC_VER)
-#include "msvc-stdatomic.h"
-#else
 #include <stdatomic.h>
-#endif
 #define STD_
 #define atomic_value_type_(p, v) v
 #endif
