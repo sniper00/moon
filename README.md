@@ -83,8 +83,13 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 3. Build
     - windows run `build.bat`
-    - linux:`make config=release`
-    - maxos: [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
+    - linux: `make config=release`
+    - maxos: 
+      ```shell
+        brew install premake
+        premake5 gmake --cc=clang
+        make config=release
+      ```
 
 
 4. If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
