@@ -82,9 +82,9 @@ Moon is a lightweight game server framework based on the actor model. One worker
 ``` 
 
 3. Build
-    - windows run `build.bat`
-    - linux: `make config=release`
-    - maxos: 
+    - **windows** run `build.bat`
+    - **linux** `make config=release`
+    - **macOS** 
       ```shell
         brew install premake
         premake5 gmake --cc=clang
