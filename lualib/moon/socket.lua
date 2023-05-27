@@ -1,5 +1,4 @@
 local moon = require("moon")
-
 local core = require("asio")
 
 local tointeger = math.tointeger
@@ -21,9 +20,12 @@ local flag_ws_ping = 32
 local flag_ws_pong = 64
 
 local supported_tcp_protocol = {
-    [moon.PTYPE_SOCKET_TCP] = true,
-    [moon.PTYPE_SOCKET_WS] = true,
-    [moon.PTYPE_SOCKET_MOON] = true,
+    [moon.PTYPE_SOCKET_TCP] = "tcp",
+    [moon.PTYPE_SOCKET_WS] = "ws",
+    [moon.PTYPE_SOCKET_MOON] = "moon",
+    tcp = moon.PTYPE_SOCKET_TCP,
+    ws = moon.PTYPE_SOCKET_WS,
+    moon = moon.PTYPE_SOCKET_MOON
 }
 
 ---@class socket : asio
@@ -35,10 +37,10 @@ local socket = core
 function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
     local sessionid = make_session()
-    assert(accept(listenfd, sessionid, serviceid),"invalid param")
-    local fd,err = yield()
+    assert(accept(listenfd, sessionid, serviceid), "invalid param")
+    local fd, err = yield()
     if not fd then
-        return nil,err
+        return nil, err
     end
     return tointeger(fd)
 end
@@ -50,25 +52,34 @@ end
 ---@async
 ---@param host string
 ---@param port integer
----@param protocol integer # moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
+---@param protocol integer|string # "tcp", "ws", "moon" 
 ---@param timeout? integer # millseconds
-function socket.connect(host, port, protocol, timeout)
-    assert(supported_tcp_protocol[protocol],"not support")
+---@param payload? string # payload data, e. websocket's path
+function socket.connect(host, port, protocol, timeout, payload)
+    assert(supported_tcp_protocol[protocol], "not support")
+    if type(protocol) == "string" then
+        protocol = supported_tcp_protocol[protocol]
+    end
     timeout = timeout or 0
     local sessionid = make_session()
-    connect(host, port, protocol, sessionid, timeout)
-    local fd,err = yield()
+    connect(host, port, protocol, sessionid, timeout, payload)
+    local fd, err = yield()
     if not fd then
-        return nil,err
+        return nil, err
     end
     return tointeger(fd)
 end
 
-function socket.sync_connect(host, port, protocol)
-    assert(supported_tcp_protocol[protocol],"not support")
-    local fd = connect(host, port, protocol, 0, 0)
+---@async
+---@param host string
+---@param port integer
+---@param protocol integer # moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
+---@param payload? string # payload data, e. websocket's path
+function socket.sync_connect(host, port, protocol, payload)
+    assert(supported_tcp_protocol[protocol], "not support")
+    local fd = connect(host, port, protocol, 0, 0, payload)
     if fd == 0 then
-        return nil,"connect failed"
+        return nil, "connect failed"
     end
     return fd
 end
@@ -85,22 +96,22 @@ function socket.read(fd, delim, maxcount)
 end
 
 function socket.write_then_close(fd, data)
-    write(fd ,data, flag_close)
+    write(fd, data, flag_close)
 end
 
 --- PTYPE_SOCKET_WS specific functions
 function socket.write_text(fd, data)
-    write(fd ,data, flag_ws_text)
+    write(fd, data, flag_ws_text)
 end
 
 --- PTYPE_SOCKET_WS specific functions
 function socket.write_ping(fd, data)
-    write(fd ,data, flag_ws_ping)
+    write(fd, data, flag_ws_ping)
 end
 
 --- PTYPE_SOCKET_WS specific functions
 function socket.write_pong(fd, data)
-    write(fd ,data, flag_ws_pong)
+    write(fd, data, flag_ws_pong)
 end
 
 local socket_data_type = {
@@ -113,6 +124,12 @@ local socket_data_type = {
 }
 
 ---@alias socket_event
+---| 'connect'
+---| 'accept'
+---| 'message'
+---| 'close'
+
+---@alias websocket_event
 ---| 'connect'
 ---| 'accept'
 ---| 'message'
@@ -157,18 +174,18 @@ function socket.on(name, cb)
     if n then
         callbacks[n] = cb
     else
-        error("register unsupport socket data type "..name)
+        error("register unsupport socket data type " .. name)
     end
 end
 
----@param name socket_event
+---@param name websocket_event
 ---@param cb fun(fd:integer, msg:message_ptr)
 function socket.wson(name, cb)
     local n = socket_data_type[name]
     if n then
         wscallbacks[n] = cb
     else
-        error("register unsupport websocket data type "..name)
+        error("register unsupport websocket data type " .. name)
     end
 end
 

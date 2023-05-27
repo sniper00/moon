@@ -96,7 +96,7 @@ namespace moon
 
         bool accept(uint32_t fd, int32_t sessionid, uint32_t owner);
 
-        uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0);
+        uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0, std::string payload=std::string{});
 
         void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid);
 
@@ -140,6 +140,7 @@ namespace moon
         asio::io_context& ioc_;
         asio::steady_timer timer_;
         message  response_;
+
         std::unordered_map<uint32_t, acceptor_context_ptr_t> acceptors_;
         std::unordered_map<uint32_t, connection_ptr_t> connections_;
         std::unordered_map<uint32_t, udp_context_ptr_t> udp_;

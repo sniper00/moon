@@ -12,7 +12,7 @@ http_server.error = function(fd, err)
 end
 
 http_server.on("/hello",function(request, response)
-    print_r(request.parse_query())
+    print_r(request:parse_query())
     response:write_header("Content-Type","text/plain")
     response:write("GET:Hello World")
 end)
@@ -24,7 +24,7 @@ http_server.on("/chat",function(request, response)
 end)
 
 http_server.on("/login",function(request, response)
-    print_r(request.parse_form())
+    print_r(request:parse_form())
     response:write_header("Content-Type","application/json")
     response:write(json.encode({score = 112, level = 100, item={id=1,count=2}}))
 end)

@@ -24,9 +24,9 @@ bool socket::try_open(const std::string& host, uint16_t port)
 {
     try
     {
-        asio::ip::tcp::resolver resolver(ioc_);
+        asio::ip::tcp::resolver resolver{ioc_};
         asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
-        asio::ip::tcp::acceptor acceptor{ ioc_ };
+        asio::ip::tcp::acceptor acceptor{ioc_};
         acceptor.open(endpoint.protocol());
 #if TARGET_PLATFORM != PLATFORM_WINDOWS
         acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
@@ -35,7 +35,7 @@ bool socket::try_open(const std::string& host, uint16_t port)
         acceptor.close();
         return true;
     }
-    catch (asio::system_error& e)
+    catch (const asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
@@ -61,7 +61,7 @@ std::pair<uint32_t, asio::ip::tcp::endpoint> socket::listen(const std::string & 
         acceptors_.emplace(id, ctx);
         return std::make_pair(id, ctx->acceptor.local_endpoint());
     }
-    catch (asio::system_error& e)
+    catch (const asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return { 0, asio::ip::tcp::endpoint {}};
@@ -89,7 +89,7 @@ uint32_t socket::udp(uint32_t owner, std::string_view host, uint16_t port)
         udp_.emplace(id, std::move(ctx));
         return id;
     }
-    catch (asio::system_error& e)
+    catch (const asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return 0;
@@ -109,7 +109,7 @@ bool socket::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
         }
         return false;
     }
-    catch (asio::system_error& e)
+    catch (const asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
@@ -178,7 +178,7 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
     return true;
 }
 
-uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds)
+uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds, std::string payload)
 {
     if (0 == sessionid)
     {
@@ -190,10 +190,10 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
             asio::connect(c->socket(), endpoints);
             c->fd(server_->nextfd());
             connections_.emplace(c->fd(), c);
-            asio::post(ioc_, [c]() {c->start(false);});
+            asio::post(ioc_, [c, payload]() {c->start(false, payload);});
             return c->fd();
         }
-        catch (asio::system_error& e)
+        catch (const asio::system_error& e)
         {
             CONSOLE_WARN(server_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
         }
@@ -202,7 +202,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
     {
         std::shared_ptr<asio::ip::tcp::resolver> resolver = std::make_shared<asio::ip::tcp::resolver>(ioc_);
         resolver->async_resolve(host, std::to_string(port),
-            [this, millseconds, type, owner, sessionid, host, port, resolver](const asio::error_code& ec, asio::ip::tcp::resolver::results_type results)
+            [this, millseconds, type, owner, sessionid, host, port, resolver, payload = std::move(payload)](const asio::error_code& ec, asio::ip::tcp::resolver::results_type results)
             {
                 if (!ec)
                 {
@@ -227,7 +227,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                     }
 
                     asio::async_connect(c->socket(), results,
-                        [this, c, host, port, owner, sessionid, timer](const asio::error_code& ec, const asio::ip::tcp::endpoint&)
+                        [this, c, host, port, owner, sessionid, timer, payload = std::move(payload)](const asio::error_code& ec, const asio::ip::tcp::endpoint&)
                         {
                             size_t cancelled_timer = 1;
                             if (timer)
@@ -243,7 +243,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                             {
                                 c->fd(server_->nextfd());
                                 connections_.emplace(c->fd(), c);
-                                c->start(false);
+                                c->start(false, payload);
                                 response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_TEXT);
                             }
                             else
@@ -490,7 +490,7 @@ size_t socket::encode_endpoint(char* buf, const asio::ip::address& addr, asio::i
 
 connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
 {
-            connection_ptr_t connection;
+    connection_ptr_t connection;
     switch (type)
     {
     case PTYPE_SOCKET_MOON:
@@ -539,7 +539,7 @@ void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, con
 {
     asio::dispatch(ioc_, [this, from, ctx, c, sessionid] {
         connections_.emplace(c->fd(), c);
-        c->start(true);
+        c->start(true, std::string{});
 
         if (sessionid != 0)
         {

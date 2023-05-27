@@ -15,9 +15,9 @@ namespace moon
         {
         }
 
-        void start(bool accepted) override
+        void start(bool accepted, const std::string& payload) override
         {
-            base_connection_t::start(accepted);
+            base_connection_t::start(accepted, payload);
             response_ = message{ 8192, 0 };
         }
 

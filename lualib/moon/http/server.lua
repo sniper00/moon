@@ -280,16 +280,15 @@ local function request_handler(fd, request)
     end
 end
 
-local function read_request(fd, pre)
-    local data, err = socket.read(fd, "\r\n\r\n", M.header_max_len)
-    if not data then
-        return {socket_error = err}
-    end
+local function parse_query(request)
+    return parse_query_string(request.query_string)
+end
 
-    if pre then
-        data = pre..data
-    end
+local function parse_form(request)
+    return parse_query_string(request.content)
+end
 
+function M.parse_header(data)
     --print("raw data",data)
     local ok,method,path,query_string,version,header = parse_request(data)
     if not ok then
@@ -314,15 +313,33 @@ local function read_request(fd, pre)
         request.header[k:lower()]=v
     end
 
-    header = request.header
-
     if method == "HEAD" then
         return request
     end
 
-    request.parse_query = function() return parse_query_string(request.query_string) end
+    request.parse_query = parse_query
 
-    request.parse_form = function() return parse_query_string(request.content) end
+    request.parse_form = parse_form
+
+    return request
+end
+
+local function read_request(fd, pre)
+    local data, err = socket.read(fd, "\r\n\r\n", M.header_max_len)
+    if not data then
+        return {socket_error = err}
+    end
+
+    if pre then
+        data = pre..data
+    end
+
+    local request = M.parse_header(data)
+    if request.protocol_error then
+        return request
+    end
+
+    local header = request.header
 
     if header["transfer-encoding"] ~= 'chunked' and not header["content-length"] then
         header["content-length"] = "0"
@@ -335,7 +352,7 @@ local function read_request(fd, pre)
             return {protocol_error = "Content-length is not number"}
         end
 
-        if M.content_max_len and content_length> M.content_max_len then
+        if M.content_max_len and content_length > M.content_max_len then
             return {protocol_error = strfmt( "HTTP content length exceeded %d, request length %d", M.content_max_len, content_length)}
         end
 

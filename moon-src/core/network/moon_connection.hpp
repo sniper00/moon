@@ -19,9 +19,9 @@ namespace moon
         {
         }
 
-        void start(bool accepted) override
+        void start(bool accepted, const std::string& payload) override
         {
-            base_connection_t::start(accepted);
+            base_connection_t::start(accepted, payload);
             auto m = message{};
             m.write_data(address());
             m.set_receiver(static_cast<uint8_t>(accepted ?

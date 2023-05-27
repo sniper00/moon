@@ -30,7 +30,7 @@ namespace moon
         {
         }
 
-        virtual void start(bool)
+        virtual void start(bool, const std::string&)
         {
             recvtime_ = now();
         }

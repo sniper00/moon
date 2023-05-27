@@ -135,17 +135,17 @@ namespace moon
         {
         }
 
-        void start(bool accepted) override
+        void start(bool accepted, const std::string& payload) override
         {
             role_ = accepted ? role::server : role::client;
-            base_connection_t::start(accepted);
+            base_connection_t::start(accepted, payload);
             if (accepted)
             {
                 read_header();
             }
             else
             {
-                request_handshake();
+                request_handshake(payload);
             }
         }
 
@@ -202,12 +202,12 @@ namespace moon
             });
         }
 
-        void request_handshake()
+        void request_handshake(const std::string& protocol)
         {
             std::string key(base64_encode((moon::randkey(16)), 16));
 
             std::shared_ptr<std::string> str = std::make_shared<std::string>();
-            str->append("GET / HTTP/1.1\r\n");
+            str->append(moon::format("GET /%s HTTP/1.1\r\n", protocol.data()));
             str->append("Upgrade: WebSocket\r\n");
             str->append("Connection: Upgrade\r\n");
             str->append("Sec-WebSocket-Version: 13\r\n");
@@ -387,7 +387,7 @@ namespace moon
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
             auto msg = message{};
-            msg.write_data(address());
+            msg.write_data(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), n });
             msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return std::error_code();

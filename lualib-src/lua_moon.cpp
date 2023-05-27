@@ -518,12 +518,13 @@ static int lasio_connect(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket();
-    std::string_view host = lua_check<std::string_view>(L, 1);
+    std::string host = lua_check<std::string>(L, 1);
     uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
     uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
     int32_t sessionid = (int32_t)luaL_checkinteger(L, 4);
     uint32_t timeout = (uint32_t)luaL_checkinteger(L, 5);
-    uint32_t fd = sock.connect(std::string{ host }, port, S->id(), type, sessionid, timeout);
+    std::string payload = luaL_optstring(L, 6, "");
+    uint32_t fd = sock.connect(host, port, S->id(), type, sessionid, timeout, std::move(payload));
     lua_pushinteger(L, fd);
     return 1;
 }
