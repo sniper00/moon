@@ -147,16 +147,25 @@ local function cluster_service()
 
     local lock = require("moon.queue")()
 
-    function command.Start()
-        if conf.host and conf.port then
-            local host, port = conf.host, conf.port
-            local listenfd = socket.listen(host, port,moon.PTYPE_SOCKET_MOON)
-            socket.start(listenfd)
-            print(strfmt("cluster run at %s %d", host, port))
-            setmetatable(clusters, {__gc=function()
-                socket.close(listenfd)
-            end})
+    function command.Listen()
+
+        local response = httpc.get(conf.etc_host,{
+            path = string.format(conf.etc_path, NODE)
+        })
+
+        if response.status_code ~= 200 then
+            error("can not found cluster config for node="..NODE)
         end
+
+        local c = json.decode(response.content)
+        assert(c.host and c.port, "require host and port")
+
+        local listenfd = socket.listen(c.host, c.port,moon.PTYPE_SOCKET_MOON)
+        socket.start(listenfd)
+        print(strfmt("cluster listen %s:%d", c.host, c.port))
+        setmetatable(clusters, {__gc=function()
+            socket.close(listenfd)
+        end})
         return true
     end
 
@@ -184,7 +193,7 @@ local function cluster_service()
         c = clusters[header.to_node]
         if not c or not c.fd then
             local response = httpc.get(conf.etc_host,{
-                path = conf.etc_path.."?node="..tostring(header.to_node)
+                path = string.format(conf.etc_path, header.to_node)
             })
             if response.status_code ~= 200 then
                 local errstr = response.content
