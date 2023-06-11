@@ -251,4 +251,28 @@ namespace moon
         }
         return false;
     }
+
+    template<typename Enum>
+    struct enum_enable_bitmask_operators
+    {
+        static constexpr bool enable = false;
+    };
+
+    template<typename Enum>
+    inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum> operator | (Enum a, Enum b){
+          return static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(a) |
+                          static_cast<std::underlying_type_t<Enum>>(b));
+    }
+
+    template<typename Enum>
+    inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum> operator & (Enum a, Enum b){
+          return static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(a) &
+                          static_cast<std::underlying_type_t<Enum>>(b));
+    }
+
+    template<typename Enum, typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, int> = 0>
+    inline bool enum_has_any_bitmask(Enum v, Enum contains){
+        using under_type = typename std::underlying_type<Enum>::type;
+        return (static_cast<under_type>(v) & static_cast<under_type>(contains))!= 0;
+    }
 }

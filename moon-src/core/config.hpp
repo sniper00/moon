@@ -65,12 +65,11 @@ namespace moon
         both = 3,
     };
 
-    template<typename Enum>
-    inline bool enum_has_any_flag(Enum flags, Enum contains)
+    template<>
+    struct enum_enable_bitmask_operators<enable_chunked>
     {
-        using under_type = typename std::underlying_type<Enum>::type;
-        return (static_cast<under_type>(flags) & static_cast<under_type>(contains))!= 0;
-    }
+        static constexpr bool enable = true;
+    };
 
     struct service_conf
     {

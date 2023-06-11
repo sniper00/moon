@@ -36,7 +36,7 @@ namespace moon
             {
                 if (data->size() >= MESSAGE_CONTINUED_FLAG)
                 {
-                    if (!enum_has_any_flag(flag_, enable_chunked::send))
+                    if (!enum_has_any_bitmask(flag_, enable_chunked::send))
                     {
                         asio::post(socket_.get_executor() , [this, self= shared_from_this()]() {
                             error(make_error_code(moon::error::write_message_too_big));
@@ -95,7 +95,7 @@ namespace moon
                 net2host(header_);
 
                 bool fin = (header_ != MESSAGE_CONTINUED_FLAG);
-                if (!fin && !enum_has_any_flag(flag_, enable_chunked::receive)) {
+                if (!fin && !enum_has_any_bitmask(flag_, enable_chunked::receive)) {
                     error(make_error_code(moon::error::read_message_too_big));
                     return;
                 }
