@@ -264,7 +264,7 @@ end
 ---创建一个新的协程并立即开始执行, 带有`async`标记的函数都需要在`moon.async`调用。如果 fn 函数没有调用 coroutine.yield, 则会同步执行。
 --- ```lua
 --- local function foo(a, b)
----    print("start foo", a, b)
+---     print("start foo", a, b)
 ---     moon.sleep(1000)
 ---     print("end foo", a, b)
 --- end
@@ -606,23 +606,29 @@ function moon.remove_timer(timerid)
     timer_routine[timerid] = false
 end
 
----创建一个定时器
+---创建一个定时器,等待的mills毫秒后触发回调函数。如果`mills<=0`则这个函数的行为退化成向消息队列post一条消息,对于需要延迟(delay)执行的操作非常有用。
 ---@param mills integer @等待的毫秒数
 ---@param fn fun() @调用的函数
+---@return integer @ 返回timerid,可以使用`moon.remove_timer`删除定时器
 function moon.timeout(mills, fn)
     local timer_session = _timeout(mills)
     timer_routine[timer_session] = fn
     return timer_session
 end
 
----异步等待 mills 毫秒
+---阻塞当前协程至少`mills`毫秒
 ---@async
----@param mills integer
----@return integer
+---@param mills integer@ 毫秒
+---@return boolean @ `moon.wakeup`唤醒的定时器返回`false`, 正常触发的定时器返回`true`
 function moon.sleep(mills)
     local timer_session = _timeout(mills)
     timer_routine[timer_session] = co_running()
-    return co_yield()
+    local timerid = co_yield()
+    if timer_session ~= timerid then
+        timer_routine[timer_session] = false
+        return false
+    end
+    return true
 end
 
 --------------------------DEBUG----------------------------

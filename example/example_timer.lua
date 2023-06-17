@@ -20,7 +20,11 @@ moon.async(function()
     print("coroutine timer end")
 end)
 
+local co = moon.async(function()
+    print("wakeup", moon.sleep(10000))
+end)
 
-
-
-
+moon.async(function ()
+    print("normal", moon.sleep(1000))
+    moon.wakeup(co)
+end)
