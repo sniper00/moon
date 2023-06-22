@@ -14,7 +14,7 @@ local HTTPSERVER_HOST = "127.0.0.1"
 local HTTPSERVER_PORT = 9001
 
 http_server.on("/redis",function(request, response)
-    local query = request.parse_query()
+    local query = request:parse_query()
     local cmd = string.split(query["cmd"],"-")
 
     local res, err = redisd.call(db_address, table.unpack(cmd))

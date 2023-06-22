@@ -126,15 +126,10 @@ moon.async(function()
     })
 
     for _=1,conf.client_num do
-        socket.connect(conf.host,conf.port,moon.PTYPE_SOCKET_MOON)
+        local fd, err = socket.connect(conf.host,conf.port,moon.PTYPE_SOCKET_MOON)
+        if not fd then
+            moon.error(err)
+            break
+        end
     end
 end)
-
-
-
-
-
-
-
-
-
