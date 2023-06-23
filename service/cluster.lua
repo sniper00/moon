@@ -4,7 +4,6 @@ local seri = require("seri")
 local conf = ...
 
 local pack = seri.pack
-local co_yield = coroutine.yield
 
 local NODE = math.tointeger(moon.env("NODE"))
 
@@ -89,11 +88,13 @@ local function cluster_service()
         if header.session < 0 then -- receive call message
             moon.async(function ()
                 local address = get_service_address(header.to_sname)
-                assert(address>0, tostring(header.to_sname))
+                if address == 0 then
+                    error(tostring(header.to_sname))
+                end
                 local session = moon.make_session(address)
                 redirect(msg, address, moon.PTYPE_LUA, moon.id, -session)
                 header.session = -header.session
-                socket.write(fd, pack(header, co_yield()))
+                socket.write(fd, pack(header, moon.wait(session)))
             end)
         elseif header.session > 0 then --receive response message
             if remove_send_watch(fd, header.from_addr, header.session) then
@@ -329,7 +330,7 @@ function cluster.call(receiver_node, receiver_sname, ...)
     }
 
     moon.raw_send("lua", cluster_address, pack("Request", header, ...))
-    return co_yield()
+    return moon.wait(sessionid)
 end
 
 return cluster

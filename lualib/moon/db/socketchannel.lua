@@ -75,9 +75,8 @@ function socketchannel:request(req,resp)
             -- no response
             return
         end
-        local co = coroutine.running()
-        self._threads[resp] = co
-        local ok, data = coroutine.yield()
+        self._threads[resp] = coroutine.running()
+        local ok, data = moon.wait()
         if not ok then
             error(data)
         end

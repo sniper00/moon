@@ -20,6 +20,7 @@ namespace moon
     constexpr uint8_t PTYPE_SOCKET_UDP = 9;//
     constexpr uint8_t PTYPE_SOCKET_WS = 10;   // websocket
     constexpr uint8_t PTYPE_SOCKET_MOON = 11; //
+    constexpr uint8_t PTYPE_INTEGER = 12; //
 
     constexpr  std::string_view STR_LF = "\n"sv;
     constexpr  std::string_view STR_CRLF = "\r\n"sv;

@@ -1,8 +1,6 @@
 local moon = require("moon")
 local core = require("asio")
 
-local tointeger = math.tointeger
-local yield = coroutine.yield
 local make_session = moon.make_session
 local id = moon.id
 
@@ -37,12 +35,14 @@ local socket = core
 function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
     local sessionid = make_session()
-    assert(accept(listenfd, sessionid, serviceid), "invalid param")
-    local fd, err = yield()
+    if not accept(listenfd, sessionid, serviceid) then
+        error("invalid accept param")
+    end
+    local fd, err = moon.wait(sessionid)
     if not fd then
         return nil, err
     end
-    return tointeger(fd)
+    return fd
 end
 
 function socket.start(listenfd)
@@ -63,11 +63,11 @@ function socket.connect(host, port, protocol, timeout, payload)
     timeout = timeout or 0
     local sessionid = make_session()
     connect(host, port, protocol, sessionid, timeout, payload)
-    local fd, err = yield()
+    local fd, err = moon.wait(sessionid)
     if not fd then
         return nil, err
     end
-    return tointeger(fd)
+    return fd
 end
 
 ---@async
@@ -92,7 +92,7 @@ end
 function socket.read(fd, delim, maxcount)
     local sessionid = make_session()
     read(fd, sessionid, delim, maxcount)
-    return yield()
+    return moon.wait(sessionid)
 end
 
 function socket.write_then_close(fd, data)

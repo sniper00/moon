@@ -182,7 +182,6 @@ else
     local client = {}
 
     local json = require("json")
-    local yield = coroutine.yield
     local buffer = require("buffer")
     local wfront = buffer.write_front
     local raw_send = moon.raw_send
@@ -192,7 +191,9 @@ else
     function client.execute(db, sql, hash)
         hash = hash or 1
         local buf = concat(sql)
-        assert(wfront(buf, packstr("Q", hash)))
+        if not wfront(buf, packstr("Q", hash)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, 0)
     end
 
@@ -200,9 +201,11 @@ else
         hash = hash or 1
         local sessionid = moon.make_session(db)
         local buf = concat(sql)
-        assert(wfront(buf, packstr("Q", hash)))
+        if not wfront(buf, packstr("Q", hash)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, sessionid)
-        return yield()
+        return moon.wait(sessionid)
     end
 
     return client

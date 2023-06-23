@@ -44,6 +44,7 @@ moon.PTYPE_SOCKET_TCP = 8
 moon.PTYPE_SOCKET_UDP = 9
 moon.PTYPE_SOCKET_WS = 10
 moon.PTYPE_SOCKET_MOON = 11
+moon.PTYPE_INTEGER = 12
 
 --moon.codecache = require("codecache")
 
@@ -68,7 +69,7 @@ local _g = _G
 ---rewrite lua print
 _g["print"] = moon.info
 
-
+---设置Lua全局变量, 如非必要, 不建议使用
 moon.exports = {}
 setmetatable(
     moon.exports,
@@ -137,11 +138,6 @@ end
 
 local make_session = moon.make_session
 
---- Cancel wait session response
-function moon.cancel_session(sessionid)
-    session_id_coroutine[sessionid] = false
-end
-
 ---
 ---向指定服务发送消息,消息内容会根据`PTYPE`类型调用对应的`pack`函数。
 ---@param PTYPE string @protocol type. e. "lua"
@@ -181,7 +177,7 @@ end
 function moon.new_service(config)
     local sessionid = make_session()
     _newservice(sessionid, config)
-    return math.tointeger(co_yield())
+    return moon.wait(sessionid)
 end
 
 --- 使当前服务退出
@@ -286,11 +282,32 @@ function moon.async(fn, ...)
     return co
 end
 
----异步唤醒一个协程，可以传递额外的参数
+--- 使一个协程挂起
+---@param session? integer @用于wakeup取消映射的协程
+function moon.wait(session)
+    local a, b, c = co_yield()
+    if a then
+        -- sz,len,PTYPE
+        return protocol[c].unpack(a, b)
+    else
+        -- false, "BREAK", {...}
+        if session then
+            session_id_coroutine[session] = false
+        end
+
+        if c then -- moon.wakeup 传递的额外参数
+            return table.unpack(c)
+        else
+            return a, b --- false, "BREAK"
+        end
+    end
+end
+
+---手动唤醒一个协程
 function moon.wakeup(co, ...)
     local args = { ... }
     moon.timeout(0, function()
-        local ok, err = co_resume(co, table.unpack(args))
+        local ok, err = co_resume(co, false, "BREAK", table.unpack(args))
         if not ok then
             err = traceback(co, tostring(err))
             co_close(co)
@@ -312,7 +329,7 @@ end
 function moon.scan_services(workerid)
     local sessionid = make_session()
     _scan_services(workerid, sessionid)
-    return co_yield()
+    return moon.wait(sessionid)
 end
 
 --- 向目标服务发送消息, 然后等待返回值, 接收方必须调用`moon.response`返回结果
@@ -335,7 +352,7 @@ function moon.call(PTYPE, receiver, ...)
 
     local sessionid = make_session(receiver)
     _send(receiver, p.pack(...), sessionid, p.PTYPE)
-    return co_yield()
+    return moon.wait(sessionid)
 end
 
 --- 用来响应moon.call的请求
@@ -366,17 +383,13 @@ local function _default_dispatch(msg, PTYPE)
     end
 
     local sender, session, sz, len = _decode(msg, "SEC")
-    if session > 0 and PTYPE ~= moon.PTYPE_ERROR then
+    if session > 0 then
         session_watcher[session] = nil
         local co = session_id_coroutine[session]
         if co then
             session_id_coroutine[session] = nil
             --print(coroutine.status(co))
-            if p.unpack then
-                coresume(co, p.unpack(sz, len))
-            else
-                coresume(co, msg)
-            end
+            coresume(co, sz, len, PTYPE)
             --print(coroutine.status(co))
             return
         end
@@ -393,7 +406,9 @@ local function _default_dispatch(msg, PTYPE)
 
         if not p.israw then
             local co = tremove(co_pool) or co_create(routine)
-            assert(p.unpack, tostring(p.PTYPE))
+            if not p.unpack then
+                error(string.format("PTYPE %s has no unpack function.", p.PTYPE))
+            end
             coresume(co, dispatch, sender, session, p.unpack(sz, len))
         else
             dispatch(msg)
@@ -459,21 +474,29 @@ reg_protocol {
 }
 
 reg_protocol {
+    name = "integer",
+    PTYPE = moon.PTYPE_INTEGER,
+    pack = function(...)
+        return ...
+    end,
+    unpack = function (sz, len)
+        return math.tointeger(moon.tostring(sz, len))
+    end,
+    dispatch = function()
+        error("PTYPE_TEXT dispatch not implemented")
+    end
+}
+
+reg_protocol {
     name = "error",
     PTYPE = moon.PTYPE_ERROR,
     israw = true,
     pack = function(...)
         return ...
     end,
-    dispatch = function(msg)
-        local sessionid, data = _decode(msg, "EZ")
-        data = data or ""
-        local co = session_id_coroutine[sessionid]
-        if co then
-            session_id_coroutine[sessionid] = nil
-            coresume(co, false, data)
-            return
-        end
+    unpack = function(sz, len)
+        local data = moon.tostring(sz, len) or "unknown error"
+        return false, data
     end
 }
 
@@ -619,14 +642,14 @@ end
 ---阻塞当前协程至少`mills`毫秒
 ---@async
 ---@param mills integer@ 毫秒
----@return boolean @ `moon.wakeup`唤醒的定时器返回`false`, 正常触发的定时器返回`true`
+---@return boolean,string? @ `moon.wakeup`唤醒的定时器返回`false`, 正常触发的定时器返回`true`
 function moon.sleep(mills)
     local timer_session = _timeout(mills)
     timer_routine[timer_session] = co_running()
-    local timerid = co_yield()
+    local timerid, reason = co_yield()
     if timer_session ~= timerid then
         timer_routine[timer_session] = false
-        return false
+        return false, reason
     end
     return true
 end

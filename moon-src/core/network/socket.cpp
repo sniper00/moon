@@ -244,7 +244,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                                 c->fd(server_->nextfd());
                                 connections_.emplace(c->fd(), c);
                                 c->start(false, payload);
-                                response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_TEXT);
+                                response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_INTEGER);
                             }
                             else
                             {
@@ -544,7 +544,7 @@ void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, con
         if (sessionid != 0)
         {
             asio::dispatch(from->ioc_, [from, ctx, sessionid, fd = c->fd()]{
-                    from->response(ctx->fd, ctx->owner, std::to_string(fd), sessionid, PTYPE_TEXT);
+                    from->response(ctx->fd, ctx->owner, std::to_string(fd), sessionid, PTYPE_INTEGER);
                 });
         }
     });

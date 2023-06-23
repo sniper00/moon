@@ -117,7 +117,7 @@ namespace moon
 
                 if (0 != conf->session)
                 {
-                    server_->response(conf->creator, std::to_string(serviceid), conf->session);
+                    server_->response(conf->creator, std::to_string(serviceid), conf->session, PTYPE_INTEGER);
                 }
                 return;
             } while (false);
@@ -130,7 +130,7 @@ namespace moon
 
             if (0 != conf->session)
             {
-                server_->response(conf->creator, "0"sv, conf->session);
+                server_->response(conf->creator, "0"sv, conf->session, PTYPE_INTEGER);
             }
         });
     }

@@ -218,7 +218,6 @@ else
     ---@class redis_client
     local client = {}
 
-    local yield = coroutine.yield
     local raw_send = moon.raw_send
     local packstr = seri.packs
 
@@ -229,32 +228,43 @@ else
     function client.call(db, ...)
         local sessionid = moon.make_session(db)
         local buf = concat_resp(...)
-        assert(wfront(buf, packstr("Q", 1)))
+        if not wfront(buf, packstr("Q", 1)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, sessionid)
-        return yield()
+        return moon.wait(sessionid)
     end
 
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
     --- - if failed return false and error message.
+    ---@param hash integer @ 一个标识符,把对同一个key的操作 在同一个redis连接上完成
+    ---@param db integer @ redisd 服务id
+    ---@param ... any
     function client.hash_call(hash, db, ...)
         local sessionid = moon.make_session(db)
         hash = hash or 1
         local buf = concat_resp(...)
-        assert(wfront(buf, packstr("Q", hash)))
+        if not wfront(buf, packstr("Q", hash)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, sessionid)
-        return yield()
+        return moon.wait(sessionid)
     end
 
     function client.send(db, ...)
         local buf = concat_resp(...)
-        assert(wfront(buf, packstr("Q", 1)))
+        if not wfront(buf, packstr("Q", 1)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, 0)
     end
 
     function client.hash_send(hash, db, ...)
         hash = hash or 1
         local buf = concat_resp(...)
-        assert(wfront(buf, packstr("Q", hash)))
+        if not wfront(buf, packstr("Q", hash)) then
+            error("buffer has no front space")
+        end
         raw_send("lua", db, buf, 0)
     end
     return client

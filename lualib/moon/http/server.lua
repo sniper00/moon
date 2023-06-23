@@ -147,7 +147,9 @@ end
 function http_response:tb()
     local status_code = self.status_code
     local status_msg = http_status_msg[status_code]
-    assert(status_msg,"invalid http status code")
+    if not status_msg then
+        error("invalid http status code")
+    end
 
     local cache = {}
     tbinsert( cache, "HTTP/1.1 "..tostring(status_code).." " )

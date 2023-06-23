@@ -392,7 +392,9 @@ local function parse_row_desc(row_desc)
         local data_type = decode_int(row_desc:sub(offset + 6, offset + 9))
         --data_type = PG_TYPES[data_type] or "string"
         local format = decode_short(row_desc:sub(offset + 16, offset + 17))
-        assert(0 == format, "don't know how to handle format")
+        if 0~=format then
+            error("don't know how to handle format")
+        end
         offset = offset + 18
         local info = {
             name,
@@ -405,7 +407,10 @@ end
 
 local function parse_row_data(data_row, fields)
     local tupnfields = decode_short(data_row:sub(1, 2))
-    assert(tupnfields == #fields, 'unexpected field count in \"D\" message')
+    if tupnfields~=#fields then
+        error('unexpected field count in \"D\" message')
+    end
+
     local out = {}
     local offset = 3
     for i = 1, tupnfields do
