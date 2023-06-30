@@ -128,10 +128,6 @@ function core.release(msg) end
 ---redirect a message to other service
 function core.redirect(msg, receiver, mtype, sender, sessionid) end
 
----get error log count
----@return integer
-function core.error_count() end
-
 ---@class asio
 local asio = {}
 

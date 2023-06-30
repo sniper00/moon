@@ -151,8 +151,7 @@ end
 local function send_message(self, t, data)
     local buf = concat(data)
     local len = bsize(buf)
-    wfront(buf, strpack(">I", len+4))
-    wfront(buf, t)
+    wfront(buf, t, strpack(">I", len+4))
     socket.write(self.sock, buf)
 end
 
@@ -482,8 +481,7 @@ end
 function pg.pack_query_buffer(buf)
     wback(buf, "\0")
     local len = bsize(buf)
-    wfront(buf, strpack(">I", len+4))
-    wfront(buf, MSG_TYPE.query)
+    wfront(buf, MSG_TYPE.query, strpack(">I", len+4))
 end
 
 ---@param sql message_ptr|string

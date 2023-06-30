@@ -147,9 +147,14 @@ static void write_string(lua_State* L, int index, buffer* b)
 static int write_front(lua_State* L)
 {
     auto buf = get_pointer(L, 1);
-    size_t len = 0;
-    auto data = luaL_checklstring(L, 2, &len);
-    bool ok = buf->write_front(data, len);
+    int top = lua_gettop(L);
+    bool ok = true;
+    for(int i = top; i>1; --i){
+        size_t len = 0;
+        auto data = luaL_checklstring(L, i, &len);
+        ok = buf->write_front(data, len);
+        if(!ok) break;
+    }
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }

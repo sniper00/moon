@@ -43,8 +43,8 @@ function buffer.read(buf, n) end
 
 --- Write string to buffer's head part
 ---@param buf buffer_ptr
----@param str string
-function buffer.write_front(buf, str) end
+---@param ... string
+function buffer.write_front(buf, ...) end
 
 --- Write string to buffer
 ---@param buf buffer_ptr
