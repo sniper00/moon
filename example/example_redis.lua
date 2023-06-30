@@ -117,6 +117,42 @@ local function run_example()
         db:disconnect()
     end)
 
+    local redisd = require("redisd")
+    --初始化服务配置
+    local db_conf= {host = "127.0.0.1", port = 6379, timeout = 1000}
+
+    local redis_db
+
+    moon.async(function ()
+        redis_db = moon.new_service(    {
+            unique = true,
+            name = "db",
+            file = "../service/redisd.lua",
+            threadid = 1, ---独占线程
+            poolsize = 5, ---连接池
+            opts = db_conf
+        })
+
+        redisd.send(redis_db, "SET", "HELLO", "WORLD")
+        print("Get HELLO:", redisd.call(redis_db, "GET", "HELLO"))
+
+        local res, err = redisd.direct(redis_db, "pipeline", {{"set", "cat", "Marry"},
+            {"set", "horse", "Bob"},
+            {"get", "cat"},
+            {"get", "horse"},
+            },{});
+
+        if err then
+            print(err)
+        else
+            print_r(res)
+        end
+    end)
+
+    moon.shutdown(function ()
+        moon.kill(redis_db)
+        moon.quit()
+    end)
 end
 
 run_example()

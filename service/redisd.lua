@@ -29,8 +29,10 @@ if conf.name then
         return db, err
     end
 
-    local function exec_one(db, msg , sender, sessionid, auto_reconnect)
+    local function exec_one(db, msg , sender, sessionid, opt)
         local reconnect_times = 1
+
+        local auto_reconnect = sessionid==0
 
         if auto_reconnect then
             reconnect_times = -1
@@ -49,7 +51,14 @@ if conf.name then
                     return
                 end
             end
-            res, err = redis.raw_send(db, msg)
+
+            if opt == "Q" then
+                res, err = redis.raw_send(db, msg)
+            else
+                local t = {moon.unpack(moon.decode(msg,"C"))}
+                res, err =db[t[1]](db, table.unpack(t, 2))
+            end
+
             if redis.socket_error == res then
                 db = nil
                 moon.error(err)
@@ -102,11 +111,11 @@ if conf.name then
         tbinsert(pool,one)
     end
 
-    local function docmd(hash, sender, sessionid, msg)
+    local function docmd(hash, sender, sessionid, msg, opt)
         hash = hash%db_pool_size + 1
         --print(moon.name, "db hash", hash)
         local ctx = pool[hash]
-        list.push(ctx.queue, {clone(msg), sender, sessionid})
+        list.push(ctx.queue, {clone(msg), sender, sessionid, opt})
         if ctx.running then
             return
         end
@@ -119,7 +128,7 @@ if conf.name then
                     break
                 end
                 local iscall = req[3]~=0
-                local ok,db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3], not iscall)
+                local ok,db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3], req[4])
                 if not ok then
                     if ctx.db then
                         ctx.db:disconnect()
@@ -163,9 +172,9 @@ if conf.name then
     moon.raw_dispatch('lua',function(msg)
         local sender, sessionid, buf = moon.decode(msg, "SEB")
         local cmd, sz, len = seri.unpack_one(buf, true)
-        if cmd == "Q" then
+        if cmd == "Q" or cmd == "D" then
             local hash = seri.unpack_one(buf, true)
-            docmd(hash, sender, sessionid, msg)
+            docmd(hash, sender, sessionid, msg, cmd)
             return
         end
 
@@ -231,6 +240,13 @@ else
         if not wfront(buf, packstr("Q", 1)) then
             error("buffer has no front space")
         end
+        raw_send("lua", db, buf, sessionid)
+        return moon.wait(sessionid)
+    end
+
+    function client.direct(db, cmd, ...)
+        local sessionid = moon.make_session(db)
+        local buf = seri.pack("D", 1, cmd, ...)
         raw_send("lua", db, buf, sessionid)
         return moon.wait(sessionid)
     end
