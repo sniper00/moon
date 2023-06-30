@@ -52,16 +52,16 @@ local function cluster_service()
         return true
     end
 
-    local services_address = {}
-    local function get_service_address(sname)
-        local addr = services_address[sname]
-        if not addr then
-            addr = queryservice(sname)
-            assert(addr>0, tostring(sname))
-            services_address[sname] = addr
+    local services_address = setmetatable ({} , {
+        __index = function(t, key)
+            local addr = moon.queryservice(key)
+            if addr == 0 then
+                return nil
+            end
+            t[key] = addr
+            return addr
         end
-        return addr
-    end
+    })
 
     socket.on("connect",function(fd, msg)
         print("connect", fd, moon.decode(msg, "Z"))
@@ -87,9 +87,13 @@ local function cluster_service()
 
         if header.session < 0 then -- receive call message
             moon.async(function ()
-                local address = get_service_address(header.to_sname)
-                if address == 0 then
-                    error(tostring(header.to_sname))
+                local address = services_address[header.to_sname]
+                if not address then
+                    local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname, header.to_node)
+                    header.session = -header.session
+                    socket.write(fd, pack(header, false, message)) -- response to sender node
+                    moon.error("An error occurred while receiving the cluster.call message:", message)
+                    return
                 end
                 local session = moon.make_session(address)
                 redirect(msg, address, moon.PTYPE_LUA, moon.id, -session)
@@ -101,13 +105,18 @@ local function cluster_service()
                 redirect(msg, header.from_addr, moon.PTYPE_LUA, moon.id, header.session)
             end
         else-- receive send message
-            local address = get_service_address(header.to_sname)
+            local address = services_address[header.to_sname]
+            if not address then
+                local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname, header.to_node)
+                moon.error("An error occurred while receiving the cluster.send message:",message)
+                return
+            end
             redirect(msg, address, moon.PTYPE_LUA)
         end
     end)
 
     socket.on("close", function(fd, msg)
-        print("close", moon.decode(msg, "Z"))
+        print("socket close", moon.decode(msg, "Z"))
         for k, v in pairs(close_watch) do
             if v == fd then
                 close_watch[k] = false
@@ -119,7 +128,7 @@ local function cluster_service()
             for key in pairs(senders) do
                 local sender = key&0xFFFFFFFF
                 local sessionid = (key>>32)
-                print("close response", sender, sessionid)
+                print("response to sender service", sender, sessionid)
                 moon.response("lua", sender, -sessionid, false, "cluster:socket disconnect")
             end
         end
@@ -295,7 +304,9 @@ local cluster_address
 ---@field public ping boolean
 ---@field public pong boolean
 
-
+---@param receiver_node integer @ node ID
+---@param receiver_sname string @ 目标node的 唯一服务 name
+---@param ... any @ 参数
 function cluster.send(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
@@ -313,6 +324,9 @@ function cluster.send(receiver_node, receiver_sname, ...)
     moon.send("lua", cluster_address, "Request", header, ...)
 end
 
+---@param receiver_node integer @ node ID
+---@param receiver_sname string @ 目标node的 唯一服务 name
+---@param ... any @ 参数
 function cluster.call(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
