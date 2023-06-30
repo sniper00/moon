@@ -360,8 +360,8 @@ static int message_decode(lua_State* L)
             buffer* buf = m->get_buffer();
             if (nullptr == buf)
             {
-                lua_pushnil(L);
-                lua_pushnil(L);
+                lua_pushlightuserdata(L, nullptr);
+                lua_pushinteger(L, 0);
             }
             else
             {

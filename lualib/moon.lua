@@ -307,7 +307,7 @@ end
 function moon.wakeup(co, ...)
     local args = { ... }
     moon.timeout(0, function()
-        local ok, err = co_resume(co, false, "BREAK", table.unpack(args))
+        local ok, err = co_resume(co, false, "BREAK", args)
         if not ok then
             err = traceback(co, tostring(err))
             co_close(co)
