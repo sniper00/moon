@@ -234,10 +234,11 @@ else
 
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
     --- - if failed return false and error message.
+    --- redisd.call(redis_db, "GET", "HELLO")
     function client.call(db, ...)
         local sessionid = moon.make_session(db)
-        local buf = concat_resp(...)
-        if not wfront(buf, packstr("Q", 1)) then
+        local buf, hash = concat_resp(...)
+        if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
         raw_send("lua", db, buf, sessionid)
@@ -251,38 +252,15 @@ else
         return moon.wait(sessionid)
     end
 
-    --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
-    --- - if failed return false and error message.
-    ---@param hash integer @ 一个标识符,把对同一个key的操作 在同一个redis连接上完成
-    ---@param db integer @ redisd 服务id
-    ---@param ... any
-    function client.hash_call(hash, db, ...)
-        local sessionid = moon.make_session(db)
-        hash = hash or 1
-        local buf = concat_resp(...)
-        if not wfront(buf, packstr("Q", hash)) then
-            error("buffer has no front space")
-        end
-        raw_send("lua", db, buf, sessionid)
-        return moon.wait(sessionid)
-    end
-
+    --- redisd.send(redis_db, "SET", "HELLO", "WORLD")
     function client.send(db, ...)
-        local buf = concat_resp(...)
-        if not wfront(buf, packstr("Q", 1)) then
-            error("buffer has no front space")
-        end
-        raw_send("lua", db, buf, 0)
-    end
-
-    function client.hash_send(hash, db, ...)
-        hash = hash or 1
-        local buf = concat_resp(...)
+        local buf, hash = concat_resp(...)
         if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
         raw_send("lua", db, buf, 0)
     end
+
     return client
 end
 

@@ -4,6 +4,8 @@
 #include <charconv>
 #include <codecvt>
 #include "common/buffer.hpp"
+#include "common/hash.hpp"
+#include "common/string.hpp"
 
 #ifdef MOON_ENABLE_MIMALLOC
 static void* json_malloc(void*, size_t size) {
@@ -699,6 +701,27 @@ static int concat_resp(lua_State* L)
     auto buf = new moon::buffer(cfg->concat_buffer_size, cfg->concat_buffer_head_size);
     try
     {
+        int64_t hash = 1;
+        if(lua_type(L, 1) == LUA_TSTRING){
+            size_t len = 0;
+            const char* key = luaL_tolstring(L, 1, &len);
+            if(len>0){
+                std::string hash_part;
+                if (n > 1) {
+                    const char* field = luaL_tolstring(L, 2, &len);
+                    if (len > 0)
+                        hash_part.append(field, len);
+                }
+
+                if (n > 2 && (key[0] == 'h' || key[0] == 'H')) {
+                    const char* field = luaL_tolstring(L, 3, &len);
+                    if (len > 0)
+                        hash_part.append(field, len);
+                }
+                hash = static_cast<uint32_t>(moon::hash_range(hash_part.begin(), hash_part.end()));
+            }
+        }
+
         buf->write_back('*');
         buf->write_chars(n);
 
@@ -709,7 +732,8 @@ static int concat_resp(lua_State* L)
 
         buf->write_back("\r\n", 2);
         lua_pushlightuserdata(L, buf);
-        return 1;
+        lua_pushinteger(L, hash);
+        return 2;
     }
     catch (const std::exception& ex)
     {
