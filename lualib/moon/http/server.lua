@@ -22,85 +22,85 @@ local assert = assert
 
 local http_status_msg = {
 
-	[100] = "Continue",
+    [100] = "Continue",
 
-	[101] = "Switching Protocols",
+    [101] = "Switching Protocols",
 
-	[200] = "OK",
+    [200] = "OK",
 
-	[201] = "Created",
+    [201] = "Created",
 
-	[202] = "Accepted",
+    [202] = "Accepted",
 
-	[203] = "Non-Authoritative Information",
+    [203] = "Non-Authoritative Information",
 
-	[204] = "No Content",
+    [204] = "No Content",
 
-	[205] = "Reset Content",
+    [205] = "Reset Content",
 
-	[206] = "Partial Content",
+    [206] = "Partial Content",
 
-	[300] = "Multiple Choices",
+    [300] = "Multiple Choices",
 
-	[301] = "Moved Permanently",
+    [301] = "Moved Permanently",
 
-	[302] = "Found",
+    [302] = "Found",
 
-	[303] = "See Other",
+    [303] = "See Other",
 
-	[304] = "Not Modified",
+    [304] = "Not Modified",
 
-	[305] = "Use Proxy",
+    [305] = "Use Proxy",
 
-	[307] = "Temporary Redirect",
+    [307] = "Temporary Redirect",
 
-	[400] = "Bad Request",
+    [400] = "Bad Request",
 
-	[401] = "Unauthorized",
+    [401] = "Unauthorized",
 
-	[402] = "Payment Required",
+    [402] = "Payment Required",
 
-	[403] = "Forbidden",
+    [403] = "Forbidden",
 
-	[404] = "Not Found",
+    [404] = "Not Found",
 
-	[405] = "Method Not Allowed",
+    [405] = "Method Not Allowed",
 
-	[406] = "Not Acceptable",
+    [406] = "Not Acceptable",
 
-	[407] = "Proxy Authentication Required",
+    [407] = "Proxy Authentication Required",
 
-	[408] = "Request Time-out",
+    [408] = "Request Time-out",
 
-	[409] = "Conflict",
+    [409] = "Conflict",
 
-	[410] = "Gone",
+    [410] = "Gone",
 
-	[411] = "Length Required",
+    [411] = "Length Required",
 
-	[412] = "Precondition Failed",
+    [412] = "Precondition Failed",
 
-	[413] = "Request Entity Too Large",
+    [413] = "Request Entity Too Large",
 
-	[414] = "Request-URI Too Large",
+    [414] = "Request-URI Too Large",
 
-	[415] = "Unsupported Media Type",
+    [415] = "Unsupported Media Type",
 
-	[416] = "Requested range not satisfiable",
+    [416] = "Requested range not satisfiable",
 
-	[417] = "Expectation Failed",
+    [417] = "Expectation Failed",
 
-	[500] = "Internal Server Error",
+    [500] = "Internal Server Error",
 
-	[501] = "Not Implemented",
+    [501] = "Not Implemented",
 
-	[502] = "Bad Gateway",
+    [502] = "Bad Gateway",
 
-	[503] = "Service Unavailable",
+    [503] = "Service Unavailable",
 
-	[504] = "Gateway Time-out",
+    [504] = "Gateway Time-out",
 
-	[505] = "HTTP Version not supported",
+    [505] = "HTTP Version not supported",
 
 }
 
@@ -132,7 +132,7 @@ end
 
 ---@param field string
 ---@param value string
-function http_response:write_header(field,value)
+function http_response:write_header(field, value)
     self.header[tostring(field)] = tostring(value)
 end
 
@@ -152,19 +152,21 @@ function http_response:tb()
     end
 
     local cache = {}
-    tbinsert( cache, "HTTP/1.1 "..tostring(status_code).." " )
-    tbinsert( cache, status_msg )
-    tbinsert( cache, "\r\n" )
+    cache[#cache + 1] = "HTTP/1.1 "
+    cache[#cache + 1] = tostring(status_code)
+    cache[#cache + 1] = " "
+    cache[#cache + 1] = status_msg
+    cache[#cache + 1] = "\r\n"
 
-    for k,v in pairs(self.header) do
-        tbinsert( cache, k )
-        tbinsert( cache, ": " )
-        tbinsert( cache, v )
-        tbinsert( cache, "\r\n" )
+    for k, v in pairs(self.header) do
+        cache[#cache + 1] = k
+        cache[#cache + 1] = ": "
+        cache[#cache + 1] = v
+        cache[#cache + 1] = "\r\n"
     end
-    tbinsert( cache, "\r\n" )
+    cache[#cache + 1] = "\r\n"
     if self.content then
-        tbinsert( cache, self.content )
+        cache[#cache + 1] = self.content
     end
     return cache
 end
@@ -172,7 +174,9 @@ end
 ----------------------------------------------------------
 
 local M = {}
---header and content max length
+
+M.header_max_len = 8192
+
 M.content_max_len = false
 --is enable keepalvie
 M.keepalive = true
@@ -180,49 +184,49 @@ M.keepalive = true
 local routers = {}
 
 local function read_chunked(fd, content_max_len)
-
     local chunkdata = {}
     local content_length = 0
 
     while true do
         local data, err = socket.read(fd, "\r\n", 64)
         if not data then
-            return {socket_error = err}
+            return { error = err, network_error = true }
         end
 
         local length = tonumber(data, 16)
         if not length then
-            return {protocol_error = "Invalid chunked format:"..data}
+            return { error = "Invalid chunked format:" .. data }
         end
 
-        if length==0 then
+        if length == 0 then
             break
         end
 
         content_length = content_length + length
 
         if content_max_len and content_length > content_max_len then
-            return {protocol_error = strfmt( "HTTP content length exceeded %d, request length %d", content_max_len, content_length)}
+            return {
+                error = strfmt("HTTP content length exceeded %d, request length %d", content_max_len, content_length) }
         end
 
-        if length >0 then
+        if length > 0 then
             data, err = socket.read(fd, length)
             if not data then
-                return {socket_error = err}
+                return { error = err, network_error = true }
             end
-            tbinsert( chunkdata, data )
+            tbinsert(chunkdata, data)
             data, err = socket.read(fd, "\r\n", 2)
             if not data then
-                return {socket_error = err}
+                return { error = err, network_error = true }
             end
-        elseif length <0 then
-            return {protocol_error = "Invalid chunked format:"..length}
+        elseif length < 0 then
+            return { error = "Invalid chunked format:" .. length }
         end
     end
 
-    local  data, err = socket.read(fd, "\r\n", 2)
+    local data, err = socket.read(fd, "\r\n", 2)
     if not data then
-        return {socket_error = err}
+        return { error = err, network_error = true }
     end
 
     return chunkdata
@@ -253,7 +257,7 @@ local function request_handler(fd, request)
 
     local handler = routers[request.path]
     if handler then
-        local ok,err = xpcall(handler, traceback, request, response)
+        local ok, err = xpcall(handler, traceback, request, response)
         if not ok then
             if M.error then
                 M.error(fd, err)
@@ -264,12 +268,12 @@ local function request_handler(fd, request)
             request.header["connection"] = "close"
 
             response.status_code = 500
-            response:write_header("Content-Type","text/plain")
+            response:write_header("Content-Type", "text/plain")
             response:write("Server Internal Error")
         end
     else
         response.status_code = 404
-        response:write_header("Content-Type","text/plain")
+        response:write_header("Content-Type", "text/plain")
         response:write(string.format("Cannot %s %s", request.method, request.path))
     end
 
@@ -290,32 +294,25 @@ local function parse_form(request)
     return parse_query_string(request.content)
 end
 
+---@class HttpServerRequest
+---@field method string
+---@field path string
+---@field header table<string,string>
+---@field query_string string
+---@field version string
+---@field content string
+---@field parse_query fun(request:HttpServerRequest):table<string,string>
+---@field parse_form fun(request:HttpServerRequest):table<string,string>
+
 function M.parse_header(data)
     --print("raw data",data)
-    local ok,method,path,query_string,version,header = parse_request(data)
-    if not ok then
-        return {protocol_error = "Invalid HTTP request header"}
+    ---@type HttpServerRequest
+    local request, err = parse_request(data)
+    if err then
+        return { protocol_error = "Invalid HTTP request header" }
     end
 
-    ---@class HttpServerRequest
-    ---@field method string
-    ---@field path string
-    ---@field query_string string
-    ---@field version string
-    ---@field content string
-    local request = {
-        method = method,
-        path = path,
-        query_string = query_string,
-        version = version
-    }
-
-    request.header = {}
-    for k,v in pairs(header) do
-        request.header[k:lower()]=v
-    end
-
-    if method == "HEAD" then
+    if request.method == "HEAD" then
         return request
     end
 
@@ -329,11 +326,11 @@ end
 local function read_request(fd, pre)
     local data, err = socket.read(fd, "\r\n\r\n", M.header_max_len)
     if not data then
-        return {socket_error = err}
+        return { error = err, network_error = true }
     end
 
     if pre then
-        data = pre..data
+        data = pre .. data
     end
 
     local request = M.parse_header(data)
@@ -349,29 +346,31 @@ local function read_request(fd, pre)
 
     local content_length = header["content-length"]
     if content_length then
+        ---@diagnostic disable-next-line: cast-local-type
         content_length = tointeger(content_length)
         if not content_length then
-            return {protocol_error = "Content-length is not number"}
+            return { error = "Content-length is not number" }
         end
 
         if M.content_max_len and content_length > M.content_max_len then
-            return {protocol_error = strfmt( "HTTP content length exceeded %d, request length %d", M.content_max_len, content_length)}
+            return {
+                error = strfmt("HTTP content length exceeded %d, request length %d", M.content_max_len, content_length) }
         end
 
         data, err = socket.read(fd, content_length)
         if not data then
-            return {socket_error = err}
+            return { error = err, network_error = true }
         end
         --print("Content-Length",content_length)
         request.content = data
     elseif header["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd, M.content_max_len)
-        if chunkdata.socket_error or chunkdata.protocol_error then
+        if chunkdata.error then
             return chunkdata
         end
-        request.content = tbconcat( chunkdata )
+        request.content = tbconcat(chunkdata)
     else
-        return {protocol_error = "Unsupport transfer-encoding:"..header["transfer-encoding"]}
+        return { error = "Unsupport transfer-encoding:" .. header["transfer-encoding"] }
     end
 
     return request
@@ -391,19 +390,15 @@ function M.start(fd, timeout, pre)
             if pre then
                 pre = nil
             end
-            if request.socket_error then
-                socket.close(fd)
-                return
-            end
 
-            if request.protocol_error then
+            if request.error then
                 local res = http_response.new()
                 res.status_code = 400
                 socket.write_then_close(fd, buffer.concat(res:tb()))
                 if M.error then
-                    M.error(fd, request.protocol_error)
-                else
-                    moon.error("HTTP_SERVER_ERROR: "..request.protocol_error)
+                    M.error(fd, request.error)
+                elseif not request.network_error then
+                    moon.error("HTTP_SERVER_ERROR: " .. request.error)
                 end
                 return
             end
@@ -412,31 +407,31 @@ function M.start(fd, timeout, pre)
                 return
             end
         end
-    end)--async
+    end) --async
 end
 
 ---@param host string @ ip address
 ---@param port integer @ port
 ---@param timeout? integer @read timeout in seconds
-function M.listen(host,port,timeout)
-    assert(not listenfd,"http server can only listen port once.")
+function M.listen(host, port, timeout)
+    assert(not listenfd, "http server can only listen port once.")
     listenfd = socket.listen(host, port, moon.PTYPE_SOCKET_TCP)
     timeout = timeout or 0
     moon.async(function()
         while true do
-            local fd,err = socket.accept(listenfd, moon.id)
+            local fd, err = socket.accept(listenfd, moon.id)
             if not fd then
-                print("httpserver accept",err)
-                return
+                print("httpserver accept", err)
+            else
+                M.start(fd, timeout)
             end
-            M.start(fd, timeout)
-        end--while
+        end --while
     end)
 end
 
 ---@param path string
 ---@param cb fun(request: HttpServerRequest, response: HttpServerResponse)
-function M.on( path, cb )
+function M.on(path, cb)
     routers[path] = cb
 end
 
@@ -446,10 +441,10 @@ function M.static(dir, showdebug)
     local res = fs.listdir(dir, 100)
     for _, v in ipairs(res) do
         local pos = string.find(v, dir, 1, true)
-        local src = string.sub(v, pos+#dir)
-        src = string.gsub(src, "\\","/")
-        if string.sub(src,1,1) ~= "/" then
-            src = "/"..src
+        local src = string.sub(v, pos + #dir)
+        src = string.gsub(src, "\\", "/")
+        if string.sub(src, 1, 1) ~= "/" then
+            src = "/" .. src
         end
 
         if not fs.isdir(v) then
@@ -463,25 +458,25 @@ function M.static(dir, showdebug)
                 print("load static file:", src)
             end
         else
-            local index_html = fs.join(v,"index.html")
+            local index_html = fs.join(v, "index.html")
             if fs.exists(index_html) then
                 static_content[src] = {
                     mime = mimes[".html"],
                     bin = io.readfile(index_html)
                 }
-                static_content[src.."/"] = static_content[src]
+                static_content[src .. "/"] = static_content[src]
                 if showdebug then
                     print("load static index:", src)
-                    print("load static index:", src.."/")
+                    print("load static index:", src .. "/")
                 end
             end
         end
     end
 
-    if fs.exists(fs.join(dir,"index.html")) then
+    if fs.exists(fs.join(dir, "index.html")) then
         static_content["/"] = {
             mime = mimes[".html"],
-            bin = io.readfile(fs.join(dir,"index.html"))
+            bin = io.readfile(fs.join(dir, "index.html"))
         }
     end
 end

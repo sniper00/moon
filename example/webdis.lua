@@ -24,8 +24,13 @@ http_server.on("/redis",function(request, response)
         return
     end
 
-    response:write_header("Content-Type", "application/json")
-    response:write(json.encode(res))
+    if type(res) == "table" then
+        response:write_header("Content-Type", "application/json")
+        response:write(json.encode(res))
+    else
+        response:write_header("Content-Type", "text/plain")
+        response:write(tostring(res))
+    end
 end)
 
 moon.async(function ()
@@ -53,3 +58,4 @@ end)
 -- http://127.0.0.1:9001/redis?cmd=hget-user1-name
 -- http://127.0.0.1:9001/redis?cmd=hgetall-user1
 
+-- cinatra_press_tool -c 50 -d 5s -t 4 -r 1 http://127.0.0.1:9001/redis?cmd=set-hello-world
