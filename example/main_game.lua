@@ -6,24 +6,17 @@ if _G["__init__"] then
         enable_stdout = true,
         logfile = string.format("log/game-%s.log", os.date("%Y-%m-%d-%H-%M-%S")),
         loglevel = "DEBUG", ---默认日志等级
+        path = table.concat({
+            "./?.lua",
+            "./?/init.lua",
+            "../lualib/?.lua",   -- moon lualib 搜索路径
+            "../service/?.lua",  -- moon 自带的服务搜索路径，需要用到redisd服务
+            -- Append your lua module search path
+        }, ";")
     }
 end
 
--- Define lua module search dir, all services use same lua search path
-local path = table.concat({
-    "./?.lua",
-    "./?/init.lua",
-    "../lualib/?.lua",   -- moon lualib 搜索路径
-    "../service/?.lua",  -- moon 自带的服务搜索路径，需要用到redisd服务
-    -- Append your lua module search path
-}, ";")
-
-package.path = path .. ";"
-
 local moon = require("moon")
-
---保存为env所有服务共享PATH配置
-moon.env("PATH", string.format("package.path='%s'", package.path))
 
 local socket = require "moon.socket"
 

@@ -151,6 +151,9 @@ int main(int argc, char* argv[])
         }
         arg.append("}");
 
+        std::shared_ptr<server> server_ = std::make_shared<server>();
+        wk_server = server_;
+
         if(file::read_all(bootstrap, std::ios::in).substr(0, 11) == "---__init__")
         {
             std::unique_ptr<lua_State, moon::state_deleter> lua_{ luaL_newstate() };
@@ -175,10 +178,12 @@ int main(int argc, char* argv[])
             logfile = lua_opt_field<std::string>(L, -1, "logfile");
             enable_stdout = lua_opt_field<bool>(L, -1, "enable_stdout", enable_stdout);
             loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
+            std::string path = lua_opt_field<std::string>(L, -1, "path", "");
+            if(!path.empty()){
+                path = moon::format("package.path='%s;'..package.path;", path.data());
+                server_->set_env("PATH", path);
+            }
         }
-
-        std::shared_ptr<server> server_ = std::make_shared<server>();
-        wk_server = server_;
 
         server_->register_service("lua", []()->service_ptr_t {
             return std::make_unique<lua_service>();
@@ -190,14 +195,17 @@ int main(int argc, char* argv[])
         server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
-        //By default, lualib and service directories are added to the lua search path
-        auto search_path = fs::absolute(fs::current_path());
-        if (!fs::exists(search_path/"lualib"))
-            search_path = fs::absolute(directory::module_path());
-        MOON_CHECK(fs::exists(search_path/"lualib"), "can not find moon lualib path.");
-        auto strpath = search_path.string();
-        moon::replace(strpath, "\\", "/");
-        server_->set_env("PATH", moon::format("package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;", strpath.data(), strpath.data()));
+        if(!server_->get_env("PATH"))
+        {
+            // By default, lualib and service directories are added to the lua search path
+            auto search_path = fs::absolute(fs::current_path());
+            if (!fs::exists(search_path / "lualib"))
+                search_path = fs::absolute(directory::module_path());
+            MOON_CHECK(fs::exists(search_path / "lualib"), "can not find moon lualib path.");
+            auto strpath = search_path.string();
+            moon::replace(strpath, "\\", "/");
+            server_->set_env("PATH", moon::format("package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;", strpath.data(), strpath.data()));
+        }
 
         //Change the working directory to the directory where the opened file is located.
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());

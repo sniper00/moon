@@ -1,4 +1,4 @@
----__init__
+---__init__---
 if _G["__init__"] then
     local arg = ...
     return {
@@ -6,22 +6,17 @@ if _G["__init__"] then
         enable_stdout = true,
         logfile = string.format("log/node-%s-%s.log", arg[1], os.date("%Y-%m-%d-%H-%M-%S")),
         loglevel = "DEBUG",
+        path = table.concat({ --Define lua module search dir, all services use same lua search path
+            "./?.lua",
+            "./?/init.lua",
+            "../lualib/?.lua",
+            "../service/?.lua",
+            -- Append your lua module search path
+        }, ";")
     }
 end
 
--- Define lua module search dir, all services use same lua search path
-local path = table.concat({
-    "./?.lua",
-    "./?/init.lua",
-    "../lualib/?.lua",
-    "../service/?.lua",
-    -- Append your lua module search path
-}, ";")
-
-package.path = path .. ";"
-
 local moon = require("moon")
-moon.env("PATH", string.format("package.path='%s'", package.path))
 
 local socket = require "moon.socket"
 local json = require("json")

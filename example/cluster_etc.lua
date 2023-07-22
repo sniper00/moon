@@ -11,10 +11,6 @@ local ETC_PORT = 9090
 httpserver.content_max_len = 8192
 httpserver.header_max_len = 8192
 
-httpserver.error = function(fd, err)
-    moon.warn(fd," disconnected:",  err)
-end
-
 local cluster_etc
 
 local function load_cluster_etc()
