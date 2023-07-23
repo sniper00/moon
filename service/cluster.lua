@@ -171,6 +171,7 @@ local function cluster_service()
         assert(c.host and c.port, "require host and port")
 
         local listenfd = socket.listen(c.host, c.port,moon.PTYPE_SOCKET_MOON)
+        assert(listenfd>0, strfmt("cluster listen %s:%s failed for node=%s", c.host, c.port, NODE))
         socket.start(listenfd)
         print(strfmt("cluster listen %s:%d", c.host, c.port))
         setmetatable(clusters, {__gc=function()
