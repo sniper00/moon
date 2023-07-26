@@ -851,6 +851,7 @@ namespace moon
                 meshQuery->getPolyHeight(polys[npolys - 1], hitPos, &h);
                 hitPos[1] = h;
             }
+            coord_transform(hitPos);
             return hit;
         }
 
