@@ -75,17 +75,9 @@ function core.queryservice(name) end
 ---@return string
 function core.env(key, value) end
 
----get worker thread info
----@return string
-function core.wsate(workerid) end
-
 --- let server exit: exitcode>=0 will wait all services quit.
 ---@param exitcode integer
 function core.exit(exitcode) end
-
---- get total services's count()
----@return integer
-function core.size() end
 
 --- adjusts server time(millsecond)
 ---@param milliseconds integer
