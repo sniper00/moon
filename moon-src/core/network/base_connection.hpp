@@ -55,8 +55,6 @@ namespace moon
                 return false;
             }
 
-            queue_.emplace_back(std::move(data));
-
             if (wq_warn_size_ != 0 && queue_.size() >= wq_warn_size_)
             {
                 CONSOLE_WARN(logger(), "network send queue too long. size:%zu", queue_.size());
@@ -69,7 +67,13 @@ namespace moon
                 }
             }
 
-            post_send();
+            bool write_in_progress = !queue_.empty();
+            queue_.emplace_back(std::move(data));
+
+            if(!write_in_progress)
+            {
+                post_send();
+            }
 
             return true;
         }
@@ -173,8 +177,6 @@ namespace moon
 
         void post_send()
         {
-            if (sending_ || queue_.size() == 0)
-                return;
 
             for (const auto& buf : queue_)
             {
@@ -193,14 +195,11 @@ namespace moon
                 }
             }
 
-            sending_ = true;
             asio::async_write(
                 socket_,
                 make_buffers_ref(holder_.buffers()),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
             {
-                sending_ = false;
-
                 if (!e)
                 {
                     if (holder_.close())
@@ -220,7 +219,10 @@ namespace moon
 
                         holder_.clear();
 
-                        post_send();
+                        if(!queue_.empty())
+                        {
+                            post_send();
+                        }
                     }
                 }
                 else
@@ -271,7 +273,6 @@ namespace moon
             }
         }
     protected:
-        bool sending_ = false;
         uint32_t fd_ = 0;
         time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
@@ -282,7 +283,7 @@ namespace moon
         uint8_t type_;
         moon::socket* parent_;
         socket_t socket_;
-        const_buffers_holder  holder_;
+        const_buffers_holder holder_;
         std::deque<buffer_ptr_t> queue_;
     };
 }
