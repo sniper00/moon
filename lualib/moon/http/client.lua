@@ -72,7 +72,7 @@ end
 local function response_handler(fd, method)
     local data, err = socket.read(fd, "\r\n\r\n")
     if not data then
-        return { socket_error = err }
+        return { error = err }
     end
 
     --print("raw data",data)
