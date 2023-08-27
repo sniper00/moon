@@ -131,6 +131,7 @@
     <ClCompile Include="..\..\..\lualib-src\lua_moon.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_navmesh.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_random.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_schema.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_serialize.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_socket.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_uuid.cpp" />

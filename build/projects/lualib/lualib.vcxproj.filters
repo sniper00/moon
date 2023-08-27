@@ -155,6 +155,9 @@
     <ClCompile Include="..\..\..\lualib-src\lua_random.cpp">
       <Filter>lualib-src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\lualib-src\lua_schema.cpp">
+      <Filter>lualib-src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\lualib-src\lua_serialize.cpp">
       <Filter>lualib-src</Filter>
     </ClCompile>

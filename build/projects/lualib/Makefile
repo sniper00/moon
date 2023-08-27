@@ -74,6 +74,7 @@ OBJECTS := \
 	$(OBJDIR)/lua_moon.o \
 	$(OBJDIR)/lua_navmesh.o \
 	$(OBJDIR)/lua_random.o \
+	$(OBJDIR)/lua_schema.o \
 	$(OBJDIR)/lua_serialize.o \
 	$(OBJDIR)/lua_socket.o \
 	$(OBJDIR)/lua_uuid.o \
@@ -190,6 +191,9 @@ $(OBJDIR)/lua_navmesh.o: ../../../lualib-src/lua_navmesh.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/lua_random.o: ../../../lualib-src/lua_random.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/lua_schema.o: ../../../lualib-src/lua_schema.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/lua_serialize.o: ../../../lualib-src/lua_serialize.cpp
