@@ -73,10 +73,13 @@ end
 ---@async
 ---@param host string
 ---@param port integer
----@param protocol integer # moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
+---@param protocol integer|string # "tcp", "ws", "moon" 
 ---@param payload? string # payload data, e. websocket's path
 function socket.sync_connect(host, port, protocol, payload)
     assert(supported_tcp_protocol[protocol], "not support")
+    if type(protocol) == "string" then
+        protocol = supported_tcp_protocol[protocol]
+    end
     local fd = connect(host, port, protocol, 0, 0, payload)
     if fd == 0 then
         return nil, "connect failed"
@@ -84,7 +87,7 @@ function socket.sync_connect(host, port, protocol, payload)
     return fd
 end
 
---- used only when protocol == moon.PTYPE_SOCKET_TCP
+--- NOTE:  used only when protocol == moon.PTYPE_SOCKET_TCP
 ---@async
 ---@param delim string @read until reach the specified delim string from the socket
 ---@param maxcount? integer
@@ -99,17 +102,17 @@ function socket.write_then_close(fd, data)
     write(fd, data, flag_close)
 end
 
---- PTYPE_SOCKET_WS specific functions
+--- NOTE:  PTYPE_SOCKET_WS specific functions
 function socket.write_text(fd, data)
     write(fd, data, flag_ws_text)
 end
 
---- PTYPE_SOCKET_WS specific functions
+--- NOTE:  PTYPE_SOCKET_WS specific functions
 function socket.write_ping(fd, data)
     write(fd, data, flag_ws_ping)
 end
 
---- PTYPE_SOCKET_WS specific functions
+--- NOTE:  PTYPE_SOCKET_WS specific functions
 function socket.write_pong(fd, data)
     write(fd, data, flag_ws_pong)
 end
@@ -167,6 +170,7 @@ moon.raw_dispatch(
     end
 )
 
+--- NOTE: used only when protocol == moon.PTYPE_SOCKET_MOON
 ---@param name socket_event
 ---@param cb fun(fd:integer, msg:message_ptr)
 function socket.on(name, cb)
@@ -178,6 +182,7 @@ function socket.on(name, cb)
     end
 end
 
+--- NOTE: used only when protocol == moon.PTYPE_SOCKET_WS
 ---@param name websocket_event
 ---@param cb fun(fd:integer, msg:message_ptr)
 function socket.wson(name, cb)
