@@ -12,13 +12,8 @@ namespace moon
         template <typename... Args>
         explicit stream_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
+            ,response_(8192,0)
         {
-        }
-
-        void start(bool accepted, const std::string& payload) override
-        {
-            base_connection_t::start(accepted, payload);
-            response_ = message{ 8192, 0 };
         }
 
         void read(size_t n, std::string_view delim, int32_t sessionid) override
