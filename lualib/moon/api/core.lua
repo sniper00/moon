@@ -163,7 +163,7 @@ function asio.setnodelay(fd) end
 ---| 'rw'
 ---| 'wr'
 
---- 对于PTYPE_SOCKET_MOON类型的协议, 默认最大长度是32767字节。
+--- 对于PTYPE_SOCKET_MOON类型的协议, 默认最大长度是65534字节。
 --- 可以设置chunkmode, 允许收发大于这个长度消息, 底层的处理是对消息进行切片。
 ---@param fd integer
 ---@param mode chunkmode
