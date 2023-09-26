@@ -428,7 +428,7 @@ static int lmi_collect(lua_State* L)
 }
 
 extern "C" {
-    int LUAMOD_API luaopen_moon(lua_State* L)
+    int LUAMOD_API luaopen_moon_core(lua_State* L)
     {
     luaL_Reg l[] = {
         { "clock", lmoon_clock},
@@ -724,7 +724,7 @@ static int lasio_unpack_udp(lua_State* L)
 }
 
 extern "C" {
-    int LUAMOD_API luaopen_asio(lua_State* L)
+    int LUAMOD_API luaopen_asio_core(lua_State* L)
     {
     luaL_Reg l[] = {
         { "try_open", lasio_try_open},

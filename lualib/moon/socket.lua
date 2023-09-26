@@ -1,5 +1,5 @@
 local moon = require("moon")
-local core = require("asio")
+local core = require("asio.core")
 
 local make_session = moon.make_session
 local id = moon.id

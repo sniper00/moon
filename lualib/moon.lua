@@ -6,7 +6,7 @@ require("base.math")
 require("base.util")
 require("base.class")
 
-local core = require("mooncore")
+local core = require("moon.core")
 local seri = require("seri")
 
 local pairs = pairs

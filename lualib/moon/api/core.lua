@@ -1,14 +1,14 @@
 error("DO NOT REQUIRE THIS FILE")
 
---- lightuserdata buffer*
----@class buffer_ptr
-
---- lightuserdata message*
 ---@meta
 
+--- lightuserdata, cpp type `buffer*`
+---@class buffer_ptr
+
+--- lightuserdata, cpp type `message*`
 ---@class message_ptr
 
---- lightuserdata char*
+--- lightuserdata, cpp type `char*`
 ---@class cstring_ptr
 
 ---@class core

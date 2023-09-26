@@ -1,12 +1,11 @@
 local moon = require("moon")
-local http = require("http")
 local buffer = require("buffer")
----@type fs
 local fs = require("fs")
 local socket = require("moon.socket")
+local c = require("http.core")
 
-local parse_request = http.parse_request
-local parse_query_string = http.parse_query_string
+local parse_request = c.parse_request
+local parse_query_string = c.parse_query_string
 
 local tbinsert = table.insert
 local tbconcat = table.concat

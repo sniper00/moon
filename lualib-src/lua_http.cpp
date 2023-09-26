@@ -119,7 +119,7 @@ static int lhttp_urldecode(lua_State* L)
 }
 
 extern "C" {
-    int LUAMOD_API luaopen_http(lua_State *L)
+    int LUAMOD_API luaopen_http_core(lua_State *L)
     {
         luaL_Reg l[] = {
             { "parse_request", lhttp_parse_request},

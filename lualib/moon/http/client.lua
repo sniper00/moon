@@ -1,8 +1,8 @@
-local http = require("http")
 local buffer = require("buffer")
 local moon = require("moon")
 local json = require("json")
 local socket = require("moon.socket")
+local c = require("http.core")
 
 local string = string
 
@@ -14,10 +14,10 @@ local tonumber = tonumber
 local tointeger = math.tointeger
 local pairs = pairs
 
-local parse_response = http.parse_response
+local parse_response = c.parse_response
 
 ---@type fun(params:table):string
-local create_query_string = http.create_query_string
+local create_query_string = c.create_query_string
 
 -----------------------------------------------------------------
 
