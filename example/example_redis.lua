@@ -136,6 +136,13 @@ local function run_example()
         redisd.send(redis_db, "SET", "HELLO", "WORLD")
         print("Get HELLO:", redisd.call(redis_db, "GET", "HELLO"))
 
+        redisd.send(redis_db, "SET", "A", "A1")
+        redisd.send(redis_db, "SET", "B", "B1")
+        redisd.send(redis_db, "SET", "C", "C1")
+        print(redisd.call(redis_db, "GET", 'A'))
+        print(redisd.call(redis_db, "GET", 'B'))
+        print(redisd.call(redis_db, "GET", 'C'))
+
         local res, err = redisd.direct(redis_db, "pipeline", {{"set", "cat", "Marry"},
             {"set", "horse", "Bob"},
             {"get", "cat"},

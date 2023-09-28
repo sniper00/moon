@@ -1,51 +1,50 @@
 --Echo Server Example
 local moon = require("moon")
 local socket = require("moon.socket")
-local http_server = require("moon.http.server")
+local websocket = require("moon.http.websocket")
 
 local conf = ...
 
 local HOST = conf.host or "127.0.0.1"
 local PORT = conf.port or 12346
 
-socket.wson("accept",function(fd, msg)
-    local header = http_server.parse_header(moon.decode(msg, "Z"))
-    print_r(header)
+websocket.on_accept(function(fd, request)
+    print_r(request)
 
     print("wsaccept ", fd)
     -- 设置read超时，单位秒
     socket.settimeout(fd, 10)
 end)
 
-socket.wson("message",function(fd, msg)
+websocket.wson("message",function(fd, msg)
     -- binary frame
     -- socket.write(fd, msg)
     -- text frame
-    socket.write_text(fd, moon.decode(msg, "Z"))
+    print(moon.decode(msg, "Z"))
+    websocket.write_text(fd, moon.decode(msg, "Z"))
 end)
 
-socket.wson("close",function(fd, msg)
+websocket.wson("close",function(fd, msg)
     print("wsclose ", fd, moon.decode(msg, "Z"))
 end)
 
-socket.wson("ping",function(fd, msg)
+websocket.wson("ping",function(fd, msg)
     print("wsping ", fd, moon.decode(msg, "Z"))
-    socket.write_pong(fd,"my pong")
+    websocket.write_pong(fd,"my pong")
 end)
 
-local listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_WS)
-socket.start(listenfd)
+local listenfd = websocket.listen(HOST, PORT)
 print("websocket server start ", HOST, PORT)
 print("enter 'CTRL-C' stop server.")
 
-
 moon.async(function ()
-    local fd = socket.connect(HOST, PORT, "ws", 0, "chat")
-    socket.write(fd, "hello world");
+    local fd = websocket.connect(string.format("ws://%s:%s/chat", HOST, PORT))
+    assert(websocket.write_text(fd, "hello world"))
+    websocket.close(fd)
 end)
 
 moon.shutdown(function()
-    socket.close(listenfd)
+    websocket.close(listenfd)
 	moon.quit()
 end)
 

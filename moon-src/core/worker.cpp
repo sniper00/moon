@@ -32,12 +32,12 @@ namespace moon
 
     void worker::run()
     {
-        socket_ = std::make_unique<moon::socket>(server_, this, io_ctx_);
+        socket_server_ = std::make_unique<moon::socket_server>(server_, this, io_ctx_);
 
         thread_ = std::thread([this]() {
             CONSOLE_INFO(server_->logger(), "WORKER-%u START", workerid_);
             io_ctx_.run();
-            socket_->close_all();
+            socket_server_->close_all();
             services_.clear();
             CONSOLE_INFO(server_->logger(), "WORKER-%u STOP", workerid_);
         });

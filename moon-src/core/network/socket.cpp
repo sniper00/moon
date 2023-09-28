@@ -10,30 +10,39 @@
 
 using namespace moon;
 
-socket::socket(server* s, worker* w, asio::io_context & ioctx)
+socket_server::socket_server(server* s, worker* w, asio::io_context & ioctx)
     : server_(s)
     , worker_(w)
-    , ioc_(ioctx)
+    , context_(ioctx)
     , timer_(ioctx)
     , response_()
 {
     timeout();
 }
 
-bool socket::try_open(const std::string& host, uint16_t port)
+bool socket_server::try_open(const std::string& host, uint16_t port, bool is_connect)
 {
     try
     {
-        asio::ip::tcp::resolver resolver{ioc_};
-        asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
-        asio::ip::tcp::acceptor acceptor{ioc_};
-        acceptor.open(endpoint.protocol());
-#if TARGET_PLATFORM != PLATFORM_WINDOWS
-        acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-#endif
-        acceptor.bind(endpoint);
-        acceptor.close();
-        return true;
+        tcp::resolver resolver{context_};
+        if(is_connect){
+            tcp::socket sock(context_);
+            asio::connect(sock, resolver.resolve(host, std::to_string(port)));
+            sock.close();
+            return true;
+        }
+        else
+        {
+            tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            tcp::acceptor acceptor{context_};
+            acceptor.open(endpoint.protocol());
+    #if TARGET_PLATFORM != PLATFORM_WINDOWS
+            acceptor.set_option(tcp::acceptor::reuse_address(true));
+    #endif
+            acceptor.bind(endpoint);
+            acceptor.close();
+            return true;
+        }
     }
     catch (const asio::system_error& e)
     {
@@ -42,16 +51,16 @@ bool socket::try_open(const std::string& host, uint16_t port)
     }
 }
 
-std::pair<uint32_t, asio::ip::tcp::endpoint> socket::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
+std::pair<uint32_t, tcp::endpoint> socket_server::listen(const std::string & host, uint16_t port, uint32_t owner, uint8_t type)
 {
     try
     {
-        auto ctx = std::make_shared<socket::acceptor_context>(type, owner, ioc_);
-        asio::ip::tcp::resolver resolver(ioc_);
-        asio::ip::tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+        auto ctx = std::make_shared<socket_server::acceptor_context>(type, owner, context_);
+        tcp::resolver resolver(context_);
+        tcp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
         ctx->acceptor.open(endpoint.protocol());
 #if TARGET_PLATFORM != PLATFORM_WINDOWS
-        ctx->acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+        ctx->acceptor.set_option(tcp::acceptor::reuse_address(true));
 #endif
         ctx->acceptor.bind(endpoint);
         ctx->acceptor.listen(std::numeric_limits<int>::max());
@@ -64,24 +73,24 @@ std::pair<uint32_t, asio::ip::tcp::endpoint> socket::listen(const std::string & 
     catch (const asio::system_error& e)
     {
         CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
-        return { 0, asio::ip::tcp::endpoint {}};
+        return { 0, tcp::endpoint {}};
     }
 }
 
-uint32_t socket::udp(uint32_t owner, std::string_view host, uint16_t port)
+uint32_t socket_server::udp(uint32_t owner, std::string_view host, uint16_t port)
 {
     try
     {
         udp_context_ptr_t ctx;
         if (host.empty())
         {
-            ctx = std::make_shared<socket::udp_context>(owner, ioc_);
+            ctx = std::make_shared<socket_server::udp_context>(owner, context_);
         }
         else
         {
-            asio::ip::udp::resolver resolver(ioc_);
-            asio::ip::udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
-            ctx = std::make_shared<socket::udp_context>(owner, ioc_, endpoint);
+            udp::resolver resolver(context_);
+            udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            ctx = std::make_shared<socket_server::udp_context>(owner, context_, endpoint);
         }
         auto id = server_->nextfd();
         ctx->fd = id;
@@ -96,14 +105,14 @@ uint32_t socket::udp(uint32_t owner, std::string_view host, uint16_t port)
     }
 }
 
-bool socket::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
+bool socket_server::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
 {
     try
     {
         if (auto iter = udp_.find(fd); iter != udp_.end())
         {
-            asio::ip::udp::resolver resolver(ioc_);
-            asio::ip::udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
+            udp::resolver resolver(context_);
+            udp::endpoint endpoint = *resolver.resolve(host, std::to_string(port)).begin();
             iter->second->sock.connect(endpoint);
             return true;
         }
@@ -116,7 +125,7 @@ bool socket::udp_connect(uint32_t fd, std::string_view host, uint16_t port)
     }
 }
 
-bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
+bool socket_server::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
 {
     auto iter = acceptors_.find(fd);
     if (iter == acceptors_.end())
@@ -134,7 +143,7 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
     if (nullptr == w)
         return false;
 
-    auto c = w->socket().make_connection(owner, ctx->type);
+    auto c = w->socket_server().make_connection(owner, ctx->type, tcp::socket(w->io_context()));
 
     ctx->acceptor.async_accept(c->socket(), [this, ctx, c, w, sessionid, owner](const asio::error_code& e)
     {
@@ -144,13 +153,13 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
                 c->socket().close();
                 ctx->reset_reserve();
                 auto ec = asio::error::make_error_code(asio::error::no_descriptors);
-                response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", ec.message().data(), ec.value()),
+                response(ctx->fd, ctx->owner, moon::format("socket_server::accept %s(%d)", ec.message().data(), ec.value()),
                     sessionid, PTYPE_ERROR);
             }
             else
             {
                 c->fd(server_->nextfd());
-                w->socket().add_connection(this, ctx, c, sessionid);
+                w->socket_server().add_connection(this, ctx, c, sessionid);
             }
         }
         else
@@ -166,7 +175,7 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
                 }
             }
 
-            response(ctx->fd, ctx->owner, moon::format("socket::accept %s(%d)", e.message().data(), e.value()),
+            response(ctx->fd, ctx->owner, moon::format("socket_server::accept %s(%d)", e.message().data(), e.value()),
                 sessionid, PTYPE_ERROR);
         }
 
@@ -178,19 +187,19 @@ bool socket::accept(uint32_t fd, int32_t sessionid, uint32_t owner)
     return true;
 }
 
-uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds, std::string payload)
+uint32_t socket_server::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds)
 {
     if (0 == sessionid)
     {
         try
         {
-            asio::ip::tcp::resolver resolver(ioc_);
-            asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
-            auto c = make_connection(owner, type);
+            tcp::resolver resolver(context_);
+            tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
+            auto c = make_connection(owner, type, tcp::socket(context_));
             asio::connect(c->socket(), endpoints);
             c->fd(server_->nextfd());
             connections_.emplace(c->fd(), c);
-            asio::post(ioc_, [c, payload]() {c->start(false, payload);});
+            asio::post(context_, [c]() {c->start(base_connection::role::client);});
             return c->fd();
         }
         catch (const asio::system_error& e)
@@ -200,17 +209,17 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
     }
     else
     {
-        std::shared_ptr<asio::ip::tcp::resolver> resolver = std::make_shared<asio::ip::tcp::resolver>(ioc_);
+        std::shared_ptr<tcp::resolver> resolver = std::make_shared<tcp::resolver>(context_);
         resolver->async_resolve(host, std::to_string(port),
-            [this, millseconds, type, owner, sessionid, host, port, resolver, payload = std::move(payload)](const asio::error_code& ec, asio::ip::tcp::resolver::results_type results)
+            [this, millseconds, type, owner, sessionid, host, port, resolver](const asio::error_code& ec, tcp::resolver::results_type results)
             {
                 if (!ec)
                 {
-                    auto c = make_connection(owner, type);
+                    auto c = make_connection(owner, type, tcp::socket(context_));
                     std::shared_ptr<asio::steady_timer> timer;
                     if (millseconds > 0)
                     {
-                        timer = std::make_shared<asio::steady_timer>(ioc_);
+                        timer = std::make_shared<asio::steady_timer>(context_);
                         timer->expires_after(std::chrono::milliseconds(millseconds));
                         timer->async_wait([this, c, owner, sessionid, host, port, timer](const asio::error_code& ec) {
                             if (!ec)
@@ -227,7 +236,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                     }
 
                     asio::async_connect(c->socket(), results,
-                        [this, c, host, port, owner, sessionid, timer, payload = std::move(payload)](const asio::error_code& ec, const asio::ip::tcp::endpoint&)
+                        [this, c, host, port, owner, sessionid, timer](const asio::error_code& ec, const tcp::endpoint&)
                         {
                             size_t cancelled_timer = 1;
                             if (timer)
@@ -243,7 +252,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
                             {
                                 c->fd(server_->nextfd());
                                 connections_.emplace(c->fd(), c);
-                                c->start(false, payload);
+                                c->start(base_connection::role::client);
                                 response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_INTEGER);
                             }
                             else
@@ -262,7 +271,7 @@ uint32_t socket::connect(const std::string& host, uint16_t port, uint32_t owner,
     return 0;
 }
 
-void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid)
+void socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -270,12 +279,12 @@ void socket::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim,
         return;
     }
 
-    asio::post(ioc_, [this, owner, sessionid]() {
+    asio::post(context_, [this, owner, sessionid]() {
         response(0, owner, "socket.read: closed", sessionid, PTYPE_ERROR);
     });
 }
 
-bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
+bool socket_server::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
 {
     if (nullptr == data || 0 == data->size())
         return false;
@@ -298,7 +307,7 @@ bool socket::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
     return false;
 }
 
-bool socket::close(uint32_t fd)
+bool socket_server::close(uint32_t fd)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -327,7 +336,7 @@ bool socket::close(uint32_t fd)
     return false;
 }
 
-void socket::close_all()
+void socket_server::close_all()
 {
     for (auto& c : connections_)
     {
@@ -345,7 +354,7 @@ void socket::close_all()
     }
 }
 
-bool socket::settimeout(uint32_t fd, uint32_t seconds)
+bool socket_server::settimeout(uint32_t fd, uint32_t seconds)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -355,7 +364,7 @@ bool socket::settimeout(uint32_t fd, uint32_t seconds)
     return false;
 }
 
-bool socket::setnodelay(uint32_t fd)
+bool socket_server::setnodelay(uint32_t fd)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -364,20 +373,20 @@ bool socket::setnodelay(uint32_t fd)
     return false;
 }
 
-bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
+bool socket_server::set_enable_chunked(uint32_t fd, std::string_view flag)
 {
-    int v = static_cast<int>(enable_chunked::none);
+    auto v = enable_chunked::none;
     for (const auto& c : flag)
     {
         switch (c)
         {
         case 'r':
         case 'R':
-            v |= static_cast<int>(moon::enable_chunked::receive);
+            v = v | moon::enable_chunked::receive;
             break;
         case 'w':
         case 'W':
-            v |= static_cast<int>(moon::enable_chunked::send);
+            v = v | moon::enable_chunked::send;
             break;
         default:
             CONSOLE_WARN(server_->logger(),
@@ -391,14 +400,14 @@ bool socket::set_enable_chunked(uint32_t fd, std::string_view flag)
         auto c = std::dynamic_pointer_cast<moon_connection>(iter->second);
         if (c)
         {
-            c->set_enable_chunked(static_cast<enable_chunked>(v));
+            c->set_enable_chunked(v);
             return true;
         }
     }
     return false;
 }
 
-bool socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
+bool socket_server::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
@@ -408,41 +417,41 @@ bool socket::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t error
     return false;
 }
 
-static bool decode_endpoint(std::string_view address, asio::ip::udp::endpoint& ep)
+static bool decode_endpoint(std::string_view address, udp::endpoint& ep)
 {
     if (address[0] != '4' && address[0] != '6')
         return false;
-    asio::ip::port_type port = 0;
+    port_type port = 0;
     if (address[0] == '4')
     {
         address = address.substr(1);
-        asio::ip::address_v4::bytes_type bytes;
+        address_v4::bytes_type bytes;
         if ((address.size()) != bytes.size() + sizeof(port))
             return false;
         memcpy(bytes.data(), address.data(), bytes.size());
         memcpy(&port, address.data() + bytes.size(), sizeof(port));
-        ep = asio::ip::udp::endpoint(asio::ip::address(asio::ip::make_address_v4(bytes)), port);
+        ep = udp::endpoint(asio::ip::address(make_address_v4(bytes)), port);
     }
     else
     {
         address = address.substr(1);
-        asio::ip::address_v6::bytes_type bytes;
+        address_v6::bytes_type bytes;
         if ((address.size()) != bytes.size() + sizeof(port))
             return false;
         memcpy(bytes.data(), address.data(), bytes.size());
         memcpy(&port, address.data() + bytes.size(), sizeof(port));
-        ep = asio::ip::udp::endpoint(asio::ip::address(asio::ip::make_address_v6(bytes)), port);
+        ep = udp::endpoint(asio::ip::address(make_address_v6(bytes)), port);
     }
     return true;
 }
 
-bool socket::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
+bool socket_server::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
 {
     if (address.empty())
         return false;
     if (auto iter = udp_.find(host); iter != udp_.end())
     {
-        asio::ip::udp::endpoint ep;
+        udp::endpoint ep;
         if (!decode_endpoint(address, ep))
             return false;
         iter->second->sock.async_send_to(
@@ -455,7 +464,7 @@ bool socket::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
     return false;
 }
 
-std::string moon::socket::getaddress(uint32_t fd)
+std::string moon::socket_server::getaddress(uint32_t fd)
 {
 	if (auto iter = connections_.find(fd); iter != connections_.end())
 	{
@@ -464,7 +473,23 @@ std::string moon::socket::getaddress(uint32_t fd)
 	return std::string();
 }
 
-size_t socket::encode_endpoint(char* buf, const asio::ip::address& addr, asio::ip::port_type port)
+bool moon::socket_server::switch_type(uint32_t fd, uint8_t new_type)
+{
+    if (auto iter = connections_.find(fd); iter != connections_.end())
+	{
+        auto c = iter->second;
+        if(c->type()!=PTYPE_SOCKET_TCP)
+            return false;
+        auto newc = make_connection(c->owner(), new_type, std::move(c->socket()));
+        newc->fd(fd);
+        iter->second = newc;
+        newc->start(c->get_role());
+        return true;
+	}
+    return false;
+}
+
+size_t socket_server::encode_endpoint(char* buf, const address& addr, port_type port)
 {
     size_t size = 0;
     if (addr.is_v4())
@@ -488,24 +513,24 @@ size_t socket::encode_endpoint(char* buf, const asio::ip::address& addr, asio::i
     return size;
 }
 
-connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
+connection_ptr_t socket_server::make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock)
 {
     connection_ptr_t connection;
     switch (type)
     {
     case PTYPE_SOCKET_MOON:
     {
-        connection = std::make_shared<moon_connection>(serviceid, type, this, ioc_);
+        connection = std::make_shared<moon_connection>(serviceid, type, this, std::move(sock));
         break;
     }
     case PTYPE_SOCKET_TCP:
     {
-        connection = std::make_shared<stream_connection>(serviceid, type, this, ioc_);
+        connection = std::make_shared<stream_connection>(serviceid, type, this, std::move(sock));
         break;
     }
     case PTYPE_SOCKET_WS:
     {
-        connection = std::make_shared<ws_connection>(serviceid, type, this, ioc_);
+        connection = std::make_shared<ws_connection>(serviceid, type, this, std::move(sock));
         break;
     }
     default:
@@ -514,9 +539,9 @@ connection_ptr_t socket::make_connection(uint32_t serviceid, uint8_t type)
     }
     connection->logger(server_->logger());
     return connection;
-    }
+}
 
-void socket::response(uint32_t sender, uint32_t receiver, std::string_view content, int32_t sessionid, uint8_t type)
+void socket_server::response(uint32_t sender, uint32_t receiver, std::string_view content, int32_t sessionid, uint8_t type)
 {
     if (0 == sessionid)
     {
@@ -535,27 +560,27 @@ void socket::response(uint32_t sender, uint32_t receiver, std::string_view conte
     handle_message(receiver, response_);
 }
 
-void socket::add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid)
+void socket_server::add_connection(socket_server* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int32_t  sessionid)
 {
-    asio::dispatch(ioc_, [this, from, ctx, c, sessionid] {
+    asio::dispatch(context_, [this, from, ctx, c, sessionid] {
         connections_.emplace(c->fd(), c);
-        c->start(true, std::string{});
+        c->start(base_connection::role::server);
 
         if (sessionid != 0)
         {
-            asio::dispatch(from->ioc_, [from, ctx, sessionid, fd = c->fd()]{
+            asio::dispatch(from->context_, [from, ctx, sessionid, fd = c->fd()]{
                     from->response(ctx->fd, ctx->owner, std::to_string(fd), sessionid, PTYPE_INTEGER);
                 });
         }
     });
 }
 
-service * socket::find_service(uint32_t serviceid)
+service* socket_server::find_service(uint32_t serviceid)
 {
     return worker_->find_service(serviceid);;
 }
 
-void socket::timeout()
+void socket_server::timeout()
 {
     timer_.expires_after(std::chrono::seconds(10));
     timer_.async_wait([this](const asio::error_code & e) {
@@ -573,7 +598,7 @@ void socket::timeout()
     });
 }
 
-void socket::do_receive(const udp_context_ptr_t& ctx)
+void socket_server::do_receive(const udp_context_ptr_t& ctx)
 {
     if (ctx->closed)
         return;

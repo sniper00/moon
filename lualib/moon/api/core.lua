@@ -123,10 +123,12 @@ function core.redirect(msg, receiver, mtype, sender, sessionid) end
 ---@class asio
 local asio = {}
 
+--- Check port bindable or connectable
 ---@param host string
 ---@param port integer
+---@param is_connect? boolean @ bind or connect
 ---@return boolean
-function asio.try_open(host, port) end
+function asio.try_open(host, port, is_connect) end
 
 ---param protocol moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
 ---@param host string
@@ -199,5 +201,9 @@ function asio.udp_connect(fd, host, port) end
 ---@param port integer
 ---@return string @addr bytes string
 function asio.make_endpoint(host, port) end
+
+---
+--- 切换协议类型, 要求fd关联的socket的type为moon.PTYPE_SOCKET_TCP. 现在只用于webscoket.
+function asio.switch_type(fd, type) end
 
 return core

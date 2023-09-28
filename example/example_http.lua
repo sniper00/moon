@@ -31,26 +31,29 @@ end)
 http_server.listen("127.0.0.1", 9991)
 print("http_server start", "127.0.0.1", 9991)
 
---- use http proxy
+-- use http proxy
 -- moon.async(function ()
---     print_r(httpc.get("www.google.com:443"),{
---         proxy = "127.0.0.1:8443"
---     })
+--     print_r(httpc.get("https://www.google.com",{
+--         path ='/',
+--         proxy = "127.0.0.1:8443",
+--         connect_timeout = 1000,
+--         read_timeout = 5000
+--     }))
 -- end)
 
 moon.async(function()
-    httpc.get("127.0.0.1:9991", {
+    httpc.get("http://127.0.0.1:9991", {
         path = "/hello?a=1&b=2",
         keepalive = 300
     })
 
-    httpc.post("127.0.0.1:9991", "Hello Post", {
+    httpc.post("http://127.0.0.1:9991", "Hello Post", {
         path = "/chat",
         keepalive = 300
     })
 
     local form = { username = "wang", passwd = "456", age = 110 }
-    local response = httpc.postform("127.0.0.1:9991", form, {
+    local response = httpc.postform("http://127.0.0.1:9991", form, {
         path = "/login",
         keepalive = 300
     })

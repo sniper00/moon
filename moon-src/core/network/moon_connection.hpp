@@ -19,12 +19,12 @@ namespace moon
         {
         }
 
-        void start(bool accepted, const std::string& payload) override
+        void start(role r) override
         {
-            base_connection_t::start(accepted, payload);
+            base_connection_t::start(r);
             auto m = message{};
             m.write_data(address());
-            m.set_receiver(static_cast<uint8_t>(accepted ?
+            m.set_receiver(static_cast<uint8_t>(r == role::server ?
                 socket_data_type::socket_accept : socket_data_type::socket_connect));
             handle_message(std::move(m));
             read_header();

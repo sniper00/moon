@@ -27,13 +27,12 @@ static int lhttp_parse_request(lua_State* L)
 
     lua_pushliteral(L, "header");
     lua_createtable(L, 0, (int)header.size());
-    std::string key;
+    std::string tmp;
     for (const auto& v : header)
     {
-        key.clear();
-        key.assign(v.first.data(), v.first.size());
-        moon::lower(key);
-        lua_pushlstring(L, key.data(), key.size());
+        tmp.assign(v.first.data(), v.first.size());
+        moon::lower(tmp);
+        lua_pushlstring(L, tmp.data(), tmp.size());
         lua_pushlstring(L, v.second.data(), v.second.size());
         lua_rawset(L, -3);
     }
@@ -59,13 +58,12 @@ static int lhttp_parse_response(lua_State* L)
     luaL_rawsetfield(L, -3, "status_code", lua_pushlstring(L, status_code.data(), status_code.size()));
     lua_pushliteral(L, "header");
     lua_createtable(L, 0, (int)header.size());
-    std::string key;
+    std::string tmp;
     for (const auto& v : header)
     {
-        key.clear();
-        key.assign(v.first.data(), v.first.size());
-        moon::lower(key);
-        lua_pushlstring(L, key.data(), key.size());
+        tmp.assign(v.first.data(), v.first.size());
+        moon::lower(tmp);
+        lua_pushlstring(L, tmp.data(), tmp.size());
         lua_pushlstring(L, v.second.data(), v.second.size());
         lua_rawset(L, -3);
     }

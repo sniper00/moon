@@ -15,7 +15,7 @@ namespace moon
     public:
         friend class server;
 
-        friend class socket;
+        friend class socket_server;
 
         explicit worker(server* srv,  uint32_t id);
 
@@ -39,7 +39,7 @@ namespace moon
 
         bool shared() const;
 
-        moon::socket& socket() { return *socket_; }
+        moon::socket_server& socket_server() { return *socket_server_; }
 
         uint32_t alive();
     private:
@@ -66,7 +66,7 @@ namespace moon
         std::thread thread_;
         queue_type mq_;
         queue_type::container_type swapmq_;
-        std::unique_ptr<moon::socket> socket_;
+        std::unique_ptr<moon::socket_server> socket_server_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
     };
 };

@@ -5,6 +5,8 @@
 #include "service.hpp"
 #include "message.hpp"
 
+using namespace asio::ip;
+
 namespace moon
 {
     class worker;
@@ -13,7 +15,7 @@ namespace moon
 
     using connection_ptr_t = std::shared_ptr<base_connection>;
 
-    class socket
+    class socket_server
     {
     public:
         struct acceptor_context
@@ -37,23 +39,23 @@ namespace moon
             void reset_reserve()
             {
                 asio::error_code ec;
-                reserve.open(asio::ip::tcp::v4(), ec);
+                reserve.open(tcp::v4(), ec);
             }
 
             uint8_t type;
             uint32_t owner;
             uint32_t fd = 0;
-            asio::ip::tcp::socket reserve;
-            asio::ip::tcp::acceptor acceptor;
+            tcp::socket reserve;
+            tcp::acceptor acceptor;
         };
 
-        static constexpr size_t addr_v4_size = 1 + sizeof(asio::ip::address_v4::bytes_type) + sizeof(asio::ip::port_type);
-        static constexpr size_t addr_v6_size = 1 + sizeof(asio::ip::address_v6::bytes_type) + sizeof(asio::ip::port_type);
+        static constexpr size_t addr_v4_size = 1 + sizeof(address_v4::bytes_type) + sizeof(port_type);
+        static constexpr size_t addr_v6_size = 1 + sizeof(address_v6::bytes_type) + sizeof(port_type);
 
         struct udp_context
         {
             static constexpr size_t READ_BUFFER_SIZE = size_t{ 2048 } - addr_v6_size;
-            udp_context(uint32_t o, asio::io_context& ioc, asio::ip::udp::endpoint ep)
+            udp_context(uint32_t o, asio::io_context& ioc, udp::endpoint ep)
                 :owner(o)
                 , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
                 , sock(ioc, ep)
@@ -63,7 +65,7 @@ namespace moon
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
                 , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
-                , sock(ioc, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0))
+                , sock(ioc, udp::endpoint(udp::v4(), 0))
             {
             }
 
@@ -71,8 +73,8 @@ namespace moon
             uint32_t owner;
             uint32_t fd = 0;
             message msg;
-            asio::ip::udp::socket sock;
-            asio::ip::udp::endpoint from_ep;
+            udp::socket sock;
+            udp::endpoint from_ep;
         };
 
         using acceptor_context_ptr_t = std::shared_ptr<acceptor_context>;
@@ -80,15 +82,15 @@ namespace moon
     public:
         friend class base_connection;
 
-        socket(server* s, worker* w, asio::io_context& ioctx);
+        socket_server(server* s, worker* w, asio::io_context& ioctx);
 
-        socket(const socket&) = delete;
+        socket_server(const socket_server&) = delete;
 
-        socket& operator =(const socket&) = delete;
+        socket_server& operator =(const socket_server&) = delete;
 
-        bool try_open(const std::string& host, uint16_t port);
+        bool try_open(const std::string& host, uint16_t port, bool is_connect = false);
 
-        std::pair<uint32_t, asio::ip::tcp::endpoint> listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
+        std::pair<uint32_t, tcp::endpoint> listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
 
         uint32_t udp(uint32_t owner, std::string_view host, uint16_t port);
 
@@ -96,7 +98,7 @@ namespace moon
 
         bool accept(uint32_t fd, int32_t sessionid, uint32_t owner);
 
-        uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0, std::string payload=std::string{});
+        uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0);
 
         void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid);
 
@@ -118,13 +120,15 @@ namespace moon
 
         std::string getaddress(uint32_t fd);
 
-        static size_t encode_endpoint(char* buf, const asio::ip::address& addr, asio::ip::port_type port);
+        bool switch_type(uint32_t fd, uint8_t new_type);
+
+        static size_t encode_endpoint(char* buf, const address& addr, port_type port);
     private:
-        connection_ptr_t make_connection(uint32_t serviceid, uint8_t type);
+        connection_ptr_t make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock);
 
         void response(uint32_t sender, uint32_t receiver, std::string_view data, int32_t sessionid, uint8_t type);
 
-        void add_connection(socket* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t& c, int32_t  sessionid);
+        void add_connection(socket_server* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t& c, int32_t  sessionid);
 
         template<typename Message>
         void handle_message(uint32_t serviceid, Message&& m);
@@ -137,9 +141,9 @@ namespace moon
     private:
         server* server_;
         worker* worker_;
-        asio::io_context& ioc_;
+        asio::io_context& context_;
         asio::steady_timer timer_;
-        message  response_;
+        message response_;
 
         std::unordered_map<uint32_t, acceptor_context_ptr_t> acceptors_;
         std::unordered_map<uint32_t, connection_ptr_t> connections_;
@@ -147,7 +151,7 @@ namespace moon
     };
 
     template<typename Message>
-    void socket::handle_message(uint32_t serviceid, Message&& m)
+    void socket_server::handle_message(uint32_t serviceid, Message&& m)
     {
         auto s = find_service(serviceid);
         if (nullptr == s)

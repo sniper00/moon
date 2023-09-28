@@ -105,12 +105,6 @@ namespace moon
     class ws_connection : public base_connection
     {
     public:
-         enum class  role
-        {
-            none,
-            client,
-            server
-        };
 
         using base_connection_t = base_connection;
 
@@ -135,23 +129,21 @@ namespace moon
         {
         }
 
-        void start(bool accepted, const std::string& payload) override
+        void start(role r) override
         {
-            role_ = accepted ? role::server : role::client;
-            base_connection_t::start(accepted, payload);
-            if (accepted)
+            base_connection_t::start(r);
+            if (role::server == r)
             {
                 read_header();
             }
             else
             {
-                request_handshake(payload);
+                read_some();
             }
         }
 
         bool send(buffer_ptr_t data) override
         {
-            if (!handshaked_) return false;
             encode_frame(data);
             return base_connection_t::send(std::move(data));
         }
@@ -202,101 +194,6 @@ namespace moon
             });
         }
 
-        void request_handshake(const std::string& protocol)
-        {
-            std::string key(base64_encode((moon::randkey(16)), 16));
-
-            std::shared_ptr<std::string> str = std::make_shared<std::string>();
-            str->append(moon::format("GET /%s HTTP/1.1\r\n", protocol.data()));
-            str->append("Upgrade: WebSocket\r\n");
-            str->append("Connection: Upgrade\r\n");
-            str->append("Sec-WebSocket-Version: 13\r\n");
-            str->append(moon::format("Sec-WebSocket-Key: %s\r\n\r\n",key.data()));
-
-            asio::async_write(socket_, asio::buffer(str->data(), str->size()), [this, self = shared_from_this(), str, key = std::move(key)](const asio::error_code& e, std::size_t) {
-                if (!e)
-                {
-                    auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
-                    asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                        [this, self = shared_from_this(), sbuf, key](const asio::error_code& e, std::size_t)
-                    {
-                        if (e)
-                        {
-                            error(e);
-                            return;
-                        }
-
-                        std::string_view status_code;
-                        std::string_view ignore;
-                        http::case_insensitive_multimap_view header;
-                        if (!http::response_parser::parse(std::string_view{ reinterpret_cast<const char*>(sbuf->data().data()), sbuf->size() }
-                            , ignore
-                            , status_code
-                            , header))
-                        {
-                            error(make_error_code(moon::error::ws_bad_http_header));
-                            return;
-                        }
-
-                        if (status_code.substr(0, 3) != "101"sv)
-                        {
-                            error(make_error_code(moon::error::ws_bad_http_status_code));
-                            return;
-                        }
-
-                        std::string_view upgrade;
-                        if (!moon::try_get_value(header, "upgrade"sv, upgrade))
-                        {
-                            error(make_error_code(moon::error::ws_no_upgrade));
-                            return;
-                        }
-
-                        if (!iequal_string(upgrade, "websocket"sv))
-                        {
-                            error(make_error_code(moon::error::ws_no_upgrade_websocket));
-                            return;
-                        }
-
-                        std::string_view connection;
-                        if (!moon::try_get_value(header, "connection"sv, connection))
-                        {
-                            error(make_error_code(moon::error::ws_no_connection));
-                            return;
-                        }
-
-                        if (!iequal_string(connection, "upgrade"sv))
-                        {
-                            error(make_error_code(moon::error::ws_no_connection_upgrade));
-                            return;
-                        }
-
-                        std::string_view accept_key;
-                        if (!moon::try_get_value(header, "sec-websocket-accept"sv, accept_key))
-                        {
-                            error(make_error_code(moon::error::ws_no_sec_accept));
-                            return;
-                        }
-
-                        if (accept_key != hash_key(key))
-                        {
-                            error(make_error_code(moon::error::ws_bad_sec_accept));
-                            return;
-                        }
-
-                        handshaked_ = true;
-                        auto msg = message{};
-                        msg.write_data(address());
-                        msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_connect));
-                        handle_message(std::move(msg));
-                        read_some();
-                    });
-                }
-                else
-                {
-                    error(e);
-                }
-            });
-        }
 
         void read_some()
         {
@@ -383,7 +280,6 @@ namespace moon
             std::string_view protocol;
             moon::try_get_value(header, "sec-websocket-protocol"sv, protocol);
 
-            handshaked_ = true;
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
             auto msg = message{};
@@ -707,8 +603,6 @@ namespace moon
         }
 
     protected:
-        bool handshaked_ = false;
-        role role_ = role::none;
         buffer_ptr_t recv_buf_;
     };
 }

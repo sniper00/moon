@@ -11,10 +11,17 @@ namespace moon
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
     public:
+        enum class role
+        {
+            none,
+            client,
+            server
+        };
+
         using socket_t = asio::ip::tcp::socket;
 
         template <typename... Args>
-        explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket* s, Args&&... args)
+        explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket_server* s, Args&&... args)
             : serviceid_(serviceid)
             , type_(type)
             , parent_(s)
@@ -30,8 +37,9 @@ namespace moon
         {
         }
 
-        virtual void start(bool, const std::string&)
+        virtual void start(role r)
         {
+            role_ = r;
             recvtime_ = now();
         }
 
@@ -106,6 +114,21 @@ namespace moon
         uint32_t fd() const
         {
             return fd_;
+        }
+
+        uint8_t type() const
+        {
+            return type_;
+        }
+
+        uint32_t owner() const
+        {
+            return serviceid_;
+        }
+
+        role get_role() const
+        {
+            return role_;
         }
 
         void timeout(time_t now)
@@ -273,6 +296,7 @@ namespace moon
             }
         }
     protected:
+        role role_ = role::none;
         uint32_t fd_ = 0;
         time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
@@ -281,7 +305,7 @@ namespace moon
         uint32_t wq_error_size_ = 0;
         uint32_t serviceid_;
         uint8_t type_;
-        moon::socket* parent_;
+        moon::socket_server* parent_;
         socket_t socket_;
         const_buffers_holder holder_;
         std::deque<buffer_ptr_t> queue_;

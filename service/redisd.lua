@@ -148,9 +148,8 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.opts.host,conf.opts.port,moon.PTYPE_SOCKET_TCP)
-    assert(fd, "connect db redis failed")
-    socket.close(fd)
+    assert(socket.try_open(conf.opts.host, conf.opts.port, true),
+        string.format("redisd connect %s:%s failed", conf.opts.host, conf.opts.port))
 
     local command = {}
 
