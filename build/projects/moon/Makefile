@@ -69,7 +69,7 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/socket.o \
+	$(OBJDIR)/socket_server.o \
 	$(OBJDIR)/server.o \
 	$(OBJDIR)/worker.o \
 	$(OBJDIR)/moon.o \
@@ -132,7 +132,7 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/socket.o: ../../../moon-src/core/network/socket.cpp
+$(OBJDIR)/socket_server.o: ../../../moon-src/core/network/socket_server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/server.o: ../../../moon-src/core/server.cpp

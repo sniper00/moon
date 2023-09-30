@@ -33,7 +33,7 @@
     <ClInclude Include="..\..\..\moon-src\core\network\moon_connection.hpp">
       <Filter>core\network</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\moon-src\core\network\socket.h">
+    <ClInclude Include="..\..\..\moon-src\core\network\socket_server.h">
       <Filter>core\network</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\moon-src\core\network\stream_connection.hpp">
@@ -59,7 +59,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\moon-src\core\network\socket.cpp">
+    <ClCompile Include="..\..\..\moon-src\core\network\socket_server.cpp">
       <Filter>core\network</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\moon-src\core\server.cpp">

@@ -667,7 +667,7 @@ static int lasio_udp(lua_State* L)
         address = std::string_view{ addr, size };
         port = (asio::ip::port_type)luaL_checkinteger(L, 2);
     }
-    uint32_t fd = sock.udp(S->id(), address, port);
+    uint32_t fd = sock.udp_open(S->id(), address, port);
     lua_pushinteger(L, fd);
     return 1;
 }

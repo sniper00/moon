@@ -77,7 +77,7 @@ std::pair<uint32_t, tcp::endpoint> socket_server::listen(const std::string & hos
     }
 }
 
-uint32_t socket_server::udp(uint32_t owner, std::string_view host, uint16_t port)
+uint32_t socket_server::udp_open(uint32_t owner, std::string_view host, uint16_t port)
 {
     try
     {

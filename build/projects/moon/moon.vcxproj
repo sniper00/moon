@@ -114,7 +114,7 @@
     <ClInclude Include="..\..\..\moon-src\core\network\const_buffers_holder.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\error.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\moon_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\socket.h" />
+    <ClInclude Include="..\..\..\moon-src\core\network\socket_server.h" />
     <ClInclude Include="..\..\..\moon-src\core\network\stream_connection.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\streambuf.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\ws_connection.hpp" />
@@ -124,7 +124,7 @@
     <ClInclude Include="..\..\..\moon-src\services\lua_service.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\moon-src\core\network\socket.cpp" />
+    <ClCompile Include="..\..\..\moon-src\core\network\socket_server.cpp" />
     <ClCompile Include="..\..\..\moon-src\core\server.cpp" />
     <ClCompile Include="..\..\..\moon-src\core\worker.cpp" />
     <ClCompile Include="..\..\..\moon-src\moon.cpp" />

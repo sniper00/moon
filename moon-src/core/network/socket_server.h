@@ -92,7 +92,7 @@ namespace moon
 
         std::pair<uint32_t, tcp::endpoint> listen(const std::string& host, uint16_t port, uint32_t owner, uint8_t type);
 
-        uint32_t udp(uint32_t owner, std::string_view host, uint16_t port);
+        uint32_t udp_open(uint32_t owner, std::string_view host, uint16_t port);
 
         bool udp_connect(uint32_t fd, std::string_view host, uint16_t port);
 
