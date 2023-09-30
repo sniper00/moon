@@ -114,18 +114,20 @@ local function coresume(co, ...)
     return ok, err
 end
 
---- 给当前协程映射一个session id, 用于稍后`resume`关联的协程。
---- 可选参数`receiver`用于`moon.call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
----@param receiver? integer @ receiver's service id
----@return integer @ session id
-function moon.make_session(receiver)
+local make_session
+
+local function make_session_check_rewind(receiver)
     uuid = uuid + 1
-    if uuid == 0x7FFFFFFF then
-        uuid = 1
-    end
+    if uuid > 0x7FFFFFFF then uuid = 1 end
 
     if nil ~= session_id_coroutine[uuid] then
-        error("sessionid is used!")
+        while true do
+            uuid = uuid + 1
+            if uuid > 0x7FFFFFFF then uuid = math.random(1,1000) end
+            if nil == session_id_coroutine[uuid] then
+                break
+            end
+        end
     end
 
     if receiver then
@@ -136,7 +138,27 @@ function moon.make_session(receiver)
     return uuid
 end
 
-local make_session = moon.make_session
+--- 给当前协程映射一个session id, 用于稍后`resume`关联的协程。
+--- 可选参数`receiver`用于`moon.call`在接收消息的服务退出时，`resume`关联的协程并附带错误信息。
+---@param receiver? integer @ receiver's service id
+---@return integer @ session id
+function make_session(receiver)
+    uuid = uuid + 1
+    if uuid > 0x7FFFFFFF then
+        uuid = 0
+        make_session = make_session_check_rewind
+        return make_session(receiver)
+    end
+
+    if receiver then
+        session_watcher[uuid] = receiver
+    end
+
+    session_id_coroutine[uuid] = co_running()
+    return uuid
+end
+
+moon.make_session = make_session
 
 ---
 ---向指定服务发送消息,消息内容会根据`PTYPE`类型调用对应的`pack`函数。
@@ -623,6 +645,37 @@ reg_protocol {
     end
 }
 
+---uint32
+local timer_uuid = 0
+
+local next_timer_id
+
+local function next_timer_id_check_rewind()
+    timer_uuid = timer_uuid + 1
+    if timer_uuid > 0xFFFFFFFF then timer_uuid = 1 end
+
+    if nil ~= timer_routine[timer_uuid] then
+        while true do
+            timer_uuid = timer_uuid + 1
+            if timer_uuid > 0xFFFFFFFF then timer_uuid = math.random(1,1000) end
+            if nil == timer_routine[timer_uuid] then
+                break
+            end
+        end
+    end
+    return timer_uuid
+end
+
+function next_timer_id()
+    timer_uuid = timer_uuid + 1
+    if timer_uuid > 0xFFFFFFFF then
+        timer_uuid = 0
+        next_timer_id = next_timer_id_check_rewind
+        return next_timer_id()
+    end
+    return timer_uuid
+end
+
 ---移除一个定时器
 ---@param timerid integer @
 function moon.remove_timer(timerid)
@@ -634,9 +687,10 @@ end
 ---@param fn fun() @调用的函数
 ---@return integer @ 返回timerid,可以使用`moon.remove_timer`删除定时器
 function moon.timeout(mills, fn)
-    local timer_session = _timeout(mills)
-    timer_routine[timer_session] = fn
-    return timer_session
+    local timerid = next_timer_id()
+    _timeout(mills, timerid)
+    timer_routine[timerid] = fn
+    return timerid
 end
 
 ---阻塞当前协程至少`mills`毫秒
@@ -644,11 +698,12 @@ end
 ---@param mills integer@ 毫秒
 ---@return boolean,string? @ `moon.wakeup`唤醒的定时器返回`false`, 正常触发的定时器返回`true`
 function moon.sleep(mills)
-    local timer_session = _timeout(mills)
-    timer_routine[timer_session] = co_running()
-    local timerid, reason = co_yield()
-    if timer_session ~= timerid then
-        timer_routine[timer_session] = false
+    local timerid = next_timer_id()
+    _timeout(mills, timerid)
+    timer_routine[timerid] = co_running()
+    local id, reason = co_yield()
+    if id ~= timerid then
+        timer_routine[timerid] = false
         return false, reason
     end
     return true

@@ -187,17 +187,16 @@ namespace moon
         return workers_[workerid-1].get();
     }
 
-    uint32_t server::timeout(int64_t interval, uint32_t serviceid)
+    void server::timeout(int64_t interval, uint32_t serviceid, uint32_t timerid)
     {
         auto workerid = worker_id(serviceid);
         assert(workerid > 0);
         if (interval<=0)
         {
-            auto timerid = timer_[workerid-1]->make_timerid();
             on_timer(serviceid, timerid);
-            return timerid;
+            return;
         }
-        return timer_[workerid-1]->add(now_+ interval, serviceid, this);
+        timer_[workerid-1]->add(now_+ interval, serviceid, timerid, this);
     }
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)

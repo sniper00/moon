@@ -53,18 +53,11 @@ namespace moon
             stop_ = false;
         }
 
-        uint32_t make_timerid()
-        {
-            return ++timerid_;
-        }
-
         template<typename... Args>
-        uint32_t add(time_t expiretime, Args&&... args)
+        void add(time_t expiretime, Args&&... args)
         {
             std::lock_guard lock{ lock_ };
-            auto id = ++timerid_;
-            timers_.emplace(expiretime, expire_policy_type{ id, std::forward<Args>(args)... });
-            return id;
+            timers_.emplace(expiretime, expire_policy_type{std::forward<Args>(args)... });
         }
 
         size_t size() const
@@ -73,7 +66,6 @@ namespace moon
         }
     private:
         bool stop_ = false;
-        std::atomic<uint32_t> timerid_ = 0;
         std::mutex lock_;
         std::multimap<int64_t, expire_policy_type> timers_;
     };

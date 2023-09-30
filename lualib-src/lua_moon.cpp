@@ -80,9 +80,9 @@ static int lmoon_timeout(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     int64_t interval = luaL_checkinteger(L, 1);
-    uint32_t timerid = S->get_server()->timeout(interval, S->id());
-    lua_pushinteger(L, timerid);
-    return 1;
+    uint32_t timerid = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+    S->get_server()->timeout(interval, S->id(), timerid);
+    return 0;
 }
 
 static int lmoon_log(lua_State* L)

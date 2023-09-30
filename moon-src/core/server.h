@@ -14,8 +14,8 @@ namespace moon
         public:
             timer_expire_policy() = default;
 
-            timer_expire_policy(uint32_t timerid, uint32_t serviceid, server* srv)
-                : timerid_(timerid), serviceid_(serviceid), server_(srv) {}
+            timer_expire_policy(uint32_t serviceid, uint32_t timerid, server* srv)
+                : serviceid_(serviceid), timerid_(timerid), server_(srv) {}
 
             void operator()()
             {
@@ -27,8 +27,8 @@ namespace moon
                 return timerid_;
             }
         private:
-            uint32_t timerid_ = 0;
             uint32_t serviceid_ = 0;
+            uint32_t timerid_ = 0;
             server* server_ = nullptr;
         };
 
@@ -67,7 +67,7 @@ namespace moon
 
         worker* get_worker(uint32_t workerid, uint32_t serviceid = 0) const;
 
-        uint32_t timeout(int64_t interval, uint32_t serviceid);
+        void timeout(int64_t interval, uint32_t serviceid, uint32_t timerid);
 
         void new_service(std::unique_ptr<service_conf> conf);
 
