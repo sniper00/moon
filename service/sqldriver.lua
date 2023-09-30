@@ -107,9 +107,9 @@ if conf.name then
         end)
     end
 
-    local fd = socket.sync_connect(conf.opts.host, conf.opts.port, moon.PTYPE_SOCKET_TCP)
-    assert(fd, string.format("connect failed provider: %s host: %s port: %s", conf.provider, conf.opts.host, conf.opts.port))
-    socket.close(fd)
+    assert(socket.try_open(conf.opts.host, conf.opts.port, true),
+        string.format("connect failed provider: %s host: %s port: %s", conf.provider, conf.opts.host, conf.opts.port))
+
 
     local command = {}
 
