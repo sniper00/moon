@@ -158,7 +158,9 @@ function make_session(receiver)
     return uuid
 end
 
-moon.make_session = make_session
+function moon.make_session(receiver)
+    return make_session(receiver)
+end
 
 ---
 ---向指定服务发送消息,消息内容会根据`PTYPE`类型调用对应的`pack`函数。
