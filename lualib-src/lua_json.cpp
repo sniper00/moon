@@ -36,13 +36,7 @@ static constexpr std::string_view json_false = "false"sv;
 
 static constexpr int MAX_DEPTH = 64;
 
-static constexpr bool EMPRY_AS_ARRYA = true;
-
-static constexpr bool ENCODE_NUMBER_KEY = true;
-
-static constexpr size_t CONCAT_BUFFER_SIZE = 512;
-
-static constexpr uint32_t CONCAT_BUFFER_HEAD_SIZE = 16;
+static constexpr size_t DEFAULT_CONCAT_BUFFER_SIZE = 512;
 
 static const char char2escape[256] = {
     'u', 'u', 'u', 'u', 'u', 'u', 'u', 'u', 'b', 't', 'n', 'u', 'f', 'r', 'u', 'u', 'u', 'u', 'u', 'u', // 0~19
@@ -62,13 +56,14 @@ static const char char2escape[256] = {
 
 static const char hex_digits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-static thread_local buffer thread_encode_buffer{CONCAT_BUFFER_SIZE};
+static thread_local buffer thread_encode_buffer{DEFAULT_CONCAT_BUFFER_SIZE};
 
 struct json_config {
-    bool empty_as_array = EMPRY_AS_ARRYA;
-    bool encode_number_key = ENCODE_NUMBER_KEY;
-    size_t concat_buffer_size = CONCAT_BUFFER_SIZE;
-    uint32_t concat_buffer_head_size = CONCAT_BUFFER_HEAD_SIZE;
+    bool empty_as_array = true;
+    bool enable_number_key = true;
+    bool enable_sparse_array = false;
+    size_t concat_buffer_size = DEFAULT_CONCAT_BUFFER_SIZE;
+    uint32_t concat_buffer_head_size = 16;
 };
 
 static int json_destroy_config(lua_State *L)
@@ -92,27 +87,53 @@ static json_config *json_fetch_config(lua_State *L)
 {
     json_config *cfg = (json_config*)lua_touserdata(L, lua_upvalueindex(1));
     if (!cfg)
-        luaL_error(L, "Unable to fetch CJSON configuration");
+        luaL_error(L, "Unable to fetch json configuration");
     return cfg;
 }
 
-static int json_cfg_empty_as_array(lua_State* L){
+static int json_options(lua_State* L)
+{
     json_config* cfg = json_fetch_config(L);
-    cfg->empty_as_array = static_cast<bool>(lua_toboolean(L, 1));
-    return 0;
-}
-
-static int json_cfg_encode_number_key(lua_State* L){
-    json_config* cfg = json_fetch_config(L);
-    cfg->encode_number_key = static_cast<bool>(lua_toboolean(L, 1));
-    return 0;
-}
-
-static int json_concat_buffer_size(lua_State* L){
-    json_config* cfg = json_fetch_config(L);
-    cfg->concat_buffer_size = luaL_optinteger(L, 1, CONCAT_BUFFER_SIZE);
-    cfg->concat_buffer_head_size = static_cast<uint32_t>(luaL_optinteger(L, 2, CONCAT_BUFFER_HEAD_SIZE));
-    return 0;
+    size_t len = 0;
+    const char* name = luaL_checklstring(L, 1, &len);
+    int top = lua_gettop(L);
+    switch (moon::chash_string(name, len))
+    {
+    case "encode_empty_as_array"_csh:
+    {
+        bool v = cfg->empty_as_array;
+        cfg->empty_as_array = static_cast<bool>(lua_toboolean(L, 2));
+        lua_pushboolean(L, v ? 1 : 0);
+        break;
+    }
+    case "enable_number_key"_csh:
+    {
+        bool v = cfg->enable_number_key;
+        cfg->enable_number_key = static_cast<bool>(lua_toboolean(L, 2));
+        lua_pushboolean(L, v ? 1 : 0);
+        break;
+    }
+    case "enable_sparse_array"_csh:
+    {
+        bool v = cfg->enable_sparse_array;
+        cfg->enable_sparse_array = static_cast<bool>(lua_toboolean(L, 2));
+        lua_pushboolean(L, v ? 1 : 0);
+        break;
+    }
+    case "concat_buffer_size"_csh:
+    {
+        auto concat_buffer_size = cfg->concat_buffer_size;
+        auto concat_buffer_head_size = cfg->concat_buffer_head_size;
+        cfg->concat_buffer_size = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+        cfg->concat_buffer_head_size = static_cast<uint32_t>(luaL_checkinteger(L, 3));
+        lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_size));
+        lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_head_size));
+        break;
+    }
+    default:
+        return luaL_error(L, "Invalid json.options '%s'", name);
+    }
+    return lua_gettop(L) - top;
 }
 
 template <bool format>
@@ -271,6 +292,103 @@ static inline size_t array_size(lua_State* L, int index)
 }
 
 template <bool format>
+static void encode_table_object(lua_State* L, buffer* writer, int idx, int depth, json_config* cfg)
+{
+    size_t i = 0;
+    writer->write_back('{');
+    lua_pushnil(L); // [table, nil]
+    while (lua_next(L, idx))
+    {
+        if (i++ > 0)
+            writer->write_back(',');
+        format_new_line<format>(writer);
+        int key_type = lua_type(L, -2);
+        switch (key_type)
+        {
+        case LUA_TSTRING:
+        {
+            format_space<format>(writer, depth);
+            size_t len = 0;
+            const char* key = lua_tolstring(L, -2, &len);
+            writer->write_back('\"');
+            writer->write_back(key, len);
+            writer->write_back('\"');
+            writer->write_back(':');
+            if constexpr (format)
+                writer->write_back(' ');
+            encode_one<format>(L, writer, -1, depth, cfg);
+            break;
+        }
+        case LUA_TNUMBER:
+        {
+            if (lua_isinteger(L, -2) && cfg->enable_number_key)
+            {
+                format_space<format>(writer, depth);
+                lua_Integer key = lua_tointeger(L, -2);
+                writer->write_back('\"');
+                writer->write_chars(key);
+                writer->write_back('\"');
+                writer->write_back(':');
+                if constexpr (format)
+                    writer->write_back(' ');
+                encode_one<format>(L, writer, -1, depth, cfg);
+            }
+            else
+            {
+                throw std::logic_error{ "json encode: unsupport number key type." };
+            }
+            break;
+        }
+        default:
+            throw std::logic_error{std::string("json encode: unsupport key type : ") + lua_typename(L, key_type)};
+        }
+        lua_pop(L, 1);
+    }
+
+    if (i == 0 && cfg->empty_as_array)
+    {
+        writer->revert(1);
+        writer->write_back('[');
+        writer->write_back(']');
+    }
+    else
+    {
+        if (i > 0)
+        {
+            format_new_line<format>(writer);
+            format_space<format>(writer, depth - 1);
+        }
+        writer->write_back('}');
+    }
+}
+
+template <bool format>
+static void encode_table_array(lua_State* L, size_t size, buffer* writer, int idx, int depth, json_config* cfg)
+{
+    size_t bsize = writer->size();
+    writer->write_back('[');
+    for (size_t i = 1; i <= size; i++)
+    {
+        if (i == 1)
+            format_new_line<format>(writer);
+        format_space<format>(writer, depth);
+        lua_rawgeti(L, idx, i);
+        if (lua_isnil(L, -1) && !cfg->enable_sparse_array){
+            lua_pop(L, 1);
+            writer->revert(writer->size() - bsize);
+            return encode_table_object<format>(L, writer, idx, depth, cfg);
+        }
+        encode_one<format>(L, writer, -1, depth, cfg);
+        lua_pop(L, 1);
+        if (i < size)
+            writer->write_back(',');
+        format_new_line<format>(writer);
+    }
+    format_space<format>(writer, depth - 1);
+    writer->write_back(']');
+}
+
+template <bool format>
 static void encode_table(lua_State* L, buffer* writer, int idx, int depth, json_config* cfg)
 {
     if ((++depth) > MAX_DEPTH)
@@ -285,90 +403,11 @@ static void encode_table(lua_State* L, buffer* writer, int idx, int depth, json_
 
     if (size_t size = array_size(L, idx); size > 0)
     {
-        writer->write_back('[');
-        for (size_t i = 1; i <= size; i++)
-        {
-            if (i == 1)
-                format_new_line<format>(writer);
-            format_space<format>(writer, depth);
-            lua_rawgeti(L, idx, i);
-            encode_one<format>(L, writer, -1, depth, cfg);
-            lua_pop(L, 1);
-            if (i < size)
-                writer->write_back(',');
-            format_new_line<format>(writer);
-        }
-        format_space<format>(writer, depth - 1);
-        writer->write_back(']');
+        encode_table_array<format>(L, size, writer, idx, depth, cfg);
     }
     else
     {
-        size_t i = 0;
-        writer->write_back('{');
-        lua_pushnil(L); // [table, nil]
-        while (lua_next(L, idx))
-        {
-            if (i++ > 0)
-                writer->write_back(',');
-            format_new_line<format>(writer);
-            int key_type = lua_type(L, -2);
-            switch (key_type)
-            {
-            case LUA_TSTRING:
-            {
-                format_space<format>(writer, depth);
-                size_t len = 0;
-                const char* key = lua_tolstring(L, -2, &len);
-                writer->write_back('\"');
-                writer->write_back(key, len);
-                writer->write_back('\"');
-                writer->write_back(':');
-                if constexpr (format)
-                    writer->write_back(' ');
-                encode_one<format>(L, writer, -1, depth, cfg);
-                break;
-            }
-            case LUA_TNUMBER:
-            {
-                if (cfg->encode_number_key && lua_isinteger(L, -2))
-                {
-                    format_space<format>(writer, depth);
-                    lua_Integer key = lua_tointeger(L, -2);
-                    writer->write_back('\"');
-                    writer->write_chars(key);
-                    writer->write_back('\"');
-                    writer->write_back(':');
-                    if constexpr (format)
-                        writer->write_back(' ');
-                    encode_one<format>(L, writer, -1, depth, cfg);
-                }
-                else
-                {
-                    throw std::logic_error{ "json encode: unsupport number key type." };
-                }
-                break;
-            }
-            default:
-                throw std::logic_error{std::string("json encode: unsupport key type : ") + lua_typename(L, key_type)};
-            }
-            lua_pop(L, 1);
-        }
-
-        if (i == 0 && cfg->empty_as_array)
-        {
-            writer->revert(1);
-            writer->write_back('[');
-            writer->write_back(']');
-        }
-        else
-        {
-            if (i > 0)
-            {
-                format_new_line<format>(writer);
-                format_space<format>(writer, depth - 1);
-            }
-            writer->write_back('}');
-        }
+       encode_table_object<format>(L, writer, idx, depth, cfg);
     }
 }
 
@@ -447,7 +486,7 @@ static void decode_one(lua_State* L, yyjson_val* value, json_config* cfg)
             if (view.size() > 0)
             {
                 char c = view.data()[0];
-                if (cfg->encode_number_key && (c == '-' || (c >= '0' && c <= '9')))
+                if ((c == '-' || (c >= '0' && c <= '9')) && cfg->enable_number_key)
                 {
                     const char* last = view.data() + view.size();
                     int64_t v = 0;
@@ -752,9 +791,7 @@ extern "C" {
             { "decode", decode},
             { "concat", concat},
             { "concat_resp", concat_resp},
-            { "encode_empty_as_array", json_cfg_empty_as_array },
-            { "encode_number_key", json_cfg_encode_number_key },
-            { "concat_buffer_size", json_concat_buffer_size },
+            { "options", json_options},
             { "null", nullptr},
             { nullptr, nullptr}
         };

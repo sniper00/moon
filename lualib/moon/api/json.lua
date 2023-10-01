@@ -29,17 +29,15 @@ function json.concat(array) end
 ---@return buffer_ptr
 function json.concat_resp(...) end
 
----Set option empty as array. default true.
----@param opt boolean 
-function json.encode_empty_as_array(opt) end
+---@alias json_options
+---| 'encode_empty_as_array' @ Set option encode empty table as array. default true.
+---| 'enable_number_key' @ Set option enable convert table's integer key as json object's key. default true.
+---| 'enable_sparse_array' @ Set option enable sparse array. default false.
+---| 'concat_buffer_size' @ Set option concat buffer_size(integer), buffer_head_size(integer). default 512 and 16.
 
----Set option encode number key. default true.
----@param opt boolean 
-function json.encode_number_key(opt) end
-
----Set option concat buffer size.
----@param buffer_size integer @default 512
----@param buffer_head_size integer @default 16
-function json.concat_buffer_size(buffer_size, buffer_head_size) end
+---Set json options and return old values
+---@param json_options json_options
+---@return ...
+function json.options(json_options, ...) end
 
 return json

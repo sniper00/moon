@@ -3,6 +3,17 @@ local json = require("json")
 local test_assert = require("test_assert")
 
 do
+    local t = {}
+    local str = json.encode(t)
+    assert(string.sub(str,1,1)=="[")
+
+    local old_options = json.options('encode_empty_as_array', false)
+    str = json.encode(t)
+    assert(string.sub(str,1,1)=="{")
+    json.options('encode_empty_as_array', old_options)
+end
+
+do
     local double = 2 ^ 53
     print(json.encode(double))
     assert(json.encode(double)=="9007199254740992")
@@ -199,6 +210,15 @@ end
 
 do
     local t = {nil,nil,nil, 100}
+    assert(string.sub(json.encode(t),1,1)=="{")
+    local t2 = json.decode(json.encode(t))
+    assert(not t2[1])
+    assert(not t2[2])
+    assert(not t2[3])
+    assert(t2[4]==100)
+
+    local old_options = json.options('enable_sparse_array', true)
+    local t = {nil,nil,nil, 100}
     assert(string.sub(json.encode(t),1,1)=="[")
     assert(#json.decode(json.encode(t)) == 4)
     local t2 = json.decode(json.encode(t))
@@ -206,6 +226,8 @@ do
     assert(t2[2]==json.null)
     assert(t2[3]==json.null)
     assert(t2[4]==100)
+
+    json.options('enable_sparse_array', old_options)
 end
 
 do
