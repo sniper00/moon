@@ -44,7 +44,7 @@ httpserver.on("/cluster",function(request, response)
     response.status_code = 200
     response:write_header("Content-Type","application/json")
 
-    local host, port = socket.parse_host_port(cfg.cluster)
+    local host, port = cfg.cluster:match("([^:]+):?(%d*)$") port = math.tointeger(port) or 80
     response:write(json.encode({host = host, port = port}))
 end)
 
