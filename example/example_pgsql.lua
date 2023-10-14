@@ -3,7 +3,7 @@ local moon = require("moon")
 local json = require "json"
 local pg = require("moon.db.pg")
 moon.async(function()
-        local db, err = pg.connect({
+        local db = pg.connect({
         host="127.0.0.1",
         port= 5432,
         database="postgres",

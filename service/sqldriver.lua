@@ -16,7 +16,7 @@ if conf.name then
     local release = moon.release
 
     ---@param sql message_ptr
-    local function exec_one(db, sql , sender, sessionid)
+    local function exec_one(db, sql, sender, sessionid)
         while true do
             if db then
                 local res = db:query(sql)
@@ -213,5 +213,5 @@ end
 
 ---@class sqlclient
 ---@field public execute fun(db:integer, sql:string|string[], hash?:integer)
----@field public query fun(db:integer, sql:string|string[], hash?:integer):pg_result|pg_error
+---@field public query fun(db:integer, sql:string|string[], hash?:integer):pg_result
 

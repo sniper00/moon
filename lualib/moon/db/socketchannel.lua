@@ -7,6 +7,7 @@ local setmetatable = setmetatable
 
 local read = socket.read
 
+---@class socketchannel
 local socketchannel = {}
 
 socketchannel.__index = socketchannel
@@ -21,7 +22,7 @@ end
 function socketchannel:connect(_)
     local fd, err = socket.connect(self._opts.host, self._opts.port, moon.PTYPE_SOCKET_TCP,self._opts.timeout)
     if not fd or fd ==0 then
-        return {code = "SOCKET", err = err}
+        return {code = "SOCKET", message = err}
     end
     self._fd = fd
 
@@ -50,7 +51,7 @@ function socketchannel:connect(_)
     if self._opts.auth then
         local ok, res = pcall(self._opts.auth, self)
         if not ok then
-            return {code = "AUTH", err = res}
+            return {code = "SOCKET", message = res}
         end
     end
 end
@@ -84,7 +85,7 @@ function socketchannel:request(req,resp)
     end
     local _, data = resp(self)
     if not _ then
-        return {code = "SOCKET", err = data}
+        return {code = "SOCKET", message = data}
     end
     return data
 end
