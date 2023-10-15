@@ -94,7 +94,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
       ```
 
 
-4. If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)
+**If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**
 
 
 # Use case
