@@ -56,7 +56,12 @@ static const char char2escape[256] = {
 
 static const char hex_digits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-static thread_local buffer thread_encode_buffer{DEFAULT_CONCAT_BUFFER_SIZE};
+static buffer* get_thread_encode_buffer()
+{
+    static thread_local buffer thread_encode_buffer{DEFAULT_CONCAT_BUFFER_SIZE};
+    thread_encode_buffer.clear();
+    return &thread_encode_buffer;
+}
 
 struct json_config {
     bool empty_as_array = true;
@@ -418,9 +423,7 @@ static int encode(lua_State* L)
 
     try
     {
-        buffer* writer = &thread_encode_buffer;
-        writer->clear();
-
+        buffer* writer = get_thread_encode_buffer();
         encode_one<false>(L, writer, 1, 0, cfg);
         lua_pushlstring(L, writer->data(), writer->size());
         return 1;
@@ -438,8 +441,7 @@ static int pretty_encode(lua_State *L)
     luaL_checkany(L, 1);
     try
     {
-        buffer* writer = &thread_encode_buffer;
-        writer->clear();
+        buffer* writer = get_thread_encode_buffer();
         lua_settop(L, 1);
         encode_one<true>(L, writer, 1, 0, cfg);
         lua_pushlstring(L, writer->data(), writer->size());
@@ -638,7 +640,6 @@ static int concat(lua_State* L)
             default:
                 throw std::logic_error{std::string("json encode: unsupport value type :") +
                                        lua_typename(L, t)};
-                break;
             }
             lua_pop(L, 1);
         }
@@ -716,8 +717,7 @@ static void concat_resp_one(moon::buffer* buf, lua_State* L, int i, json_config*
         }
         else
         {
-            buffer* writer = &thread_encode_buffer;
-            writer->clear();
+            buffer* writer = get_thread_encode_buffer();
             encode_one<false>(L, writer, i, 0, cfg);
             write_resp(buf, writer->data(), writer->size());
         }
@@ -725,7 +725,6 @@ static void concat_resp_one(moon::buffer* buf, lua_State* L, int i, json_config*
     }
     default:
         throw std::logic_error{std::string("json encode: unsupport value type :") + lua_typename(L, t)};
-        break;
     }
 }
 

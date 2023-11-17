@@ -86,7 +86,6 @@ static int unpack(lua_State* L)
                 break;
             default:
                 return luaL_error(L, "invalid format option '%c'", opt[i]);
-                break;
             }
         }
     }
@@ -255,8 +254,8 @@ static void concat_one(lua_State *L, buffer* b, int index, int depth)
 {
     if (depth > MAX_DEPTH) {
         throw std::logic_error{"buffer.concat too depth table"};
-        return;
     }
+
     int type = lua_type(L, index);
     switch (type) {
     case LUA_TNIL:

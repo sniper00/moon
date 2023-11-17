@@ -40,12 +40,6 @@ namespace moon
 
         void init(const std::string& logfile)
         {
-            if (ofs_)
-            {
-                ofs_->flush();
-                ofs_->close();
-            }
-
             if (!logfile.empty())
             {
                 std::error_code ec;
@@ -55,8 +49,7 @@ namespace moon
                     fs::create_directories(parent_path, ec);
                     MOON_CHECK(!ec, ec.message().data());
                 }
-                ofs_.reset(new std::ofstream());
-                ofs_->open(logfile, std::ofstream::out | std::ofstream::trunc);
+                fp_.reset(std::fopen(logfile.data(), "w+"));
             }
             state_.store(state::ready, std::memory_order_release);
         }
@@ -156,12 +149,7 @@ namespace moon
             if (thread_.joinable())
                 thread_.join();
 
-            if (ofs_&&ofs_->is_open())
-            {
-                ofs_->flush();
-                ofs_->close();
-                ofs_ = nullptr;
-            }
+            fp_.reset(nullptr);
         }
 
         size_t size() const
@@ -202,9 +190,9 @@ namespace moon
             return offset;
         }
 
-        void do_write(queue_type::container_type& datas)
+        void do_write(queue_type::container_type& lines)
         {
-            for (auto& it : datas)
+            for (auto& it : lines)
             {
                 auto p = it.data();
                 auto bconsole = static_cast<bool>(*(p++));
@@ -230,22 +218,25 @@ namespace moon
                     default:
                         break;
                     }
-                    std::cout << termcolor::white << std::endl;
+                    std::cout << termcolor::white << '\n';
                 }
 
-                if (ofs_)
+                if (fp_)
                 {
-                    ofs_->write(it.data(), it.size());
-                    ofs_->put('\n');
-                    if(level <= LogLevel::Error)
-                        ofs_->flush();
+                    std::fwrite(it.data(), it.size(), 1, fp_.get());
+                    std::fputc('\n', fp_.get());
+                    if(level <= LogLevel::Error){
+                        std::cout << std::endl;
+                        std::fflush(fp_.get());
+                    }
                 }
                 --size_;
             }
-            if (ofs_)
+            if (fp_)
             {
-                ofs_->flush();
+                std::fflush(fp_.get());
             }
+            std::cout << std::endl;
         }
 
         void write()
@@ -297,12 +288,21 @@ namespace moon
             }
         }
 
+        struct file_deleter {
+            void operator()(FILE* p) const {
+                if(nullptr == p)
+                    return;
+                std::fflush(p);
+                std::fclose(p);
+            }
+        };
+
         bool enable_stdout_ = true;
         std::atomic<state> state_;
         std::atomic_uint32_t size_ = 0;
         std::atomic<LogLevel> level_;
         int64_t error_count_ = 0;
-        std::unique_ptr<std::ofstream > ofs_;
+        std::unique_ptr<std::FILE, file_deleter> fp_;
         std::thread thread_;
         queue_type log_queue_;
     };

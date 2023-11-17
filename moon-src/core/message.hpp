@@ -24,10 +24,6 @@ namespace moon
             
         }
 
-        ~message()
-        {
-        }
-
         message(const message&) = delete;
 
         message& operator=(const message&) = delete;
