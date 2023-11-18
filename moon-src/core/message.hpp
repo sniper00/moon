@@ -24,6 +24,8 @@ namespace moon
             
         }
 
+        ~message() = default;
+
         message(const message&) = delete;
 
         message& operator=(const message&) = delete;
