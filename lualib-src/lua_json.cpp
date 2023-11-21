@@ -424,8 +424,18 @@ static int encode(lua_State* L)
     try
     {
         buffer* writer = get_thread_encode_buffer();
-        encode_one<false>(L, writer, 1, 0, cfg);
-        lua_pushlstring(L, writer->data(), writer->size());
+        if(LUA_TSTRING != lua_type(L, 1)){
+            encode_one<false>(L, writer, 1, 0, cfg);
+            lua_pushlstring(L, writer->data(), writer->size());
+        }
+        else{
+            size_t len = 0;
+            const char* str = luaL_checklstring(L, 1, &len);
+            writer->write_back('\"');
+            writer->write_back(str, len);
+            writer->write_back('\"');
+            lua_pushlstring(L, writer->data(), writer->size());
+        }
         return 1;
     }
     catch (const std::exception& ex)
