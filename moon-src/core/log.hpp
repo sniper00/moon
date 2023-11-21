@@ -49,7 +49,18 @@ namespace moon
                     fs::create_directories(parent_path, ec);
                     MOON_CHECK(!ec, ec.message().data());
                 }
-                fp_.reset(std::fopen(logfile.data(), "w+"));
+
+                FILE* fp = nullptr;
+                int err = 0;
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+                err = fopen_s(&fp, logfile.data(), "w");
+#else
+                fp = std::fopen(logfile.data(), "w");
+                if(nullptr == fp)
+                    err = errno;
+#endif
+                MOON_CHECK(!err, moon::format("open log file '%s' failed. errno %d.", logfile.data(), err));
+                fp_.reset(fp);
             }
             state_.store(state::ready, std::memory_order_release);
         }
@@ -318,5 +329,4 @@ namespace moon
 #define CONSOLE_DEBUG(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
 #define LOG_DEBUG(logger,fmt,...) logger->logfmt(false,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
 }
-
 
