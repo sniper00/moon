@@ -53,9 +53,9 @@ namespace moon
                 FILE* fp = nullptr;
                 int err = 0;
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-                err = fopen_s(&fp, logfile.data(), "w");
+                err = fopen_s(&fp, logfile.data(), "w+");
 #else
-                fp = std::fopen(logfile.data(), "w");
+                fp = std::fopen(logfile.data(), "w+");
                 if(nullptr == fp)
                     err = errno;
 #endif
