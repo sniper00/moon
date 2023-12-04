@@ -50,12 +50,13 @@ namespace moon
                     MOON_CHECK(!ec, ec.message().data());
                 }
 
-                FILE* fp = nullptr;
                 int err = 0;
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-                err = fopen_s(&fp, logfile.data(), "w+");
+                FILE* fp = _fsopen(logfile.data(), "w", _SH_DENYWR);
+                if(nullptr == fp)
+                    err = errno;
 #else
-                fp = std::fopen(logfile.data(), "w+");
+                FILE* fp = std::fopen(logfile.data(), "w");
                 if(nullptr == fp)
                     err = errno;
 #endif
