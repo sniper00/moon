@@ -107,6 +107,7 @@ typedef _W64 int   ssize_t;
 #include <forward_list>
 #include <queue>
 #include <tuple>
+#include <variant>
 
 #include <memory>
 #include <utility>

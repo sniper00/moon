@@ -33,7 +33,7 @@ function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
     local sessionid = make_session()
     if not accept(listenfd, sessionid, serviceid) then
-        error("invalid accept param")
+        error("invalid accept param, listenfd:"..listenfd)
     end
     local fd, err = moon.wait(sessionid)
     if not fd then

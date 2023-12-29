@@ -102,7 +102,7 @@ namespace moon
 
         void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid);
 
-        bool write(uint32_t fd, buffer_ptr_t data, buffer_flag flag = buffer_flag::none);
+        bool write(uint32_t fd, buffer_shr_ptr_t&& data, buffer_flag flag = buffer_flag::none);
 
         bool close(uint32_t fd);
 
@@ -116,7 +116,7 @@ namespace moon
 
         bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
 
-        bool send_to(uint32_t host, std::string_view address, buffer_ptr_t data);
+        bool send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t&& data);
 
         std::string getaddress(uint32_t fd);
 

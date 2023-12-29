@@ -64,4 +64,15 @@ function M.contains_if(t, fn)
     return false
 end
 
+---
+--- Looks for an object within a table. Returns the value if found,
+--- or nil if the object could not be found.
+function M.find_if(array, fn)
+    for k, v in pairs(array) do
+        if fn(v) then
+            return v
+        end
+    end
+end
+
 return M

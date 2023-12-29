@@ -123,7 +123,7 @@ local function make_session_check_rewind(receiver)
     if nil ~= session_id_coroutine[uuid] then
         while true do
             uuid = uuid + 1
-            if uuid > 0x7FFFFFFF then uuid = math.random(1,1000) end
+            if uuid > 0x7FFFFFFF then uuid = math.random(1, 1000) end
             if nil == session_id_coroutine[uuid] then
                 break
             end
@@ -171,7 +171,7 @@ function moon.send(PTYPE, receiver, ...)
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
-    _send(receiver, p.pack(...), 0, p.PTYPE)
+    _send(p.PTYPE, receiver, 0, p.pack(...))
 end
 
 ---向指定服务发送消息, 不会调用对应的`pack`函数。
@@ -185,7 +185,7 @@ function moon.raw_send(PTYPE, receiver, data, sessionid)
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
     end
     sessionid = sessionid or 0
-    _send(receiver, data, sessionid, p.PTYPE)
+    _send(p.PTYPE, receiver, sessionid, data)
 end
 
 ---@class service_conf
@@ -375,7 +375,7 @@ function moon.call(PTYPE, receiver, ...)
     end
 
     local sessionid = make_session(receiver)
-    _send(receiver, p.pack(...), sessionid, p.PTYPE)
+    _send(p.PTYPE, receiver, sessionid, p.pack(...))
     return moon.wait(sessionid)
 end
 
@@ -394,19 +394,18 @@ function moon.response(PTYPE, receiver, sessionid, ...)
         error("moon response receiver == 0")
     end
 
-    _send(receiver, p.pack(...), sessionid, p.PTYPE)
+    _send(p.PTYPE, receiver, sessionid, p.pack(...))
 end
 
 ------------------------------------
----@param msg message_ptr
+---@param m message_ptr
 ---@param PTYPE string
-local function _default_dispatch(msg, PTYPE)
+local function _dispatch(PTYPE, sender, session, sz, len, m)
     local p = protocol[PTYPE]
     if not p then
-        error(string.format("handle unknown PTYPE: %s. sender %u", PTYPE, _decode(msg, "S")))
+        error(string.format("handle unknown PTYPE: %s. sender %u", PTYPE, sender))
     end
 
-    local sender, session, sz, len = _decode(msg, "SEC")
     if session > 0 then
         session_watcher[session] = nil
         local co = session_id_coroutine[session]
@@ -435,12 +434,12 @@ local function _default_dispatch(msg, PTYPE)
             end
             coresume(co, dispatch, sender, session, p.unpack(sz, len))
         else
-            dispatch(msg)
+            dispatch(m)
         end
     end
 end
 
-core.callback(_default_dispatch)
+core.callback(_dispatch)
 
 ---注册消息协议
 function moon.register_protocol(t)
@@ -503,7 +502,7 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function (sz, len)
+    unpack = function(sz, len)
         return math.tointeger(moon.tostring(sz, len))
     end,
     dispatch = function()
@@ -548,14 +547,14 @@ reg_protocol {
     PTYPE = moon.PTYPE_SYSTEM,
     israw = true,
     pack = function(...)
-        return table.concat({...},",")
+        return table.concat({ ... }, ",")
     end,
     dispatch = function(msg)
         local sender, data = _decode(msg, "SZ")
         local params = string.split(data, ',')
         local func = system_command[params[1]]
         if func then
-            func(sender, table.unpack(params,2))
+            func(sender, table.unpack(params, 2))
         end
     end
 }
@@ -659,7 +658,7 @@ local function next_timer_id_check_rewind()
     if nil ~= timer_routine[timer_uuid] then
         while true do
             timer_uuid = timer_uuid + 1
-            if timer_uuid > 0xFFFFFFFF then timer_uuid = math.random(1,1000) end
+            if timer_uuid > 0xFFFFFFFF then timer_uuid = math.random(1, 1000) end
             if nil == timer_routine[timer_uuid] then
                 break
             end

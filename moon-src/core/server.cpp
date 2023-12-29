@@ -4,7 +4,7 @@
 
 namespace moon
 {
-    static uint32_t worker_id(uint32_t serviceid)
+    static inline uint32_t worker_id(uint32_t serviceid)
     {
         return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
     }
@@ -68,7 +68,7 @@ namespace moon
                 size_t alive = workers_.size();
                 for (const auto& w : workers_)
                 {
-                    if (w->count_.load(std::memory_order_acquire) == 0)
+                    if (w->count() == 0)
                     {
                         --alive;
                     }
@@ -141,7 +141,7 @@ namespace moon
         uint32_t res = 0;
         for (const auto& w : workers_)
         {
-            res += w->count_.load(std::memory_order_acquire);
+            res += w->count();
         }
         return res;
     }
@@ -153,7 +153,7 @@ namespace moon
         uint32_t min_count_workerid = 0;
         for (const auto& w : workers_)
         {
-            auto n = w->count_.load(std::memory_order_acquire);
+            auto n = w->count();
             if (w->shared() && n < min_count)
             {
                 min_count = n;
@@ -166,7 +166,7 @@ namespace moon
             min_count = std::numeric_limits<uint32_t>::max();
             for (const auto& w : workers_)
             {
-                auto n = w->count_.load(std::memory_order_acquire);
+                auto n = w->count();
                 if (n < min_count)
                 {
                     min_count = n;
@@ -201,7 +201,7 @@ namespace moon
 
     void server::on_timer(uint32_t serviceid, uint32_t timerid)
     {
-        auto msg = message{ buffer_ptr_t{nullptr} };
+        auto msg = message::with_empty();
         msg.set_type(PTYPE_TIMER);
         msg.set_sender(timerid);
         msg.set_receiver(serviceid);
@@ -243,23 +243,7 @@ namespace moon
         {
             return;
         }
-        asio::post(w->io_context(), [this, sender, w, sessionid] {
-            std::string content;
-            for (auto& it : w->services_)
-            {
-                if (content.empty())
-                    content.append("[");
-
-                content.append(moon::format(
-                    R"({"name":"%s","serviceid":"%X"},)",
-                    it.second->name().data(),
-                    it.second->id()));
-            }
-
-            if (!content.empty())
-                content.back() = ']';
-            response(sender, content, sessionid);
-         });
+        w->scan(sender, sessionid);
     }
 
     bool server::send_message(message&& m) const
@@ -289,7 +273,7 @@ namespace moon
     {
         for (auto& w : workers_)
         {
-            auto m = message{ buf };
+            auto m = message{ std::make_unique<buffer>(buf->clone()) };
             m.set_broadcast(true);
             m.set_sender(sender);
             m.set_type(type);
@@ -391,13 +375,12 @@ namespace moon
             req.append(",\n");
             auto v = moon::format(R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u, "timer":%zu, "alive":%u})",
                 w->id(),
-                w->cpu_cost_,
-                w->mqsize_.load(),
-                w->count_.load(std::memory_order_acquire),
+                w->cpu(),
+                w->mq_size(),
+                w->count(),
                 timer_[w->id()-1]->size(),
                 w->alive()
             );
-            w->cpu_cost_ = 0;
             req.append(v);
         }
         req.append("]");

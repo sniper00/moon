@@ -221,8 +221,8 @@ static int unsafe_delete(lua_State* L)
 
 static int unsafe_new(lua_State* L)
 {
-    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, 256 - BUFFER_HEAD_RESERVED));
-    uint32_t headreserved = static_cast<uint32_t>(luaL_optinteger(L, 2, BUFFER_HEAD_RESERVED));
+    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, buffer::DEFAULT_CAPACITY));
+    uint16_t headreserved = static_cast<uint16_t>(luaL_optinteger(L, 2, buffer::DEFAULT_HEAD_RESERVED));
     buffer* buf = new buffer(capacity, headreserved);
     lua_pushlightuserdata(L, buf);
     return 1;
@@ -301,7 +301,7 @@ static int concat(lua_State* L)
     {
         return 0;
     }
-    auto buf = new buffer(64, BUFFER_HEAD_RESERVED);
+    auto buf = new buffer{};
     try
     {
         for (int i = 1; i <= n; i++) {

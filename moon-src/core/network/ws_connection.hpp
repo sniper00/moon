@@ -142,7 +142,7 @@ namespace moon
             }
         }
 
-        bool send(buffer_ptr_t data) override
+        bool send(buffer_shr_ptr_t&& data) override
         {
             encode_frame(data);
             return base_connection_t::send(std::move(data));
@@ -152,7 +152,7 @@ namespace moon
         asio::mutable_buffer prepare_buffer(size_t size)
         {
             if (nullptr == recv_buf_)
-                recv_buf_ = message::create_buffer(size);
+                recv_buf_ = buffer::make_unique(size);
             auto space = recv_buf_->prepare(size);
             return asio::buffer(space.first, space.second);
         }
@@ -282,8 +282,8 @@ namespace moon
 
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
-            auto msg = message{};
-            msg.write_data(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), n });
+            auto msg = message{n};
+            msg.write_data(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), n});
             msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
             return std::error_code();
@@ -291,13 +291,13 @@ namespace moon
 
         void send_response(const std::string& s, bool bclose = false)
         {
-            auto buf = message::create_buffer();
+            auto buf = std::make_shared<buffer>(s.size());
             buf->write_back(s.data(), s.size());
             if (bclose)
             {
                 buf->set_flag(buffer_flag::close);
             }
-            base_connection::send(buf);
+            base_connection::send(std::move(buf));
         }
 
         bool handle_frame()
@@ -350,7 +350,7 @@ namespace moon
             }
 
             fh.mask = (tmp[1] & 0x80) != 0;
-            //message client to server must masked.
+            //message client to server must mask.
             if (!fh.mask && role_ == role::server)
             {
                 return make_error_code(moon::error::ws_bad_unmasked_frame);
@@ -388,7 +388,6 @@ namespace moon
                 {
                     //not support continuation frame
                     return make_error_code(moon::error::ws_bad_continuation);
-                    break;
                 }
             default:
                 if (!fh.fin)
@@ -471,7 +470,7 @@ namespace moon
             {
                 return make_error_code(moon::error::ws_closed);
             }
-            message msg;
+            message msg = message::with_empty();
             if (recv_buf_->size()==reallen)
             {
                 msg = message{ std::move(recv_buf_) };
@@ -509,7 +508,7 @@ namespace moon
             return decode_frame();
         }
 
-        void encode_frame(const buffer_ptr_t& data)
+        void encode_frame(const buffer_shr_ptr_t& data)
         {
             uint64_t size = data->size();
 

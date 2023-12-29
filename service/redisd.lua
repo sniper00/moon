@@ -29,6 +29,7 @@ if conf.name then
         return db, err
     end
 
+    ---@param msg buffer_shr_ptr
     local function exec_one(db, msg , sender, sessionid, opt)
         local reconnect_times = 1
 
@@ -55,7 +56,7 @@ if conf.name then
             if opt == "Q" then
                 res, err = redis.raw_send(db, msg)
             else
-                local t = {moon.unpack(moon.decode(msg,"C"))}
+                local t = {moon.unpack(moon.decode_ref_buffer(msg,"C"))}
                 res, err =db[t[1]](db, table.unpack(t, 2))
             end
 
@@ -70,7 +71,7 @@ if conf.name then
                 end
             else
                 if sessionid == 0 and not res then
-                    moon.error(err, crypt.base64encode(moon.decode(msg, 'Z')))
+                    moon.error(err, crypt.base64encode(moon.decode_ref_buffer(msg, 'Z')))
                 else
                     if err then
                         moon.response("lua", sender, sessionid, res, err)
@@ -90,8 +91,8 @@ if conf.name then
     local traceback = debug.traceback
     local xpcall = xpcall
 
-    local clone = moon.clone
-    local release = moon.release
+    local clone = moon.ref_buffer
+    local release = moon.unref_buffer
 
     local free_all = function(one)
         for k, req in pairs(one.queue) do

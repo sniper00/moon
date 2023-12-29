@@ -7,7 +7,7 @@
 
 namespace moon
 {
-    class server
+    class server final
     {
         class timer_expire_policy
         {
@@ -93,6 +93,7 @@ namespace moon
 
         bool set_unique_service(std::string name, uint32_t v);
 
+        //Used to respond to calls from the user layer to the framework layer
         void response(uint32_t to, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT) const;
 
         std::string info() const;

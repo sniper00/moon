@@ -22,7 +22,8 @@ namespace moon
         void start(role r) override
         {
             base_connection_t::start(r);
-            auto m = message{};
+            auto addr = address();
+            message m{};
             m.write_data(address());
             m.set_receiver(static_cast<uint8_t>(r == role::server ?
                 socket_data_type::socket_accept : socket_data_type::socket_connect));
@@ -30,7 +31,7 @@ namespace moon
             read_header();
         }
 
-        bool send(buffer_ptr_t data) override
+        bool send(buffer_shr_ptr_t&& data) override
         {
             if (!data->has_flag(buffer_flag::pack_size))
             {
@@ -62,7 +63,7 @@ namespace moon
             flag_ = v;
         }
     protected:
-        void message_slice(const_buffers_holder& holder, const buffer_ptr_t& buf) override
+        void message_slice(const_buffers_holder& holder, const buffer_shr_ptr_t& buf) override
         {
             size_t total = buf->size();
             const char* p = buf->data();
@@ -107,7 +108,7 @@ namespace moon
         void read_body(message_size_t size, bool fin)
         {
             if (nullptr == buf_)
-                buf_ = message::create_buffer(fin ? size : static_cast<size_t>(5) * size);
+                buf_ = buffer::make_unique(fin ? size : static_cast<size_t>(5) * size);
 
             auto space = buf_->prepare(size);
 

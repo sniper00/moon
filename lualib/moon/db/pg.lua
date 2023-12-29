@@ -489,13 +489,13 @@ function pg.pack_query_buffer(buf)
     wfront(buf, MSG_TYPE.query, strpack(">I", len+4))
 end
 
----@param sql message_ptr|string
+---@param sql buffer_shr_ptr|string
 ---@return pg_result
 function pg.query(self, sql)
     if type(sql) == "string" then
         send_message(self, MSG_TYPE.query, {sql, NULL})
     else
-        socket.write_message(self.sock, sql)
+        socket.write_ref_buffer(self.sock, sql)
     end
     local row_desc, data_rows, err_msg
     local result, notifications

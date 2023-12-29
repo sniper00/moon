@@ -12,10 +12,10 @@ if conf.name then
     local provider = require(conf.provider)
     local list = require("list")
 
-    local clone = moon.clone
-    local release = moon.release
+    local clone = moon.ref_buffer
+    local release = moon.unref_buffer
 
-    ---@param sql message_ptr
+    ---@param sql buffer_shr_ptr
     local function exec_one(db, sql, sender, sessionid)
         while true do
             if db then
@@ -28,7 +28,7 @@ if conf.name then
                 else
                     ---query success but may has sql error
                     if sessionid == 0 and code then
-                        moon.error(moon.decode(sql, "Z") ..  "\n" ..table.tostring(res))
+                        moon.error(moon.decode_ref_buffer(sql, "Z") ..  "\n" ..table.tostring(res))
                     else
                         moon.response("lua", sender, sessionid, res)
                     end

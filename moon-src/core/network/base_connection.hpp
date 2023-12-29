@@ -51,7 +51,7 @@ namespace moon
             });
         };
 
-        virtual bool send(buffer_ptr_t data)
+        virtual bool send(buffer_shr_ptr_t&& data)
         {
             if (data == nullptr || data->size() == 0)
             {
@@ -192,7 +192,7 @@ namespace moon
             return address;
         }
     protected:
-        virtual void message_slice(const_buffers_holder& holder, const buffer_ptr_t& buf)
+        virtual void message_slice(const_buffers_holder& holder, const buffer_shr_ptr_t& buf)
         {
             (void)holder;
             (void)buf;
@@ -200,7 +200,6 @@ namespace moon
 
         void post_send()
         {
-
             for (const auto& buf : queue_)
             {
                 if (buf->has_flag(buffer_flag::chunked))
@@ -262,7 +261,7 @@ namespace moon
                 return;
             }
 
-            auto msg = message{};
+            message msg{};
             std::string message = e.message();
             if (!additional.empty())
             {
@@ -308,6 +307,6 @@ namespace moon
         moon::socket_server* parent_;
         socket_t socket_;
         const_buffers_holder holder_;
-        std::deque<buffer_ptr_t> queue_;
+        std::deque<buffer_shr_ptr_t> queue_;
     };
 }

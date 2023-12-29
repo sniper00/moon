@@ -7,19 +7,27 @@ namespace moon
     class message final
     {
     public:
-        static buffer_ptr_t create_buffer(size_t capacity = 64, uint32_t headreserved = BUFFER_HEAD_RESERVED)
-        {
-            return std::make_shared<buffer>(capacity, headreserved);
+        static message with_empty(){
+            return message{buffer_ptr_t{}};
         }
 
-        message(size_t capacity = 64, uint32_t headreserved = 0)
-            :data_(std::make_shared<buffer>(capacity, headreserved))
+        message()
+        :data_(buffer::make_unique())
         {
         }
 
-        template<typename Buffer, std::enable_if_t<std::is_same_v<std::decay_t<Buffer>, buffer_ptr_t>, int> = 0>
-        explicit message(Buffer&& v)
-            :data_(std::forward<Buffer>(v))
+        message(size_t capacity)
+            :data_(buffer::make_unique(capacity))
+        {
+        }
+
+        message(size_t capacity, uint32_t headreserved)
+            :data_(buffer::make_unique(capacity, headreserved))
+        {
+        }
+
+        explicit message(buffer_ptr_t&& v)
+            :data_(std::move(v))
         {
             
         }
@@ -122,15 +130,16 @@ namespace moon
             return data_ ? data_->size():0;
         }
 
-        operator const buffer_ptr_t&() const
+        buffer_ptr_t into_buffer()
         {
-            return data_;
+            return std::move(data_);
         }
 
         buffer* get_buffer()
         {
             return data_ ? data_.get() : nullptr;
         }
+
     private:
         uint8_t type_ = 0;
         uint32_t sender_ = 0;

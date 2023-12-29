@@ -22,10 +22,21 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
     lua_service* l = reinterpret_cast<lua_service*>(ud);
     size_t mem = l->mem;
 
-    l->mem += nsize;
+    if (nsize == 0)
+    {
+        if(ptr){
+            free(ptr);
+            l->mem -= osize;
+        }
+        return nullptr;
+    }
 
-    if (ptr)
-        l->mem -= osize;
+    if (nsize > static_cast<size_t>(std::numeric_limits<int64_t>::max()))
+    {
+        return nullptr;
+    }
+
+    l->mem += nsize;
 
     if (l->mem > l->mem_limit)
     {
@@ -46,15 +57,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
             true, moon::LogLevel::Warn, moon::format("%s Memory warning %.2f M", l->name().data(), (float)l->mem / mb_memory), l->id());
     }
 
-    if (nsize == 0)
-    {
-        free(ptr);
-        return nullptr;
-    }
-    else
-    {
-        return realloc(ptr, nsize);
-    }
+    return realloc(ptr, nsize);
 }
 
 lua_service* lua_service::get(lua_State* L)
@@ -92,7 +95,7 @@ static int protect_init(lua_State* L)
 
     lua_call(L, 1, 0);
     return 0;
-};
+}
 
 bool lua_service::init(const moon::service_conf& conf)
 {
@@ -151,7 +154,7 @@ int lua_service::set_callback(lua_State* L) {
     return 0;
 }
 
-void lua_service::dispatch(message* msg)
+void lua_service::dispatch(message* m)
 {
     if (!ok())
         return;
@@ -165,10 +168,17 @@ void lua_service::dispatch(message* msg)
         int trace = 1;
         lua_pushvalue(L, 2);
 
-        lua_pushlightuserdata(L, msg);
-        lua_pushinteger(L, msg->type());
+        lua_pushinteger(L, m->type());
+        lua_pushinteger(L, m->sender());
+        lua_pushinteger(L, m->sessionid());
+        lua_pushlightuserdata(L, (void*)m->data());
+        lua_pushinteger(L, m->size());
 
-        int r = lua_pcall(L, 2, 0, trace);
+
+        lua_pushlightuserdata(L, m);
+      
+
+        int r = lua_pcall(L, 6, 0, trace);
         if (r == LUA_OK)
         {
             return;
@@ -187,18 +197,18 @@ void lua_service::dispatch(message* msg)
         case LUA_ERRERR:
             error = moon::format("dispatch %s error in error", name().data());
             break;
-        };
+        }
 
         lua_pop(L, 1);
 
-        if (msg->sessionid() >= 0)
+        if (m->sessionid() >= 0)
         {
             logger()->logstring(true, moon::LogLevel::Error, error, id());
         }
         else
         {
-            msg->set_sessionid(-msg->sessionid());
-            server_->response(msg->sender(), error, msg->sessionid(), PTYPE_ERROR);
+            m->set_sessionid(-m->sessionid());
+            server_->response(m->sender(), error, m->sessionid(), PTYPE_ERROR);
         }
     }
     catch (const std::exception& e)

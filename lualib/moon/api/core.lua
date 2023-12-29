@@ -8,6 +8,9 @@ error("DO NOT REQUIRE THIS FILE")
 --- lightuserdata, cpp type `message*`
 ---@class message_ptr
 
+--- lightuserdata, cpp type `buffer_shr_ptr*`
+---@class buffer_shr_ptr
+
 --- lightuserdata, cpp type `char*`
 ---@class cstring_ptr
 
@@ -108,14 +111,26 @@ function core.now() end
 ---@nodiscard
 function core.decode(msg, pattern) end
 
----clone message, but share buffer field
----@param msg message_ptr
----@return userdata
-function core.clone(msg) end
+--- buffer_shr_ptr 's field
+---
+--- - 'Z' to lua string
+--- - 'N' buffer size
+--- - 'B' buffer*
+--- - 'C' char* and size
+---@param msg buffer_shr_ptr
+---@param pattern string
+---@return ...
+---@nodiscard
+function core.decode_ref_buffer(msg, pattern) end
 
----release clone message
+--- convert message's buffer to buffer_shr_ptr, and alloc lightuserdata hold it
 ---@param msg message_ptr
-function core.release(msg) end
+---@return buffer_shr_ptr
+function core.ref_buffer(msg) end
+
+--- release buffer_shr_ptr
+---@param p buffer_shr_ptr
+function core.unref_buffer(p) end
 
 ---redirect a message to other service
 function core.redirect(msg, receiver, mtype, sender, sessionid) end
@@ -148,6 +163,11 @@ function asio.write(fd, data, flag) end
 ---@param m message_ptr
 ---@return boolean
 function asio.write_message(fd, m) end
+
+---@param fd integer
+---@param p buffer_shr_ptr
+---@return boolean
+function asio.write_ref_buffer(fd, p) end
 
 --- 设置读操作超时, 默认是0, 永远不会超时。为了处理大量链接的检测,实际超时检测并不严格，误差范围为[t, t+10)
 ---@param fd integer

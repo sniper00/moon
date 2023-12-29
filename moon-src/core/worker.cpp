@@ -47,13 +47,13 @@ namespace moon
     void worker::stop()
     {
         asio::post(io_ctx_, [this] {
-            message msg;
+            message msg = message::with_empty();
             msg.set_type(PTYPE_SHUTDOWN);
             for (auto& it : services_)
             {
                 it.second->dispatch(&msg);
             }
-         });
+        });
     }
 
     void worker::wait()
@@ -68,7 +68,7 @@ namespace moon
     void worker::new_service(std::unique_ptr<service_conf> conf)
     {
         count_.fetch_add(1, std::memory_order_release);
-        asio::post(io_ctx_, [this, conf = std::move(conf)](){
+        asio::post(io_ctx_, [this, conf = std::move(conf)]() {
             do
             {
                 size_t counter = 0;
@@ -150,7 +150,7 @@ namespace moon
                 if (server_->get_state() == state::ready)
                 {
                     auto content = moon::format("_service_exit,name:%s serviceid:%08X", name.data(), id);
-                    auto buf = message::create_buffer();
+                    auto buf = buffer::make_unique();
                     buf->write_back(content.data(), content.size());
                     server_->broadcast(serviceid, buf, PTYPE_SYSTEM);
                 }
@@ -164,7 +164,28 @@ namespace moon
             {
                 server_->response(sender, moon::format("service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
             }
-         });
+        });
+    }
+
+    void worker::scan(uint32_t sender, int32_t sessionid)
+    {
+        asio::post(io_ctx_, [this, sender,sessionid] {
+            std::string content;
+            for (auto& it : services_)
+            {
+                if (content.empty())
+                    content.append("[");
+
+                content.append(moon::format(
+                    R"({"name":"%s","serviceid":"%X"},)",
+                    it.second->name().data(),
+                    it.second->id()));
+            }
+
+            if (!content.empty())
+                content.back() = ']';
+            server_->response(sender, content, sessionid);
+        });
     }
 
     asio::io_context& worker::io_context()
@@ -174,23 +195,27 @@ namespace moon
 
     void worker::send(message&& msg)
     {
-        ++mqsize_;
-        if (mq_.push_back(std::move(msg)) == 1)
+        if (mq_.push_back(std::move(msg)) == 0)
         {
-            asio::post(io_ctx_, [this]() {
-                if (!mq_.try_swap(swapmq_))
-                    return;
-
-                service* s = nullptr;
-                for (auto& msg : swapmq_)
-                {
-                    handle_one(s, std::move(msg));
-                    --mqsize_;
-                }
-
-                swapmq_.clear();
-            });
+            start_handle();
         }
+    }
+
+    void worker::start_handle() {
+        asio::post(io_ctx_, [this]() {
+            if (mq_.size() == 0) return;
+            service* s = nullptr;
+            while (true) {
+                auto msg = mq_.pop();
+                if (!msg.has_value()) {
+                    if (mq_.size() > 0) {
+                        start_handle();
+                    }
+                    break;
+                }
+                s = handle_one(s, std::move(*msg));
+            }
+        });
     }
 
     uint32_t worker::id() const
@@ -218,11 +243,12 @@ namespace moon
         return shared_.load();
     }
 
-    void worker::handle_one(service*& s, message&& msg)
+    service* worker::handle_one(service* s, message&& msg)
     {
         uint32_t sender = msg.sender();
         uint32_t receiver = msg.receiver();
         uint8_t type = msg.type();
+
         if (msg.broadcast())
         {
             for (auto& it : services_)
@@ -237,7 +263,7 @@ namespace moon
                     handle_message(it.second, msg);
                 }
             }
-            return;
+            return nullptr;
         }
 
         if (nullptr == s || s->id() != receiver)
@@ -245,7 +271,7 @@ namespace moon
             s = find_service(receiver);
             if (nullptr == s || !s->ok())
             {
-                if (sender != 0 && msg.type()!=PTYPE_TIMER)
+                if (sender != 0 && msg.type() != PTYPE_TIMER)
                 {
                     std::string hexdata = moon::hex_string({ msg.data(),msg.size() });
                     std::string str = moon::format("[%08X] attempt send to dead service [%08X]: %s."
@@ -256,19 +282,20 @@ namespace moon
                     msg.set_sessionid(-msg.sessionid());
                     server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);
                 }
-                return;
+                return s;
             }
         }
 
         double start_time = moon::time::clock();
         handle_message(s, std::move(msg));
-        double cost_time = moon::time::clock() - start_time;
-        s->add_cpu_cost(cost_time);
-        cpu_cost_ += cost_time;
-        if (cost_time > 0.1)
+        double diff_time = moon::time::clock() - start_time;
+        s->add_cpu(diff_time);
+        cpu_ += diff_time;
+        if (diff_time > 0.1)
         {
             CONSOLE_WARN(server_->logger(),
-                "worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, cost_time, sender, receiver);
+                "worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, diff_time, sender, receiver);
         }
+        return s;
     }
 }

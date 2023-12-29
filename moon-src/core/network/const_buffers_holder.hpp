@@ -65,7 +65,7 @@ namespace moon
         bool close_ = false;
         size_t count_ = 0;
         std::vector<asio::const_buffer> buffers_;
-        std::forward_list< message_size_t> headers_;
+        std::forward_list<message_size_t> headers_;
     };
 
     /*

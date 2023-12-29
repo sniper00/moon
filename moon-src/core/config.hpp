@@ -6,7 +6,6 @@ namespace moon
 {
     constexpr uint32_t WORKER_ID_SHIFT = 24;// support 255 worker threads.
     constexpr uint32_t WORKER_MAX_SERVICE = (1<<24)-1;// max service count per worker thread.
-    constexpr uint32_t BUFFER_HEAD_RESERVED = 16;//max : websocket header max len 14 bytes.
 
     constexpr uint8_t PTYPE_UNKNOWN = 0;
     constexpr uint8_t PTYPE_SYSTEM = 1;
@@ -88,7 +87,8 @@ namespace moon
     constexpr uint32_t BOOTSTRAP_ADDR = 0x01000001;//The first service's id
 
     using message_size_t = uint16_t;//PTYPE_SOCKET_MOON message length type
-    using buffer_ptr_t = std::shared_ptr<buffer>;
+    using buffer_ptr_t = std::unique_ptr<buffer>;
+    using buffer_shr_ptr_t = std::shared_ptr<buffer>;
 }
 
 

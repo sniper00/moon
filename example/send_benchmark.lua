@@ -30,8 +30,12 @@ end
 local sttime = 0
 local counter = 0
 
-local nreceiver = 5
-local ncount = 20000
+
+local times = 100
+
+local nreceiver = 32
+local ncount = 100
+local avg = 0
 
 local command = {}
 
@@ -39,6 +43,7 @@ command.TEST = function()
     counter = counter + 1
     if counter == ncount*nreceiver then
         local cost = moon.clock() - sttime
+        avg = avg + math.floor(ncount*nreceiver/cost)
         print(string.format("cost %.03fs, %s op/s", cost, math.floor(ncount*nreceiver/cost)))
         counter = 0
     end
@@ -71,23 +76,27 @@ moon.async(function()
     end
 
     local i = 0
-    while i < 10 do
+    while i < times do
         sttime = moon.clock()
 
         for _=1,ncount do
             for _, id in ipairs(receivers) do
-                moon.send('lua', id, "TEST", "123456789")
+                moon.send('lua', id, "TEST", 1, 2, 3, 4 , {a=1, b=2 , c = {d=1, e=2, f=3}})
             end
         end
 
-        moon.sleep(1000)
+        moon.sleep(0)
         i= i+1
     end
+
+    moon.sleep(500)
 
     for _, id in ipairs(receivers) do
         moon.kill(id)
     end
     moon.quit()
+
+    print("avg", avg/times)
 end)
 
 

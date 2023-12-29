@@ -77,11 +77,9 @@ namespace moon
             ok_ = v;
         }
 
-        double cpu_cost()
+        double cpu()
         {
-            auto v = cpu_cost_;
-            cpu_cost_ = 0.0;
-            return v;
+            return std::exchange(cpu_, 0);
         }
     public:
         virtual bool init(const service_conf& conf) = 0;
@@ -99,9 +97,9 @@ namespace moon
             id_ = v;
         }
 
-        void add_cpu_cost(double v)
+        void add_cpu(double v)
         {
-            cpu_cost_ += v;
+            cpu_ += v;
         }
     protected:
         bool ok_ = false;
@@ -110,32 +108,26 @@ namespace moon
         log* log_ = nullptr;
         server* server_ = nullptr;
         worker* worker_ = nullptr;
-        double cpu_cost_ = 0.0;//
+        double cpu_ = 0.0;//
         std::string   name_;
     };
 
-    template<typename Service, typename Message>
-    inline void handle_message(Service&& s, Message&& m)
-    {
-        try
-        {
-            uint32_t receiver = m.receiver();
-            s->dispatch(&m);
-            //redirect message
-            if (m.receiver() != receiver)
-            {
-                MOON_ASSERT(!m.broadcast(), "can not redirect broadcast message");
-                if constexpr (std::is_rvalue_reference_v<decltype(m)>)
-                {
-                    s->get_server()->send_message(std::forward<message>(m));
-                }
-            }
-        }
-        catch (const std::exception& e)
-        {
-            CONSOLE_ERROR(s->logger(), "service::handle_message exception: %s", e.what());
-        }
-    }
+	template<typename Service, typename Message>
+	inline void handle_message(Service&& s, Message&& m)
+	{
+
+		uint32_t receiver = m.receiver();
+		s->dispatch(&m);
+		//redirect message
+		if (m.receiver() != receiver)
+		{
+			MOON_ASSERT(!m.broadcast(), "can not redirect broadcast message");
+			if constexpr (std::is_rvalue_reference_v<decltype(m)>)
+			{
+				s->get_server()->send_message(std::forward<message>(m));
+			}
+		}
+	}
 
     using service_ptr_t = std::unique_ptr<service>;
 }

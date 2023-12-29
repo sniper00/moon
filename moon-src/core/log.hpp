@@ -88,7 +88,7 @@ namespace moon
 
             enable_stdout = enable_stdout_ ? enable_stdout : enable_stdout_;
 
-            auto line = buffer{ (datasize>0)?(64 + datasize):256 };
+            auto line = buffer{ (datasize>0)?(64 + datasize):256, 0};
             auto it = line.begin();
             *(it++) = static_cast<char>(enable_stdout);
             *(it++) = static_cast<char>(level);
@@ -202,17 +202,16 @@ namespace moon
             return offset;
         }
 
-        void do_write(queue_type::container_type& lines)
+        void do_write(const queue_type::container_type& lines)
         {
             for (auto& it : lines)
             {
                 auto p = it.data();
                 auto bconsole = static_cast<bool>(*(p++));
                 auto level = static_cast<LogLevel>(*(p++));
-                it.seek(2, buffer::seek_origin::Current);
                 if (bconsole)
                 {
-                    auto s = std::string_view{ it.data(), it.size() };
+                    auto s = std::string_view{ p, it.size() -2 };
                     switch (level)
                     {
                     case LogLevel::Error:
@@ -248,7 +247,7 @@ namespace moon
             {
                 std::fflush(fp_.get());
             }
-            std::cout << std::endl;
+            std::cout.flush();
         }
 
         void write()
@@ -257,22 +256,20 @@ namespace moon
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
 
             queue_type::container_type swaps;
-            time_t sleep_time = 1<<15;
+            time_t sleep_time = 1;
             while (state_.load(std::memory_order_acquire) == state::ready)
             {
                 if (log_queue_.try_swap(swaps))
                 {
-                    sleep_time = 1<<15;
+                    sleep_time = 1;
                     do_write(swaps);
                     swaps.clear();
                 }
                 else
                 {
-                    if(sleep_time<(1<<24))
-                    {
-                        sleep_time <<=1;
-                    }
                     std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_time));
+                    sleep_time= (sleep_time<<1);
+                    sleep_time = std::min(sleep_time,(time_t)1<<24);
                 }
             }
 

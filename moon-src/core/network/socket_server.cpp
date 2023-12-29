@@ -15,7 +15,6 @@ socket_server::socket_server(server* s, worker* w, asio::io_context & ioctx)
     , worker_(w)
     , context_(ioctx)
     , timer_(ioctx)
-    , response_()
 {
     timeout();
 }
@@ -284,7 +283,7 @@ void socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view
     });
 }
 
-bool socket_server::write(uint32_t fd, buffer_ptr_t data, buffer_flag flag)
+bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, buffer_flag flag)
 {
     if (nullptr == data || 0 == data->size())
         return false;
@@ -445,7 +444,7 @@ static bool decode_endpoint(std::string_view address, udp::endpoint& ep)
     return true;
 }
 
-bool socket_server::send_to(uint32_t host, std::string_view address, buffer_ptr_t data)
+bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t&& data)
 {
     if (address.empty())
         return false;

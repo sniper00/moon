@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <type_traits>
+#include <cassert>
 
 #define luaL_rawsetfield(L, tbindex, kname, valueexp)\
     lua_pushliteral(L, kname);\
@@ -268,7 +269,7 @@ namespace moon
             index = lua_gettop(L) + index + 1;
         }
 
-        luaL_checktype(L, index, LUA_TTABLE);
+        assert(lua_type(L, index) == LUA_TTABLE);
         lua_pushlstring(L, key.data(), key.size());
         lua_scope_pop scope{ L };
         if (lua_rawget(L, index) <= LUA_TNIL)

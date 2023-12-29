@@ -128,6 +128,124 @@ namespace moon
     template<class Alloc>
     class base_buffer
     {
+        struct compressed_pair final : private Alloc{
+            using allocator_type = Alloc;
+            using value_type = typename allocator_type::value_type;
+            using iterator = buffer_iterator<value_type>;
+            using const_iterator = buffer_iterator<const value_type>;
+            using pointer = typename iterator::pointer;
+            using const_pointer = typename const_iterator::pointer;
+
+            constexpr allocator_type& first() noexcept {
+                return *this;
+            }
+
+            constexpr const allocator_type& first() const noexcept {
+                return *this;
+            }
+
+            compressed_pair(size_t cap, uint16_t head)
+                :headreserved(head)
+            {
+                prepare(cap + head);
+                readpos = writepos = headreserved;
+            }
+
+            compressed_pair(compressed_pair&& other) noexcept
+                : flag(std::exchange(other.flag, 0))
+                , headreserved(std::exchange(other.headreserved, 0))
+                , capacity(std::exchange(other.capacity, 0))
+                , readpos(std::exchange(other.readpos, 0))
+                , writepos(std::exchange(other.writepos, 0))
+                , data(std::exchange(other.data, nullptr))
+         
+            {
+
+            }
+
+            compressed_pair& operator=(compressed_pair&& other) noexcept
+            {
+                if (this != std::addressof(*other))
+                {
+                    if(nullptr != data)
+                        first().deallocate(data, capacity);
+                    flag = std::exchange(other.flag, 0);
+                    headreserved = std::exchange(other.headreserved, 0);
+                    capacity = std::exchange(other.capacity, 0);
+                    readpos = std::exchange(other.readpos, 0);
+                    writepos = std::exchange(other.writepos, 0);
+                    data = std::exchange(other.data, nullptr);
+                }
+                return *this;
+            }
+
+            ~compressed_pair(){
+                if (nullptr != data)
+                {
+                    first().deallocate(data, capacity);
+                }
+            }
+
+            size_t next_pow2(size_t x)
+            {
+                if (!(x & (x - 1)))
+                {
+                    return x;
+                }
+                x |= x >> 1;
+                x |= x >> 2;
+                x |= x >> 4;
+                x |= x >> 8;
+                x |= x >> 16;
+                return x + 1;
+            }
+
+            std::pair<pointer, size_t> prepare(size_t need)
+            {
+                assert(capacity >= writepos);
+                size_t writeable = capacity - writepos;
+
+                if (writeable >= need)
+                {
+                    return std::pair{ data + writepos, need };
+                }
+
+                if (writeable + readpos < need + headreserved)
+                {
+                    auto required_size = writepos + need;
+                    required_size = next_pow2(required_size);
+                    auto tmp = first().allocate(required_size);
+                    if (nullptr != data)
+                    {
+                        std::memcpy(tmp, data, writepos);
+                        first().deallocate(data, capacity);
+                    }
+                    data = tmp;
+                    capacity = required_size;
+                }
+                else
+                {
+                    size_t readable = writepos - readpos;
+                    if (readable != 0)
+                    {
+                        assert(readpos >= headreserved);
+                        std::memmove(data + headreserved, data + readpos, readable);
+                    }
+                    readpos = headreserved;
+                    writepos = readpos + readable;
+                }
+                return std::pair{data + writepos, need };
+            }
+
+            uint16_t flag = 0;
+            uint16_t headreserved = 0;
+            size_t capacity = 0;
+            //read position
+            size_t readpos = 0;
+            //write position
+            size_t writepos = 0;
+            pointer data = nullptr;
+        };
     public:
         using allocator_type = Alloc;
         using value_type = typename allocator_type::value_type;
@@ -136,62 +254,54 @@ namespace moon
         using pointer = typename iterator::pointer;
         using const_pointer = typename const_iterator::pointer;
 
-        //buffer default size
-        constexpr static size_t   DEFAULT_CAPACITY = 128;
-
+        //websocket header max len 14 bytes.
+        constexpr static uint16_t DEFAULT_HEAD_RESERVED = 16;
+        constexpr static size_t DEFAULT_CAPACITY = 128 - DEFAULT_HEAD_RESERVED;
+  
         enum class seek_origin
         {
             Begin,
             Current,
         };
 
-        base_buffer(size_t capacity = DEFAULT_CAPACITY, uint32_t headreserved = 0, const allocator_type& al = allocator_type())
-            : allocator_(al)
-            , flag_(0)
-            , headreserved_(headreserved)
-            , capacity_(0)
-            , readpos_(0)
-            , writepos_(0)
+        base_buffer()
+            :pair_(DEFAULT_CAPACITY, DEFAULT_HEAD_RESERVED)
         {
-            capacity = (capacity > 0 ? capacity : DEFAULT_CAPACITY);
-            prepare(capacity + headreserved);
-            readpos_ = writepos_ = headreserved_;
+        }
+
+        base_buffer(size_t capacity)
+            :pair_(capacity, DEFAULT_HEAD_RESERVED)
+        {
+        }
+
+        base_buffer(size_t capacity, uint16_t head_reserved)
+            :pair_(capacity, head_reserved)
+        {
+        }
+
+        template<typename... Args>
+        static std::unique_ptr<base_buffer> make_unique(Args&&... args){
+            return std::make_unique<base_buffer>(std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        static std::shared_ptr<base_buffer> make_shared(Args&&... args){
+            return std::make_shared<base_buffer>(std::forward<Args>(args)...);
         }
 
         base_buffer(const base_buffer&) = delete;
 
         base_buffer& operator=(const base_buffer&) = delete;
 
-        base_buffer(base_buffer&& other) noexcept
-            : allocator_(std::move(other.allocator_))
-            , flag_(std::exchange(other.flag_, 0))
-            , headreserved_(std::exchange(other.headreserved_, 0))
-            , capacity_(std::exchange(other.capacity_, 0))
-            , readpos_(std::exchange(other.readpos_, 0))
-            , writepos_(std::exchange(other.writepos_, 0))
-            , data_(std::exchange(other.data_, nullptr))
-        {
-        }
+        base_buffer(base_buffer&& other) = default;
 
-        base_buffer& operator=(base_buffer&& other) noexcept
-        {
-            if (this != std::addressof(*other))
-            {
-                allocator_.deallocate(data_, capacity_);
-                flag_ = std::exchange(other.flag_, 0);
-                headreserved_ = std::exchange(other.headreserved_, 0);
-                capacity_ = std::exchange(other.capacity_, 0);
-                readpos_ = std::exchange(other.readpos_, 0);
-                writepos_ = std::exchange(other.writepos_, 0);
-                data_ = std::exchange(other.data_, nullptr);
-                allocator_ = std::move(other.allocator_);
-            }
-            return *this;
-        }
+        base_buffer& operator=(base_buffer&& other) = default;
 
-        ~base_buffer()
-        {
-            allocator_.deallocate(data_, capacity_);
+        base_buffer clone() {
+            base_buffer b{ pair_.capacity , pair_.headreserved };
+            b.set_flag(pair_.flag);
+            b.write_back(data(), size());
+            return b;
         }
 
         template<typename T>
@@ -201,20 +311,20 @@ namespace moon
             if (nullptr == Indata || 0 == count)
                 return;
             size_t n = sizeof(T) * count;
-            auto space = prepare(n);
+            auto space = pair_.prepare(n);
             memcpy(space.first, Indata, space.second);
-            writepos_ += n;
+            pair_.writepos += n;
         }
 
         void write_back(char c)
         {
-            *(prepare(1).first) = c;
-            ++writepos_;
+            *(pair_.prepare(1).first) = c;
+            ++pair_.writepos;
         }
 
         void unsafe_write_back(char c)
         {
-            *(data_ + (writepos_++)) = c;
+            *(pair_.data + (pair_.writepos++)) = c;
         }
 
         template<typename T>
@@ -226,12 +336,12 @@ namespace moon
 
             size_t n = sizeof(T) * count;
 
-            if (n > readpos_)
+            if (n > pair_.readpos)
             {
                 return false;
             }
 
-            readpos_ -= n;
+            pair_.readpos -= n;
             auto* buff = reinterpret_cast<T*>(std::addressof(*begin()));
             memcpy(buff, Indata, n);
             return true;
@@ -241,7 +351,7 @@ namespace moon
         bool write_chars(T value)
         {
             static constexpr size_t MAX_NUMBER_2_STR = 44;
-            auto space = prepare(MAX_NUMBER_2_STR);
+            auto space = pair_.prepare(MAX_NUMBER_2_STR);
             auto* b = space.first;
 #ifndef _MSC_VER//std::to_chars in C++17: gcc and clang only integral types supported
             if constexpr (std::is_floating_point_v<T>)
@@ -273,14 +383,14 @@ namespace moon
 
             size_t n = sizeof(T) * count;
 
-            if (readpos_ + n > writepos_)
+            if (pair_.readpos + n > pair_.writepos)
             {
                 return false;
             }
 
             auto* buff = std::addressof(*begin());
             memcpy(Outdata, buff, n);
-            readpos_ += n;
+            pair_.readpos += n;
             return true;
         }
 
@@ -295,14 +405,14 @@ namespace moon
             switch (s)
             {
             case seek_origin::Begin:
-                if (offset > writepos_)
+                if (offset > pair_.writepos)
                     return false;
-                readpos_ = offset;
+                pair_.readpos = offset;
                 break;
             case seek_origin::Current:
-                if (readpos_ + offset > writepos_)
+                if (pair_.readpos + offset > pair_.writepos)
                     return false;
-                readpos_ += offset;
+                pair_.readpos += offset;
                 break;
             default:
                 assert(false);
@@ -313,66 +423,70 @@ namespace moon
 
         void clear() noexcept
         {
-            flag_ = 0;
-            writepos_ = readpos_ = headreserved_;
+            pair_.flag = 0;
+            pair_.writepos = pair_.readpos = pair_.headreserved;
         }
 
         template<typename ValueType>
         void set_flag(ValueType v) noexcept
         {
-            flag_ |= static_cast<uint32_t>(v);
+            pair_.flag |= static_cast<uint16_t>(v);
         }
 
         template<typename ValueType>
         bool has_flag(ValueType v) const noexcept
         {
-            return ((flag_ & static_cast<uint32_t>(v)) != 0);
+            return ((pair_.flag & static_cast<uint16_t>(v)) != 0);
         }
 
         template<typename ValueType>
         void clear_flag(ValueType v) noexcept
         {
-            flag_ &= ~static_cast<uint32_t>(v);
+            pair_.flag &= ~static_cast<uint16_t>(v);
         }
 
         void commit(std::size_t n) noexcept
         {
-            writepos_ += n;
-            assert(writepos_ <= capacity_);
-            if (writepos_ >= capacity_)
+            pair_.writepos += n;
+            assert(pair_.writepos <= pair_.capacity);
+            if (pair_.writepos >= pair_.capacity)
             {
-                writepos_ = capacity_;
+                pair_.writepos = pair_.capacity;
             }
+        }
+
+        std::pair<pointer, size_t> prepare(size_t need) {
+            return pair_.prepare(need);
         }
 
         pointer revert(size_t n) noexcept
         {
-            assert(writepos_ >= (readpos_+n));
-            if (writepos_ >= n)
+            assert(pair_.writepos >= (pair_.readpos+n));
+            if (pair_.writepos >= n)
             {
-                writepos_ -= n;
+                pair_.writepos -= n;
             }
-            return (data_ + writepos_);
+            return (pair_.data + pair_.writepos);
         }
 
         const_iterator begin() const noexcept
         {
-            return const_iterator{ data_ + readpos_ };
+            return const_iterator{ pair_.data + pair_.readpos };
         }
 
         iterator begin() noexcept
         {
-            return iterator{ data_ + readpos_ };
+            return iterator{ pair_.data + pair_.readpos };
         }
 
         const_iterator end() const noexcept
         {
-            return const_iterator{ data_ + writepos_ };
+            return const_iterator{ pair_.data + pair_.writepos };
         }
 
         iterator end() noexcept
         {
-            return iterator{ data_ + writepos_ };
+            return iterator{ pair_.data + pair_.writepos };
         }
 
         pointer data() noexcept
@@ -388,82 +502,20 @@ namespace moon
         //readable size
         size_t size() const noexcept
         {
-            return writepos_ - readpos_;
+            return pair_.writepos - pair_.readpos;
         }
 
         size_t capacity() const noexcept
         {
-            return capacity_;
+            return pair_.capacity;
         }
 
         size_t reserved() const noexcept
         {
-            return headreserved_;
-        }
-
-        std::pair<pointer, size_t> prepare(size_t need)
-        {
-            assert(capacity_ >= writepos_);
-            size_t writeable = capacity_ - writepos_;
-
-            if (writeable >= need)
-            {
-                return std::pair{data_ + writepos_, need};
-            }
-
-            if (writeable + readpos_ < need + headreserved_)
-            {
-                auto required_size = writepos_ + need;
-                required_size = next_pow2(required_size);
-                auto tmp = allocator_.allocate(required_size);
-                if (nullptr != data_)
-                {
-                    std::memcpy(tmp, data_, writepos_);
-                    allocator_.deallocate(data_, capacity_);
-                }
-                data_ = tmp;
-                capacity_ = required_size;
-            }
-            else
-            {
-                size_t readable = size();
-                if (readable != 0)
-                {
-                    assert(readpos_ >= headreserved_);
-                    std::memmove(data_ + headreserved_, data_ + readpos_, readable);
-                }
-                readpos_ = headreserved_;
-                writepos_ = readpos_ + readable;
-            }
-            return std::pair{data_ + writepos_, need};
+            return pair_.headreserved;
         }
     private:
-        size_t next_pow2(size_t x)
-        {
-            if (!(x & (x - 1)))
-            {
-                return x;
-            }
-            x |= x >> 1;
-            x |= x >> 2;
-            x |= x >> 4;
-            x |= x >> 8;
-            x |= x >> 16;
-            return x + 1;
-        }
-    private:
-        allocator_type allocator_;
-
-        uint32_t flag_;
-
-        uint32_t headreserved_;
-
-        size_t capacity_;
-        //read position
-        size_t readpos_;
-        //write position
-        size_t writepos_;
-        value_type* data_ = nullptr;
+        compressed_pair pair_;
     };
 };
 
@@ -479,6 +531,3 @@ namespace moon
     using buffer = base_buffer<std::allocator<char>>;
 }
 #endif
-
-
-
