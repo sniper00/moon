@@ -12,7 +12,7 @@ static void* json_malloc(void*, size_t size) {
     return mi_malloc(size);
 }
 
-static void* json_realloc(void*, void* ptr, size_t size)
+static void* json_realloc(void*, void* ptr,  size_t , size_t size)
 {
     return mi_realloc(ptr, size);
 }
@@ -68,7 +68,7 @@ struct json_config {
     bool enable_number_key = true;
     bool enable_sparse_array = false;
     size_t concat_buffer_size = DEFAULT_CONCAT_BUFFER_SIZE;
-    uint32_t concat_buffer_head_size = 16;
+    uint16_t concat_buffer_head_size = buffer::DEFAULT_HEAD_RESERVED;
 };
 
 static int json_destroy_config(lua_State *L)
@@ -130,7 +130,7 @@ static int json_options(lua_State* L)
         auto concat_buffer_size = cfg->concat_buffer_size;
         auto concat_buffer_head_size = cfg->concat_buffer_head_size;
         cfg->concat_buffer_size = static_cast<uint32_t>(luaL_checkinteger(L, 2));
-        cfg->concat_buffer_head_size = static_cast<uint32_t>(luaL_checkinteger(L, 3));
+        cfg->concat_buffer_head_size = static_cast<uint16_t>(luaL_checkinteger(L, 3));
         lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_size));
         lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_head_size));
         break;
