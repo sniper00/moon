@@ -134,6 +134,9 @@
     <ClCompile Include="..\..\..\lualib-src\lua_buffer.cpp">
       <Filter>lualib-src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\lualib-src\lua_coroutine.cpp">
+      <Filter>lualib-src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\lualib-src\lua_fs.cpp">
       <Filter>lualib-src</Filter>
     </ClCompile>

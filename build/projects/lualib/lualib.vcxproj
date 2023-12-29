@@ -124,6 +124,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\lualib-src\lua_aoi.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_buffer.cpp" />
+    <ClCompile Include="..\..\..\lualib-src\lua_coroutine.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_fs.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_http.cpp" />
     <ClCompile Include="..\..\..\lualib-src\lua_json.cpp" />

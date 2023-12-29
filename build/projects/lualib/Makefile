@@ -67,6 +67,7 @@ endif
 OBJECTS := \
 	$(OBJDIR)/lua_aoi.o \
 	$(OBJDIR)/lua_buffer.o \
+	$(OBJDIR)/lua_coroutine.o \
 	$(OBJDIR)/lua_fs.o \
 	$(OBJDIR)/lua_http.o \
 	$(OBJDIR)/lua_json.o \
@@ -170,6 +171,9 @@ $(OBJDIR)/lua_aoi.o: ../../../lualib-src/lua_aoi.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/lua_buffer.o: ../../../lualib-src/lua_buffer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/lua_coroutine.o: ../../../lualib-src/lua_coroutine.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/lua_fs.o: ../../../lualib-src/lua_fs.cpp

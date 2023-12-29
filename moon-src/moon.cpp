@@ -270,6 +270,7 @@ void open_custom_libs(lua_State* L)
     REGISTER_CUSTOM_LIBRARY("seri", luaopen_serialize);
     REGISTER_CUSTOM_LIBRARY("json", luaopen_json);
     REGISTER_CUSTOM_LIBRARY("buffer", luaopen_buffer);
+    REGISTER_CUSTOM_LIBRARY("coroutine.profile", luaopen_coroutine_profile);
 
     //custom
     REGISTER_CUSTOM_LIBRARY("pb", luaopen_pb);
