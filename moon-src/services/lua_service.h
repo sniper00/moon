@@ -22,6 +22,9 @@ private:
     static void* lalloc(void* ud, void* ptr, size_t osize, size_t nsize);
 
 public:
+    std::atomic_int trap = 0;
+    lua_State* activeL = nullptr;
+
     static lua_service* get(lua_State* L);
 
     static int set_callback(lua_State* L);
