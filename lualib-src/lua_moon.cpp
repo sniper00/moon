@@ -116,10 +116,10 @@ static int lmoon_log(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto level = (moon::LogLevel)luaL_checkinteger(L, 1);
-    if (S->logger()->get_level() < level)
+    if (log::instance().get_level() < level)
         return 0;
 
-    moon::buffer line = S->logger()->make_line(true, level, S->id());
+    moon::buffer line = log::instance().make_line(true, level, S->id());
 
     int n = lua_gettop(L);  /* number of arguments */
     int i;
@@ -146,16 +146,15 @@ static int lmoon_log(lua_State* L)
             line.write_back(')');
         }
     }
-    S->logger()->push_line(std::move(line));
+    log::instance().push_line(std::move(line));
     return 0;
 }
 
 static int lmoon_loglevel(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
     if(lua_type(L, 1) == LUA_TSTRING)
-        S->logger()->set_level(moon::lua_check<std::string_view>(L, 1));
-    lua_pushinteger(L, (lua_Integer)S->logger()->get_level());
+        log::instance().set_level(moon::lua_check<std::string_view>(L, 1));
+    lua_pushinteger(L, (lua_Integer)log::instance().get_level());
     return 1;
 }
 
@@ -311,7 +310,7 @@ static int lmoon_server_stats(lua_State* L)
     if(opt == "service.count")
         lua_pushinteger(L, S->get_server()->service_count());
     else if(opt == "log.error")
-        lua_pushinteger(L, S->logger()->error_count());
+        lua_pushinteger(L, log::instance().error_count());
     else{
         std::string info = S->get_server()->info();
         lua_pushlstring(L, info.data(), info.size());

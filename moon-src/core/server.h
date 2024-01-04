@@ -47,13 +47,11 @@ namespace moon
 
         server(server&&) = delete;
 
-        void init(uint32_t worker_num, const std::string& logfile);
+        void init(uint32_t worker_num);
 
         int run();
 
         void stop(int exitcode);
-
-        log* logger() const;
 
         state get_state() const;
 
@@ -114,7 +112,6 @@ namespace moon
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> fd_seq_ = 1;
         std::time_t now_ = 0;
-        mutable log logger_;
         mutable std::mutex fd_lock_;
         std::unordered_map<std::string, register_func > regservices_;
         concurrent_map<std::string, std::shared_ptr<const std::string>, rwlock> env_;

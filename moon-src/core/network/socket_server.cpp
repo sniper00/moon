@@ -45,7 +45,7 @@ bool socket_server::try_open(const std::string& host, uint16_t port, bool is_con
     }
     catch (const asio::system_error& e)
     {
-        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR("%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
     }
 }
@@ -71,7 +71,7 @@ std::pair<uint32_t, tcp::endpoint> socket_server::listen(const std::string & hos
     }
     catch (const asio::system_error& e)
     {
-        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR("%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return { 0, tcp::endpoint {}};
     }
 }
@@ -99,7 +99,7 @@ uint32_t socket_server::udp_open(uint32_t owner, std::string_view host, uint16_t
     }
     catch (const asio::system_error& e)
     {
-        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR("%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return 0;
     }
 }
@@ -119,7 +119,7 @@ bool socket_server::udp_connect(uint32_t fd, std::string_view host, uint16_t por
     }
     catch (const asio::system_error& e)
     {
-        CONSOLE_ERROR(server_->logger(), "%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
+        CONSOLE_ERROR("%s:%d %s(%d)", host.data(), port, e.what(), e.code().value());
         return false;
     }
 }
@@ -203,7 +203,7 @@ uint32_t socket_server::connect(const std::string& host, uint16_t port, uint32_t
         }
         catch (const asio::system_error& e)
         {
-            CONSOLE_WARN(server_->logger(), "connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
+            CONSOLE_WARN("connect %s:%d failed: %s(%d)", host.data(), port, e.code().message().data(), e.code().value());
         }
     }
     else
@@ -388,8 +388,7 @@ bool socket_server::set_enable_chunked(uint32_t fd, std::string_view flag)
             v = v | moon::enable_chunked::send;
             break;
         default:
-            CONSOLE_WARN(server_->logger(),
-                "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.", flag.data());
+            CONSOLE_WARN("tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.", flag.data());
             return false;
         }
     }
@@ -536,7 +535,6 @@ connection_ptr_t socket_server::make_connection(uint32_t serviceid, uint8_t type
         MOON_ASSERT(false, "Unknown socket protocol");
         break;
     }
-    connection->logger(server_->logger());
     return connection;
 }
 
@@ -544,9 +542,7 @@ void socket_server::response(uint32_t sender, uint32_t receiver, std::string_vie
 {
     if (0 == sessionid)
     {
-        CONSOLE_ERROR(server_->logger()
-            , "%s"
-            , std::string(content).data());
+        CONSOLE_ERROR("%s", std::string(content).data());
         return;
     }
     response_.set_sender(sender);

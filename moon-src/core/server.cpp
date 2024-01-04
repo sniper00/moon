@@ -14,13 +14,11 @@ namespace moon
         wait();
     }
 
-    void server::init(uint32_t worker_num, const std::string& logfile)
+    void server::init(uint32_t worker_num)
     {
         worker_num = (worker_num == 0) ? 1 : worker_num;
 
-        logger_.init(logfile);
-
-        CONSOLE_INFO(logger(), "INIT with %d workers.", worker_num);
+        CONSOLE_INFO("INIT with %d workers.", worker_num);
 
         for (uint32_t i = 0; i != worker_num; i++)
         {
@@ -56,7 +54,7 @@ namespace moon
             if (exitcode_ != std::numeric_limits<int>::max() && !stop_once)
             {
                 stop_once = true;
-                CONSOLE_WARN(logger(), "Received signal code %d", exitcode_);
+                CONSOLE_WARN("Received signal code %d", exitcode_);
                 for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
                 {
                     (*iter)->stop();
@@ -96,19 +94,12 @@ namespace moon
         exitcode_ = exitcode;
     }
 
-    log* server::logger() const
-    {
-        return &logger_;
-    }
-
     void server::wait()
     {
         for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
         {
             (*iter)->wait();
         }
-        CONSOLE_INFO(logger(), "STOP");
-        logger_.wait();
         state_.store(state::stopped, std::memory_order_release);
     }
 
@@ -251,7 +242,7 @@ namespace moon
         worker* w = get_worker(0, m.receiver());
         if (nullptr == w)
         {
-            CONSOLE_ERROR(logger(), "invalid message receiver serviceid %X", m.receiver());
+            CONSOLE_ERROR("invalid message receiver id: %X", m.receiver());
             return false;
         }
         w->send(std::move(m));
@@ -340,7 +331,7 @@ namespace moon
         {
             if (get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
-                CONSOLE_DEBUG(logger(), "server::response %s" , std::string(content).data());
+                CONSOLE_DEBUG("server::response %s" , std::string(content).data());
             }
             return;
         }
@@ -366,9 +357,9 @@ namespace moon
         req.append(moon::format(R"({"id":0, "socket":%zu, "timer":%zu, "log":%zu, "service":%u, "error":%zu})",
             socket_num(),
             timer_size,
-            logger_.size(),
+            log::instance().size(),
             service_count(),
-            (size_t)logger()->error_count()
+            log::instance().error_count()
         ));
         for (const auto& w : workers_)
         {

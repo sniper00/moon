@@ -45,7 +45,7 @@ namespace moon
 
         virtual void read(size_t, std::string_view, int32_t)
         {
-            CONSOLE_ERROR(logger(), "Unsupported read operation for PTYPE %d", (int)type_);
+            CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
             asio::post(socket_.get_executor(), [this, self = shared_from_this()] {
                 error(make_error_code(error::invalid_read_operation));
             });
@@ -65,7 +65,7 @@ namespace moon
 
             if (wq_warn_size_ != 0 && queue_.size() >= wq_warn_size_)
             {
-                CONSOLE_WARN(logger(), "network send queue too long. size:%zu", queue_.size());
+                CONSOLE_WARN("network send queue too long. size:%zu", queue_.size());
                 if (wq_error_size_ != 0 && queue_.size() >= wq_error_size_)
                 {
                     asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
@@ -149,16 +149,6 @@ namespace moon
             asio::error_code ec;
             socket_.set_option(option, ec);
             return !ec;
-        }
-
-        moon::log* logger() const
-        {
-            return log_;
-        }
-
-        void logger(moon::log* l)
-        {
-            log_ = l;
         }
 
         void settimeout(uint32_t v)
@@ -299,7 +289,6 @@ namespace moon
         uint32_t fd_ = 0;
         time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
-        moon::log* log_ = nullptr;
         uint32_t wq_warn_size_ = 0;
         uint32_t wq_error_size_ = 0;
         uint32_t serviceid_;

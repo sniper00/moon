@@ -35,11 +35,11 @@ namespace moon
         socket_server_ = std::make_unique<moon::socket_server>(server_, this, io_ctx_);
 
         thread_ = std::thread([this]() {
-            CONSOLE_INFO(server_->logger(), "WORKER-%u START", workerid_);
+            CONSOLE_INFO("WORKER-%u START", workerid_);
             io_ctx_.run();
             socket_server_->close_all();
             services_.clear();
-            CONSOLE_INFO(server_->logger(), "WORKER-%u STOP", workerid_);
+            CONSOLE_INFO("WORKER-%u STOP", workerid_);
         });
 
     }
@@ -78,8 +78,7 @@ namespace moon
                     if (counter >= WORKER_MAX_SERVICE)
                     {
                         serviceid = 0;
-                        CONSOLE_ERROR(server_->logger()
-                            , "new service failed: can not get more service id. worker[%u] service num[%zu].", id(), services_.size());
+                        CONSOLE_ERROR("new service failed: can not get more service id. worker[%u] service num[%zu].", id(), services_.size());
                         break;
                     }
 
@@ -100,7 +99,6 @@ namespace moon
                 auto s = server_->make_service(conf->type);
                 MOON_ASSERT(s, moon::format("new service failed:service type[%s] was not registered", conf->type.data()).data());
                 s->set_id(serviceid);
-                s->logger(server_->logger());
                 s->set_unique(conf->unique);
                 s->set_server_context(server_, this);
 
@@ -293,8 +291,7 @@ namespace moon
         cpu_ += diff_time;
         if (diff_time > 0.1)
         {
-            CONSOLE_WARN(server_->logger(),
-                "worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, diff_time, sender, receiver);
+            CONSOLE_WARN("worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, diff_time, sender, receiver);
         }
         return s;
     }

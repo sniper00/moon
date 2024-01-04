@@ -93,8 +93,17 @@ static void register_signal(int argc, char* argv[])
 #include "mimalloc.h"
 void print_mem_stats()
 {
+    std::string stats;
+    stats.append("mimalloc memory stats:\n");
+    auto fn = [](const char* msg, void* arg)
+    {
+        auto p = static_cast<std::string*>(arg);
+        p->append(msg);
+    };
+
     mi_collect(true);
-    mi_stats_print(nullptr);
+    mi_stats_print_out(fn, &stats);
+    CONSOLE_INFO(stats.data());
 }
 #else
 void print_mem_stats()
@@ -112,6 +121,8 @@ static void usage(void) {
 int main(int argc, char* argv[])
 {
     using namespace moon;
+
+    int exitcode = -1;
 
     time::timezone();
 
@@ -132,14 +143,14 @@ int main(int argc, char* argv[])
         if (argc <= argn)
         {
             usage();
-            return -1;
+            return exitcode;
         }
         bootstrap = argv[argn++];
 
         if (fs::path(bootstrap).extension() != ".lua")
         {
             usage();
-            return -1;
+            return exitcode;
         }
 
         std::string arg = "return {";
@@ -214,10 +225,11 @@ int main(int argc, char* argv[])
         server_->set_env("ARG", arg);
         server_->set_env("THREAD_NUM", std::to_string(thread_count));
 
-        server_->logger()->set_enable_console(enable_stdout);
-        server_->logger()->set_level(loglevel);
+        log::instance().set_enable_console(enable_stdout);
+        log::instance().set_level(loglevel);
+        log::instance().init(logfile);
 
-        server_->init(thread_count, logfile);
+        server_->init(thread_count);
 
         std::unique_ptr<moon::service_conf> conf = std::make_unique<moon::service_conf>();
         conf->type = "lua";
@@ -231,19 +243,19 @@ int main(int argc, char* argv[])
         server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
-        int exitcode = server_->run();
-        if (exitcode >= 0)
-        {
-            server_.reset();
-            print_mem_stats();
-            return 0;
-        }
+        exitcode = server_->run();
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-        printf("ERROR:%s\n", e.what());
+        exitcode = -1;
+        CONSOLE_ERROR("ERROR:%s", e.what());
     }
-    return -1;
+    CONSOLE_INFO("STOP");
+    while(log::instance().size()>0)
+        thread_sleep(10);
+    print_mem_stats();
+    log::instance().wait();
+    return exitcode;
 }
 
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\

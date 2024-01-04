@@ -43,7 +43,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
         if (ptr == nullptr || nsize > osize)
         {
             l->mem = mem;
-            l->logger()->logstring(true, moon::LogLevel::Error,
+            log::instance().logstring(true, moon::LogLevel::Error,
                 moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
                     (float)l->mem_limit / mb_memory),
                 l->id());
@@ -53,7 +53,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
     else if (l->mem > l->mem_report)
     {
         l->mem_report *= 2;
-        l->logger()->logstring(
+        log::instance().logstring(
             true, moon::LogLevel::Warn, moon::format("%s Memory warning %.2f M", l->name().data(), (float)l->mem / mb_memory), l->id());
     }
 
@@ -77,7 +77,7 @@ lua_service::lua_service()
 
 lua_service::~lua_service()
 {
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
+    log::instance().logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()), id());
 }
 
 static int protect_init(lua_State* L)
@@ -102,7 +102,7 @@ bool lua_service::init(const moon::service_conf& conf)
     mem_limit = conf.memlimit;
     name_ = conf.name;
 
-    logger()->logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
+    log::instance().logstring(true, moon::LogLevel::Info, moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()), id());
 
     lua_State* L = lua_.get();
 
@@ -118,7 +118,7 @@ bool lua_service::init(const moon::service_conf& conf)
 
     if (lua_pcall(L, 1, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1)
     {
-        CONSOLE_ERROR(logger(), "new_service lua_error:\n%s.", lua_tostring(L, -1));
+        CONSOLE_ERROR("new_service lua_error:\n%s.", lua_tostring(L, -1));
         return false;
     }
 
@@ -126,7 +126,7 @@ bool lua_service::init(const moon::service_conf& conf)
 
     if (unique_ && !server_->set_unique_service(name_, id_))
     {
-        CONSOLE_ERROR(logger(), "duplicate unique service name '%s'.", name_.data());
+        CONSOLE_ERROR("duplicate unique service name '%s'.", name_.data());
         return false;
     }
 
@@ -159,7 +159,7 @@ void lua_service::dispatch(message* m)
     if (!ok())
         return;
     if (cb_ctx == nullptr) {
-        logger()->logstring(true, moon::LogLevel::Error, "callback not init", id());
+        log::instance().logstring(true, moon::LogLevel::Error, "callback not init", id());
         return;
     }
     lua_State* L = cb_ctx->L;
@@ -203,7 +203,7 @@ void lua_service::dispatch(message* m)
 
         if (m->sessionid() >= 0)
         {
-            logger()->logstring(true, moon::LogLevel::Error, error, id());
+            log::instance().logstring(true, moon::LogLevel::Error, error, id());
         }
         else
         {
@@ -219,7 +219,7 @@ void lua_service::dispatch(message* m)
         {
             trace = "";
         }
-        CONSOLE_ERROR(logger(), "dispatch:\n%s", trace);
+        CONSOLE_ERROR("dispatch:\n%s", trace);
         lua_pop(L, 1);
     }
 }

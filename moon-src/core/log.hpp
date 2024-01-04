@@ -18,15 +18,21 @@ namespace moon
         Max
     };
 
-    class log
+    class log final
     {
         using queue_type = concurrent_queue<buffer, std::mutex, std::vector>;
-    public:
+
         log()
             :state_(state::init)
             , level_(LogLevel::Debug)
             , thread_(&log::write, this)
         {
+        }
+    public:
+        static log& instance()
+        {
+            static log inst;
+            return inst;
         }
 
         ~log()
@@ -169,7 +175,7 @@ namespace moon
             return size_.load();
         }
 
-        int64_t error_count() const
+        size_t error_count() const
         {
             return error_count_;
         }
@@ -209,33 +215,35 @@ namespace moon
                 auto p = it.data();
                 auto bconsole = static_cast<bool>(*(p++));
                 auto level = static_cast<LogLevel>(*(p++));
+                auto str = std::string_view{ p, it.size() -2 };
                 if (bconsole)
                 {
-                    auto s = std::string_view{ p, it.size() -2 };
                     switch (level)
                     {
                     case LogLevel::Error:
-                        std::cerr << termcolor::red << s;
+                        std::cerr << termcolor::red << str;
                         break;
                     case LogLevel::Warn:
-                        std::cout << termcolor::yellow << s;
+                        std::cout << termcolor::yellow << str;
                         break;
                     case LogLevel::Info:
-                        std::cout << termcolor::white << s;
+                        std::cout << termcolor::white << str;
                         break;
                     case LogLevel::Debug:
-                        std::cout << termcolor::green << s;
+                        std::cout << termcolor::green << str;
                         break;
                     default:
                         break;
                     }
-                    std::cout << termcolor::white << '\n';
+                    if(str.back()!='\n')
+                        std::cout << termcolor::white << '\n';
                 }
 
                 if (fp_)
                 {
-                    std::fwrite(it.data(), it.size(), 1, fp_.get());
-                    std::fputc('\n', fp_.get());
+                    std::fwrite(str.data(), str.size(), 1, fp_.get());
+                    if(str.back()!='\n')
+                        std::fputc('\n', fp_.get());
                     if(level <= LogLevel::Error){
                         std::cout << std::endl;
                         std::fflush(fp_.get());
@@ -310,21 +318,15 @@ namespace moon
         std::atomic<state> state_;
         std::atomic_uint32_t size_ = 0;
         std::atomic<LogLevel> level_;
-        int64_t error_count_ = 0;
+        size_t error_count_ = 0;
         std::unique_ptr<std::FILE, file_deleter> fp_;
         std::thread thread_;
         queue_type log_queue_;
     };
-
-#define CONSOLE_INFO(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);
-#define CONSOLE_WARN(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Warn,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-#define CONSOLE_ERROR(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Error,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-
-#define LOG_INFO(logger,fmt,...) logger->logfmt(false,moon::LogLevel::Info,fmt,##__VA_ARGS__);  
-#define LOG_WARN(logger,fmt,...) logger->logfmt(false,moon::LogLevel::Warn,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-#define LOG_ERROR(logger,fmt,...) logger->logfmt(false,moon::LogLevel::Error,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-
-#define CONSOLE_DEBUG(logger,fmt,...) logger->logfmt(true,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-#define LOG_DEBUG(logger,fmt,...) logger->logfmt(false,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
 }
+
+#define CONSOLE_INFO(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);
+#define CONSOLE_WARN(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Warn,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
+#define CONSOLE_ERROR(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Error,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
+#define CONSOLE_DEBUG(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
 

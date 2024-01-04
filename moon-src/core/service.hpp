@@ -57,16 +57,6 @@ namespace moon
             return unique_;
         }
 
-        log* logger() const
-        {
-            return log_;
-        }
-
-        void logger(log * l)
-        {
-            log_ = l;
-        }
-
         bool ok() const
         {
             return ok_;
@@ -105,7 +95,6 @@ namespace moon
         bool ok_ = false;
         bool unique_ = false;
         uint32_t id_ = 0;
-        log* log_ = nullptr;
         server* server_ = nullptr;
         worker* worker_ = nullptr;
         double cpu_ = 0.0;//
