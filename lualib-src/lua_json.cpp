@@ -68,7 +68,7 @@ struct json_config {
     bool enable_number_key = true;
     bool enable_sparse_array = false;
     size_t concat_buffer_size = DEFAULT_CONCAT_BUFFER_SIZE;
-    uint16_t concat_buffer_head_size = buffer::DEFAULT_HEAD_RESERVED;
+    uint16_t concat_buffer_head_size = buffer::DEFAULT_HEAD_RESERVE;
 };
 
 static int json_destroy_config(lua_State *L)
@@ -587,7 +587,7 @@ static int concat(lua_State* L)
     {
         size_t size;
         const char* sz = lua_tolstring(L, -1, &size);
-        auto buf = new moon::buffer(size, 16);
+        auto buf = new moon::buffer{size};
         buf->write_back(sz, size);
         lua_pushlightuserdata(L, buf);
         return 1;

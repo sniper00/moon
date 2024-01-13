@@ -221,8 +221,8 @@ static int unsafe_delete(lua_State* L)
 
 static int unsafe_new(lua_State* L)
 {
-    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, buffer::DEFAULT_CAPACITY));
-    uint16_t headreserved = static_cast<uint16_t>(luaL_optinteger(L, 2, buffer::DEFAULT_HEAD_RESERVED));
+    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, buffer::DEFAULT_RESERVE));
+    uint16_t headreserved = static_cast<uint16_t>(luaL_optinteger(L, 2, buffer::DEFAULT_HEAD_RESERVE));
     buffer* buf = new buffer(capacity, headreserved);
     lua_pushlightuserdata(L, buf);
     return 1;

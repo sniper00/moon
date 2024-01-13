@@ -255,8 +255,8 @@ namespace moon
         using const_pointer = typename const_iterator::pointer;
 
         //websocket header max len 14 bytes.
-        constexpr static uint16_t DEFAULT_HEAD_RESERVED = 16;
-        constexpr static size_t DEFAULT_CAPACITY = 128 - DEFAULT_HEAD_RESERVED;
+        constexpr static uint16_t DEFAULT_HEAD_RESERVE = 16;
+        constexpr static size_t DEFAULT_RESERVE = 128 - DEFAULT_HEAD_RESERVE;
   
         enum class seek_origin
         {
@@ -265,17 +265,17 @@ namespace moon
         };
 
         base_buffer()
-            :pair_(DEFAULT_CAPACITY, DEFAULT_HEAD_RESERVED)
+            :pair_(DEFAULT_RESERVE, DEFAULT_HEAD_RESERVE)
         {
         }
 
-        base_buffer(size_t capacity)
-            :pair_(capacity, DEFAULT_HEAD_RESERVED)
+        base_buffer(size_t reserve)
+            :pair_(reserve, DEFAULT_HEAD_RESERVE)
         {
         }
 
-        base_buffer(size_t capacity, uint16_t head_reserved)
-            :pair_(capacity, head_reserved)
+        base_buffer(size_t reserve, uint16_t head_reserve)
+            :pair_(reserve, head_reserve)
         {
         }
 

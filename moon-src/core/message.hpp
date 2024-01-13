@@ -16,13 +16,13 @@ namespace moon
         {
         }
 
-        message(size_t capacity)
-            :data_(buffer::make_unique(capacity))
+        message(size_t reserve)
+            :data_(buffer::make_unique(reserve))
         {
         }
 
-        message(size_t capacity, uint32_t headreserved)
-            :data_(buffer::make_unique(capacity, headreserved))
+        message(size_t reserve, uint16_t head_reserve)
+            :data_(buffer::make_unique(reserve, head_reserve))
         {
         }
 
