@@ -158,10 +158,10 @@ void lua_service::dispatch(message* m)
 {
     if (!ok())
         return;
-    if (cb_ctx == nullptr) {
-        log::instance().logstring(true, moon::LogLevel::Error, "callback not init", id());
-        return;
-    }
+
+    //require ‘moon’ first
+    assert(cb_ctx != nullptr);
+
     lua_State* L = cb_ctx->L;
     try
     {
