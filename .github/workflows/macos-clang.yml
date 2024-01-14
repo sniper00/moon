@@ -33,7 +33,7 @@ jobs:
           version: "5.0.0-beta1"
       - name: Build
         run: |
-          chomd +x build.sh
+          chmod +x build.sh
           ./build.sh
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
