@@ -2,7 +2,21 @@
 name: linux-gcc
 
 # Run this workflow every time a new commit pushed to your repository
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - '.h'
+      - '.hpp'
+      - '**.c'
+      - '**.cc'
+      - '**.cpp'
+  pull_request:
+    paths:
+      - '.h'
+      - '.hpp'
+      - '**.c'
+      - '**.cc'
+      - '**.cpp'
 
 jobs:
   linux-gcc:
@@ -18,8 +32,8 @@ jobs:
           version: "5.0.0-beta1"
       - name: Build
         run: |
-          premake5 gmake
-          make -j2 config=release
+          chomd +x build.sh
+          ./build.sh
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
       - name: Publish

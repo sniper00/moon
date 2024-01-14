@@ -10,12 +10,13 @@
 
 [Static Analysis (SonarCloud)](https://sonarcloud.io/summary/overall?id=sniper00_moon) proposes C++ quality improvements.
 
-
 # Moon
-Moon is a lightweight game server framework based on the actor model. One worker thread can have one or multiple actors (services), which communicate with each other through message queues. There are many features for game server development:
+Moon is a lightweight game server framework based on the actor model. One worker thread can have one or more actors (services), which communicate with each other through message queues. There are many features for game server development:
 
 - Less core code, easy to learn
 - Cross-platform (Windows, Linux, MacOS)
+- Uses ASIO for scheduling
+- Uses Lua for logic scripting
 - Optimized networking
    - Tcp
    - Udp/Kcp
@@ -49,10 +50,6 @@ Moon is a lightweight game server framework based on the actor model. One worker
   
   https://github.com/sniper00/moon/wiki
 
-# Dependencies
-
-- [asio](https://github.com/chriskohlhoff/asio)
-- [lua](https://github.com/cloudwu/skynet/tree/master/3rd/lua)
 
 # Quick Start
 
@@ -83,19 +80,13 @@ Moon is a lightweight game server framework based on the actor model. One worker
 2. Clone source code 
 
 ```
-    git clone --recursive https://github.com/sniper00/moon.git
+    git clone https://github.com/sniper00/moon.git
 ``` 
 
 3. Build
     - **windows** run `build.bat`
-    - **linux** `make config=release`
-    - **macOS** 
-      ```shell
-        brew install premake
-        premake5 gmake --cc=clang
-        make config=release
-      ```
-
+    - **linux** run `./build.sh`
+    - **macOS** run `./build.sh`
 
 **If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**
 
