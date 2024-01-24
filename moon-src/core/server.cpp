@@ -86,6 +86,8 @@ namespace moon
             timer.wait(ignore);
         }
         wait();
+        if(exitcode_ == std::numeric_limits<int>::max())
+            exitcode_ = 0;
         return exitcode_;
     }
 
