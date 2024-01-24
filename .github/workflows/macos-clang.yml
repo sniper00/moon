@@ -3,21 +3,7 @@
 name: macos-clang
 
 # Run this workflow every time a new commit pushed to your repository
-on:
-  push:
-    paths:
-      - '.h'
-      - '.hpp'
-      - '**.c'
-      - '**.cc'
-      - '**.cpp'
-  pull_request:
-    paths:
-      - '.h'
-      - '.hpp'
-      - '**.c'
-      - '**.cc'
-      - '**.cpp'
+on: [push, pull_request]
 
 jobs:
   macos-clang:
