@@ -262,16 +262,13 @@ namespace moon
         {
             while (state_.load(std::memory_order_acquire) == state::init)
                 std::this_thread::sleep_for(std::chrono::microseconds(50));
-
-            queue_type::container_type swaps;
             time_t sleep_time = 1;
             while (state_.load(std::memory_order_acquire) == state::ready)
             {
-                if (log_queue_.try_swap(swaps))
-                {
+                if(auto& read_queue = log_queue_.swap_on_read(); !read_queue.empty()){
                     sleep_time = 1;
-                    do_write(swaps);
-                    swaps.clear();
+                    do_write(read_queue);
+                    read_queue.clear();
                 }
                 else
                 {
@@ -281,10 +278,9 @@ namespace moon
                 }
             }
 
-            if(log_queue_.try_swap(swaps))
-            {
-                do_write(swaps);
-                swaps.clear();
+            if(auto& read_queue = log_queue_.swap_on_read(); !read_queue.empty()){
+                do_write(read_queue);
+                read_queue.clear();
             }
         }
 

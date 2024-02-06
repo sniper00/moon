@@ -27,43 +27,42 @@ namespace moon
         size_t push_back(Value&& x)
         {
             std::lock_guard<lock_type> lk(mutex_);
-            container_.push_back(std::forward<Value>(x));
-            return container_.size();
+            write_queue_.push_back(std::forward<Value>(x));
+            return write_queue_.size();
         }
 
         bool try_pop(T& t)
         {
             std::lock_guard<lock_type> lk(mutex_);
-            if (container_.empty())
+            if (write_queue_.empty())
                 return false;
-            t = std::move(container_.front());
-            container_.pop_front();
+            t = std::move(write_queue_.front());
+            write_queue_.pop_front();
             return true;
         }
 
         size_t size() const
         {
             std::lock_guard<lock_type> lk(mutex_);
-            return container_.size();
+            return write_queue_.size();
         }
 
         size_t capacity() const
         {
             std::lock_guard<lock_type> lk(mutex_);
-            return container_.capacity();
+            return write_queue_.capacity();
         }
 
-        bool try_swap(container_type& other)
+        container_type& swap_on_read()
         {
             std::lock_guard<lock_type> lk(mutex_);
-            if (container_.empty())
-                return false;
-            container_.swap(other);
-            return true;
+            write_queue_.swap(read_queue_);
+            return read_queue_;
         }
     private:
         mutable lock_type mutex_;
-        container_type container_;
+        container_type write_queue_;
+        container_type read_queue_;
     };
 
     template <typename T>

@@ -193,28 +193,23 @@ namespace moon
 
     void worker::send(message&& msg)
     {
-        if (mq_.push_back(std::move(msg)) == 0)
+        mqsize_.fetch_add(1, std::memory_order_relaxed);
+        if (mq_.push_back(std::move(msg)) == 1)
         {
-            start_handle();
+            asio::post(io_ctx_, [this]() {
+                if(auto& read_queue = mq_.swap_on_read(); !read_queue.empty()){
+                    service* s = nullptr;
+                    for (auto& m : read_queue)
+                    {
+                        handle_one(s, std::move(m));
+                        --mqsize_;
+                    }
+                    read_queue.clear();
+                }
+            });
         }
     }
 
-    void worker::start_handle() {
-        asio::post(io_ctx_, [this]() {
-            if (mq_.size() == 0) return;
-            service* s = nullptr;
-            while (true) {
-                auto msg = mq_.pop();
-                if (!msg.has_value()) {
-                    if (mq_.size() > 0) {
-                        start_handle();
-                    }
-                    break;
-                }
-                s = handle_one(s, std::move(*msg));
-            }
-        });
-    }
 
     uint32_t worker::id() const
     {

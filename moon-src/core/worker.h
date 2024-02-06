@@ -41,7 +41,7 @@ namespace moon
 
         moon::socket_server& socket_server() { return *socket_server_; }
 
-        size_t mq_size() { return mq_.size(); }
+        size_t mq_size() { return mqsize_.load(std::memory_order_acquire); }
 
         uint32_t alive();
 
@@ -55,14 +55,13 @@ namespace moon
 
         void wait();
     private:
-        void start_handle();
-
         service* handle_one(service* s, message&& msg);
 
         service* find_service(uint32_t serviceid) const;
     private:
         std::atomic_bool shared_ = true;
         std::atomic_uint32_t count_ = 0;
+        std::atomic_size_t mqsize_ = 0;
         uint32_t nextid_ = 0;
         uint32_t workerid_ = 0;
         uint32_t version_ = 0;
@@ -71,7 +70,7 @@ namespace moon
         asio::io_context io_ctx_;
         asio_work_type work_;
         std::thread thread_;
-        mpsc_queue<message> mq_;
+        queue_type mq_;
         std::unique_ptr<moon::socket_server> socket_server_;
         std::unordered_map<uint32_t, service_ptr_t> services_;
     };
