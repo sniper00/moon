@@ -783,7 +783,7 @@ end
 
 function _M.query(self, query)
     if type(query) == "userdata" then
-        query = moon.decode(query, "Z")
+        query = moon.decode_ref_buffer(query, "Z")
     end
     local querypacket = _compose_query(self, query)
     local sockchannel = self.sockchannel
@@ -1143,6 +1143,10 @@ end
 
 function _M.set_compact_arrays(self, value)
     self.compact = value
+end
+
+function _M.pack_query_buffer()
+    -- compat with sqldriver
 end
 
 return _M
