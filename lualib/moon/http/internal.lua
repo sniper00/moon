@@ -344,6 +344,11 @@ function M.read_request(fd, prefix_data, opt)
             return { error = "Content-length is not number" }
         end
 
+        if content_length == 0 then
+            request.content = ""
+            return request
+        end
+
         if content_max_len and content_length > content_max_len then
             return {
                 error = string.format("HTTP content length exceeded %d, request length %d", content_max_len, content_length) }
