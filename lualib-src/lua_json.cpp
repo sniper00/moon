@@ -724,7 +724,7 @@ static void concat_resp_one(moon::buffer* buf, lua_State* L, int i, json_config*
         break;
     }
     default:
-        throw std::logic_error{std::string("json encode: unsupport value type :") + lua_typename(L, t)};
+        throw std::logic_error{std::string("concat_resp_one: unsupport value type :") + lua_typename(L, t)};
     }
 }
 
@@ -740,23 +740,25 @@ static int concat_resp(lua_State* L)
     try
     {
         int64_t hash = 1;
-        if(lua_type(L, 1) == LUA_TSTRING){
+        if(lua_type(L, 2) == LUA_TTABLE){
             size_t len = 0;
-            const char* key = luaL_tolstring(L, 1, &len);
+            const char* key = lua_tolstring(L, 1, &len);
             if(len>0){
-                std::string hash_part;
+                std::string_view hash_part;
                 if (n > 1) {
-                    const char* field = luaL_tolstring(L, 2, &len);
+                    const char* field = lua_tolstring(L, 2, &len);
                     if (len > 0)
-                        hash_part.append(field, len);
+                        hash_part = std::string_view{field, len};
                 }
 
                 if (n > 2 && (key[0] == 'h' || key[0] == 'H')) {
-                    const char* field = luaL_tolstring(L, 3, &len);
+                    const char* field = lua_tolstring(L, 3, &len);
                     if (len > 0)
-                        hash_part.append(field, len);
+                        hash_part = std::string_view{field, len};
                 }
-                hash = static_cast<uint32_t>(moon::hash_range(hash_part.begin(), hash_part.end()));
+
+                if(!hash_part.empty())
+                    hash = static_cast<uint32_t>(moon::hash_range(hash_part.begin(), hash_part.end()));
             }
         }
 
