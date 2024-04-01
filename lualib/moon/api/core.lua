@@ -72,6 +72,9 @@ function core.kill(addr) end
 --- query **unique** service's address by name
 function core.queryservice(name) end
 
+---@return integer
+function core.next_sequence() end
+
 --- set or get env
 ---@param key string
 ---@param value? string

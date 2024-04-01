@@ -29,9 +29,9 @@ namespace moon
 
         void new_service(std::unique_ptr<service_conf> conf);
 
-        void remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid);
+        void remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid);
 
-        void scan(uint32_t sender, int32_t sessionid);
+        void scan(uint32_t sender, int64_t sessionid);
 
         void send(message&& msg);
 

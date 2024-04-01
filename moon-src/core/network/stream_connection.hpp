@@ -16,11 +16,10 @@ namespace moon
         {
         }
 
-        void read(size_t n, std::string_view delim, int32_t sessionid) override
+        void read(size_t n, std::string_view delim, int64_t sessionid) override
         {
             if (!is_open() || sessionid_ != 0)
             {
-                //Undefined behavior
                 CONSOLE_ERROR("invalid read operation. %u", fd_);
                 asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                     error(make_error_code(error::invalid_read_operation));
@@ -28,7 +27,7 @@ namespace moon
                 return;
             }
 
-            buffer* buf = response_.get_buffer();
+            buffer* buf = response_.as_buffer();
             std::size_t size = buf->size() + delim_.size();
             buf->commit(revert_);
             buf->consume(size);
@@ -50,7 +49,7 @@ namespace moon
     protected:
         void read_until(size_t count)
         {
-            asio::async_read_until(socket_, moon::streambuf(response_.get_buffer(), count), delim_,
+            asio::async_read_until(socket_, moon::streambuf(response_.as_buffer(), count), delim_,
                     [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
             {
                 if (e)
@@ -65,7 +64,7 @@ namespace moon
         void read(size_t count)
         {
             std::size_t size = (response_.size() >= count ? 0 : (count - response_.size()));
-            asio::async_read(socket_, moon::streambuf(response_.get_buffer(), count), asio::transfer_exactly(size),
+            asio::async_read(socket_, moon::streambuf(response_.as_buffer(), count), asio::transfer_exactly(size),
                     [this, self = shared_from_this(), count](const asio::error_code& e, std::size_t)
             {
                 if (e)
@@ -86,7 +85,7 @@ namespace moon
                 return;
             }
             delim_.clear();
-            response_.get_buffer()->clear();
+            response_.as_buffer()->clear();
 
             if (e)
             {
@@ -119,7 +118,7 @@ namespace moon
             {
                 return;
             }
-            auto buf = response_.get_buffer();
+            auto buf = response_.as_buffer();
             assert(buf->size() >= count);
             revert_ = 0;
             if (type == PTYPE_SOCKET_TCP)
@@ -135,7 +134,7 @@ namespace moon
         }
     protected:
         size_t revert_ = 0;
-        int32_t sessionid_ = 0;
+        int64_t sessionid_ = 0;
         std::string delim_;
         message response_;
     };

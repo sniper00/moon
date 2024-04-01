@@ -80,12 +80,12 @@ namespace moon
             return receiver_;
         }
 
-        void set_sessionid(int32_t v)
+        void set_sessionid(int64_t v)
         {
             sessionid_ = v;
         }
 
-        int32_t sessionid() const
+        int64_t sessionid() const
         {
             return sessionid_;
         }
@@ -135,7 +135,7 @@ namespace moon
             return std::move(data_);
         }
 
-        buffer* get_buffer()
+        buffer* as_buffer()
         {
             return data_ ? data_.get() : nullptr;
         }
@@ -144,7 +144,7 @@ namespace moon
         uint8_t type_ = 0;
         uint32_t sender_ = 0;
         uint32_t receiver_ = 0;
-        int32_t sessionid_ = 0;
+        int64_t sessionid_ = 0;
         buffer_ptr_t data_;
     };
 };

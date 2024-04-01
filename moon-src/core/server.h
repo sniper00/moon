@@ -14,7 +14,7 @@ namespace moon
         public:
             timer_expire_policy() = default;
 
-            timer_expire_policy(uint32_t serviceid, uint32_t timerid, server* srv)
+            timer_expire_policy(uint32_t serviceid, int64_t timerid, server* srv)
                 : serviceid_(serviceid), timerid_(timerid), server_(srv) {}
 
             void operator()()
@@ -22,13 +22,13 @@ namespace moon
                 server_->on_timer(serviceid_, timerid_);
             }
 
-            uint32_t id() const
+            int64_t id() const
             {
                 return timerid_;
             }
         private:
             uint32_t serviceid_ = 0;
-            uint32_t timerid_ = 0;
+            int64_t timerid_ = 0;
             server* server_ = nullptr;
         };
 
@@ -65,17 +65,17 @@ namespace moon
 
         worker* get_worker(uint32_t workerid, uint32_t serviceid = 0) const;
 
-        void timeout(int64_t interval, uint32_t serviceid, uint32_t timerid);
+        void timeout(int64_t interval, uint32_t serviceid, int64_t timerid);
 
         void new_service(std::unique_ptr<service_conf> conf);
 
-        void remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid);
+        void remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid);
 
-        void scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid) const;
+        void scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const;
 
         bool send_message(message&& msg) const;
 
-        bool send(uint32_t sender, uint32_t receiver, buffer_ptr_t buf, int32_t sessionid, uint8_t type) const;
+        bool send(uint32_t sender, uint32_t receiver, buffer_ptr_t buf, int64_t sessionid, uint8_t type) const;
 
         void broadcast(uint32_t sender, const buffer_ptr_t& buf, uint8_t type) const;
 
@@ -92,7 +92,7 @@ namespace moon
         bool set_unique_service(std::string name, uint32_t v);
 
         //Used to respond to calls from the user layer to the framework layer
-        void response(uint32_t to, std::string_view content, int32_t sessionid, uint8_t mtype = PTYPE_TEXT) const;
+        void response(uint32_t to, std::string_view content, int64_t sessionid, uint8_t mtype = PTYPE_TEXT) const;
 
         std::string info() const;
 
@@ -104,7 +104,7 @@ namespace moon
 
         size_t socket_num() const;
     private:
-        void on_timer(uint32_t serviceid, uint32_t timerid);
+        void on_timer(uint32_t serviceid, int64_t timerid);
 
         void wait();
     private:

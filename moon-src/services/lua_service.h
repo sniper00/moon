@@ -28,10 +28,13 @@ public:
     static lua_service* get(lua_State* L);
 
     static int set_callback(lua_State* L);
+
+    int64_t next_sequence();
 private:
     size_t mem = 0;
     size_t mem_limit = std::numeric_limits<size_t>::max();
     size_t mem_report = 8 * 1024 * 1024;
+    int64_t current_sequence_ = 0;
     callback_context* cb_ctx = nullptr;
     std::unique_ptr<lua_State, moon::state_deleter> lua_;
 };

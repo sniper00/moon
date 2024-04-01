@@ -194,18 +194,16 @@ else
         if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
-        raw_send("lua", db, buf, 0)
+        raw_send("lua", db, buf)
     end
 
     function client.query(db, sql, hash)
         hash = hash or 1
-        local sessionid = moon.make_session(db)
         local buf = concat(sql)
         if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
-        raw_send("lua", db, buf, sessionid)
-        return moon.wait(sessionid)
+        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
     end
 
     return client

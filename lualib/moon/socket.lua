@@ -1,7 +1,6 @@
 local moon = require("moon")
 local core = require("asio.core")
 
-local make_session = moon.make_session
 local id = moon.id
 
 local close = core.close
@@ -31,11 +30,7 @@ local socket = core
 ---@param serviceid? integer
 function socket.accept(listenfd, serviceid)
     serviceid = serviceid or id
-    local sessionid = make_session()
-    if not accept(listenfd, sessionid, serviceid) then
-        error("invalid accept param, listenfd:"..listenfd)
-    end
-    local fd, err = moon.wait(sessionid)
+    local fd, err = moon.wait(accept(listenfd, serviceid))
     if not fd then
         return nil, err
     end
@@ -43,13 +38,13 @@ function socket.accept(listenfd, serviceid)
 end
 
 function socket.start(listenfd)
-    accept(listenfd, 0, id)
+    accept(listenfd, id, 0)
 end
 
 ---@async
 ---@param host string
 ---@param port integer
----@param protocol integer|string # "tcp", "ws", "moon" 
+---@param protocol integer|string # "tcp", "ws", "moon"
 ---@param timeout? integer # millseconds
 function socket.connect(host, port, protocol, timeout)
     assert(supported_tcp_protocol[protocol], "not support")
@@ -57,9 +52,7 @@ function socket.connect(host, port, protocol, timeout)
         protocol = supported_tcp_protocol[protocol]
     end
     timeout = timeout or 0
-    local sessionid = make_session()
-    connect(host, port, protocol, sessionid, timeout)
-    local fd, err = moon.wait(sessionid)
+    local fd, err = moon.wait(connect(host, port, protocol, timeout))
     if not fd then
         return nil, err
     end
@@ -72,9 +65,7 @@ end
 ---@param maxcount? integer
 ---@overload fun(fd: integer, count: integer) @ read a specified number of bytes from the socket.
 function socket.read(fd, delim, maxcount)
-    local sessionid = make_session()
-    read(fd, sessionid, delim, maxcount)
-    return moon.wait(sessionid)
+    return moon.wait(read(fd, delim, maxcount))
 end
 
 function socket.write_then_close(fd, data)

@@ -119,7 +119,7 @@ local function run_example()
 
     local redisd = require("redisd")
     --初始化服务配置
-    local db_conf= {host = "127.0.0.1", port = 6379, timeout = 1000}
+    local db_conf= {host = HOST, port = PORT, timeout = 1000}
 
     local redis_db
 

@@ -478,7 +478,7 @@ namespace moon
             else
             {
                 msg = message{ reallen };
-                msg.get_buffer()->write_back(recv_buf_->data(), reallen);
+                msg.as_buffer()->write_back(recv_buf_->data(), reallen);
                 recv_buf_->consume(reallen);
             }
 

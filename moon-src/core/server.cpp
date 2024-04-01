@@ -180,7 +180,7 @@ namespace moon
         return workers_[workerid-1].get();
     }
 
-    void server::timeout(int64_t interval, uint32_t serviceid, uint32_t timerid)
+    void server::timeout(int64_t interval, uint32_t serviceid, int64_t timerid)
     {
         auto workerid = worker_id(serviceid);
         assert(workerid > 0);
@@ -192,11 +192,11 @@ namespace moon
         timer_[workerid-1]->add(now_+ interval, serviceid, timerid, this);
     }
 
-    void server::on_timer(uint32_t serviceid, uint32_t timerid)
+    void server::on_timer(uint32_t serviceid, int64_t timerid)
     {
         auto msg = message::with_empty();
         msg.set_type(PTYPE_TIMER);
-        msg.set_sender(timerid);
+        msg.set_sessionid(timerid);
         msg.set_receiver(serviceid);
         send_message(std::move(msg));
     }
@@ -215,7 +215,7 @@ namespace moon
         w->new_service(std::move(conf));
     }
 
-    void server::remove_service(uint32_t serviceid, uint32_t sender, int32_t sessionid)
+    void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid)
     {
         worker* w = get_worker(0, serviceid);
         if (nullptr != w)
@@ -229,7 +229,7 @@ namespace moon
         }
     }
 
-    void server::scan_services(uint32_t sender, uint32_t workerid, int32_t sessionid) const
+    void server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const
     {
         auto* w = get_worker(workerid);
         if (nullptr == w)
@@ -251,7 +251,7 @@ namespace moon
         return true;
     }
 
-    bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, int32_t sessionid, uint8_t type) const
+    bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, int64_t sessionid, uint8_t type) const
     {
         sessionid = -sessionid;
         message m = message{ std::move(data) };
@@ -327,7 +327,7 @@ namespace moon
         return unique_services_.try_set(std::move(name), v);
     }
 
-    void server::response(uint32_t to, std::string_view content, int32_t sessionid, uint8_t mtype) const
+    void server::response(uint32_t to, std::string_view content, int64_t sessionid, uint8_t mtype) const
     {
         if (to == 0 || sessionid == 0)
         {

@@ -43,7 +43,7 @@ namespace moon
             recvtime_ = now();
         }
 
-        virtual void read(size_t, std::string_view, int32_t)
+        virtual void read(size_t, std::string_view, int64_t)
         {
             CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
             asio::post(socket_.get_executor(), [this, self = shared_from_this()] {

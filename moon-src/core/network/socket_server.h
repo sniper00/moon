@@ -96,11 +96,11 @@ namespace moon
 
         bool udp_connect(uint32_t fd, std::string_view host, uint16_t port);
 
-        bool accept(uint32_t fd, int32_t sessionid, uint32_t owner);
+        bool accept(uint32_t fd, int64_t sessionid, uint32_t owner);
 
-        uint32_t connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int32_t sessionid, uint32_t millseconds = 0);
+        void connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds = 0);
 
-        void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int32_t sessionid);
+        void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid);
 
         bool write(uint32_t fd, buffer_shr_ptr_t&& data, buffer_flag flag = buffer_flag::none);
 
@@ -126,9 +126,9 @@ namespace moon
     private:
         connection_ptr_t make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock);
 
-        void response(uint32_t sender, uint32_t receiver, std::string_view data, int32_t sessionid, uint8_t type);
+        void response(uint32_t sender, uint32_t receiver, std::string_view data, int64_t sessionid, uint8_t type);
 
-        void add_connection(socket_server* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t& c, int32_t  sessionid);
+        void add_connection(socket_server* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t& c, int64_t  sessionid);
 
         template<typename Message>
         void handle_message(uint32_t serviceid, Message&& m);

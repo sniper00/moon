@@ -133,7 +133,7 @@ namespace moon
         });
     }
 
-    void worker::remove_service(uint32_t serviceid, uint32_t sender, uint32_t sessionid)
+    void worker::remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid)
     {
         asio::post(io_ctx_, [this, serviceid, sender, sessionid]() {
             if (auto s = find_service(serviceid); nullptr != s)
@@ -165,7 +165,7 @@ namespace moon
         });
     }
 
-    void worker::scan(uint32_t sender, int32_t sessionid)
+    void worker::scan(uint32_t sender, int64_t sessionid)
     {
         asio::post(io_ctx_, [this, sender,sessionid] {
             std::string content;

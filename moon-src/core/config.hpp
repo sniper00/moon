@@ -76,7 +76,7 @@ namespace moon
         bool unique = false;
         uint32_t threadid = 0;
         uint32_t creator = 0;
-        int32_t session = 0;
+        int64_t session = 0;
         size_t memlimit = 0;
         std::string type;
         std::string name;

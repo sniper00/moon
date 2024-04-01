@@ -236,20 +236,16 @@ else
     --- - if failed return false and error message.
     --- redisd.call(redis_db, "GET", "HELLO")
     function client.call(db, ...)
-        local sessionid = moon.make_session(db)
         local buf, hash = concat_resp(...)
         if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
-        raw_send("lua", db, buf, sessionid)
-        return moon.wait(sessionid)
+        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
     end
 
     function client.direct(db, cmd, ...)
-        local sessionid = moon.make_session(db)
         local buf = seri.pack("D", 1, cmd, ...)
-        raw_send("lua", db, buf, sessionid)
-        return moon.wait(sessionid)
+        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
     end
 
     --- redisd.send(redis_db, "SET", "HELLO", "WORLD")
@@ -258,7 +254,7 @@ else
         if not wfront(buf, packstr("Q", hash)) then
             error("buffer has no front space")
         end
-        raw_send("lua", db, buf, 0)
+        raw_send("lua", db, buf)
     end
 
     return client

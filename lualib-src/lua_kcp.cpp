@@ -7,7 +7,7 @@
 
 struct box
 {
-    int32_t session = 0;
+    int64_t session = 0;
     size_t readn = 0;
     std::queue<std::string> wqueue;
     moon::buffer rbuf = moon::buffer{8192,0};
@@ -132,7 +132,7 @@ static int lua_ikcp_read(lua_State* L) {
     box* ud = (box*)kcp->user;
     if (ud->session != 0)
         return luaL_error(L, "already has a read request!");
-    ud->session = (int32_t)luaL_checkinteger(L, 2);
+    ud->session = (int64_t)luaL_checkinteger(L, 2);
     auto n = luaL_checkinteger(L, 3);
     if(n<=0)
         return luaL_error(L, "invalid read size!");

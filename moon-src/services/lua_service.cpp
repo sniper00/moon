@@ -24,7 +24,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 
     if (nsize == 0)
     {
-        if(ptr){
+        if (ptr) {
             free(ptr);
             l->mem -= osize;
         }
@@ -114,7 +114,7 @@ bool lua_service::init(const moon::service_conf& conf)
     int trace_fn = lua_gettop(L);
 
     lua_pushcfunction(L, protect_init);
-    lua_pushlightuserdata(L,(void*)&conf);
+    lua_pushlightuserdata(L, (void*)&conf);
 
     if (lua_pcall(L, 1, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1)
     {
@@ -122,7 +122,7 @@ bool lua_service::init(const moon::service_conf& conf)
         return false;
     }
 
-	lua_pop(L, 1);
+    lua_pop(L, 1);
 
     if (unique_ && !server_->set_unique_service(name_, id_))
     {
@@ -152,6 +152,16 @@ int lua_service::set_callback(lua_State* L) {
     lua_xmove(L, cb_ctx->L, 1); // L [-1, +0], cb_ctx->L [-0, +1] move callback-function to cb_ctx->L, cb_ctx->L's top=2
     S->cb_ctx = cb_ctx;
     return 0;
+}
+
+int64_t lua_service::next_sequence()
+{
+    auto v = ++current_sequence_;
+    if(v==std::numeric_limits<int64_t>::max()){//Should never happened!
+        CONSOLE_ERROR("sequence rewinded!!!");
+        server_->stop(-1);
+    }
+    return v;
 }
 
 void lua_service::dispatch(message* m)

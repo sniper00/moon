@@ -57,7 +57,6 @@ local function run_recv_message()
     local tcount = 0
     local bt = 0
     command.COUNTER = function(t)
-        -- print(...)
         count = count + 1
         if bt == 0 then
             bt = t
@@ -113,8 +112,7 @@ local function init(node_conf)
         server_ok = true
 
         -- cluster服务开启监听端口
-        print(moon.call("lua", moon.queryservice("cluster"), "Listen"))
-
+        print("start cluster Listen", moon.call("lua", moon.queryservice("cluster"), "Listen"))
         run_recv_message()
     end)
 

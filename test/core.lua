@@ -7,7 +7,7 @@ do
 	moon.raw_dispatch("text", function(msg)
 		assert(moon.decode(msg, "Z") == "123")
 	end)
-	moon.raw_send("text", moon.id, "123", 0)
+	moon.raw_send("text", moon.id, "123")
 
 	moon.env("1", "2")
 	assert(moon.env("1") == "2")
