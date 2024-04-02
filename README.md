@@ -8,7 +8,7 @@
 
 [![windows-vs2022](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml/badge.svg)](https://github.com/sniper00/moon/actions/workflows/windows-vs2022.yml)
 
-[Static Analysis (SonarCloud)](https://sonarcloud.io/summary/overall?id=sniper00_moon) proposes C++ quality improvements.
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=sniper00_moon&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=sniper00_moon)
 
 # Moon
 Moon is a lightweight game server framework based on the actor model. One worker thread can have one or more actors (services), which communicate with each other through message queues. There are many features for game server development:
