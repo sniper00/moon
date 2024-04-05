@@ -62,6 +62,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 
 lua_service* lua_service::get(lua_State* L)
 {
+    static_assert((LUA_EXTRASPACE == sizeof(lua_service*)) && (LUA_EXTRASPACE == sizeof(intptr_t)));
     intptr_t v = 0;
     memcpy(&v, lua_getextraspace(L), LUA_EXTRASPACE);
     return reinterpret_cast<lua_service*>(v);

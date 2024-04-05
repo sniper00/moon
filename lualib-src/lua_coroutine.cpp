@@ -7,7 +7,7 @@
 static void
 signal_hook(lua_State *L, lua_Debug *) {
 	lua_service *S = lua_service::get(L);
-	lua_sethook (L, NULL, 0, 0);
+	lua_sethook (L, nullptr, 0, 0);
 	if (S->trap.load(std::memory_order_acquire)) {
         S->trap.store(0, std::memory_order_release);
 		luaL_error(L, "signal 0");
@@ -57,7 +57,8 @@ diff_time(double start) {
 ** cases or -1 for errors.
 */
 static int auxresume (lua_State *L, lua_State *co, int narg) {
-  int status, nres;
+  int status = 0;
+  int nres = 0;
   if (!lua_checkstack(co, narg)) {
     lua_pushliteral(L, "too many arguments to resume");
     return -1;  /* error flag */
@@ -269,7 +270,7 @@ extern "C" {
 
 		luaL_setfuncs(L,l,2);
 
-		// replace coroutine.resume / coroutine.wrap
+		// replace coroutine resume and wrap
 		lua_getglobal(L, "coroutine");
 		lua_getfield(L, 2, "resume");
 		lua_setfield(L, -2, "resume");

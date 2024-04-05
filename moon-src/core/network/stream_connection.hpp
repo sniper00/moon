@@ -9,7 +9,7 @@ namespace moon
     public:
         using base_connection_t = base_connection;
 
-        template <typename... Args>
+        template <typename... Args, std::enable_if_t<!std::disjunction_v<std::is_same<std::decay_t<Args>, stream_connection>...>, int> = 0>
         explicit stream_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
             ,response_(8192,0)

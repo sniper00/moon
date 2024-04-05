@@ -16,7 +16,7 @@ namespace moon
         {
         }
 
-        message(size_t reserve)
+        explicit message(size_t reserve)
             :data_(buffer::make_unique(reserve))
         {
         }

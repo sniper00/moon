@@ -11,7 +11,7 @@ namespace moon
 
         using base_connection_t = base_connection;
 
-        template <typename... Args>
+        template <typename... Args, std::enable_if_t<!std::disjunction_v<std::is_same<std::decay_t<Args>, moon_connection>...>, int> = 0>
         explicit moon_connection(Args&&... args)
             :base_connection(std::forward<Args>(args)...)
             , flag_(enable_chunked::none)

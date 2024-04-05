@@ -13,7 +13,6 @@ namespace moon
     public:
         buffer_view(const char* data, size_t size)
             :data_(data)
-            , readpos_(0)
             , size_(size)
         {
         }
@@ -21,9 +20,7 @@ namespace moon
         buffer_view(const buffer_view&) = delete;
         buffer_view& operator=(const buffer_view&) = delete;
 
-        ~buffer_view(void)
-        {
-        }
+        ~buffer_view(void) = default;
 
         template<typename T>
         bool read(T* Outdata, size_t count = 1) noexcept
@@ -77,7 +74,7 @@ namespace moon
             return tmp;
         }
 
-        std::string bytes()
+        std::string to_string()
         {
             return std::string((const char*)data(), size());
         }
@@ -163,10 +160,10 @@ namespace moon
             readpos_ += sizeof(T);
             return val;
         }
-    protected:
+    private:
         const char*	data_;
         //read position
-        size_t	readpos_;
+        size_t	readpos_ = 0;
         //size
         size_t   size_;
     };

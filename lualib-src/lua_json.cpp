@@ -3,29 +3,37 @@
 #include <string_view>
 #include <charconv>
 #include <codecvt>
+#include <cstdlib>
 #include "common/buffer.hpp"
 #include "common/hash.hpp"
 #include "common/string.hpp"
 
-#ifdef MOON_ENABLE_MIMALLOC
 static void* json_malloc(void*, size_t size) {
+#ifdef MOON_ENABLE_MIMALLOC
     return mi_malloc(size);
+#else
+    return std::malloc(size);
+#endif
 }
 
 static void* json_realloc(void*, void* ptr,  size_t , size_t size)
 {
+#ifdef MOON_ENABLE_MIMALLOC
     return mi_realloc(ptr, size);
+#else
+    return std::realloc(ptr, size);
+#endif
 }
 
 static void json_free(void*, void* ptr)
 {
+#ifdef MOON_ENABLE_MIMALLOC
     mi_free(ptr);
-}
-
-static const yyjson_alc allocator = {json_malloc, json_realloc, json_free,nullptr};
 #else
-static const yyjson_alc allocator = { nullptr };
+    std::free(ptr);
 #endif
+}
+static const yyjson_alc allocator = {json_malloc, json_realloc, json_free,nullptr};
 
 using namespace std::literals::string_view_literals;
 using namespace moon;
@@ -570,8 +578,10 @@ static int decode(lua_State* L)
 
     lua_settop(L, 1);
 
+
+
     yyjson_read_err err;
-    yyjson_doc* doc = yyjson_read_opts((char*)str, len, 0, (allocator.malloc) ? &allocator : nullptr, &err);
+    yyjson_doc* doc = yyjson_read_opts((char*)str, len, 0, &allocator, &err);
     if (nullptr == doc)
     {
         return luaL_error(L, "decode error: %s code: %d at position: %d\n", err.msg, (int)err.code, (int)err.pos);

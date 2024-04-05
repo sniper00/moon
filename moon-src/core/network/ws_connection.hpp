@@ -123,7 +123,7 @@ namespace moon
         static constexpr const std::string_view UPGRADE = "upgrade"sv;
         static constexpr const std::string_view WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"sv;
 
-        template <typename... Args>
+        template <typename... Args, std::enable_if_t<!std::disjunction_v<std::is_same<std::decay_t<Args>, ws_connection>...>, int> = 0>
         explicit ws_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
         {

@@ -13,8 +13,7 @@ using namespace moon;
 
 static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
 {
-    int t = lua_type(L, index);
-    switch (t)
+    switch (lua_type(L, index))
     {
     case LUA_TNIL:
     case LUA_TNONE:
@@ -34,15 +33,14 @@ static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index)
         return moon::buffer_ptr_t{static_cast<moon::buffer*>(lua_touserdata(L, index))};
     }
     default:
-        luaL_argerror(L, index, "nil, lightuserdata(buffer*) or string expected. %d");
+        luaL_argerror(L, index, "nil, lightuserdata(buffer*) or string expected");
     }
     return nullptr;
 }
 
 static moon::buffer_shr_ptr_t moon_to_shr_buffer(lua_State* L, int index)
 {
-    int t = lua_type(L, index);
-    switch (t)
+    switch (lua_type(L, index))
     {
     case LUA_TNIL:
     {
@@ -170,10 +168,10 @@ static int lmoon_send(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
 
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 1);
+    auto type = (uint8_t)luaL_checkinteger(L, 1);
     luaL_argcheck(L, type > 0, 1, "PTYPE must > 0");
 
-    uint32_t receiver = (uint32_t)luaL_checkinteger(L, 2);
+    auto receiver = (uint32_t)luaL_checkinteger(L, 2);
     luaL_argcheck(L, receiver > 0, 2, "receiver must > 0");
 
     int64_t session = luaL_opt(L, luaL_checkinteger, 4, S->next_sequence());
@@ -452,7 +450,7 @@ static int ref_buffer(lua_State* L)
 
 static int unref_buffer(lua_State* L)
 {
-    moon::buffer_shr_ptr_t* p = (moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
+    auto p = (moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_argerror(L, 1, "lightuserdata(moon::buffer_shr_ptr_t*) expected");
     delete p;
@@ -461,7 +459,7 @@ static int unref_buffer(lua_State* L)
 
 static int decode_ref_buffer(lua_State* L)
 {
-    buffer_shr_ptr_t* p = (moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
+    auto p = (const moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_argerror(L, 1, "lightuserdata(buffer_shr_ptr_t*) expected");
     buffer* b = p->get();
@@ -611,9 +609,9 @@ static int lasio_connect(lua_State* L)
 
     auto& sock = S->get_worker()->socket_server();
     std::string host = lua_check<std::string>(L, 1);
-    uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
-    uint32_t timeout = (uint32_t)luaL_checkinteger(L, 4);
+    auto port = (uint16_t)luaL_checkinteger(L, 2);
+    auto type = (uint8_t)luaL_checkinteger(L, 3);
+    auto timeout = (uint32_t)luaL_checkinteger(L, 4);
     int64_t session = S->next_sequence();
     sock.connect(host, port, S->id(), type, session, timeout);
     lua_pushinteger(L, session);
@@ -674,8 +672,8 @@ static int lasio_write_ref_buffer(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    moon::buffer_shr_ptr_t* p =(moon::buffer_shr_ptr_t*)lua_touserdata(L, 2);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto p =(const moon::buffer_shr_ptr_t*)lua_touserdata(L, 2);
     if (nullptr == p)
         return luaL_argerror(L, 2, "lightuserdata(buffer_shr_ptr_t*) expected");
     bool ok = sock.write(fd, moon::buffer_shr_ptr_t{*p});

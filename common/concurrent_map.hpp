@@ -15,8 +15,7 @@ namespace moon
             template<class TMap>
             static bool get(const TMap& map, const TKey& key, TValue& value)
             {
-                auto iter = map.find(key);
-                if (iter != map.end())
+                if (auto iter = map.find(key);iter != map.end())
                 {
                     value = iter->second;
                     return true;
@@ -27,7 +26,7 @@ namespace moon
     }
 
     template<typename Key, typename Value, typename Lock = std::shared_timed_mutex >
-    class concurrent_map : noncopyable
+    class concurrent_map : private noncopyable
     {
     public:
         concurrent_map() = default;
@@ -60,8 +59,7 @@ namespace moon
         bool erase(const Key& key)
         {
             std::unique_lock lck(lock_);
-            auto iter = data_.find(key);
-            if (iter != data_.end())
+            if (auto iter = data_.find(key);iter != data_.end())
             {
                 data_.erase(iter);
                 return true;
@@ -84,8 +82,7 @@ namespace moon
         bool has(const Key& key) const
         {
             std::shared_lock lck(lock_);
-            auto iter = data_.find(key);
-            if (iter != data_.end())
+            if (auto iter = data_.find(key); iter != data_.end())
             {
                 return true;
             }

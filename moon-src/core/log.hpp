@@ -66,7 +66,7 @@ namespace moon
                 if(nullptr == fp)
                     err = errno;
 #endif
-                MOON_CHECK(!err, moon::format("open log file '%s' failed. errno %d.", logfile.data(), err));
+                MOON_CHECK(!err, moon::format("open log file '%s' failed. errno %d.", logfile.data(), err))
                 fp_.reset(fp);
             }
             state_.store(state::ready, std::memory_order_release);
@@ -111,13 +111,19 @@ namespace moon
 
         void logstring(bool console, LogLevel level, std::string_view s, uint64_t serviceid = 0)
         {
-            if (level_ < level)
-                return;
+            try
+            {
+                if (level_ < level)
+                    return;
 
-            buffer line = make_line(console, level, serviceid, s.size());
-            line.write_back(s.data(), s.size());
-            log_queue_.push_back(std::move(line));
-            ++size_;
+                buffer line = make_line(console, level, serviceid, s.size());
+                line.write_back(s.data(), s.size());
+                log_queue_.push_back(std::move(line));
+                ++size_;
+            }catch (std::exception& e)
+            {
+                std::cerr << "logstring exception:" << e.what() << std::endl;
+            }
         }
 
         void set_level(LogLevel level)
