@@ -58,6 +58,7 @@ namespace moon
     void table_to_vector(lua_State* L, int index, std::vector<T>& out)
     {
         auto size = lua_rawlen(L, index);
+        out.reserve(size);
         for (size_t i = 1; i <= size; ++i)
         {
             lua_rawgeti(L, index, i);
