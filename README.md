@@ -13,7 +13,7 @@
 # Moon
 Moon is a lightweight game server framework based on the actor model. One worker thread can have one or more actors (services), which communicate with each other through message queues. There are many features for game server development:
 
-- Less core code, easy to learn
+- The architecture is simple, and the source code is concise and easy to understand.
 - Cross-platform (Windows, Linux, MacOS)
 - Uses ASIO for scheduling
 - Uses Lua for logic scripting
