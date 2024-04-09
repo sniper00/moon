@@ -530,13 +530,13 @@ namespace moon
 
             if (role_ == role::client)
             {
-                auto d = reinterpret_cast<unsigned char*>(data->data());
+                auto d = reinterpret_cast<uint8_t*>(data->data());
                 auto mask = randkey();
                 for (uint64_t i = 0; i < size; i++)
                 {
-                    d[i] = d[i] ^ mask[i % 4];
+                    d[i] = d[i] ^ mask[i % mask.size()];
                 }
-                data->write_front(mask.data(), 4);
+                data->write_front(mask.data(), mask.size());
             }
 
             uint8_t payload_len = 0;

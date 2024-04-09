@@ -299,12 +299,11 @@ namespace moon
             return std::string();
         }
 
+        inline static thread_local std::mt19937 generator{std::random_device{}()};
         static inline float randf()
         {
-            std::random_device rd;
-            std::mt19937 gen(rd());
             std::uniform_real_distribution<float> dis(0.0f, 1.0f);
-            return dis(gen);
+            return dis(generator);
         }
 
         void coord_transform(float* p) const
