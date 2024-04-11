@@ -395,6 +395,12 @@ static int message_decode(lua_State* L)
             lua_pushlightuserdata(L, m->as_buffer());
             break;
         }
+        case 'L':
+        {
+            auto buf = m->into_buffer();
+            lua_pushlightuserdata(L, buf.release());
+            break;
+        }
         case 'C':
         {
             buffer* buf = m->as_buffer();
@@ -435,15 +441,15 @@ static int message_redirect(lua_State* L)
 
 static int ref_buffer(lua_State* L)
 {
-    message* m = (message*)lua_touserdata(L, 1);
-    if (nullptr == m)
-        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
+    buffer* b = (buffer*)lua_touserdata(L, 1);
+    if (nullptr == b)
+        return luaL_argerror(L, 1, "lightuserdata(buffer*) expected");
 
-    if (m->data() == nullptr) {
+    if (b->size() == 0) {
         return 0;
     }
 
-    auto *p = new moon::buffer_shr_ptr_t{ m->into_buffer() };
+    auto *p = new moon::buffer_shr_ptr_t{ b };
     lua_pushlightuserdata(L, p);
     return 1;
 }
@@ -645,12 +651,12 @@ static int lasio_write(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    int flag = (int)luaL_optinteger(L, 3, 0);
-    if (flag!=0 && (flag<=0 || flag >=(int)moon::buffer_flag::buffer_flag_max))
+    int mask = (int)luaL_optinteger(L, 3, 0);
+    if (mask !=0 && (mask <0 || mask >=(int)moon::socket_send_mask::max_mask))
     {
         return luaL_error(L, "asio.write param 'flag' invalid");
     }
-    bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), (moon::buffer_flag)flag);
+    bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), (moon::socket_send_mask)mask);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }

@@ -48,10 +48,10 @@ namespace moon
             CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
             asio::post(socket_.get_executor(), [this, self = shared_from_this()] {
                 error(make_error_code(error::invalid_read_operation));
-            });
+                });
         };
 
-        virtual bool send(buffer_shr_ptr_t&& data)
+        virtual bool send(buffer_shr_ptr_t&& data, socket_send_mask mask)
         {
             if (data == nullptr || data->size() == 0)
             {
@@ -70,15 +70,17 @@ namespace moon
                 {
                     asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                         error(make_error_code(moon::error::send_queue_too_big));
-                    });
+                        });
                     return false;
                 }
             }
 
+            will_close_ =  enum_has_any_bitmask(mask, socket_send_mask::close) ? true : will_close_;
+
             bool write_in_progress = !queue_.empty();
             queue_.emplace_back(std::move(data));
 
-            if(!write_in_progress)
+            if (!write_in_progress)
             {
                 post_send();
             }
@@ -137,7 +139,7 @@ namespace moon
             {
                 asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                     error(make_error_code(moon::error::read_timeout));
-                });
+                    });
                 return;
             }
             return;
@@ -182,25 +184,16 @@ namespace moon
             return address;
         }
     protected:
-        virtual void message_slice(const_buffers_holder& holder, const buffer_shr_ptr_t& buf)
+        virtual void prepare_send(const_buffers_holder& holder, const buffer_shr_ptr_t& buf)
         {
-            (void)holder;
-            (void)buf;
+            holder.push_back(buf->data(), buf->size());
         }
 
         void post_send()
         {
             for (const auto& buf : queue_)
             {
-                if (buf->has_flag(buffer_flag::chunked))
-                {
-                    message_slice(holder_, buf);
-                }
-                else
-                {
-                    holder_.push_back(buf->data(), buf->size(), buf->has_flag(buffer_flag::close));
-                }
-
+                prepare_send(holder_, buf);
                 if (holder_.size() >= const_buffers_holder::max_count)
                 {
                     break;
@@ -211,37 +204,30 @@ namespace moon
                 socket_,
                 make_buffers_ref(holder_.buffers()),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
-            {
-                if (!e)
                 {
-                    if (holder_.close())
+                    if (e)
                     {
-                        if (parent_ != nullptr)
-                        {
-                            parent_->close(fd_);
-                            parent_ = nullptr;
-                        }
+                        error(e);
+                        return;
                     }
-                    else
+
+                    for (size_t i = 0; i < holder_.count(); ++i)
                     {
-                        for (size_t i = 0; i < holder_.count(); ++i)
-                        {
-                            queue_.pop_front();
-                        }
-
-                        holder_.clear();
-
-                        if(!queue_.empty())
-                        {
-                            post_send();
-                        }
+                        queue_.pop_front();
                     }
-                }
-                else
-                {
-                    error(e);
-                }
-            });
+
+                    holder_.clear();
+
+                    if (!queue_.empty())
+                    {
+                        post_send();
+                    }
+                    else if (will_close_ && parent_ != nullptr)
+                    {
+                        parent_->close(fd_);
+                        parent_ = nullptr;
+                    }
+                });
         }
 
         virtual void error(const asio::error_code& e, const std::string& additional = "")
@@ -285,6 +271,7 @@ namespace moon
             }
         }
     protected:
+        bool will_close_ = false;
         role role_ = role::none;
         uint32_t fd_ = 0;
         time_t recvtime_ = 0;

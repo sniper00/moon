@@ -261,15 +261,14 @@ void socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view
     });
 }
 
-bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, buffer_flag flag)
+bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask)
 {
     if (nullptr == data || 0 == data->size())
         return false;
 
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
-        data->set_flag(flag);
-        return iter->second->send(std::move(data));
+        return iter->second->send(std::move(data), mask);
     }
 
     if (auto iter = udp_.find(fd); iter != udp_.end())
@@ -578,7 +577,11 @@ void socket_server::do_receive(const udp_context_ptr_t& ctx)
 
     auto buf = ctx->msg.as_buffer();
     buf->clear();
-    auto space = buf->prepare(udp_context::READ_BUFFER_SIZE);
+    //reserve addr_v6_size bytes for address
+    buf->commit(addr_v6_size);
+    buf->seek(addr_v6_size, buffer::seek_origin::Begin);
+
+    auto space = buf->writeable();
     ctx->sock.async_receive_from(
         asio::buffer(space.first, space.second), ctx->from_ep,
         [this, ctx](std::error_code ec, std::size_t bytes_recvd)

@@ -241,23 +241,6 @@ static int prepare(lua_State* L)
     return 0;
 }
 
-static int has_flag(lua_State* L)
-{
-    auto buf = get_pointer(L, 1);
-    auto flag = static_cast<int>(luaL_checkinteger(L, 2));
-    bool res = buf->has_flag(flag);
-    lua_pushboolean(L, res ? 1 : 0);
-    return 1;
-}
-
-static int set_flag(lua_State* L)
-{
-    auto buf = get_pointer(L, 1);
-    auto flag = static_cast<int>(luaL_checkinteger(L, 2));
-    buf->set_flag(flag);
-    return 0;
-}
-
 static int unsafe_delete(lua_State* L)
 {
     auto buf = get_pointer(L, 1);
@@ -267,9 +250,8 @@ static int unsafe_delete(lua_State* L)
 
 static int unsafe_new(lua_State* L)
 {
-    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, buffer::DEFAULT_RESERVE));
-    uint16_t headreserved = static_cast<uint16_t>(luaL_optinteger(L, 2, buffer::DEFAULT_HEAD_RESERVE));
-    buffer* buf = new buffer(capacity, headreserved);
+    size_t capacity = static_cast<size_t>(luaL_optinteger(L, 1, buffer::DEFAULT_CAPACITY));
+    buffer* buf = new buffer{capacity};
     lua_pushlightuserdata(L, buf);
     return 1;
 }
@@ -282,11 +264,13 @@ static int concat(lua_State* L)
         return 0;
     }
     auto buf = new buffer{};
+    buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
     try
     {
         for (int i = 1; i <= n; i++) {
             concat_one(L, buf, i, 0);
         }
+        buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
         return 1;
     }
@@ -335,8 +319,6 @@ extern "C" {
             , {"seek", seek}
             , {"commit", commit}
             , {"prepare", prepare}
-            , {"has_flag", has_flag}
-            , {"set_flag", set_flag}
             , {"concat",concat }
             , {"concat_string",concat_string }
             , {NULL, NULL}

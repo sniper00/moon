@@ -110,44 +110,25 @@ do
 
 
 	do
-		local buf = buffer.unsafe_new(256, 8)
-		buffer.write_back(buf, "12345")
-		assert(buffer.read(buf, 5) == "12345")
-		buffer.write_back(buf, "abcde")
-		assert(buffer.read(buf, 5) == "abcde")
-		assert(buffer.size(buf) == 0)
+		local buf = buffer.unsafe_new(256)
+        buffer.commit(buf, 8) --reserve head space
 
-		for i = 1, 1000 do
-			buffer.write_back(buf, "abcde")
-		end
-
+        buffer.seek(buf, 8)
 		assert(not buffer.write_front(buf, "123456789"))
 
 		buffer.write_front(buf, "12345678")
 
 		assert(buffer.read(buf, 8) == "12345678")
 
-		buffer.seek(buf, 1)
-		assert(buffer.read(buf, 1) == "b")
-
-		buffer.delete(buf)
-	end
-
-	do
-		local buf = buffer.unsafe_new(256)
-		buffer.write_back(buf, "12345")
+        buffer.write_back(buf, "12345")
 		assert(buffer.read(buf, 5) == "12345")
 		buffer.write_back(buf, "abcde")
 		assert(buffer.read(buf, 5) == "abcde")
 		assert(buffer.size(buf) == 0)
 
 		for i = 1, 1000 do
-			buffer.write_back(buf, "abcde")
+			buffer.write_back(buf, "abcde") -- realloc
 		end
-
-		buffer.write_front(buf, "1000")
-
-		assert(buffer.read(buf, 4) == "1000")
 
 		buffer.seek(buf, 1)
 		assert(buffer.read(buf, 1) == "b")

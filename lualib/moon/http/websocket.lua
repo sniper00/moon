@@ -5,9 +5,10 @@ local internal = require("moon.http.internal")
 
 local WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-local flag_ws_text = 16
-local flag_ws_ping = 32
-local flag_ws_pong = 64
+--- config.hpp: socket_send_mask
+local flag_ws_text = 4
+local flag_ws_ping = 8
+local flag_ws_pong = 16
 
 --- PTYPE_SOCKET_WS wscallbacks
 local wscallbacks = {}

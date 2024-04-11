@@ -144,17 +144,14 @@ namespace moon
                 return *this;
             }
 
-            compressed_pair(size_t cap, uint16_t head)
-                :headreserved(head)
+            compressed_pair(size_t cap)
             {
-                prepare(cap + head);
-                readpos = writepos = headreserved;
+                prepare(cap);
+                readpos = writepos = 0;
             }
 
             compressed_pair(compressed_pair&& other) noexcept
-                : flag(std::exchange(other.flag, 0))
-                , headreserved(std::exchange(other.headreserved, 0))
-                , capacity(std::exchange(other.capacity, 0))
+                : capacity(std::exchange(other.capacity, 0))
                 , readpos(std::exchange(other.readpos, 0))
                 , writepos(std::exchange(other.writepos, 0))
                 , data(std::exchange(other.data, nullptr))
@@ -169,8 +166,6 @@ namespace moon
                 {
                     if(nullptr != data)
                         first().deallocate(data, capacity);
-                    flag = std::exchange(other.flag, 0);
-                    headreserved = std::exchange(other.headreserved, 0);
                     capacity = std::exchange(other.capacity, 0);
                     readpos = std::exchange(other.readpos, 0);
                     writepos = std::exchange(other.writepos, 0);
@@ -210,7 +205,7 @@ namespace moon
                     return std::pair{ data + writepos, need };
                 }
 
-                if (writeable + readpos < need + headreserved)
+                if (writeable + readpos < need)
                 {
                     auto required_size = writepos + need;
                     required_size = next_pow2(required_size);
@@ -228,21 +223,16 @@ namespace moon
                     size_t readable = writepos - readpos;
                     if (readable != 0)
                     {
-                        assert(readpos >= headreserved);
-                        std::memmove(data + headreserved, data + readpos, readable);
+                        std::memmove(data , data + readpos, readable);
                     }
-                    readpos = headreserved;
+                    readpos = 0;
                     writepos = readpos + readable;
                 }
                 return std::pair{data + writepos, need };
             }
 
-            uint16_t flag = 0;
-            uint16_t headreserved = 0;
             size_t capacity = 0;
-            //read position
             size_t readpos = 0;
-            //write position
             size_t writepos = 0;
             pointer data = nullptr;
         };
@@ -254,9 +244,7 @@ namespace moon
         using pointer = typename iterator::pointer;
         using const_pointer = typename const_iterator::pointer;
 
-        //websocket header max len 14 bytes.
-        constexpr static uint16_t DEFAULT_HEAD_RESERVE = 16;
-        constexpr static size_t DEFAULT_RESERVE = 128 - DEFAULT_HEAD_RESERVE;
+        static constexpr size_t DEFAULT_CAPACITY = 128;
   
         enum class seek_origin
         {
@@ -265,17 +253,12 @@ namespace moon
         };
 
         base_buffer()
-            :pair_(DEFAULT_RESERVE, DEFAULT_HEAD_RESERVE)
+            :pair_(DEFAULT_CAPACITY)
         {
         }
 
-        base_buffer(size_t reserve)
-            :pair_(reserve, DEFAULT_HEAD_RESERVE)
-        {
-        }
-
-        base_buffer(size_t reserve, uint16_t head_reserve)
-            :pair_(reserve, head_reserve)
+        base_buffer(size_t capacity)
+            :pair_(capacity)
         {
         }
 
@@ -298,8 +281,7 @@ namespace moon
         base_buffer& operator=(base_buffer&& other) = default;
 
         base_buffer clone() {
-            base_buffer b{ pair_.capacity , pair_.headreserved };
-            b.set_flag(pair_.flag);
+            base_buffer b{ pair_.capacity };
             b.write_back(data(), size());
             return b;
         }
@@ -338,6 +320,7 @@ namespace moon
 
             if (n > pair_.readpos)
             {
+                assert(false);
                 return false;
             }
 
@@ -423,26 +406,7 @@ namespace moon
 
         void clear() noexcept
         {
-            pair_.flag = 0;
-            pair_.writepos = pair_.readpos = pair_.headreserved;
-        }
-
-        template<typename ValueType>
-        void set_flag(ValueType v) noexcept
-        {
-            pair_.flag |= static_cast<uint16_t>(v);
-        }
-
-        template<typename ValueType>
-        bool has_flag(ValueType v) const noexcept
-        {
-            return ((pair_.flag & static_cast<uint16_t>(v)) != 0);
-        }
-
-        template<typename ValueType>
-        void clear_flag(ValueType v) noexcept
-        {
-            pair_.flag &= ~static_cast<uint16_t>(v);
+            pair_.writepos = pair_.readpos = 0;
         }
 
         void commit(std::size_t n) noexcept
@@ -455,8 +419,15 @@ namespace moon
             }
         }
 
-        std::pair<pointer, size_t> prepare(size_t need) {
+        std::pair<pointer, size_t> prepare(size_t need)
+        {
             return pair_.prepare(need);
+        }
+
+        std::pair<pointer, size_t> writeable() const noexcept
+        {
+            size_t writeable = pair_.capacity - pair_.writepos;
+            return std::pair{ pair_.data + pair_.writepos, writeable };
         }
 
         pointer revert(size_t n) noexcept
@@ -509,11 +480,6 @@ namespace moon
         {
             return pair_.capacity;
         }
-
-        size_t reserved() const noexcept
-        {
-            return pair_.headreserved;
-        }
     private:
         compressed_pair pair_;
     };
@@ -521,13 +487,15 @@ namespace moon
 
 #ifdef MOON_ENABLE_MIMALLOC
 #include "mimalloc.h"
-namespace moon
-{
-    using buffer = base_buffer<mi_stl_allocator<char>>;
-}
-#else
-namespace moon
-{
-    using buffer = base_buffer<std::allocator<char>>;
-}
 #endif
+
+namespace moon
+{
+#ifdef MOON_ENABLE_MIMALLOC
+    using buffer = base_buffer<mi_stl_allocator<char>>;
+#else
+    using buffer = base_buffer<std::allocator<char>>;
+#endif
+    constexpr size_t BUFFER_OPTION_CHEAP_PREPEND = 16;
+}
+

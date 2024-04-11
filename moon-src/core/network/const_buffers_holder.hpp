@@ -12,9 +12,8 @@ namespace moon
 
         const_buffers_holder() = default;
 
-        void push_back(const char* data, size_t len, bool close)
+        void push_back(const char* data, size_t len)
         {
-            close_ = close ? true : close_;
             buffers_.emplace_back(data, len);
             ++count_;
         }
@@ -51,18 +50,11 @@ namespace moon
 
         void clear()
         {
-            close_ = false;
             count_ = 0;
             buffers_.clear();
             headers_.clear();
         }
-
-        bool close() const
-        {
-            return close_;
-        }
     private:
-        bool close_ = false;
         size_t count_ = 0;
         std::vector<asio::const_buffer> buffers_;
         std::forward_list<message_size_t> headers_;

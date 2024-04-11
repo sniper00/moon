@@ -94,7 +94,7 @@ namespace moon
 
             enable_stdout = enable_stdout_ ? enable_stdout : enable_stdout_;
 
-            auto line = buffer{ (datasize>0)?(64 + datasize):256, 0};
+            auto line = buffer{ (datasize>0)?(64 + datasize):128 };
             auto it = line.begin();
             *(it++) = static_cast<char>(enable_stdout);
             *(it++) = static_cast<char>(level);

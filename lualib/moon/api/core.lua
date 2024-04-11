@@ -106,7 +106,8 @@ function core.now() end
 --- - 'E' message:sessionid()
 --- - 'Z' message:bytes()
 --- - 'N' message:size()
---- - 'B' message:buffer()
+--- - 'B' message:get_buffer()
+--- - 'L' return buffer_ptr,leak buffer ownership from message
 --- - 'C' message:buffer():data() and message:buffer():size()
 ---@param msg message_ptr
 ---@param pattern string
@@ -114,7 +115,7 @@ function core.now() end
 ---@nodiscard
 function core.decode(msg, pattern) end
 
---- buffer_shr_ptr 's field
+--- Get buffer_shr_ptr 's field
 ---
 --- - 'Z' to lua string
 --- - 'N' buffer size
@@ -126,10 +127,10 @@ function core.decode(msg, pattern) end
 ---@nodiscard
 function core.decode_ref_buffer(msg, pattern) end
 
---- convert message's buffer to buffer_shr_ptr, and alloc lightuserdata hold it
----@param msg message_ptr
+--- Converts a buffer_ptr into a buffer_shr_ptr. The buffer_shr_ptr is responsible for managing the lifecycle of the buffer_ptr, often used for reusing the same buffer_ptr.
+---@param buf buffer_ptr
 ---@return buffer_shr_ptr
-function core.ref_buffer(msg) end
+function core.ref_buffer(buf) end
 
 --- release buffer_shr_ptr
 ---@param p buffer_shr_ptr

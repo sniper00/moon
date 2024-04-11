@@ -25,22 +25,22 @@ if conf.name then
             if not db and auto_reconnect then
                 moon.sleep(1000)
             end
-        until(not auto_reconnect or db)
+        until (not auto_reconnect or db)
         return db, err
     end
 
     ---@param msg buffer_shr_ptr
-    local function exec_one(db, msg , sender, sessionid, opt)
+    local function exec_one(db, msg, sender, sessionid, opt)
         local reconnect_times = 1
 
-        local auto_reconnect = sessionid==0
+        local auto_reconnect = sessionid == 0
 
         if auto_reconnect then
             reconnect_times = -1
         end
 
         repeat
-            local err,res
+            local err, res
             if not db then
                 db, err = connect(conf.opts, auto_reconnect)
                 if not db then
@@ -56,8 +56,8 @@ if conf.name then
             if opt == "Q" then
                 res, err = redis.raw_send(db, msg)
             else
-                local t = {moon.unpack(moon.decode_ref_buffer(msg,"C"))}
-                res, err =db[t[1]](db, table.unpack(t, 2))
+                local t = { moon.unpack(moon.decode_ref_buffer(msg, "C")) }
+                res, err = db[t[1]](db, table.unpack(t, 2))
             end
 
             if redis.socket_error == res then
@@ -96,7 +96,7 @@ if conf.name then
 
     local free_all = function(one)
         for k, req in pairs(one.queue) do
-            if type(req[1])=="userdata" then
+            if type(req[1]) == "userdata" then
                 release(req[1])
             end
         end
@@ -105,18 +105,20 @@ if conf.name then
 
     local pool = {}
 
-    for _=1,db_pool_size do
-        local one = setmetatable({queue = list.new(), running = false, db = false},{
+    for _ = 1, db_pool_size do
+        local one = setmetatable({ queue = list.new(), running = false, db = false }, {
             __gc = free_all
-        }) 
-        tbinsert(pool,one)
+        })
+        tbinsert(pool, one)
     end
 
-    local function docmd(hash, sender, sessionid, msg, opt)
-        hash = hash%db_pool_size + 1
+    local function docmd(sender, sessionid, args)
+        local opt = args[1]
+        local hash = args[2]
+        hash = hash % db_pool_size + 1
         --print(moon.name, "db hash", hash)
         local ctx = pool[hash]
-        list.push(ctx.queue, {clone(msg), sender, sessionid, opt})
+        list.push(ctx.queue, { clone(args[3]), sender, sessionid, opt })
         if ctx.running then
             return
         end
@@ -128,8 +130,8 @@ if conf.name then
                 if not req then
                     break
                 end
-                local iscall = req[3]~=0
-                local ok,db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3], req[4])
+                local iscall = req[3] ~= 0
+                local ok, db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3], req[4])
                 if not ok then
                     if ctx.db then
                         ctx.db:disconnect()
@@ -156,10 +158,32 @@ if conf.name then
 
     function command.len()
         local res = {}
-        for _,v in ipairs(pool) do
-            res[#res+1] = list.size(v.queue)
+        for _, v in ipairs(pool) do
+            res[#res + 1] = list.size(v.queue)
         end
         return res
+    end
+
+    function command.save_then_quit()
+        moon.async(function()
+            while true do
+                local all = true
+                for _, v in ipairs(pool) do
+                    if list.front(v.queue) then
+                        all = false
+                        print("wait_all_send", _, list.size(v.queue))
+                        break
+                    end
+                end
+                if not all then
+                    moon.sleep(1000)
+                else
+                    break
+                end
+            end
+
+            moon.quit()
+        end)
     end
 
     local function xpcall_ret(ok, ...)
@@ -169,12 +193,14 @@ if conf.name then
         return moon.pack(false, ...)
     end
 
-    moon.raw_dispatch('lua',function(msg)
-        local sender, sessionid, buf = moon.decode(msg, "SEB")
-        local cmd, sz, len = seri.unpack_one(buf, true)
+    moon.raw_dispatch('lua', function(msg)
+        local sender, sessionid, sz, len = moon.decode(msg, "SEC")
+
+        local args = { moon.unpack(sz, len) }
+
+        local cmd = args[1]
         if cmd == "Q" or cmd == "D" then
-            local hash = seri.unpack_one(buf, true)
-            docmd(hash, sender, sessionid, msg, cmd)
+            docmd(sender, sessionid, args)
             return
         end
 
@@ -182,81 +208,43 @@ if conf.name then
         if fn then
             moon.async(function()
                 if sessionid == 0 then
-                    fn(sender, sessionid, buf, msg)
+                    fn(table.unpack(args, 2))
                 else
                     if sessionid ~= 0 then
-                        local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
+                        local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, table.unpack(args, 2)))
                         moon.raw_send("lua", sender, unsafe_buf, sessionid)
                     end
                 end
             end)
         else
-            moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
+            moon.error(moon.name, "recv unknown cmd " .. tostring(cmd))
         end
-    end)
-
-    local function wait_all_send()
-        while true do
-            local all = true
-            for _,v in ipairs(pool) do
-                if list.front(v.queue) then
-                    all = false
-                    print("wait_all_send", _, list.size(v.queue))
-                    break
-                end
-            end
-
-            if not all then
-                moon.sleep(1000)
-            else
-                return
-            end
-        end
-    end
-
-    moon.system("wait_save", function()
-        moon.async(function()
-            wait_all_send()
-            moon.quit()
-        end)
     end)
 else
     local json = require("json")
-    local buffer = require("buffer")
+
     local concat_resp = json.concat_resp
+
     ---@class redis_client
     local client = {}
-
-    local raw_send = moon.raw_send
-    local packstr = seri.packs
-
-    local wfront = buffer.write_front
 
     --- - if success return value same as redis commands.see http://www.redis.cn/commands/hgetall.html
     --- - if failed return false and error message.
     --- redisd.call(redis_db, "GET", "HELLO")
     function client.call(db, ...)
         local buf, hash = concat_resp(...)
-        if not wfront(buf, packstr("Q", hash)) then
-            error("buffer has no front space")
-        end
-        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
+        return moon.call("lua", db, "Q", hash, buf)
     end
 
     function client.direct(db, cmd, ...)
-        local buf = seri.pack("D", 1, cmd, ...)
-        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
+        return moon.call("lua", db, "D", 1, seri.pack(cmd, ...))
     end
 
     --- redisd.send(redis_db, "SET", "HELLO", "WORLD")
     function client.send(db, ...)
         local buf, hash = concat_resp(...)
-        if not wfront(buf, packstr("Q", hash)) then
-            error("buffer has no front space")
-        end
-        raw_send("lua", db, buf)
+        moon.send("lua", db, "Q", hash, buf)
     end
 
     return client
 end
-

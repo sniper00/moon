@@ -76,7 +76,6 @@ struct json_config {
     bool enable_number_key = true;
     bool enable_sparse_array = false;
     size_t concat_buffer_size = DEFAULT_CONCAT_BUFFER_SIZE;
-    uint16_t concat_buffer_head_size = buffer::DEFAULT_HEAD_RESERVE;
 };
 
 static int json_destroy_config(lua_State *L)
@@ -136,11 +135,8 @@ static int json_options(lua_State* L)
     case "concat_buffer_size"_csh:
     {
         auto concat_buffer_size = cfg->concat_buffer_size;
-        auto concat_buffer_head_size = cfg->concat_buffer_head_size;
         cfg->concat_buffer_size = static_cast<uint32_t>(luaL_checkinteger(L, 2));
-        cfg->concat_buffer_head_size = static_cast<uint16_t>(luaL_checkinteger(L, 3));
         lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_size));
-        lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_head_size));
         break;
     }
     default:
@@ -597,8 +593,10 @@ static int concat(lua_State* L)
     {
         size_t size;
         const char* sz = lua_tolstring(L, -1, &size);
-        auto buf = new moon::buffer{size};
+        auto buf = new moon::buffer{ BUFFER_OPTION_CHEAP_PREPEND + size };
+        buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
         buf->write_back(sz, size);
+        buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
         return 1;
     }
@@ -609,7 +607,8 @@ static int concat(lua_State* L)
 
     json_config* cfg = json_fetch_config(L);
 
-    auto buf = new moon::buffer(cfg->concat_buffer_size, cfg->concat_buffer_head_size);
+    auto buf = new moon::buffer(cfg->concat_buffer_size);
+    buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
     try
     {
         int array_size = (int)lua_rawlen(L, 1);
@@ -653,6 +652,7 @@ static int concat(lua_State* L)
             }
             lua_pop(L, 1);
         }
+        buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
 		return 1;
     }
@@ -746,7 +746,7 @@ static int concat_resp(lua_State* L)
 
     json_config* cfg = json_fetch_config(L);
 
-    auto buf = new moon::buffer(cfg->concat_buffer_size, cfg->concat_buffer_head_size);
+    auto buf = new moon::buffer(cfg->concat_buffer_size);
     try
     {
         int64_t hash = 1;

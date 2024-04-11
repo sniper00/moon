@@ -34,17 +34,20 @@ namespace moon
         stopped
     };
 
-    enum class buffer_flag :uint8_t
+    enum class socket_send_mask :uint8_t
     {
         none = 0,
-        pack_size = 1 << 0,
         close = 1 << 1,
-        chunked = 1 << 2,
-        broadcast = 1 << 3,
-        ws_text = 1 << 4,
-        ws_ping = 1 << 5,
-        ws_pong = 1 << 6,
-        buffer_flag_max,
+        ws_text = 1 << 2,
+        ws_ping = 1 << 3,
+        ws_pong = 1 << 4,
+        max_mask
+    };
+
+    template<>
+    struct enum_enable_bitmask_operators<socket_send_mask>
+    {
+        static constexpr bool enable = true;
     };
 
     enum class socket_data_type :std::uint8_t

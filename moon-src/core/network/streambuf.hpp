@@ -52,7 +52,7 @@ namespace moon
         std::size_t capacity() const noexcept
         {
             if (nullptr == buffer_) return 0;
-            return buffer_->capacity() - buffer_->reserved();
+            return buffer_->capacity();
         }
 
         const_buffers_type data() const noexcept

@@ -242,7 +242,7 @@ namespace moon
         uint32_t receiver = msg.receiver();
         uint8_t type = msg.type();
 
-        if (msg.broadcast())
+        if (receiver == 0)
         {
             for (auto& it : services_)
             {

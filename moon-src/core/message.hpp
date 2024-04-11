@@ -16,13 +16,8 @@ namespace moon
         {
         }
 
-        explicit message(size_t reserve)
-            :data_(buffer::make_unique(reserve))
-        {
-        }
-
-        message(size_t reserve, uint16_t head_reserve)
-            :data_(buffer::make_unique(reserve, head_reserve))
+        explicit message(size_t capacity)
+            :data_(buffer::make_unique(capacity))
         {
         }
 
@@ -98,20 +93,6 @@ namespace moon
         uint8_t type() const
         {
             return type_;
-        }
-
-        bool broadcast() const
-        {
-            return (data_ && data_->has_flag(buffer_flag::broadcast));
-        }
-
-        void set_broadcast(bool v)
-        {
-            if (!data_)
-            {
-                return;
-            }
-            v ? data_->set_flag(buffer_flag::broadcast) : data_->clear_flag(buffer_flag::broadcast);
         }
 
         void write_data(std::string_view s)

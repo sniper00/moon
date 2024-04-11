@@ -343,6 +343,98 @@ $$ LANGUAGE plpgsql;
     -- select * from public.userdata where key='level' AND (value)::int = 100;
 end
 
+local function test_sql_driver()
+    local sqldriver = require("service.sqldriver")
+    local db = moon.new_service {
+        unique = true,
+        name = "db_game",
+        file = "../service/sqldriver.lua",
+        provider = "moon.db.pg",
+        threadid = 2,
+        poolsize = 5,
+        opts = db_config
+    }
+
+    assert(db>0)
+
+    local fn_sql = [[
+        CREATE OR REPLACE FUNCTION update_userdata(pk integer, VARIADIC key_values text[]) RETURNS void AS $$
+DECLARE
+    i integer;
+BEGIN
+    FOR i IN 1..array_length(key_values, 1) BY 2 LOOP
+        INSERT INTO userdata(uid, key, value) VALUES (pk, key_values[i], key_values[i+1]::json) ON CONFLICT (uid, key) DO UPDATE SET value = excluded.value::json;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+    ]]
+
+    local sql = string.format([[
+        --create userdata table
+        drop table if exists userdata;
+        create table userdata (
+            uid	bigint,
+            key		text,
+            value   jsonb,
+            CONSTRAINT pk_userdata PRIMARY KEY (uid, key)
+           );
+    ]])
+
+    print(1)
+    sqldriver.query(db, sql)
+    print(2)
+
+    local res = sqldriver.query(db, fn_sql)
+    assert(not res.code, res.message)
+
+    ---@class User
+    ---@field name string
+    ---@field age number
+    ---@field level number
+    ---@field exp number
+    local user = {
+        name = "hello",
+        age = 10,
+        level = 99,
+        exp = 11,
+        info1 = simple_json_field,
+        info2 = simple_json_field,
+    }
+
+    local key_value_model = require "key_value_model"
+
+    ---@type User Description
+    local user = key_value_model.new("userdata", 233, user)
+
+    user.age = 101
+    user.level = 100
+    user.info1.cc = 200
+    user.info2.cc = 300
+    user.name = "hello world"
+
+    local sql = key_value_model.modifyed(user)
+
+    -- print(sql)
+    local bt = moon.clock()
+
+    local res
+    for m = 1, 100 do
+        res = sqldriver.query(db, sql)
+        assert(not res.code, res.message)
+    end
+
+    print("test_key_value_table_function insert cost", (moon.clock() - bt)/100)
+
+    sql = string.format([[
+        --select userdata
+        select key, value from userdata where uid = %d;
+    ]], 233)
+    local res = sqldriver.query(db, sql)
+    local data = res.data
+
+    moon.send("lua", db, "save_then_quit")
+end
+
 moon.async(function()
     test_json_query()
     test_big_json_value()
@@ -351,6 +443,8 @@ moon.async(function()
     test_key_value_table_raw()
 
     test_key_value_table_function()
+
+    test_sql_driver()
 
 
     moon.exit(-1)

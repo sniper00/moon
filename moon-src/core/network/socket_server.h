@@ -54,17 +54,17 @@ namespace moon
 
         struct udp_context
         {
-            static constexpr size_t READ_BUFFER_SIZE = size_t{ 2048 } - addr_v6_size;
+            static constexpr size_t READ_BUFFER_SIZE = 2048;
             udp_context(uint32_t o, asio::io_context& ioc, udp::endpoint ep)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
+                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, ep)
             {
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE, static_cast<uint32_t>(addr_v6_size))
+                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, udp::endpoint(udp::v4(), 0))
             {
             }
@@ -102,7 +102,7 @@ namespace moon
 
         void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid);
 
-        bool write(uint32_t fd, buffer_shr_ptr_t&& data, buffer_flag flag = buffer_flag::none);
+        bool write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask = socket_send_mask::none);
 
         bool close(uint32_t fd);
 

@@ -170,7 +170,7 @@ void lua_service::dispatch(message* m)
     if (!ok())
         return;
 
-    //require ‘moon’ first
+    //require 'moon' first
     assert(cb_ctx != nullptr);
 
     lua_State* L = cb_ctx->L;

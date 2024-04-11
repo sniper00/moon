@@ -528,8 +528,7 @@ static int peek_one(lua_State* L)
 
     if (seek)
     {
-        assert(!buf->has_flag(buffer_flag::broadcast));
-        buf->seek(static_cast<int>(buf->size() - br.size()));
+        buf->seek(buf->size() - br.size());
     }
     lua_pushlightuserdata(L, (void*)br.data());
     lua_pushinteger(L, static_cast<int64_t>(br.size()));

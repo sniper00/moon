@@ -267,7 +267,6 @@ namespace moon
         for (auto& w : workers_)
         {
             auto m = message{ std::make_unique<buffer>(buf->clone()) };
-            m.set_broadcast(true);
             m.set_sender(sender);
             m.set_type(type);
             w->send(std::move(m));

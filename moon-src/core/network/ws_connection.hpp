@@ -141,17 +141,20 @@ namespace moon
             }
         }
 
-        bool send(buffer_shr_ptr_t&& data) override
+        bool send(buffer_shr_ptr_t&& data, socket_send_mask mask) override
         {
-            encode_frame(data);
-            return base_connection_t::send(std::move(data));
+            auto payload = encode_frame(data, mask);
+            base_connection_t::send(std::move(payload), mask);
+            return base_connection_t::send(std::move(data), mask);
         }
 
     protected:
         asio::mutable_buffer prepare_buffer(size_t size)
         {
-            if (nullptr == recv_buf_)
-                recv_buf_ = buffer::make_unique(size);
+            if (nullptr == recv_buf_){
+                recv_buf_ = buffer::make_unique(size + BUFFER_OPTION_CHEAP_PREPEND);
+                recv_buf_->commit(BUFFER_OPTION_CHEAP_PREPEND);
+            }
             auto space = recv_buf_->prepare(size);
             return asio::buffer(space.first, space.second);
         }
@@ -288,15 +291,11 @@ namespace moon
             return std::error_code();
         }
 
-        void send_response(const std::string& s, bool bclose = false)
+        void send_response(const std::string& s, bool will_close = false)
         {
             auto buf = std::make_shared<buffer>(s.size());
             buf->write_back(s.data(), s.size());
-            if (bclose)
-            {
-                buf->set_flag(buffer_flag::close);
-            }
-            base_connection::send(std::move(buf));
+            base_connection::send(std::move(buf), will_close?socket_send_mask::close:socket_send_mask::none);
         }
 
         bool handle_frame()
@@ -472,12 +471,16 @@ namespace moon
             message msg = message::with_empty();
             if (recv_buf_->size()==reallen)
             {
+                recv_buf_->seek(BUFFER_OPTION_CHEAP_PREPEND);
                 msg = message{ std::move(recv_buf_) };
             }
             else
             {
-                msg = message{ reallen };
-                msg.as_buffer()->write_back(recv_buf_->data(), reallen);
+                msg = message{ reallen + BUFFER_OPTION_CHEAP_PREPEND };
+                auto b = msg.as_buffer();
+                b->commit(BUFFER_OPTION_CHEAP_PREPEND);
+                b->write_back(recv_buf_->data(), reallen);
+                b->seek(BUFFER_OPTION_CHEAP_PREPEND);
                 recv_buf_->consume(reallen);
             }
 
@@ -524,8 +527,12 @@ namespace moon
             return tmp;
         }
 
-        void encode_frame(const buffer_shr_ptr_t& data) const
+        buffer_shr_ptr_t encode_frame(const buffer_shr_ptr_t& data, socket_send_mask send_mask) const
         {
+            buffer_shr_ptr_t payload = buffer::make_shared(16);
+            payload->commit(16);
+            payload->seek(16);
+
             uint64_t size = data->size();
 
             if (role_ == role::client)
@@ -536,7 +543,7 @@ namespace moon
                 {
                     d[i] = d[i] ^ mask[i % mask.size()];
                 }
-                data->write_front(mask.data(), mask.size());
+                payload->write_front(mask.data(), mask.size());
             }
 
             uint8_t payload_len = 0;
@@ -549,13 +556,13 @@ namespace moon
                 payload_len = static_cast<uint8_t>(PAYLOAD_MID_LEN);
                 uint16_t n = (uint16_t)size;
                 moon::host2net(n);
-                data->write_front(&n, 1);
+                payload->write_front(&n, 1);
             }
             else
             {
                 payload_len = static_cast<uint8_t>(PAYLOAD_MAX_LEN);
                 moon::host2net(size);
-                data->write_front(&size, 1);
+                payload->write_front(&size, 1);
             }
 
             //messages from the client must be masked
@@ -564,24 +571,25 @@ namespace moon
                 payload_len |= 0x80;
             }
 
-            data->write_front(&payload_len, 1);
+            payload->write_front(&payload_len, 1);
 
             uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
 
-            if (data->has_flag(buffer_flag::ws_text))
+            if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_text))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::text);
             }
-            else if (data->has_flag(buffer_flag::ws_ping))
+            else if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_ping))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::ping);
             }
-            else if (data->has_flag(buffer_flag::ws_pong))
+            else if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_pong))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::pong);
             }
 
-            data->write_front(&opcode, 1);
+            payload->write_front(&opcode, 1);
+            return payload;
         }
 
         static std::string hash_key(std::string_view seckey)

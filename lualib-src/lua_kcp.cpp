@@ -10,7 +10,7 @@ struct box
     int64_t session = 0;
     size_t readn = 0;
     std::queue<std::string> wqueue;
-    moon::buffer rbuf = moon::buffer{8192,0};
+    moon::buffer rbuf = moon::buffer{8192};
 };
 
 static int udp_output(const char* buf, int len, ikcpcb*, void* user) {

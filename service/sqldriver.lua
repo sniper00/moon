@@ -77,11 +77,12 @@ if conf.name then
         tbinsert(pool,one)
     end
 
-    local function execute(sql, hash, sender, sessionid)
+    local function execute(sender, sessionid, args)
+        local hash = args[2]
         hash = hash%db_pool_size + 1
         --print(moon.name, "db hash", hash, db_pool_size)
         local ctx = pool[hash]
-        list.push(ctx.queue, {clone(sql), sender, sessionid})
+        list.push(ctx.queue, {clone(args[3]), sender, sessionid})
         if ctx.running then
             return
         end
@@ -121,6 +122,30 @@ if conf.name then
         return res
     end
 
+    function command.save_then_quit()
+        moon.async(function()
+
+            while true do
+                local all = true
+                for _,v in ipairs(pool) do
+                    if list.front(v.queue) then
+                        all = false
+                        print("wait_all_send", _, list.size(v.queue))
+                        break
+                    end
+                end
+    
+                if not all then
+                    moon.sleep(1000)
+                else
+                    break
+                end
+            end
+
+            moon.quit()
+        end)
+    end
+
     local function xpcall_ret(ok, ...)
         if ok then
             return moon.pack(...)
@@ -129,22 +154,24 @@ if conf.name then
     end
 
     moon.raw_dispatch('lua', function(msg)
-        local sender, sessionid, buf = moon.decode(msg, "SEB")
-        local cmd, sz, len = unpack_one(buf, true)
+        local sender, sessionid, sz, len = moon.decode(msg, "SEC")
+
+        local args = { moon.unpack(sz, len) }
+
+        local cmd = args[1]
         if cmd == "Q" then
-            local hash = unpack_one(buf, true)
-            provider.pack_query_buffer(buf)
-            execute(msg, hash, sender, sessionid)
+            provider.pack_query_buffer(args[3])
+            execute(sender, sessionid, args)
             return
         end
 
         local fn = command[cmd]
         if fn then
             if sessionid == 0 then
-                fn(sender, sessionid, moon.unpack(sz, len))
+                fn(sender, sessionid, table.unpack(args, 2))
             else
                 moon.async(function()
-                    local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, moon.unpack(sz, len)))
+                    local unsafe_buf = xpcall_ret(xpcall(fn, debug.traceback, table.unpack(args, 2)))
                     moon.raw_send("lua", sender, unsafe_buf, sessionid)
                 end)
             end
@@ -152,58 +179,19 @@ if conf.name then
             moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
         end
     end)
-
-    local function wait_all_send()
-        while true do
-            local all = true
-            for _,v in ipairs(pool) do
-                if list.front(v.queue) then
-                    all = false
-                    print("wait_all_send", _, list.size(v.queue))
-                    break
-                end
-            end
-
-            if not all then
-                moon.sleep(1000)
-            else
-                return
-            end
-        end
-    end
-
-    moon.system("wait_save", function()
-        moon.async(function()
-            wait_all_send()
-            moon.quit()
-        end)
-    end)
 else
     local client = {}
 
     local json = require("json")
-    local buffer = require("buffer")
-    local wfront = buffer.write_front
-    local raw_send = moon.raw_send
-    local packstr = seri.packs
+
     local concat = json.concat
 
     function client.execute(db, sql, hash)
-        hash = hash or 1
-        local buf = concat(sql)
-        if not wfront(buf, packstr("Q", hash)) then
-            error("buffer has no front space")
-        end
-        raw_send("lua", db, buf)
+        moon.send("lua", db, "Q", hash or 1, concat(sql))
     end
 
     function client.query(db, sql, hash)
-        hash = hash or 1
-        local buf = concat(sql)
-        if not wfront(buf, packstr("Q", hash)) then
-            error("buffer has no front space")
-        end
-        return moon.wait(raw_send("lua", db, buf, moon.next_sequence()))
+        return moon.call("lua", db, "Q", hash or 1, concat(sql))
     end
 
     return client
