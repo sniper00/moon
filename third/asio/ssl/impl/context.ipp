@@ -3,7 +3,7 @@
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2005 Voipster / Indrek dot Juhani at voipster dot com
-// Copyright (c) 2005-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2005-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -376,7 +376,6 @@ context::context(context::native_handle_type native_handle)
   }
 }
 
-#if defined(ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
 context::context(context&& other)
 {
   handle_ = other.handle_;
@@ -385,12 +384,11 @@ context::context(context&& other)
 
 context& context::operator=(context&& other)
 {
-  context tmp(ASIO_MOVE_CAST(context)(*this));
+  context tmp(static_cast<context&&>(*this));
   handle_ = other.handle_;
   other.handle_ = 0;
   return *this;
 }
-#endif // defined(ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
 
 context::~context()
 {
