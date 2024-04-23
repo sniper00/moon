@@ -31,9 +31,9 @@ public:
 
     int64_t next_sequence();
 private:
-    size_t mem = 0;
-    size_t mem_limit = std::numeric_limits<size_t>::max();
-    size_t mem_report = 8 * 1024 * 1024;
+    ssize_t mem = 0;
+    ssize_t mem_limit = std::numeric_limits<ssize_t>::max();
+    ssize_t mem_report = 8 * 1024 * 1024;
     int64_t current_sequence_ = 0;
     callback_context* cb_ctx = nullptr;
     std::unique_ptr<lua_State, moon::state_deleter> lua_;

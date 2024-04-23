@@ -13,14 +13,13 @@
 
 using namespace moon;
 
-constexpr size_t mb_memory = 1024 * 1024;
+constexpr ssize_t mb_memory = 1024 * 1024;
 
 extern "C" void open_custom_libs(lua_State * L);
 
 void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 {
     lua_service* l = reinterpret_cast<lua_service*>(ud);
-    size_t mem = l->mem;
 
     if (nsize == 0)
     {
@@ -31,18 +30,23 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
         return nullptr;
     }
 
-    if (nsize > static_cast<size_t>(std::numeric_limits<int64_t>::max()))
+    if (nsize > static_cast<size_t>(std::numeric_limits<ssize_t>::max()))
     {
         return nullptr;
     }
 
-    l->mem += nsize;
+    auto mem_diff = static_cast<ssize_t>(nsize);
+    if(nullptr != ptr)
+    {
+        mem_diff -= static_cast<ssize_t>(osize);
+    }
 
-    if (l->mem > l->mem_limit)
+    auto new_used_memory = l->mem + mem_diff;
+
+    if (new_used_memory > l->mem_limit)
     {
         if (ptr == nullptr || nsize > osize)
         {
-            l->mem = mem;
             log::instance().logstring(true, moon::LogLevel::Error,
                 moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
                     (float)l->mem_limit / mb_memory),
@@ -50,7 +54,10 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
             return nullptr;
         }
     }
-    else if (l->mem > l->mem_report)
+    
+    l->mem += mem_diff;
+    
+    if (new_used_memory > l->mem_report)
     {
         l->mem_report *= 2;
         log::instance().logstring(
@@ -184,11 +191,8 @@ void lua_service::dispatch(message* m)
         lua_pushinteger(L, m->sessionid());
         lua_pushlightuserdata(L, (void*)m->data());
         lua_pushinteger(L, m->size());
-
-
         lua_pushlightuserdata(L, m);
       
-
         int r = lua_pcall(L, 6, 0, trace);
         if (r == LUA_OK)
         {
