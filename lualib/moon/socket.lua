@@ -61,11 +61,15 @@ end
 
 --- NOTE:  used only when protocol == moon.PTYPE_SOCKET_TCP
 ---@async
----@param delim string @read until reach the specified delim string from the socket
+---@param delim string @Read until reach the specified delim string from the socket. Max length is 7 bytes.
 ---@param maxcount? integer
 ---@overload fun(fd: integer, count: integer) @ read a specified number of bytes from the socket.
 function socket.read(fd, delim, maxcount)
-    return moon.wait(read(fd, delim, maxcount))
+    local session, data = read(fd, delim, maxcount)
+    if data then
+        return data
+    end
+    return moon.wait(session)
 end
 
 function socket.write_then_close(fd, data)

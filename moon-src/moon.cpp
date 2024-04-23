@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
         conf->type = "lua";
         conf->name = "bootstrap";
         conf->source = fs::path(bootstrap).filename().string();
-        conf->memlimit = std::numeric_limits<size_t>::max();
+        conf->memlimit = std::numeric_limits<ssize_t>::max();
         auto path = server_->get_env("PATH");
         if (path)
             conf->params.append(*path);

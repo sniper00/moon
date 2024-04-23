@@ -248,17 +248,17 @@ void socket_server::connect(const std::string& host, uint16_t port, uint32_t own
         });
 }
 
-void socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid)
+std::optional<std::string_view> socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
-        iter->second->read(n, delim, sessionid);
-        return;
+        return iter->second->read(n, delim, sessionid);
     }
 
     asio::post(context_, [this, owner, sessionid]() {
         response(0, owner, "socket.read: closed", sessionid, PTYPE_ERROR);
     });
+    return std::nullopt;
 }
 
 bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask)
@@ -382,7 +382,7 @@ bool socket_server::set_enable_chunked(uint32_t fd, std::string_view flag)
     return false;
 }
 
-bool socket_server::set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize)
+bool socket_server::set_send_queue_limit(uint32_t fd, uint16_t warnsize, uint16_t errorsize)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {

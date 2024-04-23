@@ -344,7 +344,7 @@ $$ LANGUAGE plpgsql;
 end
 
 local function test_sql_driver()
-    local sqldriver = require("service.sqldriver")
+    local sqldriver = require("sqldriver")
     local db = moon.new_service {
         unique = true,
         name = "db_game",
@@ -435,6 +435,72 @@ $$ LANGUAGE plpgsql;
     moon.send("lua", db, "save_then_quit")
 end
 
+local function test_hstore()
+    local db = pg.connect(db_config)
+
+    if db.code then
+        moon.error(print_r(db, true))
+        return
+    end
+
+    local sql = string.format([[
+        --create userdata table
+        CREATE EXTENSION IF NOT EXISTS hstore;
+        drop table if exists userdata;
+        create table userdata (
+            uid	bigint PRIMARY KEY,
+            info hstore
+           );
+    ]])
+
+    local res = db:query(sql)
+    assert(not res.code, res.message)
+
+    local sql_init = [[
+        INSERT INTO userdata (uid, info) VALUES (233, '');
+    ]]
+    local res = db:query(sql_init)
+    assert(not res.code, res.message)
+
+    local function make_one_row(t, uid, key, value)
+        local n = #t
+        t[n + 1] = "'"
+        t[n + 2] = key
+        t[n + 3] = "','"
+        t[n + 4] = value
+        t[n + 5] = "',"
+    end
+
+    local user = {
+        name = "hello",
+        age = 10,
+        level = 99,
+        exp = 20,
+        info1 = simple_json_field,
+        info2 = simple_json_field,
+    }
+
+    local cache = {}
+    cache[#cache + 1] = "BEGIN;update userdata set info = info || hstore(ARRAY["
+
+    for key, value in pairs(user) do
+        make_one_row(cache, 233, key, value)
+    end
+
+    cache[#cache] = "']) WHERE uid = 233;COMMIT;"
+
+    sql = buffer.unpack(json.concat(cache))
+
+    -- print(sql)
+
+    local bt = moon.clock()
+    for m = 1, 100 do
+        local res = db:query(sql)
+        assert(not res.code, res.message)
+    end
+    print("test_hstore insert cost", (moon.clock() - bt)/100)
+end
+
 moon.async(function()
     test_json_query()
     test_big_json_value()
@@ -443,6 +509,8 @@ moon.async(function()
     test_key_value_table_raw()
 
     test_key_value_table_function()
+    
+    --test_hstore()
 
     test_sql_driver()
 

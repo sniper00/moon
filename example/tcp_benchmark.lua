@@ -27,9 +27,7 @@ if conf.name == "server" then
     local listenfd  = socket.listen(conf.host, conf.port,moon.PTYPE_SOCKET_MOON)
     socket.start(listenfd)
     
-    print(string.format([[
-        network benchmark run at %s %d with %d clients, per client send %s message.
-    ]], conf.host, conf.port, conf.client_num, conf.count))
+    print(string.format("\nnetwork benchmark run at %s %d with %d clients, per client send %s message.", conf.host, conf.port, conf.client_num, conf.count))
 
     return
 end

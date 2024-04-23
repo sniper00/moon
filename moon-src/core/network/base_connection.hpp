@@ -5,13 +5,14 @@
 #include "const_buffers_holder.hpp"
 #include "common/string.hpp"
 #include "error.hpp"
+#include "common/vec_deque.hpp"
 
 namespace moon
 {
     class base_connection :public std::enable_shared_from_this<base_connection>
     {
     public:
-        enum class role
+        enum class role: uint8_t
         {
             none,
             client,
@@ -22,8 +23,8 @@ namespace moon
 
         template <typename... Args>
         explicit base_connection(uint32_t serviceid, uint8_t type, moon::socket_server* s, Args&&... args)
-            : serviceid_(serviceid)
-            , type_(type)
+            : type_(type)
+            , serviceid_(serviceid)
             , parent_(s)
             , socket_(std::forward<Args>(args)...)
         {
@@ -43,12 +44,13 @@ namespace moon
             recvtime_ = now();
         }
 
-        virtual void read(size_t, std::string_view, int64_t)
+        virtual std::optional<std::string_view> read(size_t, std::string_view, int64_t)
         {
             CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
             asio::post(socket_.get_executor(), [this, self = shared_from_this()] {
                 error(make_error_code(error::invalid_read_operation));
                 });
+            return std::nullopt;
         };
 
         virtual bool send(buffer_shr_ptr_t&& data, socket_send_mask mask)
@@ -78,7 +80,7 @@ namespace moon
             will_close_ =  enum_has_any_bitmask(mask, socket_send_mask::close) ? true : will_close_;
 
             bool write_in_progress = !queue_.empty();
-            queue_.emplace_back(std::move(data));
+            queue_.push_back(std::move(data));
 
             if (!write_in_progress)
             {
@@ -159,7 +161,7 @@ namespace moon
             recvtime_ = now();
         }
 
-        void set_send_queue_limit(uint32_t warnsize, uint32_t errorsize)
+        void set_send_queue_limit(uint16_t warnsize, uint16_t errorsize)
         {
             wq_warn_size_ = warnsize;
             wq_error_size_ = errorsize;
@@ -191,9 +193,9 @@ namespace moon
 
         void post_send()
         {
-            for (const auto& buf : queue_)
-            {
-                prepare_send(holder_, buf);
+            size_t queue_size = queue_.size();
+            for (size_t i = 0; i < queue_size; ++i) {
+                prepare_send(holder_, queue_[i]);
                 if (holder_.size() >= const_buffers_holder::max_count)
                 {
                     break;
@@ -230,27 +232,27 @@ namespace moon
                 });
         }
 
-        virtual void error(const asio::error_code& e, const std::string& additional = "")
+        virtual void error(const asio::error_code& e, int64_t session = 0, const std::string& additional = "")
         {
-            if (nullptr == parent_)
-            {
+            (void)session;
+            if (nullptr == parent_){
                 return;
             }
-
-            message msg{};
-            std::string message = e.message();
+            std::string str = e.message();
             if (!additional.empty())
             {
-                message.append("(");
-                message.append(additional);
-                message.append(")");
+                str.append("(");
+                str.append(additional);
+                str.append(")");
             }
             std::string content =
-                moon::format("{\"addr\":\"%s\",\"code\":%d,\"message\":\"%s\"}", address().data(), e.value(), message.data());
+                moon::format("{\"addr\":\"%s\",\"code\":%d,\"message\":\"%s\"}", address().data(), e.value(), str.data());
+            
+            message msg{};
+            msg.set_type(type_);
             msg.write_data(content);
-
             msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
-            msg.set_sender(fd_);
+
             parent_->close(fd_);
             handle_message(std::move(msg));
             parent_ = nullptr;
@@ -263,26 +265,23 @@ namespace moon
             if (nullptr != parent_)
             {
                 m.set_sender(fd_);
-                if (m.type() == 0)
-                {
-                    m.set_type(type_);
-                }
                 parent_->handle_message(serviceid_, std::forward<Message>(m));
             }
         }
     protected:
         bool will_close_ = false;
+        bool read_in_progress_ = false;
         role role_ = role::none;
+        uint8_t type_ = 0;
+        uint16_t wq_warn_size_ = 0;
+        uint16_t wq_error_size_ = 0;
         uint32_t fd_ = 0;
-        time_t recvtime_ = 0;
         uint32_t timeout_ = 0;
-        uint32_t wq_warn_size_ = 0;
-        uint32_t wq_error_size_ = 0;
-        uint32_t serviceid_;
-        uint8_t type_;
+        uint32_t serviceid_ = 0;
+        time_t recvtime_ = 0;
         moon::socket_server* parent_;
-        socket_t socket_;
         const_buffers_holder holder_;
-        std::deque<buffer_shr_ptr_t> queue_;
+        VecDeque<buffer_shr_ptr_t> queue_;
+        socket_t socket_;
     };
 }

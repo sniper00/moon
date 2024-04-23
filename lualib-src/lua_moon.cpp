@@ -246,7 +246,7 @@ static int lmoon_new_service(lua_State* L)
     conf->name = lua_opt_field<std::string>(L, 1, "name");
     conf->type = lua_opt_field<std::string>(L, 1, "stype", "lua");
     conf->source = lua_opt_field<std::string>(L, 1, "file");
-    conf->memlimit = lua_opt_field<size_t>(L, 1, "memlimit",  std::numeric_limits<size_t>::max());
+    conf->memlimit = lua_opt_field<ssize_t>(L, 1, "memlimit",  std::numeric_limits<ssize_t>::max());
     conf->unique = lua_opt_field<bool>(L, 1, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 1, "threadid", 0);
 
@@ -641,8 +641,12 @@ static int lasio_read(lua_State* L)
         delim = lua_check<std::string_view>(L, 2);
         size = (int64_t)luaL_optinteger(L, 3, 0);
     }
-    sock.read(fd, S->id(), size, delim, session);
+    auto res = sock.read(fd, S->id(), size, delim, session);
     lua_pushinteger(L, session);
+    if (res.has_value()) {
+        lua_pushlstring(L, res->data(), res->size());
+        return 2;
+    }
     return 1;
 }
 
@@ -746,8 +750,8 @@ static int lasio_set_send_queue_limit(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t warnsize = (uint32_t)luaL_checkinteger(L, 2);
-    uint32_t errorsize = (uint32_t)luaL_checkinteger(L, 3);
+    uint16_t warnsize = moon::lua_check<uint16_t>(L, 2);
+    uint16_t errorsize = moon::lua_check<uint16_t>(L, 3);
     bool ok = sock.set_send_queue_limit(fd, warnsize, errorsize);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;

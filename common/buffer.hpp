@@ -388,13 +388,17 @@ namespace moon
             switch (s)
             {
             case seek_origin::Begin:
-                if (offset > pair_.writepos)
+                if (offset > pair_.writepos) {
+                    assert(false);
                     return false;
+                }
                 pair_.readpos = offset;
                 break;
             case seek_origin::Current:
-                if (pair_.readpos + offset > pair_.writepos)
+                if (pair_.readpos + offset > pair_.writepos) {
+                    assert(false);
                     return false;
+                }
                 pair_.readpos += offset;
                 break;
             default:

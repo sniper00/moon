@@ -80,7 +80,7 @@ namespace moon
         uint32_t threadid = 0;
         uint32_t creator = 0;
         int64_t session = 0;
-        size_t memlimit = 0;
+        ssize_t memlimit = 0;
         std::string type;
         std::string name;
         std::string source;

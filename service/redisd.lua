@@ -62,7 +62,7 @@ if conf.name then
 
             if redis.socket_error == res then
                 db = nil
-                moon.error(err)
+                moon.error("A network error occurred, preparing to reconnect.", err)
                 if reconnect_times == 0 then
                     if sessionid ~= 0 then
                         moon.response("lua", sender, sessionid, false, err)

@@ -100,7 +100,7 @@ namespace moon
 
         void connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds = 0);
 
-        void read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid);
+        std::optional<std::string_view> read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid);
 
         bool write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask = socket_send_mask::none);
 
@@ -114,7 +114,7 @@ namespace moon
 
         bool set_enable_chunked(uint32_t fd, std::string_view flag);
 
-        bool set_send_queue_limit(uint32_t fd, uint32_t warnsize, uint32_t errorsize);
+        bool set_send_queue_limit(uint32_t fd, uint16_t warnsize, uint16_t errorsize);
 
         bool send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t&& data);
 

@@ -145,11 +145,13 @@ end
 function M.listen(host, port, timeout)
     assert(not listenfd, "http server can only listen port once.")
     listenfd = socket.listen(host, port, moon.PTYPE_SOCKET_TCP)
+    assert(listenfd>0, "Http server listen failed.")
     timeout = timeout or 0
     moon.async(function()
         while true do
             local fd, err = socket.accept(listenfd, moon.id)
             if not fd then
+                moon.sleep(1000)
                 print("httpserver accept", err)
             else
                 M.start(fd, timeout)

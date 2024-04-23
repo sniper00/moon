@@ -1,3 +1,4 @@
+#pragma once
 #include "asio.hpp"
 #include "common/buffer.hpp"
 

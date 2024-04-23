@@ -1,6 +1,7 @@
 #pragma once
 #include "base_connection.hpp"
 #include "common/byte_convert.hpp"
+#include "streambuf.hpp"
 
 namespace moon
 {
@@ -15,15 +16,15 @@ namespace moon
         explicit moon_connection(Args&&... args)
             :base_connection(std::forward<Args>(args)...)
             , flag_(enable_chunked::none)
-            , header_(0)
+            , cache_(512)
         {
         }
 
         void start(role r) override
         {
             base_connection_t::start(r);
-            auto addr = address();
             message m{};
+            m.set_type(type_);
             m.write_data(address());
             m.set_receiver(static_cast<uint8_t>(r == role::server ?
                 socket_data_type::socket_accept : socket_data_type::socket_connect));
@@ -69,63 +70,92 @@ namespace moon
 
         void read_header()
         {
-            header_ = 0;
-            asio::async_read(socket_, asio::buffer(&header_, sizeof(header_)),
+            if (cache_.size() >= sizeof(message_size_t))
+            {
+                hanlde_header();
+                return;
+            }
+
+            asio::async_read(socket_, moon::streambuf(&cache_, cache_.capacity()), asio::transfer_at_least(sizeof(message_size_t)),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
                 {
-                    if (e)
+                    if (!e)
                     {
-                        error(e);
+                        hanlde_header();
                         return;
                     }
-
-                    net2host(header_);
-
-                    bool fin = (header_ != MESSAGE_CONTINUED_FLAG);
-                    if (!fin && !enum_has_any_bitmask(flag_, enable_chunked::receive)) {
-                        error(make_error_code(moon::error::read_message_too_big));
-                        return;
-                    }
-
-                    read_body(header_, fin);
+                    error(e);
                 });
+        }
+
+        void hanlde_header()
+        {
+            message_size_t header = 0;
+            cache_.read(&header, 1);
+            net2host(header);
+
+            bool fin = (header != MESSAGE_CONTINUED_FLAG);
+            if (!fin && !enum_has_any_bitmask(flag_, enable_chunked::receive)) {
+                error(make_error_code(moon::error::read_message_too_big));
+                return;
+            }
+
+            read_body(header, fin);
         }
 
         void read_body(message_size_t size, bool fin)
         {
-            if (nullptr == buf_)
+            if (nullptr == data_)
             {
-                buf_ = buffer::make_unique((fin ? size : static_cast<size_t>(5) * size) + BUFFER_OPTION_CHEAP_PREPEND);
-                buf_->commit(BUFFER_OPTION_CHEAP_PREPEND);
+                data_ = buffer::make_unique((fin ? size : static_cast<size_t>(5) * size) + BUFFER_OPTION_CHEAP_PREPEND);
+                data_->commit(BUFFER_OPTION_CHEAP_PREPEND);
             }
 
-            auto space = buf_->prepare(size);
+            // Calculate the difference between the cache size and the expected size
+            ssize_t diff = static_cast<ssize_t>(cache_.size()) - static_cast<ssize_t>(size);
+            // Determine the amount of data to consume from the cache
+            // If the cache size is greater than or equal to the expected size, consume the expected size
+            // Otherwise, consume the entire cache
+            size_t consume_size = (diff >= 0 ? size : cache_.size());
+            data_->write_back(cache_.data(), consume_size);
+            cache_.consume(consume_size);
 
-            asio::async_read(socket_, asio::buffer(space.first, space.second),
-                [this, self = shared_from_this(), fin](const asio::error_code& e, std::size_t bytes_transferred)
+            if (diff >=0)
+            {
+                handle_body(fin);
+                return;
+            }
+
+            cache_.clear();
+
+            asio::async_read(socket_, moon::streambuf(data_.get()), asio::transfer_exactly(static_cast<size_t>(-diff)),
+                [this, self = shared_from_this(), size, fin](const asio::error_code& e, std::size_t)
                 {
-                    if (e)
+                    if (!e)
                     {
-                        error(e);
+                        handle_body(fin);
                         return;
                     }
-
-                    buf_->commit(static_cast<int>(bytes_transferred));
-                    if (fin)
-                    {
-                        buf_->seek(BUFFER_OPTION_CHEAP_PREPEND);
-                        auto m = message{ std::move(buf_) };
-                        m.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
-                        handle_message(std::move(m));
-                    }
-
-                    read_header();
+                    error(e);
                 });
+        }
+
+        void handle_body(bool fin)
+        {
+            if (fin)
+            {
+                data_->seek(BUFFER_OPTION_CHEAP_PREPEND);
+                auto m = message{ std::move(data_) };
+                m.set_type(type_);
+                m.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
+                handle_message(std::move(m));
+            }
+            read_header();
         }
 
     protected:
         enable_chunked flag_;
-        message_size_t header_;
-        buffer_ptr_t buf_;
+        buffer cache_;
+        buffer_ptr_t data_;
     };
 }

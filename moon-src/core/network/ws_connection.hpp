@@ -4,6 +4,7 @@
 #include "common/base64.hpp"
 #include "common/byte_convert.hpp"
 #include "common/sha1.hpp"
+#include "streambuf.hpp"
 
 //https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers
 
@@ -88,6 +89,8 @@ namespace moon
             crsvf = 15
         };
 
+        using mask_key_type = std::array<uint8_t, 4>;
+
         struct frame_header
         {
             bool fin;
@@ -97,7 +100,7 @@ namespace moon
             bool mask;
             opcode op;//4bit
             uint8_t payload_len;//7 bit
-            std::uint32_t key;
+            mask_key_type mask_key;
         };
     }
 
@@ -107,9 +110,7 @@ namespace moon
 
         using base_connection_t = base_connection;
 
-        static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 8192;
-
-        static constexpr size_t DEFAULT_RECV_BUFFER_SIZE = 128;
+        static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 2048;
 
         static constexpr size_t SEC_WEBSOCKET_KEY_LEN = 24;
 
@@ -125,6 +126,7 @@ namespace moon
         template <typename... Args, std::enable_if_t<!std::disjunction_v<std::is_same<std::decay_t<Args>, ws_connection>...>, int> = 0>
         explicit ws_connection(Args&&... args)
             :base_connection_t(std::forward<Args>(args)...)
+            , cache_(HANDSHAKE_STREAMBUF_SIZE)
         {
         }
 
@@ -133,11 +135,11 @@ namespace moon
             base_connection_t::start(r);
             if (role::server == r)
             {
-                read_header();
+                read_handshake();
             }
             else
             {
-                read_some();
+                read_payload(2);
             }
         }
 
@@ -149,21 +151,10 @@ namespace moon
         }
 
     protected:
-        asio::mutable_buffer prepare_buffer(size_t size)
+        void read_handshake()
         {
-            if (nullptr == recv_buf_){
-                recv_buf_ = buffer::make_unique(size + BUFFER_OPTION_CHEAP_PREPEND);
-                recv_buf_->commit(BUFFER_OPTION_CHEAP_PREPEND);
-            }
-            auto space = recv_buf_->prepare(size);
-            return asio::buffer(space.first, space.second);
-        }
-
-        void read_header()
-        {
-            auto sbuf = std::make_shared<asio::streambuf>(HANDSHAKE_STREAMBUF_SIZE);
-            asio::async_read_until(socket_, *sbuf, STR_DCRLF,
-                    [this, self = shared_from_this(), sbuf](const asio::error_code& e, std::size_t bytes_transferred)
+            asio::async_read_until(socket_, moon::streambuf(&cache_, cache_.capacity()), STR_DCRLF,
+                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t size)
             {
                 if (e)
                 {
@@ -171,67 +162,21 @@ namespace moon
                     return;
                 }
 
-                size_t num_additional_bytes = sbuf->size() - bytes_transferred;
-                auto ec = handshake(sbuf, bytes_transferred);
-                sbuf->consume(bytes_transferred);
-                if (!ec)
+                auto ec = handshake(size);
+                if (ec)
                 {
-                    prepare_buffer(std::max(DEFAULT_RECV_BUFFER_SIZE, num_additional_bytes));
-                    if (num_additional_bytes > 0)
-                    {
-                        auto data = reinterpret_cast<const char*>(sbuf->data().data());
-                        recv_buf_->write_back(data, num_additional_bytes);
-                        if (!handle_frame())
-                        {
-                            return;
-                        }
-                    }
-                    read_some();
-                }
-                else
-                {
-                    // client close, or server check read timeout.
                     send_response("HTTP/1.1 400 Bad Request\r\n\r\n", true);
                 }
             });
         }
 
-
-        void read_some()
-        {
-            socket_.async_read_some(prepare_buffer(DEFAULT_RECV_BUFFER_SIZE),
-                    [this, self = shared_from_this()](const asio::error_code& e, std::size_t bytes_transferred)
-            {
-                if (e)
-                {
-                    error(e);
-                    return;
-                }
-
-                if (bytes_transferred == 0)
-                {
-                    read_some();
-                    return;
-                }
-
-                recv_buf_->commit(static_cast<int>(bytes_transferred));
- 
-                if (!handle_frame())
-                {
-                    return;
-                }
-
-                read_some();
-            });
-        }
-
-        std::error_code handshake(const std::shared_ptr<asio::streambuf>& buf, size_t n)
+        std::error_code handshake(size_t n)
         {
             std::string_view method;
             std::string_view ignore;
             std::string_view version;
             http::case_insensitive_multimap_view header;
-            if(!http::request_parser::parse(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), n }
+            if (!http::request_parser::parse(std::string_view{ cache_.data(), n }
                 , method
                 , ignore
                 , ignore
@@ -241,7 +186,7 @@ namespace moon
                 return make_error_code(moon::error::ws_bad_http_header);
             }
 
-            if (version<"1.0" || version>"1.1")
+            if (version < "1.0" || version>"1.1")
             {
                 return make_error_code(moon::error::ws_bad_http_version);
             }
@@ -284,11 +229,32 @@ namespace moon
 
             auto answer = upgrade_response(sec_ws_key, protocol);
             send_response(answer);
-            auto msg = message{n};
-            msg.write_data(std::string_view{ reinterpret_cast<const char*>(buf->data().data()), n});
+            auto msg = message{ n };
+            msg.set_type(type_);
+            msg.write_data(std::string_view{ cache_.data(), n });
             msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
             handle_message(std::move(msg));
-            return std::error_code();
+
+            cache_.consume(n);
+
+            handle_frame();
+
+            return std::error_code{};
+        }
+
+        void read_payload(size_t size)
+        {
+            asio::async_read(socket_, moon::streambuf(&cache_, cache_.capacity()), asio::transfer_at_least(size),
+                [this, self = shared_from_this()](const asio::error_code& ec, std::size_t)
+                {
+                    if (ec)
+                    {
+                        error(ec);
+                        return;
+                    }
+
+                    handle_frame();
+                });
         }
 
         void send_response(const std::string& s, bool will_close = false)
@@ -298,79 +264,67 @@ namespace moon
             base_connection::send(std::move(buf), will_close?socket_send_mask::close:socket_send_mask::none);
         }
 
-        bool handle_frame()
+        template <typename T>
+        static T read_be_uint(const uint8_t* data)
         {
-            auto ec = decode_frame();
-            if (ec)
+            T result = 0;
+            for (size_t i = 0; i < sizeof(T); ++i)
             {
-                if (ec == moon::error::ws_closed && recv_buf_->size()>1)
-                {
-                    uint16_t code = *(const uint16_t*)recv_buf_->data();
-                    std::string reason;
-                    reason.append(std::to_string(code));
-                    recv_buf_->consume(2);
-                    if (recv_buf_->size() != 0)
-                    {
-                        reason.append(":");
-                        reason.append(recv_buf_->data(), recv_buf_->size());
-                    }
-                    error(ec, reason);
-                }
-                else
-                {
-                    error(ec);
-                }
-                return false;
+                result = (result << 8) | data[i];
             }
-            return true;
+            return result;
         }
 
-        std::error_code decode_frame()
+        void handle_frame()
         {
-            const uint8_t* tmp = (const uint8_t*)(recv_buf_->data());
-            size_t size = recv_buf_->size();
+            size_t size = cache_.size();
 
-            if (size < 3)
+            // Check if the size of the data is less than 2
+            // According to the WebSocket protocol, a frame must have at least 2 bytes
+            // The first byte contains FIN bit and opcode
+            // The second byte contains the mask bit and payload length
+            if (size < 2)
             {
-                return std::error_code();
+                return read_payload(2);
             }
 
-            size_t need = 2;
+            const uint8_t* frame_data = (const uint8_t*)(cache_.data());
+
+            size_t header_size = 2;
             ws::frame_header fh{};
 
-            fh.payload_len = tmp[1] & 0x7F;
+            fh.payload_len = frame_data[1] & 0x7F;
             switch (fh.payload_len)
             {
-            case PAYLOAD_MID_LEN: need += 2; break;
-            case PAYLOAD_MAX_LEN: need += 8; break;
+            case PAYLOAD_MID_LEN: header_size += 2; break;
+            case PAYLOAD_MAX_LEN: header_size += 8; break;
             default:
                 break;
             }
 
-            fh.mask = (tmp[1] & 0x80) != 0;
+            fh.mask = (frame_data[1] & 0x80) != 0;
             //message client to server must mask.
             if (!fh.mask && role_ == role::server)
             {
-                return make_error_code(moon::error::ws_bad_unmasked_frame);
+                return error(make_error_code(moon::error::ws_bad_unmasked_frame));
             }
 
             if (fh.mask)
             {
-                need += 4;
+                header_size += 4;
             }
 
-            //need more data
-            if (size < need)
+            // Check if we have enough data for the entire WebSocket frame header
+            if (size < header_size)
             {
-                prepare_buffer(need);
-                return std::error_code();
+                return read_payload(header_size - size);
             }
 
-            fh.op = static_cast<ws::opcode>(tmp[0] & 0x0F);
-            fh.fin = (tmp[0] & 0x80) != 0;
-            fh.rsv1 = (tmp[0] & 0x40) != 0;
-            fh.rsv2 = (tmp[0] & 0x20) != 0;
-            fh.rsv3 = (tmp[0] & 0x10) != 0;
+            fh.op = static_cast<ws::opcode>(frame_data[0] & 0x0F);
+            fh.fin = (frame_data[0] & 0x80) != 0;
+            fh.rsv1 = (frame_data[0] & 0x40) != 0;
+            fh.rsv2 = (frame_data[0] & 0x20) != 0;
+            fh.rsv3 = (frame_data[0] & 0x10) != 0;
 
             switch (fh.op)
             {
@@ -379,29 +333,29 @@ namespace moon
                 if (fh.rsv1 || fh.rsv2 || fh.rsv3)
                 {
                     // reserved bits not cleared
-                    return make_error_code(moon::error::ws_bad_reserved_bits);
+                    return error(make_error_code(moon::error::ws_bad_reserved_bits));
                 }
                 break;
             case ws::opcode::incomplete:
                 {
                     //not support continuation frame
-                    return make_error_code(moon::error::ws_bad_continuation);
+                    return error(make_error_code(moon::error::ws_bad_continuation));
                 }
             default:
                 if (!fh.fin)
                 {
                     //not support fragmented control message
-                    return make_error_code(moon::error::ws_bad_control_fragment);
+                    return error(make_error_code(moon::error::ws_bad_control_fragment));
                 }
                 if (fh.payload_len > PAYLOAD_MIN_LEN)
                 {
                     // invalid length for control message
-                    return make_error_code(moon::error::ws_bad_control_size);
+                    return error(make_error_code(moon::error::ws_bad_control_size));
                 }
                 if (fh.rsv1 || fh.rsv2 || fh.rsv3)
                 {
                     // reserved bits not cleared
-                    return make_error_code(moon::error::ws_bad_reserved_bits);
+                    return error(make_error_code(moon::error::ws_bad_reserved_bits));
                 }
                 break;
             }
@@ -411,13 +365,11 @@ namespace moon
             {
             case PAYLOAD_MID_LEN:
             {
-                auto n = *(uint16_t*)(&tmp[2]);
-                moon::net2host(n);
-                reallen = n;
+                reallen = read_be_uint<uint16_t>(frame_data+2);
                 if (reallen < PAYLOAD_MID_LEN)
                 {
                     // length not canonical
-                    return make_error_code(moon::error::ws_bad_size);
+                    return error(make_error_code(moon::error::ws_bad_size));
                 }
                 break;
             }
@@ -426,16 +378,15 @@ namespace moon
                 if (role_ == role::server)
                 {
                     //server not support PAYLOAD_MAX_LEN frame.
-                    return make_error_code(moon::error::ws_bad_size);
+                    return error(make_error_code(moon::error::ws_bad_size));
                 }
                 else
                 {
-                    reallen = *(uint64_t*)(&tmp[2]);
-                    moon::net2host(reallen);
+                    reallen = read_be_uint<uint64_t>(frame_data+2);
                     if (reallen < 65536)
                     {
                         // length not canonical
-                        return make_error_code(moon::error::ws_bad_size);
+                        return error(make_error_code(moon::error::ws_bad_size));
                     }
                 }
                 break;
@@ -445,44 +396,69 @@ namespace moon
                 break;
             }
 
-            if (size < need + reallen)
+            if (fh.mask)
             {
-                //need more data
-                prepare_buffer(static_cast<size_t>(need + reallen - size));
-                return std::error_code();
+                memcpy(fh.mask_key.data(), frame_data + (header_size - fh.mask_key.size()), fh.mask_key.size());
             }
+
+            cache_.consume(header_size);
+
+            if (nullptr == data_)
+            {
+                data_ = buffer::make_unique(reallen + BUFFER_OPTION_CHEAP_PREPEND);
+                data_->commit(BUFFER_OPTION_CHEAP_PREPEND);
+            }
+
+            // Calculate the difference between the cache size and the expected size
+            ssize_t diff = static_cast<ssize_t>(cache_.size()) - static_cast<ssize_t>(reallen);
+            // Determine the amount of data to consume from the cache
+            // If the cache size is greater than or equal to the expected size, consume the expected size
+            // Otherwise, consume the entire cache
+            size_t consume_size = (diff >= 0 ? reallen : cache_.size());
+            data_->write_back(cache_.data(), consume_size);
+            cache_.consume(consume_size);
+
+            if (diff >= 0)
+            {
+                return on_message(fh);
+            }
+            
+            cache_.clear();
+
+            asio::async_read(socket_, moon::streambuf(data_.get()), asio::transfer_exactly(static_cast<size_t>(-diff)),
+                [this, self = shared_from_this(), size, fh](const asio::error_code& e, std::size_t)
+                {
+                    if (!e)
+                    {
+                        on_message(fh);
+                        return;
+                    }
+                    error(e);
+                });
+        }
+
+        void on_message(ws::frame_header fh)
+        {
+            data_->seek(BUFFER_OPTION_CHEAP_PREPEND);
 
             if (fh.mask)
             {
-                fh.key = *((uint32_t*)(tmp + (need - sizeof(fh.key))));
                 // unmask data:
-                uint8_t* d = (uint8_t*)(tmp + need);
-                for (uint64_t i = 0; i < reallen; i++)
+                uint8_t* d = (uint8_t*)data_->data();
+                size_t size = data_->size();
+                for (size_t i = 0; i < size; ++i)
                 {
-                    d[i] = d[i] ^ ((uint8_t*)(&fh.key))[i % 4];
+                    d[i] = d[i] ^ fh.mask_key[i % 4];
                 }
             }
 
-            recv_buf_->consume(need);
             if (fh.op == ws::opcode::close)
             {
-                return make_error_code(moon::error::ws_closed);
+                return error(make_error_code(moon::error::ws_closed), 0, std::string{data_->data(), data_->size()});
             }
-            message msg = message::with_empty();
-            if (recv_buf_->size()==reallen)
-            {
-                recv_buf_->seek(BUFFER_OPTION_CHEAP_PREPEND);
-                msg = message{ std::move(recv_buf_) };
-            }
-            else
-            {
-                msg = message{ reallen + BUFFER_OPTION_CHEAP_PREPEND };
-                auto b = msg.as_buffer();
-                b->commit(BUFFER_OPTION_CHEAP_PREPEND);
-                b->write_back(recv_buf_->data(), reallen);
-                b->seek(BUFFER_OPTION_CHEAP_PREPEND);
-                recv_buf_->consume(reallen);
-            }
+
+            message msg = message{ std::move(data_) };
+            msg.set_type(type_);
 
             switch (fh.op)
             {
@@ -503,16 +479,12 @@ namespace moon
 
             handle_message(std::move(msg));
 
-            if (nullptr == recv_buf_) {
-                return std::error_code();
-            }
-
-            return decode_frame();
+            handle_frame();
         }
 
-        static const std::array<uint8_t, 4> randkey()
+        static const ws::mask_key_type randkey()
         {
-            std::array<uint8_t, 4> tmp;
+            ws::mask_key_type tmp{};
             char x = 0;
             for (auto& c : tmp) {
                 c = static_cast<uint8_t>(std::rand() & 0xFF);
@@ -625,7 +597,8 @@ namespace moon
             return response;
         }
 
-    protected:
-        buffer_ptr_t recv_buf_;
+    private:
+        buffer cache_;
+        buffer_ptr_t data_;
     };
 }
