@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
         std::shared_ptr<server> server_ = std::make_shared<server>();
         wk_server = server_;
 
-        if(file::read_all(bootstrap, std::ios::in).substr(0, 11) == "---__init__")
+        if(file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos)
         {
             std::unique_ptr<lua_State, moon::state_deleter> lua_{ luaL_newstate() };
             lua_State* L = lua_.get();
