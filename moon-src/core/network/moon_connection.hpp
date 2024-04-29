@@ -48,24 +48,36 @@ namespace moon
         {
             flag_ = v;
         }
-    protected:
-        void prepare_send(const_buffers_holder& holder, const buffer_shr_ptr_t& buf) override
+    private:
+        void prepare_send(size_t default_once_send_bytes) override
         {
-            size_t total = buf->size();
-            const char* p = buf->data();
-            holder.push();
-            message_size_t  size = 0, header = 0;
-            do
-            {
-                header = size = (total >= MESSAGE_CONTINUED_FLAG) ? MESSAGE_CONTINUED_FLAG : static_cast<message_size_t>(total);
-                host2net(header);
-                holder.push_slice(header, p, size);
-                assert(holder.size() < 100);
-                total -= size;
-                p += size;
-            } while (total != 0);
-            if (size == MESSAGE_CONTINUED_FLAG)
-                holder.push_slice(0, nullptr, 0);//end flag
+            size_t bytes = 0;
+            size_t queue_size = queue_.size();
+            for (size_t i = 0; i < queue_size; ++i) {
+                const auto& buf = queue_[i];
+                size_t total = buf->size();
+                bytes += total;
+                const char* data = buf->data();
+                wbuffers_.begin_write_slice();
+                message_size_t size = 0, header = 0;
+                do
+                {
+                    header = size = (total >= MESSAGE_CONTINUED_FLAG) ? MESSAGE_CONTINUED_FLAG : static_cast<message_size_t>(total);
+                    host2net(header);
+                    wbuffers_.write_slice(&header, sizeof(header), data, size);
+                    total -= size;
+                    data += size;
+                } while (total != 0);
+
+                if (size == MESSAGE_CONTINUED_FLAG) {
+                    header = 0;
+                    wbuffers_.write_slice(&header, sizeof(header), nullptr, 0);//end flag
+                }
+
+                if (bytes >= default_once_send_bytes){
+                    break;
+                }
+            }
         }
 
         void read_header()

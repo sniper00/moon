@@ -2,10 +2,10 @@
 #include "config.hpp"
 #include "asio.hpp"
 #include "message.hpp"
-#include "const_buffers_holder.hpp"
-#include "common/string.hpp"
-#include "error.hpp"
 #include "common/vec_deque.hpp"
+#include "common/string.hpp"
+#include "write_buffer.hpp"
+#include "error.hpp"
 
 namespace moon
 {
@@ -79,10 +79,9 @@ namespace moon
 
             will_close_ =  enum_has_any_bitmask(mask, socket_send_mask::close) ? true : will_close_;
 
-            bool write_in_progress = !queue_.empty();
             queue_.push_back(std::move(data));
 
-            if (!write_in_progress)
+            if (queue_.size() == 1)
             {
                 post_send();
             }
@@ -186,25 +185,28 @@ namespace moon
             return address;
         }
     protected:
-        virtual void prepare_send(const_buffers_holder& holder, const buffer_shr_ptr_t& buf)
+        virtual void prepare_send(size_t default_once_send_bytes)
         {
-            holder.push_back(buf->data(), buf->size());
-        }
-
-        void post_send()
-        {
+            size_t bytes = 0;
             size_t queue_size = queue_.size();
             for (size_t i = 0; i < queue_size; ++i) {
-                prepare_send(holder_, queue_[i]);
-                if (holder_.size() >= const_buffers_holder::max_count)
+                const auto& buf = queue_[i];
+                wbuffers_.write(buf->data(), buf->size());
+                bytes+= buf->size();
+                if (bytes >= default_once_send_bytes)
                 {
                     break;
                 }
             }
+        }
 
+        void post_send()
+        {
+            prepare_send(262144);
+ 
             asio::async_write(
                 socket_,
-                make_buffers_ref(holder_.buffers()),
+                make_buffers_ref(wbuffers_.buffers()),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
                 {
                     if (e)
@@ -213,12 +215,12 @@ namespace moon
                         return;
                     }
 
-                    for (size_t i = 0; i < holder_.count(); ++i)
+                    for (size_t i = 0; i < wbuffers_.size(); ++i)
                     {
                         queue_.pop_front();
                     }
 
-                    holder_.clear();
+                    wbuffers_.clear();
 
                     if (!queue_.empty())
                     {
@@ -280,7 +282,7 @@ namespace moon
         uint32_t serviceid_ = 0;
         time_t recvtime_ = 0;
         moon::socket_server* parent_;
-        const_buffers_holder holder_;
+        write_buffer wbuffers_;
         VecDeque<buffer_shr_ptr_t> queue_;
         socket_t socket_;
     };

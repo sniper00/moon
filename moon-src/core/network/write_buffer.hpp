@@ -1,33 +1,32 @@
 #pragma once
 #include "config.hpp"
+#include <deque>
 #include "common/buffer.hpp"
 #include "asio.hpp"
 
 namespace moon
 {
-    class const_buffers_holder
+    class write_buffer
     {
     public:
-        static constexpr size_t max_count = 64;
+        write_buffer() = default;
 
-        const_buffers_holder() = default;
-
-        void push_back(const char* data, size_t len)
+        void write(const char* data, size_t len)
         {
             buffers_.emplace_back(data, len);
-            ++count_;
+            ++size_;
         }
 
-        void push()
+        void begin_write_slice()
         {
-            ++count_;
+            ++size_;
         }
 
-        void push_slice(message_size_t header, const char* data, size_t len)
+        void write_slice(void* padding_data, size_t padding_size, const char* data, size_t len)
         {
-            headers_.emplace_front(header);
-            message_size_t& value = headers_.front();
-            buffers_.emplace_back(reinterpret_cast<const char*>(&value), sizeof(value));
+            auto& space = padding_.emplace_front();
+            memcpy(space.data(), padding_data, std::min(space.size(), padding_size));
+            buffers_.emplace_back(space.data(), padding_size);
             if(len>0)
                 buffers_.emplace_back(data, len);
         }
@@ -39,25 +38,19 @@ namespace moon
 
         size_t size() const
         {
-            return buffers_.size();
-        }
-
-        //hold buffer's count
-        size_t count() const
-        {
-            return count_;
+            return size_;
         }
 
         void clear()
         {
-            count_ = 0;
+            size_ = 0;
             buffers_.clear();
-            headers_.clear();
+            padding_.clear();
         }
     private:
-        size_t count_ = 0;
+        size_t size_ = 0;
         std::vector<asio::const_buffer> buffers_;
-        std::forward_list<message_size_t> headers_;
+        std::deque<std::array<char, 16>> padding_;
     };
 
     /*

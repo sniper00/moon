@@ -51,6 +51,8 @@ namespace moon
                 return std::nullopt;
             }
 
+            read_in_progress_ = true;
+
             buffer* buf = read_cache_.as_buffer();
             buf->commit(more_bytes_);
             buf->consume(consume_);
@@ -65,7 +67,7 @@ namespace moon
             }
         }
 
-    protected:
+    private:
         std::optional<std::string_view> read(read_until op)
         {
             size_t delim_size = op.delim.size();

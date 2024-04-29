@@ -150,7 +150,7 @@ namespace moon
             return base_connection_t::send(std::move(data), mask);
         }
 
-    protected:
+    private:
         void read_handshake()
         {
             asio::async_read_until(socket_, moon::streambuf(&cache_, cache_.capacity()), STR_DCRLF,
