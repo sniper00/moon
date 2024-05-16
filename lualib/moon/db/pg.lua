@@ -483,7 +483,7 @@ local function format_query_result(row_desc, data_rows, command_complete)
 end
 
 function pg.pack_query_buffer(buf)
-    wfront(buf, MSG_TYPE.query, strpack(">I", bsize(buf)+5))
+    wfront(buf, MSG_TYPE.query, strpack(">I", bsize(buf)+4+#NULL))
     wback(buf, NULL)
 end
 
