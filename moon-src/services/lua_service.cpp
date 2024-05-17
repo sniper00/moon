@@ -230,11 +230,7 @@ void lua_service::dispatch(message* m)
     {
         luaL_traceback(L, L, e.what(), 1);
         const char* trace = lua_tostring(L, -1);
-        if (nullptr == trace)
-        {
-            trace = "";
-        }
-        CONSOLE_ERROR("dispatch:\n%s", trace);
+        CONSOLE_ERROR("dispatch:\n%s", (trace!=nullptr)?trace:"");
         lua_pop(L, 1);
     }
 }

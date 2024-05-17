@@ -55,8 +55,8 @@ function buffer.write_front(buf, ...) end
 
 --- Write string to buffer
 ---@param buf buffer_ptr
----@param str string
-function buffer.write_back(buf, str) end
+---@param ... string
+function buffer.write_back(buf, ...) end
 
 --- Moves the read position of the buffer
 ---@param buf buffer_ptr
