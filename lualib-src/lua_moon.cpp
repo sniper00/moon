@@ -194,7 +194,7 @@ static void table_tostring(std::string& res, lua_State* L, int index)
     lua_pushnil(L);
     while (lua_next(L, index))
     {
-        res.append(lua_tostring(L, -2));
+        res.append(lua_tostring_unchecked(L, -2));
         res.append("=");
         switch (lua_type(L, -1))
         {

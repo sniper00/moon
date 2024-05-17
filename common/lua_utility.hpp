@@ -296,4 +296,25 @@ namespace moon
     {
         return luaL_opt(L, lua_check<bool>, arg, def);
     }
+
+    inline std::string lua_tostring_unchecked(lua_State *L, int index)
+    {
+        int type = lua_type(L, index);
+        switch (type) {
+        case LUA_TNIL:
+            return std::string{"nil"};
+        case LUA_TNUMBER:
+            return lua_isinteger(L, index)?std::to_string(lua_tointeger(L, index))
+                        :std::to_string(lua_tonumber(L, index));
+        case LUA_TBOOLEAN:
+            return lua_toboolean(L, index)? std::string{"true"}:std::string{"false"};
+        case LUA_TSTRING: {
+            size_t sz = 0;
+            const char *str = lua_tolstring(L, index, &sz);
+            return std::string{ str, sz };
+        }
+        default:
+            return std::string{"string type expected"};
+        }
+    }
 }
