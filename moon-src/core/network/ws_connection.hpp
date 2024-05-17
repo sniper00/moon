@@ -454,7 +454,7 @@ namespace moon
 
             if (fh.op == ws::opcode::close)
             {
-                return error(make_error_code(moon::error::ws_closed), 0, std::string{data_->data(), data_->size()});
+                return error(make_error_code(moon::error::ws_closed), std::string{data_->data(), data_->size()});
             }
 
             message msg = message{ std::move(data_) };

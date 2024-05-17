@@ -100,7 +100,7 @@ namespace moon
 
         void connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds = 0);
 
-        std::optional<std::string_view> read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid);
+        direct_read_result read(uint32_t fd, size_t n, std::string_view delim, int64_t sessionid);
 
         bool write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask = socket_send_mask::none);
 

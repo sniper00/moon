@@ -29,6 +29,7 @@ local socket = core
 ---@param listenfd integer
 ---@param serviceid? integer
 function socket.accept(listenfd, serviceid)
+    assert(listenfd>0, "Invalid listenfd")
     serviceid = serviceid or id
     local fd, err = moon.wait(accept(listenfd, serviceid))
     if not fd then
@@ -38,6 +39,7 @@ function socket.accept(listenfd, serviceid)
 end
 
 function socket.start(listenfd)
+    assert(listenfd>0, "Invalid listenfd")
     accept(listenfd, id, 0)
 end
 
@@ -66,10 +68,10 @@ end
 ---@overload fun(fd: integer, count: integer) @ read a specified number of bytes from the socket.
 function socket.read(fd, delim, maxcount)
     local session, data = read(fd, delim, maxcount)
-    if data then
+    if session and data then
         return data
     end
-    return moon.wait(session)
+    return moon.wait(session, data)
 end
 
 function socket.write_then_close(fd, data)

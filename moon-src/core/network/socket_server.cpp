@@ -248,17 +248,13 @@ void socket_server::connect(const std::string& host, uint16_t port, uint32_t own
         });
 }
 
-std::optional<std::string_view> socket_server::read(uint32_t fd, uint32_t owner, size_t n, std::string_view delim, int64_t sessionid)
+direct_read_result socket_server::read(uint32_t fd, size_t n, std::string_view delim, int64_t sessionid)
 {
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
         return iter->second->read(n, delim, sessionid);
     }
-
-    asio::post(context_, [this, owner, sessionid]() {
-        response(0, owner, "socket.read: closed", sessionid, PTYPE_ERROR);
-    });
-    return std::nullopt;
+    return direct_read_result{ false, { "socket.read: closed" } };
 }
 
 bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask)

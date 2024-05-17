@@ -88,7 +88,7 @@ namespace moon
                 return;
             }
 
-            asio::async_read(socket_, moon::streambuf(&cache_, cache_.capacity()), asio::transfer_at_least(sizeof(message_size_t)),
+            asio::async_read(socket_, moon::streambuf{&cache_, cache_.capacity()}, asio::transfer_at_least(sizeof(message_size_t)),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
                 {
                     if (!e)

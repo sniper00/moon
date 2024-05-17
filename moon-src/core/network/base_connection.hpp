@@ -44,13 +44,12 @@ namespace moon
             recvtime_ = now();
         }
 
-        virtual std::optional<std::string_view> read(size_t, std::string_view, int64_t)
+        virtual direct_read_result read(size_t, std::string_view, int64_t)
         {
             CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
-            asio::post(socket_.get_executor(), [this, self = shared_from_this()] {
-                error(make_error_code(error::invalid_read_operation));
-                });
-            return std::nullopt;
+            parent_->close(fd_);
+            parent_ = nullptr;
+            return direct_read_result{false, { "Unsupported read operation" } };
         };
 
         virtual bool send(buffer_shr_ptr_t&& data, socket_send_mask mask)
@@ -234,9 +233,8 @@ namespace moon
                 });
         }
 
-        virtual void error(const asio::error_code& e, int64_t session = 0, const std::string& additional = "")
+        virtual void error(const asio::error_code& e, const std::string& additional = "")
         {
-            (void)session;
             if (nullptr == parent_){
                 return;
             }

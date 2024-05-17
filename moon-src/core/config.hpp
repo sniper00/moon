@@ -92,6 +92,16 @@ namespace moon
     using message_size_t = uint16_t;//PTYPE_SOCKET_MOON message length type
     using buffer_ptr_t = std::unique_ptr<buffer>;
     using buffer_shr_ptr_t = std::shared_ptr<buffer>;
+
+    struct direct_read_result
+    {
+        direct_read_result(bool suc, std::string_view s)
+            :success(suc), size(s.size()), data(s.data()){}
+
+        size_t success : 1;
+        size_t size : 63;
+        const char* data = nullptr;
+    };
 }
 
 

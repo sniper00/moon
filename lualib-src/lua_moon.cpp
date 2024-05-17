@@ -641,12 +641,15 @@ static int lasio_read(lua_State* L)
         delim = lua_check<std::string_view>(L, 2);
         size = (int64_t)luaL_optinteger(L, 3, 0);
     }
-    auto res = sock.read(fd, S->id(), size, delim, session);
-    lua_pushinteger(L, session);
-    if (res.has_value()) {
-        lua_pushlstring(L, res->data(), res->size());
+
+    auto res = sock.read(fd, size, delim, session);
+    res.success ? lua_pushinteger(L, session) : lua_pushboolean(L, 0);
+
+    if (res.data!=nullptr) {
+        lua_pushlstring(L, res.data, res.size);
         return 2;
     }
+
     return 1;
 }
 
