@@ -145,19 +145,23 @@ namespace moon
             }
 
             compressed_pair(size_t cap)
+                :bitmask(0)
+                ,capacity(0)
             {
                 prepare(cap);
                 readpos = writepos = 0;
             }
 
             compressed_pair(compressed_pair&& other) noexcept
-                : capacity(std::exchange(other.capacity, 0))
+                : bitmask(other.bitmask)
+                , capacity(other.capacity)
                 , readpos(std::exchange(other.readpos, 0))
                 , writepos(std::exchange(other.writepos, 0))
                 , data(std::exchange(other.data, nullptr))
          
             {
-
+                other.bitmask = 0;
+                other.capacity = 0;
             }
 
             compressed_pair& operator=(compressed_pair&& other) noexcept
@@ -166,10 +170,13 @@ namespace moon
                 {
                     if(nullptr != data)
                         first().deallocate(data, capacity);
-                    capacity = std::exchange(other.capacity, 0);
+                    bitmask = other.bitmask;
+                    capacity = other.capacity;
                     readpos = std::exchange(other.readpos, 0);
                     writepos = std::exchange(other.writepos, 0);
                     data = std::exchange(other.data, nullptr);
+                    other.bitmask = 0;
+                    other.capacity = 0;
                 }
                 return *this;
             }
@@ -231,7 +238,8 @@ namespace moon
                 return std::pair{data + writepos, need };
             }
 
-            size_t capacity = 0;
+            size_t bitmask : 8;
+            size_t capacity: 56;
             size_t readpos = 0;
             size_t writepos = 0;
             pointer data = nullptr;
@@ -411,6 +419,7 @@ namespace moon
         void clear() noexcept
         {
             pair_.writepos = pair_.readpos = 0;
+            pair_.bitmask = 0;
         }
 
         void commit(std::size_t n) noexcept
@@ -483,6 +492,32 @@ namespace moon
         size_t capacity() const noexcept
         {
             return pair_.capacity;
+        }
+
+        template<typename Enum>
+        void add_bitmask(Enum e) noexcept
+        {
+            static_assert(std::is_enum_v<Enum> && std::is_same_v<std::underlying_type_t<Enum>, uint8_t>);
+            uint8_t v = (uint8_t)pair_.bitmask;
+            v |= (uint8_t)e;
+            pair_.bitmask = v;
+        }
+
+        template<typename Enum>
+        bool has_bitmask(Enum e) noexcept
+        {
+            static_assert(std::is_enum_v<Enum> && std::is_same_v<std::underlying_type_t<Enum>, uint8_t>);
+            uint8_t v = (uint8_t)pair_.bitmask;
+            return ((v & (uint8_t)e) != 0);
+        }
+
+        template<typename Enum>
+        void clear_bitmask(Enum e) noexcept
+        {
+            static_assert(std::is_enum_v<Enum> && std::is_same_v<std::underlying_type_t<Enum>, uint8_t>);
+            uint8_t v = (uint8_t)pair_.bitmask;
+            v &= ~(uint8_t)e;
+            pair_.bitmask = v;
         }
     private:
         compressed_pair pair_;

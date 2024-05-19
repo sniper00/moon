@@ -1,5 +1,6 @@
 local moon = require("moon")
 local seri = require("seri")
+local buffer = require("buffer")
 local crypt = require("crypt")
 local socket = require("moon.socket")
 local redis = require("moon.db.redis")
@@ -29,8 +30,8 @@ if conf.name then
         return db, err
     end
 
-    ---@param msg buffer_shr_ptr
-    local function exec_one(db, msg, sender, sessionid, opt)
+    ---@param cmd buffer_shr_ptr
+    local function exec_one(db, cmd, sender, sessionid, opt)
         local reconnect_times = 1
 
         local auto_reconnect = sessionid == 0
@@ -54,9 +55,9 @@ if conf.name then
             end
 
             if opt == "Q" then
-                res, err = redis.raw_send(db, msg)
+                res, err = redis.raw_send(db, cmd)
             else
-                local t = { moon.unpack(moon.decode_ref_buffer(msg, "C")) }
+                local t = { moon.unpack(buffer.unpack(cmd, "C")) }
                 res, err = db[t[1]](db, table.unpack(t, 2))
             end
 
@@ -71,7 +72,7 @@ if conf.name then
                 end
             else
                 if sessionid == 0 and not res then
-                    moon.error(err, crypt.base64encode(moon.decode_ref_buffer(msg, 'Z')))
+                    moon.error(err, crypt.base64encode(buffer.unpack(cmd)))
                 else
                     if err then
                         moon.response("lua", sender, sessionid, res, err)
@@ -91,24 +92,12 @@ if conf.name then
     local traceback = debug.traceback
     local xpcall = xpcall
 
-    local clone = moon.ref_buffer
-    local release = moon.unref_buffer
-
-    local free_all = function(one)
-        for k, req in pairs(one.queue) do
-            if type(req[1]) == "userdata" then
-                release(req[1])
-            end
-        end
-        one.queue = {}
-    end
+    local clone = buffer.to_shared
 
     local pool = {}
 
     for _ = 1, db_pool_size do
-        local one = setmetatable({ queue = list.new(), running = false, db = false }, {
-            __gc = free_all
-        })
+        local one = { queue = list.new(), running = false, db = false }
         tbinsert(pool, one)
     end
 
@@ -143,7 +132,6 @@ if conf.name then
                     ctx.db = db
                 end
                 if iscall or db then
-                    release(req[1])
                     list.pop(ctx.queue)
                 end
             end

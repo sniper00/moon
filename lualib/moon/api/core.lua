@@ -8,7 +8,7 @@ error("DO NOT REQUIRE THIS FILE")
 --- lightuserdata, cpp type `message*`
 ---@class message_ptr
 
---- lightuserdata, cpp type `buffer_shr_ptr*`
+--- userdata buffer_shr_ptr
 ---@class buffer_shr_ptr
 
 --- lightuserdata, cpp type `char*`
@@ -115,27 +115,6 @@ function core.now() end
 ---@nodiscard
 function core.decode(msg, pattern) end
 
---- Get buffer_shr_ptr 's field
----
---- - 'Z' to lua string
---- - 'N' buffer size
---- - 'B' buffer*
---- - 'C' char* and size
----@param msg buffer_shr_ptr
----@param pattern string
----@return ...
----@nodiscard
-function core.decode_ref_buffer(msg, pattern) end
-
---- Converts a buffer_ptr into a buffer_shr_ptr. The buffer_shr_ptr is responsible for managing the lifecycle of the buffer_ptr, often used for reusing the same buffer_ptr.
----@param buf buffer_ptr
----@return buffer_shr_ptr
-function core.ref_buffer(buf) end
-
---- release buffer_shr_ptr
----@param p buffer_shr_ptr
-function core.unref_buffer(p) end
-
 ---redirect a message to other service
 function core.redirect(msg, receiver, mtype, sender, sessionid) end
 
@@ -158,20 +137,15 @@ function asio.listen(host, port, protocol) end
 
 ---send data to fd
 ---@param fd integer
----@param data string|buffer_ptr
----@param flag? integer
+---@param data string|buffer_ptr|buffer_shr_ptr
+---@param mask? integer
 ---@return boolean
-function asio.write(fd, data, flag) end
+function asio.write(fd, data, mask) end
 
 ---@param fd integer
 ---@param m message_ptr
 ---@return boolean
 function asio.write_message(fd, m) end
-
----@param fd integer
----@param p buffer_shr_ptr
----@return boolean
-function asio.write_ref_buffer(fd, p) end
 
 --- 设置读操作超时, 默认是0, 永远不会超时。为了处理大量链接的检测,实际超时检测并不严格，误差范围为[t, t+10)
 ---@param fd integer

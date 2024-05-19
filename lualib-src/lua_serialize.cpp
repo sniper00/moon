@@ -499,10 +499,6 @@ static int unpack(lua_State* L)
 
 static int peek_one(lua_State* L)
 {
-    if (lua_isnoneornil(L, 1)) {
-        return 0;
-    }
-
     if (lua_type(L, 1) != LUA_TLIGHTUSERDATA)
     {
         return luaL_error(L, "need userdata");

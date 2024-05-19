@@ -51,6 +51,7 @@ namespace moon
             buf->commit(std::exchange(more_bytes_, 0));
             buf->consume(std::exchange(consume_, 0));
 
+            read_in_progress_ = true;
             read_cache_.set_sessionid(session);
 
             return delim.empty() ? read(read_exactly{ size }) : read(read_until{ size, delim });

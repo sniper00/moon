@@ -11,7 +11,8 @@ local write = core.write
 local udp = core.udp
 local unpack_udp = core.unpack_udp
 
-local flag_close = 2
+local mask_close<const> = 2
+local mask_moon_packed<const> = 32
 
 local supported_tcp_protocol = {
     [moon.PTYPE_SOCKET_TCP] = "tcp",
@@ -24,6 +25,8 @@ local supported_tcp_protocol = {
 
 ---@class socket : asio
 local socket = core
+
+socket.mask_moon_packed = mask_moon_packed
 
 ---@async
 ---@param listenfd integer
@@ -74,8 +77,16 @@ function socket.read(fd, delim, maxcount)
     return moon.wait(session, data)
 end
 
+---@param fd integer
+---@param data string|buffer_ptr|buffer_shr_ptr
 function socket.write_then_close(fd, data)
-    write(fd, data, flag_close)
+    write(fd, data, mask_close)
+end
+
+---@param fd integer
+---@param data string|buffer_ptr|buffer_shr_ptr
+function socket.write_moon_packed(fd, data)
+    write(fd, data, mask_moon_packed)
 end
 
 local socket_data_type = {

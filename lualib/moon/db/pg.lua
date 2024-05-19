@@ -314,6 +314,8 @@ function pg.connect(opts)
         return {code = "SOCKET", message = err}
     end
 
+    socket.settimeout(sock, 10)
+
     local obj = table.deepcopy(opts)
     obj.sock = sock
 
@@ -493,7 +495,7 @@ function pg.query(self, sql)
     if type(sql) == "string" then
         send_message(self, MSG_TYPE.query, {sql, NULL})
     else
-        socket.write_ref_buffer(self.sock, sql)
+        socket.write(self.sock, sql)
     end
     local row_desc, data_rows, err_msg
     local result, notifications

@@ -54,26 +54,31 @@ namespace moon
             size_t bytes = 0;
             size_t queue_size = queue_.size();
             for (size_t i = 0; i < queue_size; ++i) {
-                const auto& buf = queue_[i];
-                size_t total = buf->size();
-                bytes += total;
-                const char* data = buf->data();
-                wbuffers_.begin_write_slice();
-                message_size_t size = 0, header = 0;
-                do
-                {
-                    header = size = (total >= MESSAGE_CONTINUED_FLAG) ? MESSAGE_CONTINUED_FLAG : static_cast<message_size_t>(total);
-                    host2net(header);
-                    wbuffers_.write_slice(&header, sizeof(header), data, size);
-                    total -= size;
-                    data += size;
-                } while (total != 0);
+                const auto& elm = queue_[i];
+                size_t size = elm->size();
+                const char* data = elm->data();
+                bytes += size;
+                if (!elm->has_bitmask(socket_send_mask::moon_packed)) {
+                    wbuffers_.begin_write_slice();
+                    message_size_t slice_size = 0, header = 0;
+                    do
+                    {
+                        header = slice_size = (size >= MESSAGE_CONTINUED_FLAG) ? MESSAGE_CONTINUED_FLAG : static_cast<message_size_t>(size);
+                        host2net(header);
+                        wbuffers_.write_slice(&header, sizeof(header), data, slice_size);
+                        size -= slice_size;
+                        data += slice_size;
+                    } while (size != 0);
 
-                if (size == MESSAGE_CONTINUED_FLAG) {
-                    header = 0;
-                    wbuffers_.write_slice(&header, sizeof(header), nullptr, 0);//end flag
+                    if (slice_size == MESSAGE_CONTINUED_FLAG) {
+                        header = 0;
+                        wbuffers_.write_slice(&header, sizeof(header), nullptr, 0);//end flag
+                    }
                 }
-
+                else
+                {
+                    wbuffers_.write(data, size);
+                }
                 if (bytes >= default_once_send_bytes){
                     break;
                 }
@@ -88,7 +93,7 @@ namespace moon
                 return;
             }
 
-            asio::async_read(socket_, moon::streambuf{&cache_, cache_.capacity()}, asio::transfer_at_least(sizeof(message_size_t)),
+            asio::async_read(socket_, moon::streambuf(&cache_, cache_.capacity()), asio::transfer_at_least(sizeof(message_size_t)),
                 [this, self = shared_from_this()](const asio::error_code& e, std::size_t)
                 {
                     if (!e)

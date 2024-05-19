@@ -189,9 +189,9 @@ namespace moon
             size_t bytes = 0;
             size_t queue_size = queue_.size();
             for (size_t i = 0; i < queue_size; ++i) {
-                const auto& buf = queue_[i];
-                wbuffers_.write(buf->data(), buf->size());
-                bytes+= buf->size();
+                const auto& elm = queue_[i];
+                wbuffers_.write(elm->data(), elm->size());
+                bytes+= elm->size();
                 if (bytes >= default_once_send_bytes)
                 {
                     break;

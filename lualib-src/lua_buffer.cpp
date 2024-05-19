@@ -8,10 +8,22 @@ using namespace moon;
 constexpr int MAX_DEPTH = 32;
 
 static buffer* get_pointer(lua_State* L, int index) {
-    auto buf = reinterpret_cast<buffer*>(lua_touserdata(L, index));
-    if (buf == NULL)
+    buffer* b = nullptr;
+    if (lua_type(L, index) == LUA_TLIGHTUSERDATA) {
+        b = static_cast<buffer*>(lua_touserdata(L, index));
+    }
+    else {
+        auto shr = static_cast<buffer_shr_ptr_t*>(lua_touserdata(L, index));
+        if (shr == nullptr) {
+            luaL_argerror(L, index, "null buffer_shr_ptr_t pointer");
+            return nullptr;
+        }
+        b = shr->get();
+    }
+
+    if (b == nullptr)
         luaL_argerror(L, index, "null buffer pointer");
-    return buf;
+    return b;
 }
 
 static int clear(lua_State* L)
@@ -304,6 +316,51 @@ static int concat_string(lua_State *L)
     return lua_error(L);
 }
 
+static int to_shared(lua_State* L)
+{
+    buffer* b = (buffer*)lua_touserdata(L, 1);
+    if (nullptr == b)
+        return luaL_argerror(L, 1, "lightuserdata(buffer*) expected");
+
+    if (b->size() == 0) {
+        return 0;
+    }
+
+    void* space = lua_newuserdatauv(L, sizeof(moon::buffer_shr_ptr_t), 0);
+    new (space) moon::buffer_shr_ptr_t{ b };
+    if (luaL_newmetatable(L, "lbuffer_shr_ptr"))//mt
+    {
+        auto gc = [](lua_State* L)
+            {
+                buffer_shr_ptr_t* shr = (buffer_shr_ptr_t*)lua_touserdata(L, 1);
+                if (nullptr == shr)
+                    return luaL_argerror(L, 1, "invalid buffer_shr_ptr_t pointer");
+                std::destroy_at(shr);
+                return 0;
+            };
+        lua_pushcclosure(L, gc, 0);
+        lua_setfield(L, -2, "__gc");
+    }
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+static int has_bitmask(lua_State* L)
+{
+    auto buf = get_pointer(L, 1);
+    bool has = buf->has_bitmask(static_cast<socket_send_mask>(luaL_checkinteger(L, 2)));
+    lua_pushboolean(L, has ? 1 : 0);
+    return 1;
+}
+
+static int add_bitmask(lua_State* L)
+{
+    auto buf = get_pointer(L, 1);
+    auto bitmask = static_cast<socket_send_mask>(luaL_checkinteger(L, 2));
+    buf->add_bitmask(bitmask);
+    return 0;
+}
+
 extern "C" {
     int LUAMOD_API luaopen_buffer(lua_State* L)
     {
@@ -319,8 +376,11 @@ extern "C" {
             , {"seek", seek}
             , {"commit", commit}
             , {"prepare", prepare}
-            , {"concat",concat }
-            , {"concat_string",concat_string }
+            , {"concat", concat }
+            , {"concat_string", concat_string }
+            , {"to_shared", to_shared }
+            , {"has_bitmask", has_bitmask}
+            , {"add_bitmask", add_bitmask}
             , {NULL, NULL}
         };
         luaL_newlib(L, l);

@@ -1,5 +1,6 @@
 local moon = require("moon")
 local seri = require("seri")
+local buffer = require("buffer")
 
 local conf = ...
 
@@ -177,11 +178,15 @@ local function cluster_service()
     end
 
     function command.Request(msg)
-        ---@type cluster_header
-        local header = unpack_one(moon.decode(msg, "B"))
 
+        local buf = moon.decode(msg, "L")
+
+        ---@type cluster_header
+        local header = unpack_one(buf)
+
+		local shr = buffer.to_shared(buf)
         local c = clusters[header.to_node]
-        if c and c.fd and socket.write_message(c.fd, msg) then
+        if c and c.fd and socket.write(c.fd, shr) then
             if header.session < 0 then
                 --记录mode-call消息，网络断开时，返回错误信息
                 add_send_watch(c.fd, header.from_addr, -header.session)
@@ -193,7 +198,7 @@ local function cluster_service()
             end
         end
 
-        local data = moon.decode(msg, "Z")
+        local data = buffer.unpack(buf)
 
         local scope<close> = lock()
 

@@ -165,7 +165,7 @@ end
 
 local function request(fd, req, res, israw)
 	if israw then
-		socket.write_ref_buffer(fd,  req)
+		socket.write(fd,  req)
 	else
 		socket.write(fd, buffer.concat(req))
 	end

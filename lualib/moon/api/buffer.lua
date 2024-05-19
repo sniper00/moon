@@ -34,7 +34,7 @@ function buffer.size(buf) end
 --- buffer.unpack(buf, fmt, pos) unpacks the buffer data according to the `fmt` format. 
 --- The optional parameter `pos` (default is 0) marks where to start reading from the buffer.
 ---
---- @param buf buffer_ptr
+--- @param buf buffer_ptr|buffer_shr_ptr
 --- @param fmt? string @ like string.unpack but only supports '>', '<', 'h', 'H', 'i', 'I'
 --- @param pos? integer @ start position
 --- @param count? integer @ number of elements to read
@@ -83,5 +83,19 @@ function buffer.concat(...) end
 --- Converts the parameters to a string.
 ---@return string
 function buffer.concat_string(...) end
+
+--- Converts a buffer_ptr into userdata(buffer_shr_ptr)
+---@param buf buffer_ptr
+---@return buffer_shr_ptr
+function buffer.to_shared(buf) end
+
+---@param buf buffer_ptr
+---@param mask integer
+---@return boolean
+function buffer.has_bitmask(buf, mask) end
+
+---@param buf buffer_ptr
+---@param mask integer
+function buffer.add_bitmask(buf, mask) end
 
 return buffer

@@ -264,6 +264,7 @@ bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask
 
     if (auto iter = connections_.find(fd); iter != connections_.end())
     {
+        data->add_bitmask(mask);
         return iter->second->send(std::move(data), mask);
     }
 

@@ -1,8 +1,5 @@
 local moon = require("moon")
-local seri = require("seri")
-
-local unpack_one = seri.unpack_one
-
+local buffer = require("buffer")
 local tbinsert = table.insert
 
 local conf = ...
@@ -12,8 +9,7 @@ if conf.name then
     local provider = require(conf.provider)
     local list = require("list")
 
-    local clone = moon.ref_buffer
-    local release = moon.unref_buffer
+    local clone = buffer.to_shared
 
     ---@param sql buffer_shr_ptr
     local function exec_one(db, sql, sender, sessionid)
@@ -28,7 +24,7 @@ if conf.name then
                 else
                     ---query success but may has sql error
                     if sessionid == 0 and code then
-                        moon.error(moon.decode_ref_buffer(sql, "Z") ..  "\n" ..table.tostring(res))
+                        moon.error(buffer.unpack(sql) ..  "\n" ..table.tostring(res))
                     else
                         moon.response("lua", sender, sessionid, res)
                     end
@@ -59,21 +55,10 @@ if conf.name then
     local traceback = debug.traceback
     local xpcall = xpcall
 
-    local free_all = function(one)
-        for _, req in pairs(one.queue) do
-            if type(req[1])=="userdata" then
-                release(req[1])
-            end
-        end
-        one.queue = {}
-    end
-
     local pool = {}
 
     for _=1,db_pool_size do
-        local one = setmetatable({queue = list.new(), running = false, db = false},{
-            __gc = free_all
-        })
+        local one = {queue = list.new(), running = false, db = false}
         tbinsert(pool,one)
     end
 
@@ -102,7 +87,6 @@ if conf.name then
                     moon.error(db)
                 end
                 ctx.db = db
-                release(req[1])
             end
             ctx.running = false
         end)

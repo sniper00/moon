@@ -439,72 +439,6 @@ static int message_redirect(lua_State* L)
     return 0;
 }
 
-static int ref_buffer(lua_State* L)
-{
-    buffer* b = (buffer*)lua_touserdata(L, 1);
-    if (nullptr == b)
-        return luaL_argerror(L, 1, "lightuserdata(buffer*) expected");
-
-    if (b->size() == 0) {
-        return 0;
-    }
-
-    auto *p = new moon::buffer_shr_ptr_t{ b };
-    lua_pushlightuserdata(L, p);
-    return 1;
-}
-
-static int unref_buffer(lua_State* L)
-{
-    auto p = (moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "lightuserdata(moon::buffer_shr_ptr_t*) expected");
-    delete p;
-    return 0;
-}
-
-static int decode_ref_buffer(lua_State* L)
-{
-    auto p = (const moon::buffer_shr_ptr_t*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "lightuserdata(buffer_shr_ptr_t*) expected");
-    buffer* b = p->get();
-    size_t len = 0;
-    const char* sz = luaL_checklstring(L, 2, &len);
-    int top = lua_gettop(L);
-    for (size_t i = 0; i < len; ++i)
-    {
-        switch (sz[i])
-        {
-        case 'Z':
-            if (b->data() != nullptr)
-                lua_pushlstring(L, b->data(), b->size());
-            else
-                lua_pushnil(L);
-            break;
-        case 'N':
-        {
-            lua_pushinteger(L, b->size());
-            break;
-        }
-        case 'B':
-        {
-            lua_pushlightuserdata(L, b);
-            break;
-        }
-        case 'C':
-        {
-             lua_pushlightuserdata(L, b->data());
-             lua_pushinteger(L, b->size());
-            break;
-        }
-        default:
-            return luaL_error(L, "invalid format option '%c'", sz[i]);
-        }
-    }
-    return lua_gettop(L) - top;
-}
-
 static int lmi_collect(lua_State* L)
 {
     (void)L;
@@ -539,9 +473,6 @@ extern "C" {
         { "adjtime", lmoon_adjtime},
         { "callback", lua_service::set_callback},
         { "decode", message_decode},
-        { "decode_ref_buffer", decode_ref_buffer},
-        { "ref_buffer", ref_buffer },
-        { "unref_buffer", unref_buffer },
         { "redirect", message_redirect},
         { "collect", lmi_collect},
         /* placeholders */
@@ -663,8 +594,17 @@ static int lasio_write(lua_State* L)
     {
         return luaL_error(L, "asio.write param 'flag' invalid");
     }
-    bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), (moon::socket_send_mask)mask);
-    lua_pushboolean(L, ok ? 1 : 0);
+
+    if (LUA_TUSERDATA == lua_type(L, 2)) {
+        buffer_shr_ptr_t shr = *static_cast<buffer_shr_ptr_t*>(lua_touserdata(L, 2));
+        bool ok = sock.write(fd, std::move(shr), (moon::socket_send_mask)mask);
+        lua_pushboolean(L, ok ? 1 : 0);
+    }
+    else
+    {
+        bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), (moon::socket_send_mask)mask);
+        lua_pushboolean(L, ok ? 1 : 0);
+    }
     return 1;
 }
 
@@ -677,19 +617,6 @@ static int lasio_write_message(lua_State* L)
     if (nullptr == m)
         return luaL_argerror(L, 2, "lightuserdata(message*) expected");
     bool ok = sock.write(fd, m->into_buffer());
-    lua_pushboolean(L, ok ? 1 : 0);
-    return 1;
-}
-
-static int lasio_write_ref_buffer(lua_State* L)
-{
-    lua_service* S = lua_service::get(L);
-    auto& sock = S->get_worker()->socket_server();
-    auto fd = (uint32_t)luaL_checkinteger(L, 1);
-    auto p =(const moon::buffer_shr_ptr_t*)lua_touserdata(L, 2);
-    if (nullptr == p)
-        return luaL_argerror(L, 2, "lightuserdata(buffer_shr_ptr_t*) expected");
-    bool ok = sock.write(fd, moon::buffer_shr_ptr_t{*p});
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }
@@ -862,7 +789,6 @@ extern "C" {
         { "read", lasio_read},
         { "write", lasio_write},
         { "write_message", lasio_write_message},
-        { "write_ref_buffer", lasio_write_ref_buffer},
         { "close", lasio_close},
         { "switch_type", lasio_switch_type},
         { "settimeout", lasio_settimeout},
