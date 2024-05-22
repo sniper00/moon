@@ -32,7 +32,7 @@ namespace moon
             read_header();
         }
 
-        bool send(buffer_shr_ptr_t&& data, socket_send_mask mask) override
+        bool send(buffer_shr_ptr_t&& data) override
         {
             if (data->size() >= MESSAGE_CONTINUED_FLAG && !enum_has_any_bitmask(flag_, enable_chunked::send))
             {
@@ -41,7 +41,7 @@ namespace moon
                     });
                 return false;
             }
-            return base_connection_t::send(std::move(data), mask);
+            return base_connection_t::send(std::move(data));
         }
 
         void set_enable_chunked(enable_chunked v)
@@ -58,7 +58,7 @@ namespace moon
                 size_t size = elm->size();
                 const char* data = elm->data();
                 bytes += size;
-                if (!elm->has_bitmask(socket_send_mask::moon_packed)) {
+                if (!elm->has_bitmask(socket_send_mask::raw)) {
                     wbuffers_.begin_write_slice();
                     message_size_t slice_size = 0, header = 0;
                     do

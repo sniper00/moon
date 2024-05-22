@@ -25,8 +25,9 @@ namespace moon
         void write_slice(void* padding_data, size_t padding_size, const char* data, size_t len)
         {
             auto& space = padding_.emplace_front();
-            memcpy(space.data(), padding_data, std::min(space.size(), padding_size));
-            buffers_.emplace_back(space.data(), padding_size);
+            size_t n = std::min(space.size(), padding_size);
+            memcpy(space.data(), padding_data, n);
+            buffers_.emplace_back(space.data(), n);
             if(len>0)
                 buffers_.emplace_back(data, len);
         }

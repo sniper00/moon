@@ -52,13 +52,8 @@ namespace moon
             return direct_read_result{false, { "Unsupported read operation" } };
         };
 
-        virtual bool send(buffer_shr_ptr_t&& data, socket_send_mask mask)
+        virtual bool send(buffer_shr_ptr_t&& data)
         {
-            if (data == nullptr || data->size() == 0)
-            {
-                return false;
-            }
-
             if (!socket_.is_open())
             {
                 return false;
@@ -76,11 +71,9 @@ namespace moon
                 }
             }
 
-            will_close_ =  enum_has_any_bitmask(mask, socket_send_mask::close) ? true : will_close_;
+            will_close_ = data->has_bitmask(socket_send_mask::close) ? true : will_close_;
 
-            queue_.push_back(std::move(data));
-
-            if (queue_.size() == 1)
+            if (queue_.push_back(std::move(data)); queue_.size() == 1)
             {
                 post_send();
             }

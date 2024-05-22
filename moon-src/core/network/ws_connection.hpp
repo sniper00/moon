@@ -143,13 +143,6 @@ namespace moon
             }
         }
 
-        bool send(buffer_shr_ptr_t&& data, socket_send_mask mask) override
-        {
-            auto payload = encode_frame(data, mask);
-            base_connection_t::send(std::move(payload), mask);
-            return base_connection_t::send(std::move(data), mask);
-        }
-
     private:
         void read_handshake()
         {
@@ -261,7 +254,8 @@ namespace moon
         {
             auto buf = std::make_shared<buffer>(s.size());
             buf->write_back(s.data(), s.size());
-            base_connection::send(std::move(buf), will_close?socket_send_mask::close:socket_send_mask::none);
+            buf->add_bitmask(socket_send_mask::raw|(will_close?socket_send_mask::close:socket_send_mask::none));
+            base_connection::send(std::move(buf));
         }
 
         template <typename T>
@@ -499,11 +493,33 @@ namespace moon
             return tmp;
         }
 
-        buffer_shr_ptr_t encode_frame(const buffer_shr_ptr_t& data, socket_send_mask send_mask) const
+        virtual void prepare_send(size_t default_once_send_bytes) override
         {
-            buffer_shr_ptr_t payload = buffer::make_shared(16);
-            payload->commit(16);
-            payload->seek(16);
+            size_t bytes = 0;
+            size_t queue_size = queue_.size();
+            for (size_t i = 0; i < queue_size; ++i) {
+                const auto& elm = queue_[i];
+                if (!elm->has_bitmask(socket_send_mask::raw)){
+                    buffer payload = encode_frame(elm);
+                    wbuffers_.begin_write_slice();
+                    wbuffers_.write_slice(payload.data(), payload.size(), elm->data(), elm->size());
+                }else{
+                    wbuffers_.write(elm->data(), elm->size());
+                }
+
+                bytes+= elm->size();
+                if (bytes >= default_once_send_bytes)
+                {
+                    break;
+                }
+            }
+        }
+
+        buffer encode_frame(const buffer_shr_ptr_t& data) const
+        {
+            buffer payload{16};
+            payload.commit(16);
+            payload.seek(16);
 
             uint64_t size = data->size();
 
@@ -515,7 +531,7 @@ namespace moon
                 {
                     d[i] = d[i] ^ mask[i % mask.size()];
                 }
-                payload->write_front(mask.data(), mask.size());
+                payload.write_front(mask.data(), mask.size());
             }
 
             uint8_t payload_len = 0;
@@ -528,13 +544,13 @@ namespace moon
                 payload_len = static_cast<uint8_t>(PAYLOAD_MID_LEN);
                 uint16_t n = (uint16_t)size;
                 moon::host2net(n);
-                payload->write_front(&n, 1);
+                payload.write_front(&n, 1);
             }
             else
             {
                 payload_len = static_cast<uint8_t>(PAYLOAD_MAX_LEN);
                 moon::host2net(size);
-                payload->write_front(&size, 1);
+                payload.write_front(&size, 1);
             }
 
             //messages from the client must be masked
@@ -543,24 +559,24 @@ namespace moon
                 payload_len |= 0x80;
             }
 
-            payload->write_front(&payload_len, 1);
+            payload.write_front(&payload_len, 1);
 
             uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
 
-            if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_text))
+            if (data->has_bitmask(socket_send_mask::ws_text))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::text);
             }
-            else if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_ping))
+            else if (data->has_bitmask(socket_send_mask::ws_ping))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::ping);
             }
-            else if (enum_has_any_bitmask(send_mask, socket_send_mask::ws_pong))
+            else if (data->has_bitmask(socket_send_mask::ws_pong))
             {
                 opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::pong);
             }
 
-            payload->write_front(&opcode, 1);
+            payload.write_front(&opcode, 1);
             return payload;
         }
 

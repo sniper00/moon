@@ -174,9 +174,8 @@ local function send_startup_message(self)
         NULL
     }
 
-    local str = buffer.concat_string(data)
-
-    socket.write(self.sock, buffer.concat_string(encode_int(#str + 4), data))
+    local startup_message = buffer.concat_string(data)
+    socket.write(self.sock, buffer.concat_string(encode_int(#startup_message + 4), startup_message))
 end
 
 local function parse_error(err_msg)

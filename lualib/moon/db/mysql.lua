@@ -7,7 +7,7 @@
 -- protocol detail: https://mariadb.com/kb/en/clientserver-protocol/
 
 
-local moon = require "moon"
+local buffer = require "buffer"
 local crypt = require("crypt")
 local socketchannel = require("moon.db.socketchannel")
 
@@ -27,6 +27,7 @@ local tointeger = math.tointeger
 
 ---@class mysql
 ---@field _server_ver string
+---@field sockchannel socketchannel
 local _M = {_VERSION = "0.14"}
 
 -- the following charset map is generated from the following mysql query:
@@ -783,7 +784,7 @@ end
 
 function _M.query(self, query)
     if type(query) == "userdata" then
-        query = moon.decode_ref_buffer(query, "Z")
+        query = buffer.unpack(query)
     end
     local querypacket = _compose_query(self, query)
     local sockchannel = self.sockchannel

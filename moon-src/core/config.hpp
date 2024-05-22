@@ -41,7 +41,7 @@ namespace moon
         ws_text = 1 << 2,
         ws_ping = 1 << 3,
         ws_pong = 1 << 4,
-        moon_packed = 1 << 5,
+        raw = 1 << 5,
         max_mask
     };
 
