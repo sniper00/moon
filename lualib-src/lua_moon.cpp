@@ -94,8 +94,8 @@ static int lmoon_md5(lua_State* L)
 
 static int lmoon_tostring(lua_State* L)
 {
+    luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
     const char* data = (const char*)lua_touserdata(L, 1);
-    luaL_argcheck(L, nullptr != data, 1, "lightuserdata(char*) expected");
     size_t len = luaL_checkinteger(L, 2);
     lua_pushlstring(L, data, len);
     return 1;
