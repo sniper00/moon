@@ -91,6 +91,11 @@ lua_service::~lua_service()
 static int protect_init(lua_State* L)
 {
     const moon::service_conf* conf = (const moon::service_conf*)lua_touserdata(L, 1);
+    
+    if (nullptr == conf) {
+        luaL_error(L, "Invalid service conf");
+        return 0;
+    }
 
     luaL_openlibs(L);
     open_custom_libs(L);
