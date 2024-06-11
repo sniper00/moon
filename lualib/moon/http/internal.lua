@@ -470,6 +470,10 @@ function M.request(method, host, options, content)
 
     if options.proxy then
         options.path = string.format("%s://%s%s", protocol, host, options.path)
+    else
+        if protocol == "https" then
+            error('Error: The protocol is set to "https", but no HTTP to HTTPS forward proxy has been set. Please set a proxy using the "options.proxy" parameter.')
+        end
     end
 
     local cache = {}
