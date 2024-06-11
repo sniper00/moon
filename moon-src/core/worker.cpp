@@ -201,7 +201,7 @@ namespace moon
                     service* s = nullptr;
                     for (auto& m : read_queue)
                     {
-                        handle_one(s, std::move(m));
+                        s = handle_one(s, std::move(m));
                         --mqsize_;
                     }
                     read_queue.clear();
