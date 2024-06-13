@@ -420,7 +420,7 @@ namespace moon
             cache_.clear();
 
             asio::async_read(socket_, moon::streambuf(data_.get()), asio::transfer_exactly(static_cast<size_t>(-diff)),
-                [this, self = shared_from_this(), size, fh](const asio::error_code& e, std::size_t)
+                [this, self = shared_from_this(), fh](const asio::error_code& e, std::size_t)
                 {
                     if (!e)
                     {

@@ -11,8 +11,6 @@ namespace moon
         size_t max_size = 0;
         static_string<max_delim_size> delim;
 
-        read_until() = default;
-
         read_until(size_t max_size, std::string_view delims)
             : max_size(max_size>0?max_size: std::numeric_limits<size_t>::max())
             , delim(delims)

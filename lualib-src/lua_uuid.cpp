@@ -9,7 +9,7 @@
 #define METANAME "luuid"
 
 //////////////////////////////////uuid///////////////////////////////////
-static constexpr int64_t FLAG_BITS = 1;
+// static constexpr int64_t FLAG_BITS = 1;
 static constexpr int64_t TYPE_BITS = 9;
 static constexpr int64_t SERVERID_BITS = 12;
 static constexpr int64_t BOOTTIMES_BITS = 10;
