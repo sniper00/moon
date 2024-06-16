@@ -27,34 +27,6 @@ namespace moon
             
         }
 
-        ~message() = default;
-
-        message(const message&) = delete;
-
-        message& operator=(const message&) = delete;
-
-        message(message&& other) noexcept
-            :type_(std::exchange(other.type_, uint8_t{}))
-            , sender_(std::exchange(other.sender_, 0))
-            , receiver_(std::exchange(other.receiver_, 0))
-            , sessionid_(std::exchange(other.sessionid_, 0))
-            , data_(std::move(other.data_))
-        {
-        }
-
-        message& operator=(message&& other) noexcept
-        {
-            if (this != std::addressof(other))
-            {
-                type_ = std::exchange(other.type_, uint8_t{});
-                sender_ = std::exchange(other.sender_, 0);
-                receiver_ = std::exchange(other.receiver_, 0);
-                sessionid_ = std::exchange(other.sessionid_, 0);
-                data_ = std::move(other.data_);
-            }
-            return *this;
-        }
-
         void set_sender(uint32_t serviceid)
         {
             sender_ = serviceid;
@@ -126,7 +98,7 @@ namespace moon
         uint32_t sender_ = 0;
         uint32_t receiver_ = 0;
         int64_t sessionid_ = 0;
-        buffer_ptr_t data_;
+        std::unique_ptr<buffer> data_;
     };
 };
 

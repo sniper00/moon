@@ -9,7 +9,7 @@ local counter = 0
 local times = 100
 
 local nreceiver = 8
-local ncount = 100
+local ncount = 1000
 local avg = 0
 
 if conf.sender then
@@ -30,8 +30,8 @@ if conf.sender then
         while i < times do
             sttime = moon.clock()
     
-            for _=1,ncount do
-                for _, id in ipairs(receivers) do
+            for _, id in ipairs(receivers) do
+                for _=1,ncount do
                     moon.send('lua', id, "TEST", 1, 2, 3, 4 , {a=1, b=2 , c = {d=1, e=2, f=3}})
                 end
             end

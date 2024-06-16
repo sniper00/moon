@@ -144,12 +144,13 @@ namespace moon
                 return *this;
             }
 
-            compressed_pair(size_t cap)
+           constexpr compressed_pair(size_t cap)
                 :bitmask(0)
-                ,capacity(0)
+                ,capacity(next_pow2(cap))
+                ,readpos(0)
+                ,writepos(0)
+                ,data(Alloc::allocate(capacity))
             {
-                prepare(cap);
-                readpos = writepos = 0;
             }
 
             compressed_pair(compressed_pair&& other) noexcept
@@ -188,7 +189,7 @@ namespace moon
                 }
             }
 
-            size_t next_pow2(size_t x)
+            static constexpr size_t next_pow2(size_t x)
             {
                 if (!(x & (x - 1)))
                 {
