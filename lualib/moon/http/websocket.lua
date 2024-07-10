@@ -63,7 +63,7 @@ function websocket.connect(url, header, timeout)
 
     local response = internal.request("GET", host, {
         path = uri,
-        connect_timeout = timeout,
+        timeout = timeout,
         header = request_header
     })
 

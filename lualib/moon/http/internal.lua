@@ -2,8 +2,7 @@
 ---@field public path string
 ---@field public header? table<string,string>
 ---@field public keepalive? integer @ seconds
----@field public connect_timeout? integer @ ms
----@field public read_timeout? integer @ ms
+---@field public timeout? integer @ The timeout is applied from when the request starts connecting until the response body has finished. milliseconds, default 10000
 ---@field public proxy? string @ host:port
 
 ---@class HttpRequest
@@ -30,8 +29,7 @@ local setmetatable = setmetatable
 local pairs = pairs
 local tointeger = math.tointeger
 
-local default_connect_timeout <const> = 1000
-local default_read_timeout <const> = 10000
+local default_timeout <const> = 10000 -- 10s
 local max_pool_num <const> = 10
 local keep_alive_host = {}
 
@@ -375,8 +373,7 @@ end
 
 ---@param options HttpOptions
 local function do_request(baseaddress, options, req, method, protocol)
-    options.connect_timeout = options.connect_timeout or default_connect_timeout
-    options.read_timeout = options.read_timeout or default_read_timeout
+    options.timeout = options.timeout or default_timeout
 
     local fd, err
     local pool = keep_alive_host[baseaddress]
@@ -387,21 +384,24 @@ local function do_request(baseaddress, options, req, method, protocol)
 
     fd = table.remove(pool)
 
+    local timeout = options.timeout
+
     if not fd then
         local host, port = baseaddress:match("([^:]+):?(%d*)$")
         port = math.tointeger(port) or (protocol == 'https' and 443 or 80)
-        fd, err = socket.connect(host, port, moon.PTYPE_SOCKET_TCP, options.connect_timeout)
+        local start_time = moon.clock()
+        fd, err = socket.connect(host, port, moon.PTYPE_SOCKET_TCP, timeout)
         if not fd then
             return { error = err }
         end
+        timeout = timeout - math.floor((moon.clock() - start_time)*1000)
     end
 
     if not socket.write(fd, buffer.concat(req)) then
         return { error = "CLOSED" }
     end
 
-    local read_timeout = options.read_timeout or 0
-    socket.settimeout(fd, read_timeout // 1000)
+    socket.settimeout(fd, timeout//1000)
     local ok, response = pcall(read_response, fd, method)
     socket.settimeout(fd, 0)
 
@@ -466,6 +466,10 @@ function M.request(method, host, options, content)
 
     if not options.path or options.path == "" then
         options.path = "/"
+    end
+
+    if protocol == "https" then
+        options.proxy = options.proxy or moon.env("HTTPS_PROXY")
     end
 
     if options.proxy then
