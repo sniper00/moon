@@ -31,15 +31,21 @@ end)
 http_server.listen("127.0.0.1", 9991)
 print("http_server start", "127.0.0.1", 9991)
 
--- use http proxy
--- moon.async(function ()
---     print_r(httpc.get("https://www.google.com",{
---         path ='/',
---         proxy = "127.0.0.1:8443",
---         connect_timeout = 1000,
---         read_timeout = 5000
---     }))
--- end)
+if false then -- Set true to test http proxy
+
+    -- Set http proxy
+
+    -- Solution 1: Set the environment variable HTTPS_PROXY
+    moon.env("HTTPS_PROXY", "http://127.0.0.1:8443")
+
+    moon.async(function ()
+        print_r(httpc.get("https://www.google.com.hk", {
+            path = "/",
+            -- Solution 2: Set the proxy parameter
+            --proxy = "http://127.0.0.1:8443"
+        }))
+    end)
+end
 
 moon.async(function()
     httpc.get("http://127.0.0.1:9991", {
