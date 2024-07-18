@@ -30,7 +30,11 @@ local socket_data_type = {
 ---| 'ping'
 ---| 'pong'
 
-local websocket = {}
+---@class websocket
+---@field write fun(fd:integer, data:string|buffer_ptr|buffer_shr_ptr):boolean send binary data
+local websocket = {
+    write = socket.write,
+}
 
 function websocket.close(fd)
     socket.close(fd)

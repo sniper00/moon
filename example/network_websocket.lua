@@ -17,10 +17,12 @@ websocket.on_accept(function(fd, request)
 end)
 
 websocket.wson("message",function(fd, msg)
-    -- binary frame
-    -- socket.write(fd, msg)
-    -- text frame
     print(moon.decode(msg, "Z"))
+
+    -- binary frame
+    -- websocket.write(fd, msg)
+
+    -- text frame
     websocket.write_text(fd, moon.decode(msg, "Z"))
 end)
 
