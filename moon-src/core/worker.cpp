@@ -242,52 +242,57 @@ namespace moon
         uint32_t receiver = msg.receiver();
         uint8_t type = msg.type();
 
-        if (receiver == 0)
+        if (receiver > 0)
         {
-            for (auto& it : services_)
+            if (nullptr == s || s->id() != receiver)
             {
-                if (!it.second->unique() && type == PTYPE_SYSTEM)
+                s = find_service(receiver);
+                if (nullptr == s || !s->ok())
                 {
-                    continue;
-                }
-
-                if (it.second->ok() && it.second->id() != sender)
-                {
-                    handle_message(it.second, msg);
+                    if (sender != 0 && msg.type() != PTYPE_TIMER)
+                    {
+                        if(msg.sessionid()>=0){
+                            CONSOLE_DEBUG("Dead service [%08X] recv message from [%08X]: %s.",
+                                receiver,
+                                sender,
+                                moon::hex_string({ msg.data(),msg.size() }).data()
+                            );
+                        }else{
+                            std::string str = moon::format("Attemp call dead service [%08X]: %s."
+                            , receiver
+                            , moon::hex_string({ msg.data(),msg.size() }).data());
+                            msg.set_sessionid(-msg.sessionid());
+                            server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);
+                        }
+                    }
+                    return nullptr;
                 }
             }
-            return nullptr;
+
+            double start_time = moon::time::clock();
+            handle_message(s, std::move(msg));
+            double diff_time = moon::time::clock() - start_time;
+            s->add_cpu(diff_time);
+            cpu_ += diff_time;
+            if (diff_time > 0.1)
+            {
+                CONSOLE_WARN("worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, diff_time, sender, receiver);
+            }
+            return s->ok() ? s : nullptr;
         }
 
-        if (nullptr == s || s->id() != receiver)
+        for (auto& it : services_)
         {
-            s = find_service(receiver);
-            if (nullptr == s || !s->ok())
+            if (!it.second->unique() && type == PTYPE_SYSTEM)
             {
-                if (sender != 0 && msg.type() != PTYPE_TIMER)
-                {
-                    std::string hexdata = moon::hex_string({ msg.data(),msg.size() });
-                    std::string str = moon::format("[%08X] attempt send to dead service [%08X]: %s."
-                        , sender
-                        , receiver
-                        , hexdata.data());
+                continue;
+            }
 
-                    msg.set_sessionid(-msg.sessionid());
-                    server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);
-                }
-                return s;
+            if (it.second->ok() && it.second->id() != sender)
+            {
+                handle_message(it.second, msg);
             }
         }
-
-        double start_time = moon::time::clock();
-        handle_message(s, std::move(msg));
-        double diff_time = moon::time::clock() - start_time;
-        s->add_cpu(diff_time);
-        cpu_ += diff_time;
-        if (diff_time > 0.1)
-        {
-            CONSOLE_WARN("worker %u handle one message(%d) cost %f, from %08X to %08X", id(), type, diff_time, sender, receiver);
-        }
-        return s;
+        return nullptr;
     }
 }

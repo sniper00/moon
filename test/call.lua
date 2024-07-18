@@ -67,9 +67,10 @@ else
 
             res = moon.call("lua", receiverid, "SUB", 100, 99)
             test_assert.equal(res, 1)
-
             --Let receiver exit:
-            assert(moon.call("lua", receiverid, "EXIT"))
+            moon.send("lua", receiverid,  "EXIT")
+            moon.send("lua", receiverid,  "EXIT") -- trigger error
+
             res = moon.call("lua", receiverid, "SUB", 100, 99)
             test_assert.equal(res, false)
             test_assert.success()

@@ -482,13 +482,16 @@ reg_protocol {
 reg_protocol {
     name = "error",
     PTYPE = moon.PTYPE_ERROR,
-    israw = true,
     pack = function(...)
         return ...
     end,
     unpack = function(sz, len)
         local data = moon.tostring(sz, len) or "unknown error"
         return false, data
+    end,
+    dispatch = function(...)
+        moon.error(...)
+        error("PTYPE_TEXT dispatch not implemented")
     end
 }
 
