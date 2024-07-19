@@ -160,7 +160,7 @@ namespace moon
             }
             else
             {
-                server_->response(sender, moon::format("service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
+                server_->response(sender, moon::format("worker::remove_service [%08X] not found", serviceid), sessionid, PTYPE_ERROR);
             }
         });
     }

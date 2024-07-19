@@ -247,6 +247,9 @@ int main(int argc, char* argv[])
     }
     catch (const std::exception& e)
     {
+        if (!log::instance().is_ready()) {
+            log::instance().init("");
+        }
         exitcode = -1;
         CONSOLE_ERROR("ERROR:%s", e.what());
     }

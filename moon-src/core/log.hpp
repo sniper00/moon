@@ -72,6 +72,11 @@ namespace moon
             state_.store(state::ready, std::memory_order_release);
         }
 
+        bool is_ready() const
+        {
+            return state_.load(std::memory_order_acquire) == state::ready;
+        }
+
         template<typename... Args>
         void logfmt(bool console, LogLevel level, const char* fmt, Args&&... args)
         {

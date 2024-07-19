@@ -224,7 +224,7 @@ namespace moon
         }
         else
         {
-            auto content = moon::format("remove_service: invalid service id %u.", serviceid);
+            auto content = moon::format("server::remove_service invalid service id %u.", serviceid);
             response(sender, content, sessionid, PTYPE_ERROR);
         }
     }
@@ -332,7 +332,7 @@ namespace moon
         {
             if (get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty())
             {
-                CONSOLE_DEBUG("server::response %s" , std::string(content).data());
+                CONSOLE_DEBUG("%s" , std::string(content).data());
             }
             return;
         }
