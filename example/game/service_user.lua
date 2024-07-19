@@ -68,10 +68,13 @@ function client_command.guess(num)
 end
 
 function client_command.quit()
+    socket.close(client.fd)
+end
+
+function client_command.on_quit()
     if #client.name >0 then
         moon.send("lua", addr_center, "offline", client)
     end
-    socket.close(client.fd)
     moon.quit()
 end
 
@@ -110,9 +113,11 @@ function command.start(fd, timeout)
     while true do
         local data, err = socket.read(fd, "\n")
         if not data then
-            client_command.quit()
+            client_command.on_quit()
             return
         end
+
+        data = string.trim(data)
 
         local req = {}
         for v in data:gmatch("%w+") do
