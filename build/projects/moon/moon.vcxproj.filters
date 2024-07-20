@@ -24,9 +24,6 @@
     <ClInclude Include="..\..\..\moon-src\core\network\base_connection.hpp">
       <Filter>core\network</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\moon-src\core\network\const_buffers_holder.hpp">
-      <Filter>core\network</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\moon-src\core\network\error.hpp">
       <Filter>core\network</Filter>
     </ClInclude>
@@ -40,6 +37,9 @@
       <Filter>core\network</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\moon-src\core\network\streambuf.hpp">
+      <Filter>core\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\moon-src\core\network\write_buffer.hpp">
       <Filter>core\network</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\moon-src\core\network\ws_connection.hpp">

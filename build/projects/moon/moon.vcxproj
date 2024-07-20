@@ -111,12 +111,12 @@
     <ClInclude Include="..\..\..\moon-src\core\log.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\message.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\base_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\const_buffers_holder.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\error.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\moon_connection.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\socket_server.h" />
     <ClInclude Include="..\..\..\moon-src\core\network\stream_connection.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\streambuf.hpp" />
+    <ClInclude Include="..\..\..\moon-src\core\network\write_buffer.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\network\ws_connection.hpp" />
     <ClInclude Include="..\..\..\moon-src\core\server.h" />
     <ClInclude Include="..\..\..\moon-src\core\service.hpp" />
