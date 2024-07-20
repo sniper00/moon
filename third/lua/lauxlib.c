@@ -1150,9 +1150,6 @@ init(void) {
 	CC.L = luaL_newstate();
 }
 
-
-void luaL_initcodecache(void);
-
 LUALIB_API void
 luaL_initcodecache(void) {
 	SPIN_INIT(&CC);
