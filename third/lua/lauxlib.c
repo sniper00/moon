@@ -1293,8 +1293,6 @@ cache_clear(lua_State *L) {
 	return 0;
 }
 
-int luaopen_cache(lua_State *L);
-
 LUAMOD_API int luaopen_cache(lua_State *L) {
 	luaL_Reg l[] = {
 		{ "clear", cache_clear },
