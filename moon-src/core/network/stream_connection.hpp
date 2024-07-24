@@ -58,8 +58,7 @@ namespace moon
     private:
         direct_read_result read(read_until op)
         {
-            size_t delim_size = op.delim.size();
-            if (read_cache_.size() >= delim_size) {
+            if (size_t delim_size = op.delim.size(); read_cache_.size() >= delim_size) {
                 std::string_view data{ read_cache_.data(), read_cache_.size() };
                 std::default_searcher searcher{ op.delim.data(), op.delim.data() + delim_size };
                 if (auto it = std::search(data.begin(), data.end(), searcher); it != data.end()) {
@@ -90,7 +89,7 @@ namespace moon
                 read_in_progress_ = false;
                 consume_ = op.size;
                 return direct_read_result{ true, {read_cache_.data(), op.size} };
-            };
+            }
 
             std::size_t size = op.size - read_cache_.size();
             asio::async_read(socket_, moon::streambuf{ read_cache_.as_buffer(), op.size }, asio::transfer_exactly(size),

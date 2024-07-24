@@ -144,11 +144,9 @@ namespace moon
                 return *this;
             }
 
-           constexpr compressed_pair(size_t cap)
+            explicit constexpr compressed_pair(size_t cap)
                 :bitmask(0)
                 ,capacity(next_pow2(cap))
-                ,readpos(0)
-                ,writepos(0)
                 ,data(Alloc::allocate(capacity))
             {
             }
@@ -266,7 +264,7 @@ namespace moon
         {
         }
 
-        base_buffer(size_t capacity)
+        explicit base_buffer(size_t capacity)
             :pair_(capacity)
         {
         }
@@ -285,11 +283,11 @@ namespace moon
 
         base_buffer& operator=(const base_buffer&) = delete;
 
-        base_buffer(base_buffer&& other) = default;
+        base_buffer(base_buffer&& other) noexcept = default;
 
-        base_buffer& operator=(base_buffer&& other) = default;
+        base_buffer& operator=(base_buffer&& other) noexcept = default;
 
-        base_buffer clone() {
+        base_buffer clone() const {
             base_buffer b{ pair_.capacity };
             b.write_back(data(), size());
             return b;

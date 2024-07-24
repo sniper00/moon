@@ -250,7 +250,7 @@ namespace moon
                 });
         }
 
-        void send_response(const std::string& s, bool will_close = false)
+        void send_response(std::string_view s, bool will_close = false)
         {
             auto buf = std::make_shared<buffer>(s.size());
             buf->write_back(s.data(), s.size());
@@ -476,7 +476,7 @@ namespace moon
             handle_frame();
         }
 
-        static const ws::mask_key_type randkey()
+        static ws::mask_key_type randkey()
         {
             ws::mask_key_type tmp{};
             char x = 0;
@@ -493,7 +493,7 @@ namespace moon
             return tmp;
         }
 
-        virtual void prepare_send(size_t default_once_send_bytes) override
+        void prepare_send(size_t default_once_send_bytes) override
         {
             size_t bytes = 0;
             size_t queue_size = queue_.size();

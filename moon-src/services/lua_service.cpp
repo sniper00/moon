@@ -43,16 +43,13 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 
     auto new_used_memory = l->mem + mem_diff;
 
-    if (new_used_memory > l->mem_limit)
+    if (new_used_memory > l->mem_limit && (ptr == nullptr || nsize > osize))
     {
-        if (ptr == nullptr || nsize > osize)
-        {
-            log::instance().logstring(true, moon::LogLevel::Error,
-                moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
-                    (float)l->mem_limit / mb_memory),
-                l->id());
-            return nullptr;
-        }
+        log::instance().logstring(true, moon::LogLevel::Error,
+            moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
+                (float)l->mem_limit / mb_memory),
+            l->id());
+        return nullptr;
     }
     
     l->mem += mem_diff;

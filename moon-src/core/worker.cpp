@@ -148,8 +148,8 @@ namespace moon
                 if (server_->get_state() == state::ready)
                 {
                     auto content = moon::format("_service_exit,name:%s serviceid:%08X", name.data(), id);
-                    auto buf = buffer::make_unique();
-                    buf->write_back(content.data(), content.size());
+                    auto buf = buffer{content.size()};
+                    buf.write_back(content.data(), content.size());
                     server_->broadcast(serviceid, buf, PTYPE_SYSTEM);
                 }
 
@@ -169,7 +169,7 @@ namespace moon
     {
         asio::post(io_ctx_, [this, sender,sessionid] {
             std::string content;
-            for (auto& it : services_)
+            for (const auto& it : services_)
             {
                 if (content.empty())
                     content.append("[");

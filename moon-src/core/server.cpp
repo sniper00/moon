@@ -262,11 +262,11 @@ namespace moon
         return send_message(std::move(m));
     }
 
-    void server::broadcast(uint32_t sender, const buffer_ptr_t& buf, uint8_t type) const
+    void server::broadcast(uint32_t sender, const buffer& buf, uint8_t type) const
     {
         for (auto& w : workers_)
         {
-            auto m = message{ std::make_unique<buffer>(buf->clone()) };
+            auto m = message{ std::make_unique<buffer>(buf.clone()) };
             m.set_sender(sender);
             m.set_type(type);
             w->send(std::move(m));

@@ -60,7 +60,8 @@ namespace moon
                 bytes += size;
                 if (!elm->has_bitmask(socket_send_mask::raw)) {
                     wbuffers_.begin_write_slice();
-                    message_size_t slice_size = 0, header = 0;
+                    message_size_t slice_size = 0;
+                    message_size_t header = 0;
                     do
                     {
                         header = slice_size = (size >= MESSAGE_CONTINUED_FLAG) ? MESSAGE_CONTINUED_FLAG : static_cast<message_size_t>(size);

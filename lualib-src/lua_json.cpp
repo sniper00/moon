@@ -8,6 +8,8 @@
 #include "common/hash.hpp"
 #include "common/string.hpp"
 
+using namespace moon;
+
 static void* json_malloc(void*, size_t size) {
 #ifdef MOON_ENABLE_MIMALLOC
     return mi_malloc(size);
@@ -593,7 +595,7 @@ static int concat(lua_State* L)
     {
         size_t size;
         const char* sz = lua_tolstring(L, -1, &size);
-        auto buf = new moon::buffer{ BUFFER_OPTION_CHEAP_PREPEND + size };
+        auto buf = new buffer{ BUFFER_OPTION_CHEAP_PREPEND + size };
         buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
         buf->write_back(sz, size);
         buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
@@ -664,7 +666,7 @@ static int concat(lua_State* L)
     return lua_error(L);
 }
 
-static void write_resp(moon::buffer* buf, const char* cmd, size_t size)
+static void write_resp(buffer* buf, const char* cmd, size_t size)
 {
     buf->write_back("\r\n$", 3);
     buf->write_chars(size);
@@ -672,7 +674,7 @@ static void write_resp(moon::buffer* buf, const char* cmd, size_t size)
     buf->write_back(cmd, size);
 }
 
-static void concat_resp_one(moon::buffer* buf, lua_State* L, int i, json_config* cfg)
+static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg)
 {
     int t = lua_type(L, i);
     switch (t)

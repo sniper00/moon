@@ -22,7 +22,7 @@ namespace moon
             ++size_;
         }
 
-        void write_slice(void* padding_data, size_t padding_size, const char* data, size_t len)
+        void write_slice(const void* padding_data, size_t padding_size, const char* data, size_t len)
         {
             auto& space = padding_.emplace_front();
             size_t n = std::min(space.size(), padding_size);

@@ -332,8 +332,8 @@ namespace moon
     };
 }
 
-#define CONSOLE_INFO(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__);
-#define CONSOLE_WARN(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Warn,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-#define CONSOLE_ERROR(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Error,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
-#define CONSOLE_DEBUG(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__);
+#define CONSOLE_INFO(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Info,fmt,##__VA_ARGS__)
+#define CONSOLE_WARN(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Warn,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__)
+#define CONSOLE_ERROR(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Error,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__)
+#define CONSOLE_DEBUG(fmt,...) moon::log::instance().logfmt(true,moon::LogLevel::Debug,fmt" (%s:%d)",##__VA_ARGS__,__FILENAME__,__LINE__)
 

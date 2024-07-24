@@ -59,7 +59,7 @@ namespace moon
 // double-ended queue functionality specifically, but it can be reasonably expanded to provide
 // an iterator if we have a use-case for one in the future.
 template<typename T, class Allocator = std::allocator<T>>
-class VecDeque : Allocator
+class VecDeque : private Allocator
 {
 private:
     static_assert(std::is_nothrow_move_constructible_v<T>);
@@ -73,17 +73,19 @@ private:
 
     void destroyElements() noexcept
     {
-        size_t head_size =
+        if constexpr(!std::is_trivial_v<std::decay_t<T>>){
+            size_t head_size =
             std::min(queue_size, capacity() - head); // how many elements are in the head portion (i.e. from the head to the end of the buffer)
-        size_t tail_size = queue_size - head_size;   // how many elements are in the tail portion (i.e. any portion that wrapped to the front)
+            size_t tail_size = queue_size - head_size;   // how many elements are in the tail portion (i.e. any portion that wrapped to the front)
 
-        // we have to destroy every element in the head portion
-        for (size_t index = head; index < head + head_size; index++)
-            buffer[index].~T();
+            // we have to destroy every element in the head portion
+            for (size_t index = head; index < head + head_size; index++)
+                std::destroy_at(&buffer[index]);
 
-        // and any in the tail portion, if one exists
-        for (size_t index = 0; index < tail_size; index++)
-            buffer[index].~T();
+            // and any in the tail portion, if one exists
+            for (size_t index = 0; index < tail_size; index++)
+                std::destroy_at(&buffer[index]);
+        }
     }
 
     bool is_full()
@@ -457,6 +459,18 @@ public:
         new (buffer + next_back) T(value);
         queue_size++;
     }
+
+    template<typename ...Args>
+    void emplace_back(Args&&...arg)
+    {
+        if (is_full())
+            grow();
+
+
+        size_t next_back = logicalToPhysical(queue_size);
+        new (buffer + next_back) T{std::forward<Args>(arg)...};
+        queue_size++;
+    }   
 
     void pop_back()
     {

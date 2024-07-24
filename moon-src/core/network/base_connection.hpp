@@ -73,7 +73,7 @@ namespace moon
 
             will_close_ = data->has_bitmask(socket_send_mask::close) ? true : will_close_;
 
-            if (queue_.push_back(std::move(data)); queue_.size() == 1)
+            if (queue_.emplace_back(std::move(data)); queue_.size() == 1)
             {
                 post_send();
             }

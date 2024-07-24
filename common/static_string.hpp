@@ -6,7 +6,7 @@ namespace moon
     template <std::size_t N>
     class static_string {
     public:
-        static_string(std::string_view str) {
+        explicit static_string(std::string_view str) {
             std::copy_n(str.data(), std::min(N, str.size()), data_.begin());
         }
 

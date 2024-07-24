@@ -41,13 +41,13 @@ namespace moon
 
         moon::socket_server& socket_server() { return *socket_server_; }
 
-        size_t mq_size() { return mqsize_.load(std::memory_order_acquire); }
+        size_t mq_size() const { return mqsize_.load(std::memory_order_acquire); }
 
         uint32_t alive();
 
         double cpu() { return std::exchange(cpu_, 0.0);}
 
-        uint32_t count() { return count_.load(std::memory_order_acquire);}
+        uint32_t count() const { return count_.load(std::memory_order_acquire);}
 
         void run();
 

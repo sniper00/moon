@@ -589,20 +589,18 @@ static int lasio_write(lua_State* L)
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    int mask = (int)luaL_optinteger(L, 3, 0);
-    if (mask !=0 && (mask <0 || mask >=(int)moon::socket_send_mask::max_mask))
-    {
-        return luaL_error(L, "asio.write param 'flag' invalid");
-    }
+    auto n = static_cast<int>(luaL_optinteger(L, 3, 0));
+    luaL_argcheck(L, n >= 0 && n < static_cast<int>(moon::socket_send_mask::max_mask), 3, "invalid mask");
+    auto mask = static_cast<moon::socket_send_mask>(n);
 
     if (LUA_TUSERDATA == lua_type(L, 2)) {
-        buffer_shr_ptr_t shr = *static_cast<buffer_shr_ptr_t*>(lua_touserdata(L, 2));
-        bool ok = sock.write(fd, std::move(shr), (moon::socket_send_mask)mask);
+        auto shr = *static_cast<buffer_shr_ptr_t*>(lua_touserdata(L, 2));
+        bool ok = sock.write(fd, std::move(shr), mask);
         lua_pushboolean(L, ok ? 1 : 0);
     }
     else
     {
-        bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), (moon::socket_send_mask)mask);
+        bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), mask);
         lua_pushboolean(L, ok ? 1 : 0);
     }
     return 1;

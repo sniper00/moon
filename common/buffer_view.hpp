@@ -74,7 +74,7 @@ namespace moon
             return tmp;
         }
 
-        std::string to_string()
+        std::string to_string() const
         {
             return std::string((const char*)data(), size());
         }
