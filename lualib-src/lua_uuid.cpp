@@ -55,18 +55,29 @@ static int linit(lua_State *L)
     int64_t channel = (int64_t)luaL_checkinteger(L, 1);
     int64_t serverid = (int64_t)luaL_checkinteger(L, 2);
     int64_t boottimes = (int64_t)luaL_checkinteger(L, 3);
+    luaL_checktype(L, 4, LUA_TTABLE);
+    auto len = lua_rawlen(L, 4);
 
     luaL_argcheck(L, (channel > 0 && channel <= UID_CHANNEL_MAX), 1, "channel out off limit");
     luaL_argcheck(L, (serverid>0&& serverid<= SERVERID_MAX), 2, "serverid out off limit");
-    luaL_argcheck(L, (boottimes > 0 && boottimes <= BOOTTIMES_MAX), 3, "boottimes out off limit");
+    luaL_argcheck(L, (len==0 || len==TYPE_MAX), 4, "init sequence table size error");
 
     g_uuid.serverid = serverid;
     g_uuid.boottimes = boottimes;
     g_uuid.channel = channel;
 
-    for (auto& v : g_uuid.sequence)
-    {
-        v = 1;
+    if(len>0){
+        for (int i = 0; i < len; i++)
+        {
+            lua_rawgeti(L, 4, i+1);
+            g_uuid.sequence[i].store(luaL_checkinteger(L, -1));
+            lua_pop(L, 1);
+        }
+    }else{
+        for (auto& v : g_uuid.sequence)
+        {
+            v = 1;
+        }
     }
     return 0;
 }
@@ -94,7 +105,7 @@ static int lnext(lua_State *L)
         int64_t v = (u.channel << UID_CHANNEL_LEFT_SHIFT) |
             (u.serverid << UID_SERVERID_LEFT_SHIFT) |
             (u.boottimes << UID_BOOTTIMES_LEFT_SHIFT) |
-            (sequence);
+            sequence;
         lua_pushinteger(L, v);
         return 1;
     }
@@ -171,6 +182,25 @@ static int serverid(lua_State* L)
     }
 }
 
+static int dump_sequence(lua_State* L)
+{
+    auto& u = g_uuid;
+    lua_createtable(L, TYPE_MAX, 0);
+    double max_percent = 0.0;
+    for (int i = 0; i < TYPE_MAX; i++)
+    {
+        auto v = u.sequence[i].load();
+        auto percent = ((i==0)?(double)v / UID_SEQUENCE_MAX:(double)v / SEQUENCE_MAX);
+        if(percent>max_percent)
+            max_percent = percent;
+        lua_pushinteger(L, v);
+        lua_rawseti(L, -2, i + 1);
+    }
+    lua_pushnumber(L, max_percent);
+    lua_pushinteger(L, u.boottimes);
+    return 3;
+}
+
 extern "C"
 {
     int LUAMOD_API luaopen_uuid(lua_State *L)
@@ -181,6 +211,7 @@ extern "C"
             {"type",ltype },
             {"isuid",isuid },
             {"serverid", serverid},
+            {"dump", dump_sequence},
             {NULL,NULL}
         };
         luaL_checkversion(L);
