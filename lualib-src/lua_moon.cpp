@@ -74,28 +74,28 @@ static int lmoon_md5(lua_State* L)
 {
     size_t size;
     const char* s = luaL_checklstring(L, 1, &size);
-    uint8_t buf[md5::DIGEST_BYTES] = { 0 };
+    std::array<uint8_t,md5::DIGEST_BYTES> bytes{};
     md5::md5_context ctx;
     md5::init(ctx);
     md5::update(ctx, s, size);
-    md5::finish(ctx, buf);
+    md5::finish(ctx, bytes.data());
 
-    char res[md5::DIGEST_BYTES * 2];
+    std::array<char,md5::DIGEST_BYTES*2> str{};
     for (size_t i = 0; i < 16; i++) {
-        int t = buf[i];
+        int t = bytes[i];
         int a = t / 16;
         int b = t % 16;
-        res[i * 2] = md5::HEX[a];
-        res[i * 2 + 1] = md5::HEX[b];
+        str[i * 2] = md5::HEX[a];
+        str[i * 2 + 1] = md5::HEX[b];
     }
-    lua_pushlstring(L, res, sizeof(res));
+    lua_pushlstring(L, str.data(), str.size());
     return 1;
 }
 
 static int lmoon_tostring(lua_State* L)
 {
     luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
-    const char* data = (const char*)lua_touserdata(L, 1);
+    auto* data = (const char*)lua_touserdata(L, 1);
     size_t len = luaL_checkinteger(L, 2);
     lua_pushlstring(L, data, len);
     return 1;
@@ -113,7 +113,7 @@ static int lmoon_timeout(lua_State* L)
 
 static int lmoon_log(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto level = (moon::LogLevel)luaL_checkinteger(L, 1);
     if (log::instance().get_level() < level)
         return 0;
@@ -121,8 +121,7 @@ static int lmoon_log(lua_State* L)
     moon::buffer line = log::instance().make_line(true, level, S->id());
 
     int n = lua_gettop(L);  /* number of arguments */
-    int i;
-    for (i = 2; i <= n; i++) {  /* for each argument */
+    for (int i = 2; i <= n; i++) {  /* for each argument */
         size_t l;
         const char* s = luaL_tolstring(L, i, &l);  /* convert it to string */
         if (i > 2)  /* not the first element? */
@@ -131,19 +130,15 @@ static int lmoon_log(lua_State* L)
         lua_pop(L, 1);  /* pop result */
     }
 
-    lua_Debug ar;
-    if (lua_getstack(L, 2, &ar))
+    if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar))
     {
-        if (lua_getinfo(L, "Sl", &ar))
-        {
-            line.write_back("    ", 4);
-            line.write_back('(');
-            if (ar.srclen>1)
-                line.write_back(ar.source + 1, ar.srclen - 1);
-            line.write_back(':');
-            line.write_chars(ar.currentline);
-            line.write_back(')');
-        }
+        line.write_back("    ", 4);
+        line.write_back('(');
+        if (ar.srclen>1)
+            line.write_back(ar.source + 1, ar.srclen - 1);
+        line.write_back(':');
+        line.write_chars(ar.currentline);
+        line.write_back(')');
     }
     log::instance().push_line(std::move(line));
     return 0;
@@ -189,7 +184,7 @@ static void table_tostring(std::string& res, lua_State* L, int index)
         index = lua_gettop(L) + index + 1;
     }
 
-    luaL_checkstack(L, LUA_MINSTACK, NULL);
+    luaL_checkstack(L, LUA_MINSTACK, nullptr);
     res.append("{");
     lua_pushnil(L);
     while (lua_next(L, index))
@@ -238,7 +233,7 @@ static int lmoon_new_service(lua_State* L)
     luaL_checktype(L, 1, LUA_TTABLE);
 
     lua_service* S = lua_service::get(L);
-    std::unique_ptr<moon::service_conf> conf = std::make_unique<moon::service_conf>();
+    auto conf = std::make_unique<moon::service_conf>();
 
     conf->creator = S->id();
     int64_t session =  S->next_sequence();
@@ -250,8 +245,7 @@ static int lmoon_new_service(lua_State* L)
     conf->unique = lua_opt_field<bool>(L, 1, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 1, "threadid", 0);
 
-    auto path = S->get_server()->get_env("PATH");
-    if(path)
+    if(auto path = S->get_server()->get_env("PATH"); path)
         conf->params.append(*path);
     conf->params.append("return ");
     table_tostring(conf->params, L, 1);
@@ -264,7 +258,7 @@ static int lmoon_new_service(lua_State* L)
 static int lmoon_kill(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    uint32_t serviceid = (uint32_t)luaL_checkinteger(L, 1);
+    auto serviceid = (uint32_t)luaL_checkinteger(L, 1);
     if (S->id() == serviceid)
         S->ok(false);
     S->get_server()->remove_service(serviceid, S->id(), 0);
@@ -274,7 +268,7 @@ static int lmoon_kill(lua_State* L)
 static int lmoon_scan_services(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
-    uint32_t workerid = (uint32_t)luaL_checkinteger(L, 1);
+    auto workerid = (uint32_t)luaL_checkinteger(L, 1);
     int64_t sessionid = S->next_sequence();
     S->get_server()->scan_services(S->id(), workerid, sessionid);
     lua_pushinteger(L, sessionid);
@@ -283,7 +277,7 @@ static int lmoon_scan_services(lua_State* L)
 
 static int lmoon_queryservice(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     std::string_view name = lua_check<std::string_view>(L, 1);
     uint32_t id = S->get_server()->get_unique_service(std::string{ name });
     lua_pushinteger(L, id);
@@ -299,7 +293,7 @@ static int lmoon_next_sequence(lua_State* L)
 
 static int lmoon_env(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     if(lua_gettop(L) == 2)
     {
         S->get_server()->set_env(lua_check<std::string>(L, 1), lua_check<std::string>(L, 2));
@@ -317,9 +311,8 @@ static int lmoon_env(lua_State* L)
 
 static int lmoon_server_stats(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
-    std::string_view opt = luaL_optstring(L, 1, "");
-    if(opt == "service.count")
+    const lua_service* S = lua_service::get(L);
+    if(std::string_view opt = luaL_optstring(L, 1, ""); opt == "service.count")
         lua_pushinteger(L, S->get_server()->service_count());
     else if(opt == "log.error")
         lua_pushinteger(L, log::instance().error_count());
@@ -332,15 +325,15 @@ static int lmoon_server_stats(lua_State* L)
 
 static int lmoon_exit(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
-    int32_t code = (int32_t)luaL_checkinteger(L, 1);
+    const lua_service* S = lua_service::get(L);
+    auto code = (int32_t)luaL_checkinteger(L, 1);
     S->get_server()->stop(code);
     return 0;
 }
 
 static int lmoon_now(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto ratio = luaL_optinteger(L, 1, 1);
     luaL_argcheck(L, ratio > 0, 1, "must >0");
     time_t t = (S->get_server()->now()/ratio);
@@ -350,7 +343,7 @@ static int lmoon_now(lua_State* L)
 
 static int lmoon_adjtime(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     time_t t = luaL_checkinteger(L, 1);
     bool ok = time::offset(t);
     S->get_server()->now(true);
@@ -360,7 +353,7 @@ static int lmoon_adjtime(lua_State* L)
 
 static int message_decode(lua_State* L)
 {
-    message* m = (message*)lua_touserdata(L, 1);
+    auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     size_t len = 0;
@@ -403,8 +396,7 @@ static int message_decode(lua_State* L)
         }
         case 'C':
         {
-            buffer* buf = m->as_buffer();
-            if (nullptr == buf)
+            if (buffer* buf = m->as_buffer();nullptr == buf)
             {
                 lua_pushlightuserdata(L, nullptr);
                 lua_pushinteger(L, 0);
@@ -426,7 +418,7 @@ static int message_decode(lua_State* L)
 static int message_redirect(lua_State* L)
 {
     int top = lua_gettop(L);
-    message* m = (message*)lua_touserdata(L, 1);
+    auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
     m->set_receiver((uint32_t)luaL_checkinteger(L, 2));
@@ -483,7 +475,7 @@ extern "C" {
     };
 
     luaL_newlib(L, l);
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     lua_pushinteger(L, S->id());
     lua_setfield(L, -2, "id");
     lua_pushlstring(L, S->name().data(), S->name().size());
@@ -496,10 +488,10 @@ extern "C" {
 
 static int lasio_try_open(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     std::string_view host = lua_check<std::string_view>(L, 1);
-    uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
+    auto port = (uint16_t)luaL_checkinteger(L, 2);
     bool is_connect = luaL_optboolean(L, 3, false);
     bool ok = sock.try_open(std::string{host}, port, is_connect);
     lua_pushboolean(L, ok ? 1 : 0);
@@ -508,17 +500,17 @@ static int lasio_try_open(lua_State* L)
 
 static int lasio_listen(lua_State* L)
 {
-    lua_service* S  = lua_service::get(L);
+    const lua_service* S  = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     std::string_view host = lua_check<std::string_view>(L, 1);
-    uint16_t port = (uint16_t)luaL_checkinteger(L, 2);
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 3);
-    auto res  = sock.listen(std::string{ host }, port, S->id(), type);
-    lua_pushinteger(L, res.first);
-    if (res.first > 0)
+    auto port = (uint16_t)luaL_checkinteger(L, 2);
+    auto type = (uint8_t)luaL_checkinteger(L, 3);
+    auto [k,v]  = sock.listen(std::string{ host }, port, S->id(), type);
+    lua_pushinteger(L, k);
+    if (k > 0)
     {
-        lua_pushstring(L, res.second.address().to_string().data());
-        lua_pushinteger(L, res.second.port());
+        lua_pushstring(L, v.address().to_string().data());
+        lua_pushinteger(L, v.port());
         return 3;
     }
     return 1;
@@ -528,8 +520,8 @@ static int lasio_accept(lua_State* L)
 {
     lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t owner = (uint32_t)luaL_checkinteger(L, 2);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto owner = (uint32_t)luaL_checkinteger(L, 2);
     int64_t session = luaL_opt(L, luaL_checkinteger, 3, S->next_sequence());
     if(!sock.accept(fd, session, owner)){
         lua_pushboolean(L, 0);
@@ -560,17 +552,17 @@ static int lasio_read(lua_State* L)
     lua_service* S = lua_service::get(L);
     int64_t session = S->next_sequence();
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     int64_t size = 0;
     std::string_view delim;
     if (lua_type(L, 2) == LUA_TNUMBER)
     {
-        size = (int64_t)luaL_checkinteger(L, 2);
+        size = luaL_checkinteger(L, 2);
     }
     else
     {
         delim = lua_check<std::string_view>(L, 2);
-        size = (int64_t)luaL_optinteger(L, 3, 0);
+        size = luaL_optinteger(L, 3, 0);
     }
 
     auto res = sock.read(fd, size, delim, session);
@@ -586,9 +578,9 @@ static int lasio_read(lua_State* L)
 
 static int lasio_write(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     auto n = static_cast<int>(luaL_optinteger(L, 3, 0));
     luaL_argcheck(L, n >= 0 && n < static_cast<int>(moon::socket_send_mask::max_mask), 3, "invalid mask");
     auto mask = static_cast<moon::socket_send_mask>(n);
@@ -608,10 +600,10 @@ static int lasio_write(lua_State* L)
 
 static int lasio_write_message(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    moon::message* m =(moon::message*)lua_touserdata(L, 2);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto* m =(message*)lua_touserdata(L, 2);
     if (nullptr == m)
         return luaL_argerror(L, 2, "lightuserdata(message*) expected");
     bool ok = sock.write(fd, m->into_buffer());
@@ -621,9 +613,9 @@ static int lasio_write_message(lua_State* L)
 
 static int lasio_close(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     bool ok = sock.close(fd);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -631,11 +623,11 @@ static int lasio_close(lua_State* L)
 
 static int lasio_switch_type(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
 
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    uint8_t type = (uint8_t)luaL_checkinteger(L, 2);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto type = (uint8_t)luaL_checkinteger(L, 2);
     bool ok = sock.switch_type(fd, type);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -643,10 +635,10 @@ static int lasio_switch_type(lua_State* L)
 
 static int lasio_settimeout(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
-    uint32_t seconds = (uint32_t)luaL_checkinteger(L, 2);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto seconds = (uint32_t)luaL_checkinteger(L, 2);
     bool ok = sock.settimeout(fd, seconds);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -654,9 +646,9 @@ static int lasio_settimeout(lua_State* L)
 
 static int lasio_setnodelay(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     bool ok = sock.setnodelay(fd);
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -664,9 +656,9 @@ static int lasio_setnodelay(lua_State* L)
 
 static int lasio_set_enable_chunked(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     std::string_view flag = lua_check<std::string_view>(L, 2);
     bool ok = sock.set_enable_chunked(fd, flag);
     lua_pushboolean(L, ok ? 1 : 0);
@@ -675,9 +667,9 @@ static int lasio_set_enable_chunked(lua_State* L)
 
 static int lasio_set_send_queue_limit(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     uint16_t warnsize = moon::lua_check<uint16_t>(L, 2);
     uint16_t errorsize = moon::lua_check<uint16_t>(L, 3);
     bool ok = sock.set_send_queue_limit(fd, warnsize, errorsize);
@@ -687,9 +679,9 @@ static int lasio_set_send_queue_limit(lua_State* L)
 
 static int lasio_address(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     std::string addr = sock.getaddress(fd);
     lua_pushlstring(L, addr.data(), addr.size());
     return 1;
@@ -697,7 +689,7 @@ static int lasio_address(lua_State* L)
 
 static int lasio_udp(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     size_t size = 0;
     const char* addr = lua_tolstring(L, 1, &size);
@@ -715,9 +707,9 @@ static int lasio_udp(lua_State* L)
 
 static int lasio_udp_connect(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     auto ok = sock.udp_connect(fd, lua_check<std::string_view>(L, 2), (asio::ip::port_type)luaL_checkinteger(L, 3));
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -725,9 +717,9 @@ static int lasio_udp_connect(lua_State* L)
 
 static int lasio_sendto(lua_State* L)
 {
-    lua_service* S = lua_service::get(L);
+    const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
-    uint32_t fd = (uint32_t)luaL_checkinteger(L, 1);
+    auto fd = (uint32_t)luaL_checkinteger(L, 1);
     std::string_view address = lua_check<std::string_view>(L, 2);
     bool ok = sock.send_to(fd, address, moon_to_shr_buffer(L, 3));
     lua_pushboolean(L, ok ? 1 : 0);
@@ -750,9 +742,9 @@ static int lasio_make_endpoint(lua_State* L)
         lua_pushlstring(L, message.data(), message.size());
         return 2;
     }
-    char arr[moon::socket_server::addr_v6_size];
-    size = moon::socket_server::encode_endpoint(arr, addr, port);
-    lua_pushlstring(L, arr, size);
+    
+    auto bytes = moon::socket_server::encode_endpoint(addr, port);
+    lua_pushlstring(L, bytes.data(), bytes.size());
     return 1;
 }
 

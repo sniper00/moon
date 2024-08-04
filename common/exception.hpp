@@ -29,7 +29,7 @@ namespace moon
         logic_error& operator=(const logic_error& e) = default;
         logic_error& operator=(logic_error&& e) = default;
 
-        virtual const char* what() const noexcept override {
+        const char* what() const noexcept override {
             return w.c_str();
         }
     };
@@ -44,7 +44,7 @@ namespace moon
 #define MOON_CHECK(cnd,msg) {if(!(cnd)) throw moon::logic_error{(msg),__FILENAME__,__LINE__};}
 
 #ifdef DEBUG
-#define MOON_ASSERT(cnd,msg) assert(cnd && msg);
+#define MOON_ASSERT(cnd,msg) assert(cnd && msg)
 #else
 #define MOON_ASSERT(cnd,msg)
 #endif

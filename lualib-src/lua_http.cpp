@@ -12,8 +12,7 @@ static int lhttp_parse_request(lua_State* L)
     std::string_view query_string;
     std::string_view version;
     http::case_insensitive_multimap_view header;
-    bool ok = http::request_parser::parse(data, method, path, query_string, version, header);
-    if(!ok){
+    if(bool ok = http::request_parser::parse(data, method, path, query_string, version, header); !ok){
         lua_pushboolean(L, 0);
         lua_pushstring(L, "Parse http request failed");
         return 2;
@@ -28,12 +27,12 @@ static int lhttp_parse_request(lua_State* L)
     lua_pushliteral(L, "header");
     lua_createtable(L, 0, (int)header.size());
     std::string tmp;
-    for (const auto& v : header)
+    for (const auto&[k,v] : header)
     {
-        tmp.assign(v.first.data(), v.first.size());
+        tmp.assign(k.data(), k.size());
         moon::lower(tmp);
         lua_pushlstring(L, tmp.data(), tmp.size());
-        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_pushlstring(L, v.data(), v.size());
         lua_rawset(L, -3);
     }
     lua_rawset(L, -3);
@@ -46,8 +45,7 @@ static int lhttp_parse_response(lua_State* L)
     std::string_view version;
     std::string_view status_code;
     http::case_insensitive_multimap_view header;
-    bool ok = http::response_parser::parse(data, version, status_code, header);
-    if(!ok){
+    if(bool ok = http::response_parser::parse(data, version, status_code, header); !ok){
         lua_pushboolean(L, 0);
         lua_pushstring(L, "Parse http response failed");
         return 2;
@@ -59,12 +57,12 @@ static int lhttp_parse_response(lua_State* L)
     lua_pushliteral(L, "header");
     lua_createtable(L, 0, (int)header.size());
     std::string tmp;
-    for (const auto& v : header)
+    for (const auto& [k,v] : header)
     {
-        tmp.assign(v.first.data(), v.first.size());
+        tmp.assign(k.data(), k.size());
         moon::lower(tmp);
         lua_pushlstring(L, tmp.data(), tmp.size());
-        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_pushlstring(L, v.data(), v.size());
         lua_rawset(L, -3);
     }
     lua_rawset(L, -3);
@@ -76,10 +74,10 @@ static int lhttp_parse_query_string(lua_State* L)
     std::string_view data = lua_check<std::string_view>(L, 1);
     http::case_insensitive_multimap cim = http::query_string::parse(data);
     lua_createtable(L, 0, (int)cim.size());
-    for (const auto& v : cim)
+    for (const auto& [k,v] : cim)
     {
-        lua_pushlstring(L, v.first.data(), v.first.size());
-        lua_pushlstring(L, v.second.data(), v.second.size());
+        lua_pushlstring(L, k.data(), k.size());
+        lua_pushlstring(L, v.data(), v.size());
         lua_rawset(L, -3);
     }
     return 1;

@@ -4,10 +4,8 @@
 #include "string.hpp"
 #include "buffer_view.hpp"
 
-namespace moon
+namespace moon::http
 {
-    namespace http
-    {
         using  case_insensitive_multimap = std::unordered_multimap<std::string, std::string, moon::ihash_string_view_functor_t, moon::iequal_string_view_functor_t>;
         using  case_insensitive_multimap_view = std::unordered_multimap<std::string_view, std::string_view, moon::ihash_string_view_functor_t, moon::iequal_string_view_functor_t>;
 
@@ -22,7 +20,7 @@ namespace moon
 
                 for (const auto &chr : value) {
                     if (!((chr >= '0' && chr <= '9') || (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z') || chr == '-' || chr == '.' || chr == '_' || chr == '~'))
-                        result += std::string("%") + hex_chars[static_cast<unsigned char>(chr) >> 4] + hex_chars[static_cast<unsigned char>(chr) & 15];
+                        result += std::string("%") + hex_chars[static_cast<uint8_t>(chr) >> 4] + hex_chars[static_cast<uint8_t>(chr) & 15];
                     else
                         result += chr;
                 }
@@ -61,8 +59,8 @@ namespace moon
                 std::string result;
 
                 bool first = true;
-                for (auto &field : fields) {
-                    result += (!first ? "&" : "") + field.first + '=' + percent::encode(field.second);
+                for (const auto &[k,v] : fields) {
+                    result += (!first ? "&" : "") + k + '=' + percent::encode(v);
                     first = false;
                 }
 
@@ -81,10 +79,9 @@ namespace moon
                 auto value_pos = std::string_view::npos;
                 for (std::size_t c = 0; c < query_string.size(); ++c) {
                     if (query_string[c] == '&') {
-                        auto name = query_string.substr(name_pos, (name_end_pos == std::string_view::npos ? c : name_end_pos) - name_pos);
-                        if (!name.empty()) {
+                        if (auto name = query_string.substr(name_pos, (name_end_pos == std::string_view::npos ? c : name_end_pos) - name_pos); !name.empty()) {
                             auto value = value_pos == std::string_view::npos ? std::string_view{} : query_string.substr(value_pos, c - value_pos);
-                            result.emplace(std::move(name), percent::decode(value));
+                            result.emplace(name, percent::decode(value));
                         }
                         name_pos = c + 1;
                         name_end_pos = std::string_view::npos;
@@ -99,7 +96,7 @@ namespace moon
                     auto name = query_string.substr(name_pos, name_end_pos - name_pos);
                     if (!name.empty()) {
                         auto value = value_pos >= query_string.size() ? std::string_view{} : query_string.substr(value_pos);
-                        result.emplace(std::move(name), percent::decode(value));
+                        result.emplace(name, percent::decode(value));
                     }
                 }
 
@@ -116,8 +113,7 @@ namespace moon
                 std::string_view line = br.readline();
                 size_t param_end = 0;
                 while ((param_end = line.find(':')) != std::string_view::npos) {
-                    size_t value_start = param_end + 1;
-                    if (value_start < line.size()) {
+                    if (size_t value_start = param_end + 1; value_start < line.size()) {
                         if (line[value_start] == ' ')
                             value_start++;
                         if (value_start < line.size())
@@ -138,8 +134,7 @@ namespace moon
                 buffer_view br(sv.data(), sv.size());
                 auto line = br.readline();
 
-                size_t method_end;
-                if ((method_end = line.find(' ')) != std::string_view::npos)
+                if (size_t method_end; (method_end = line.find(' ')) != std::string_view::npos)
                 {
                     method = line.substr(0, method_end);
                     size_t query_start = std::string_view::npos;
@@ -164,8 +159,7 @@ namespace moon
                         }
                         else
                             path = line.substr(method_end + 1, path_and_query_string_end - method_end - 1);
-                        size_t protocol_end;
-                        if ((protocol_end = line.find('/', path_and_query_string_end + 1)) != std::string_view::npos) {
+                        if (size_t protocol_end; (protocol_end = line.find('/', path_and_query_string_end + 1)) != std::string_view::npos) {
                             if (line.compare(path_and_query_string_end + 1, protocol_end - path_and_query_string_end - 1, "HTTP") != 0)
                                 return false;
                             http_version = line.substr(protocol_end + 1, line.size() - protocol_end - 1);
@@ -192,8 +186,12 @@ namespace moon
             {
                 buffer_view br(sv.data(), sv.size());
                 auto line = br.readline();
-                std::size_t version_end;
-                if (!line.empty() && (version_end = line.find(' ')) != std::string_view::npos) {
+                if(line.empty()){
+                    return false;
+                }
+
+
+                if (std::size_t version_end = line.find(' '); version_end != std::string_view::npos) {
                     if (5 < line.size())
                         version = line.substr(5, version_end - 5);
                     else
@@ -210,7 +208,6 @@ namespace moon
                 return true;
             }
         };
-    }
    
 }
 

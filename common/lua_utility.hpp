@@ -9,14 +9,14 @@
 #define luaL_rawsetfield(L, tbindex, kname, valueexp)\
     lua_pushliteral(L, kname);\
     (valueexp);\
-    lua_rawset(L, tbindex);\
+    lua_rawset(L, tbindex)\
 
 namespace moon
 {
     struct lua_scope_pop
     {
         lua_State* lua;
-        lua_scope_pop(lua_State* L)
+        explicit lua_scope_pop(lua_State* L)
             :lua(L)
         {
         }
@@ -213,8 +213,7 @@ namespace moon
     };
 
     inline int traceback(lua_State* L) {
-        const char* msg = lua_tostring(L, 1);
-        if (msg)
+        if (const char* msg = lua_tostring(L, 1))
             luaL_traceback(L, L, msg, 1);
         else {
             lua_pushliteral(L, "(no error message)");
