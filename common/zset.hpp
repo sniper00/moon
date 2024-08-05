@@ -45,11 +45,11 @@ namespace moon
             return *this;
         }
 
-        friend bool operator!=(skip_list_iterator self, skip_list_iterator_sentinel) const {
+        friend bool operator!=(skip_list_iterator self, skip_list_iterator_sentinel) {
             return self.node_ != nullptr;
         }
 
-        friend bool operator==(skip_list_iterator self, skip_list_iterator_sentinel) const {
+        friend bool operator==(skip_list_iterator self, skip_list_iterator_sentinel) {
             return self.node_ == nullptr;
         }
     };
@@ -409,12 +409,12 @@ namespace moon
             int64_t score = 0;
             int64_t timestamp = 0;
 
-            friend bool operator==(const context& self, const context& val) const
+            friend bool operator==(const context& self, const context& val)
             {
                 return self.key == val.key;
             }
 
-            friend bool operator<(const context& self, const context& val) const
+            friend bool operator<(const context& self, const context& val)
             {
                 if (self.score == val.score)
                 {
@@ -427,14 +427,14 @@ namespace moon
                 return self.score > val.score;
             }
 
-            friend bool operator<=(const context& self, const context& val) const
+            friend bool operator<=(const context& self, const context& val)
             {
                 if (self.key == val.key)
                     return true;
-                return operator<(val);
+                return operator<(self, val);
             }
 
-            friend bool operator>(const context& self, const context& val) const
+            friend bool operator>(const context& self, const context& val)
             {
                 if (self.score == val.score)
                 {

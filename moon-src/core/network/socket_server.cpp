@@ -217,14 +217,18 @@ void socket_server::connect(const std::string& host, uint16_t port, uint32_t own
                         size_t cancelled_timer = 1;
                         if (timer)
                         {
-                            asio::error_code ignored_ec;
-                            cancelled_timer = timer->cancel(ignored_ec);
+                            try {
+                                cancelled_timer = timer->cancel();
+                            }
+                            catch (const asio::system_error& _) {
+                                //do nothing
+                            }
                         }
 
                         if (!ec)
                         {
                             c->fd(server_->nextfd());
-                            connections_.insert({c->fd(), c});
+                            connections_.try_emplace(c->fd(), c);
                             c->start(base_connection::role::client);
                             response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_INTEGER);
                         }
