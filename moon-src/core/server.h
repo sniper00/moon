@@ -17,7 +17,7 @@ namespace moon
             timer_expire_policy(uint32_t serviceid, int64_t timerid, server* srv)
                 : serviceid_(serviceid), timerid_(timerid), server_(srv) {}
 
-            void operator()()
+            void operator()() const
             {
                 server_->on_timer(serviceid_, timerid_);
             }
@@ -69,7 +69,7 @@ namespace moon
 
         void new_service(std::unique_ptr<service_conf> conf);
 
-        void remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid);
+        void remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid) const;
 
         void scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const;
 
@@ -104,11 +104,11 @@ namespace moon
 
         size_t socket_num() const;
     private:
-        void on_timer(uint32_t serviceid, int64_t timerid);
+        void on_timer(uint32_t serviceid, int64_t timerid) const;
 
         void wait();
     private:
-        volatile int exitcode_ = std::numeric_limits<int>::max();
+        std::atomic_int32_t exitcode_ = std::numeric_limits<int>::max();
         std::atomic<state> state_ = state::unknown;
         std::atomic<uint32_t> fd_seq_ = 1;
         std::time_t now_ = 0;

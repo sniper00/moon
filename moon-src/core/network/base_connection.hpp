@@ -34,9 +34,7 @@ namespace moon
 
         base_connection& operator=(const base_connection&) = delete;
 
-        virtual ~base_connection()
-        {
-        }
+        virtual ~base_connection() = default;
 
         virtual void start(role r)
         {
@@ -52,7 +50,7 @@ namespace moon
             return direct_read_result{false, { "Unsupported read operation" } };
         };
 
-        virtual bool send(buffer_shr_ptr_t&& data)
+        virtual bool send(buffer_shr_ptr_t data)
         {
             if (!socket_.is_open())
             {
@@ -239,7 +237,7 @@ namespace moon
                 str.append(")");
             }
             std::string content =
-                moon::format("{\"addr\":\"%s\",\"code\":%d,\"message\":\"%s\"}", address().data(), e.value(), str.data());
+                moon::format(R"({"addr":"%s","code":%d,"message":"%s"})", address().data(), e.value(), str.data());
             
             message msg{};
             msg.set_type(type_);

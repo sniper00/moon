@@ -57,14 +57,12 @@ namespace moon
             static constexpr size_t READ_BUFFER_SIZE = 2048;
             udp_context(uint32_t o, asio::io_context& ioc, udp::endpoint ep)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, ep)
             {
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, udp::endpoint(udp::v4(), 0))
             {
             }
@@ -72,7 +70,7 @@ namespace moon
             bool closed = false;
             uint32_t owner;
             uint32_t fd = 0;
-            message msg;
+            message msg{READ_BUFFER_SIZE};
             udp::socket sock;
             udp::endpoint from_ep;
         };
@@ -106,7 +104,7 @@ namespace moon
 
         bool close(uint32_t fd);
 
-        void close_all();
+        void close_all() const;
 
         bool settimeout(uint32_t fd, uint32_t seconds);
 

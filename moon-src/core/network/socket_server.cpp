@@ -185,56 +185,42 @@ bool socket_server::accept(uint32_t fd, int64_t sessionid, uint32_t owner)
 
 void socket_server::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds)
 {
+    auto conn = make_connection(owner, type, tcp::socket(context_));
+
+    if (millseconds > 0)
+    {
+        std::shared_ptr<asio::steady_timer> timer;
+        timer = std::make_shared<asio::steady_timer>(context_);
+        timer->expires_after(std::chrono::milliseconds(millseconds));
+        timer->async_wait([this, owner, sessionid, host, port, timer, conn](const asio::error_code& ec) {
+            if (ec)
+                return;
+            if(conn.use_count() > 1){
+                conn->close();
+                response(0, owner, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
+            }
+        });
+    }
+
     auto resolver = std::make_shared<tcp::resolver>(context_);
     resolver->async_resolve(host, std::to_string(port),
-        [this, millseconds, type, owner, sessionid, host, port, resolver](const asio::error_code& ec, tcp::resolver::results_type results)
+        [this, sessionid, host, port, owner, resolver, conn](const asio::error_code& ec, tcp::resolver::results_type results)
         {
             if (!ec)
             {
-                auto c = make_connection(owner, type, tcp::socket(context_));
-                std::shared_ptr<asio::steady_timer> timer;
-                if (millseconds > 0)
-                {
-                    timer = std::make_shared<asio::steady_timer>(context_);
-                    timer->expires_after(std::chrono::milliseconds(millseconds));
-                    timer->async_wait([this, c, owner, sessionid, host, port, timer](const asio::error_code& ec) {
-                        if (!ec)
-                        {
-                            // The timer may have expired, but the callback function has not yet been called(asio's complete-queue).(0 == timer->cancel()).
-                            // Only trigger error code when socket not connected :
-                            if (c->fd() == 0)
-                            {
-                                c->close();
-                                response(0, owner, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
-                            }
-                        }
-                        });
-                }
-
-                asio::async_connect(c->socket(), results,
-                    [this, c, host, port, owner, sessionid, timer](const asio::error_code& ec, const tcp::endpoint&)
+                asio::async_connect(conn->socket(), results,
+                    [this, host, port, owner, sessionid, conn](const asio::error_code& ec, const tcp::endpoint&)
                     {
-                        size_t cancelled_timer = 1;
-                        if (timer)
-                        {
-                            try {
-                                cancelled_timer = timer->cancel();
-                            }
-                            catch (const asio::system_error& _) {
-                                //do nothing
-                            }
-                        }
-
                         if (!ec)
                         {
-                            c->fd(server_->nextfd());
-                            connections_.try_emplace(c->fd(), c);
-                            c->start(base_connection::role::client);
-                            response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_INTEGER);
+                            conn->fd(server_->nextfd());
+                            connections_.try_emplace(conn->fd(), conn);
+                            conn->start(base_connection::role::client);
+                            response(0, owner, std::to_string(conn->fd()), sessionid, PTYPE_INTEGER);
                         }
                         else
                         {
-                            if(cancelled_timer>0)
+                            if(conn.use_count() > 1)
                                 response(0, owner, moon::format("connect %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
                         }
                     });
@@ -309,19 +295,19 @@ bool socket_server::close(uint32_t fd)
     return false;
 }
 
-void socket_server::close_all()
+void socket_server::close_all() const
 {
-    for (auto& [_,v] : connections_)
+    for (const auto& [_, v] : connections_)
     {
         v->close();
     }
 
-    for (auto& [_,v] : udp_)
+    for (const auto& [_, v] : udp_)
     {
         v->sock.close();
     }
 
-    for (auto& [_,v] : acceptors_)
+    for (const auto& [_, v] : acceptors_)
     {
         v->close();
     }
@@ -486,7 +472,6 @@ socket_server::encode_endpoint(const address& addr, port_type port)
         size += bytes.size();
     }
     memcpy(buf.data() + size, &port, sizeof(port));
-    size += sizeof(port);
     return buf;
 }
 
