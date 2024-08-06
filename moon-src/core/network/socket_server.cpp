@@ -183,51 +183,67 @@ bool socket_server::accept(uint32_t fd, int64_t sessionid, uint32_t owner)
     return true;
 }
 
-void socket_server::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds)
+void socket_server::connect(const std::string &host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds)
 {
+    struct connect_params
+    {
+        uint16_t port;
+        uint32_t owner;
+        int64_t millseconds;
+        int64_t sessionid;
+        std::string host;
+    };
+
+    auto params = std::make_shared<connect_params>(connect_params{port, owner, millseconds, sessionid, host});
+
     auto conn = make_connection(owner, type, tcp::socket(context_));
 
     if (millseconds > 0)
     {
-        std::shared_ptr<asio::steady_timer> timer;
-        timer = std::make_shared<asio::steady_timer>(context_);
+        auto timer = std::make_unique<asio::steady_timer>(context_);
         timer->expires_after(std::chrono::milliseconds(millseconds));
-        timer->async_wait([this, owner, sessionid, host, port, timer, conn](const asio::error_code& ec) {
+        timer->async_wait([this, params, conn, _ = std::move(timer)](const asio::error_code &ec)
+                          {
             if (ec)
                 return;
             if(conn.use_count() > 1){
                 conn->close();
-                response(0, owner, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
-            }
-        });
+                response(0, params->owner, moon::format("connect %s:%d timeout", params->host.data(), params->port), params->sessionid, PTYPE_ERROR);
+            } });
     }
 
-    auto resolver = std::make_shared<tcp::resolver>(context_);
+    auto resolver = std::make_unique<tcp::resolver>(context_);
     resolver->async_resolve(host, std::to_string(port),
-        [this, sessionid, host, port, owner, resolver, conn](const asio::error_code& ec, tcp::resolver::results_type results)
+        [this, params, resolver = std::move(resolver), conn = std::move(conn)](const asio::error_code &ec, tcp::resolver::results_type results) mutable
         {
+            if (params->millseconds > 0 && conn.use_count() == 1) // has timeout
+                return;
+
             if (!ec)
             {
-                asio::async_connect(conn->socket(), results,
-                    [this, host, port, owner, sessionid, conn](const asio::error_code& ec, const tcp::endpoint&)
+                auto &socket = conn->socket();
+                asio::async_connect(socket, results,
+                    [this, params, conn = std::move(conn)](const asio::error_code &ec, const tcp::endpoint &)
                     {
+                        if (params->millseconds > 0 && conn.use_count() == 1) // has timeout
+                            return;
+
                         if (!ec)
                         {
                             conn->fd(server_->nextfd());
                             connections_.try_emplace(conn->fd(), conn);
                             conn->start(base_connection::role::client);
-                            response(0, owner, std::to_string(conn->fd()), sessionid, PTYPE_INTEGER);
+                            response(0, params->owner, std::to_string(conn->fd()), params->sessionid, PTYPE_INTEGER);
                         }
                         else
                         {
-                            if(conn.use_count() > 1)
-                                response(0, owner, moon::format("connect %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                            response(0, params->owner, moon::format("connect %s:%d %s(%d)", params->host.data(), params->port, ec.message().data(), ec.value()), params->sessionid, PTYPE_ERROR);
                         }
                     });
             }
             else
             {
-                response(0, owner, moon::format("resolve %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                response(0, params->owner, moon::format("resolve %s:%d %s(%d)", params->host.data(), params->port, ec.message().data(), ec.value()), params->sessionid, PTYPE_ERROR);
             }
         });
 }
