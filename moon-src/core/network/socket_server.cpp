@@ -206,7 +206,7 @@ void socket_server::connect(const std::string &host, uint16_t port, uint32_t own
                           {
             if (ec)
                 return;
-            if(conn.use_count() > 1){
+            if(conn->fd() == 0){
                 conn->close();
                 response(0, params->owner, moon::format("connect %s:%d timeout", params->host.data(), params->port), params->sessionid, PTYPE_ERROR);
             } });
@@ -216,7 +216,7 @@ void socket_server::connect(const std::string &host, uint16_t port, uint32_t own
     resolver->async_resolve(host, std::to_string(port),
         [this, params, resolver = std::move(resolver), conn = std::move(conn)](const asio::error_code &ec, tcp::resolver::results_type results) mutable
         {
-            if (params->millseconds > 0 && conn.use_count() == 1) // has timeout
+            if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
                 return;
 
             if (!ec)
@@ -225,7 +225,7 @@ void socket_server::connect(const std::string &host, uint16_t port, uint32_t own
                 asio::async_connect(socket, results,
                     [this, params, conn = std::move(conn)](const asio::error_code &ec, const tcp::endpoint &)
                     {
-                        if (params->millseconds > 0 && conn.use_count() == 1) // has timeout
+                        if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
                             return;
 
                         if (!ec)
