@@ -30,10 +30,10 @@ end)
 moon.async(function()
 	local res =  task.wait_all({
 		function ()
-			return httpc.get("www.baidu.com")
+			return httpc.get("http://www.baidu.com")
 		end,
 		function ()
-			return httpc.get("cn.bing.com")
+			return httpc.get("http://cn.bing.com")
 		end,
 		function ()
 			moon.sleep(10000)

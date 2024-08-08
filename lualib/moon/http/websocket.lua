@@ -43,7 +43,7 @@ end
 function websocket.connect(url, header, timeout)
     local protocol, host, uri = string.match(url, "^(ws)://([^/]+)(.*)$")
     if protocol ~= "ws" then
-        error(string.format("invalid protocol: %s", protocol))
+        error(string.format("Invalid protocol: %s", protocol))
     end
     assert(host)
     local host_addr, host_port = string.match(host, "^([^:]+):?(%d*)$")
@@ -65,8 +65,7 @@ function websocket.connect(url, header, timeout)
         end
     end
 
-    local response = internal.request("GET", host, {
-        path = uri,
+    local response = internal.request("GET", "http://".. host .. uri, {
         timeout = timeout,
         header = request_header
     })

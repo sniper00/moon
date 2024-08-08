@@ -20,9 +20,7 @@ end)
 http_server.listen("127.0.0.1",8001)
 
 moon.async(function()
-    local response = httpc.post("127.0.0.1:8001","HAHAHA", {
-        path = "/home"
-    })
+    local response = httpc.post("http://127.0.0.1:8001/home","HAHAHA")
     -- print_r(response)
     test_assert.equal(response.content,"Hello World/home")
     test_assert.success()

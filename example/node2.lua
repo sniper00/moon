@@ -26,7 +26,8 @@ local httpc = require("moon.http.client")
 
 local arg = moon.args()
 
-local NODE_ETC_HOST = "127.0.0.1:9090"
+local NODE_ETC_URL = "http://127.0.0.1:9090/conf.node?node=%s"
+local CLUSTER_ETC_URL = "http://127.0.0.1:9090/cluster?node=%s"
 
 local function run_recv_message()
     --- recv message from other node
@@ -90,8 +91,7 @@ local function init(node_conf)
             unique = true,
             name = "cluster",
             file = "../service/cluster.lua",
-            etc_host = NODE_ETC_HOST,
-            etc_path = "/cluster?node=%s",
+            url = CLUSTER_ETC_URL,
             threadid = 2,
         }
     }
@@ -131,9 +131,7 @@ local function init(node_conf)
 end
 
 moon.async(function()
-    local response = httpc.get(NODE_ETC_HOST, {
-        path = "/conf.node?node=" .. tostring(arg[1])
-    })
+    local response = httpc.get(string.format(NODE_ETC_URL, arg[1]))
 
     if response.status_code ~= 200 then
         moon.error(response.status_code, response.content)

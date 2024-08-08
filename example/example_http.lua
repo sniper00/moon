@@ -48,21 +48,12 @@ if false then -- Set true to test http proxy
 end
 
 moon.async(function()
-    httpc.get("http://127.0.0.1:9991", {
-        path = "/hello?a=1&b=2",
-        keepalive = 300
-    })
+    print_r(httpc.get("http://127.0.0.1:9991/hello?a=1&b=2"))
 
-    httpc.post("http://127.0.0.1:9991", "Hello Post", {
-        path = "/chat",
-        keepalive = 300
-    })
+    print_r(httpc.post("http://127.0.0.1:9991/chat", "Hello Post"))
 
     local form = { username = "wang", passwd = "456", age = 110 }
-    local response = httpc.postform("http://127.0.0.1:9991", form, {
-        path = "/login",
-        keepalive = 300
-    })
+    local response = httpc.postform("http://127.0.0.1:9991/login", form)
 
     print_r(response:json())
 
