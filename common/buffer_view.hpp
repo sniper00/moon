@@ -43,9 +43,9 @@ namespace moon
         }
 
         template<typename T>
-        typename std::enable_if<
-            !std::is_same<T, bool>::value &&
-            !std::is_same<T, std::string>::value, T>::type
+        std::enable_if_t<
+            !std::is_same_v<T, bool> &&
+            !std::is_same_v<T, std::string>, T>
             read()
         {
             static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable.");
@@ -53,15 +53,15 @@ namespace moon
         }
 
         template<typename T>
-        typename std::enable_if<
-            std::is_same<T, bool>::value, T>::type read()
+        std::enable_if_t<
+            std::is_same_v<T, bool>, T> read()
         {
             return (_read<uint8_t>() != 0) ? true : false;
         }
 
         template<typename T>
-        typename std::enable_if<
-            std::is_same<T, std::string>::value, T>::type read()
+        std::enable_if_t<
+            std::is_same_v<T, std::string>, T> read()
         {
             std::string tmp;
             while (readpos_ < size_)
@@ -76,7 +76,7 @@ namespace moon
 
         std::string to_string() const
         {
-            return std::string((const char*)data(), size());
+            return std::string(data(), size());
         }
 
         template<class T>
@@ -141,8 +141,7 @@ namespace moon
         std::string_view read_delim(char c)
         {
             std::string_view strref(data_ + readpos_, size());
-            size_t pos = strref.find(c);
-            if (pos != std::string_view::npos)
+            if (size_t pos = strref.find(c); pos != std::string_view::npos)
             {
                 readpos_ += (pos + sizeof(c));
                 return std::string_view(strref.data(), pos);

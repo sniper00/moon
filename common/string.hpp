@@ -192,7 +192,6 @@ namespace moon
         return r;
     }
 
-    //format string
     inline std::string format(const char* fmt, ...)
     {
         if (!fmt) return std::string("");
@@ -255,8 +254,7 @@ namespace moon
     //" /t/n/r"
     inline std::string_view trim_right(std::string_view v)
     {
-        const auto words_end(v.find_last_not_of(" \t\n\r"));
-        if (words_end != std::string_view::npos) {
+        if (const auto words_end(v.find_last_not_of(" \t\n\r")); words_end != std::string_view::npos) {
             v.remove_suffix(v.size() - words_end - 1);
         }
         return v;
@@ -271,8 +269,7 @@ namespace moon
 
     inline std::string_view trim(std::string_view v)
     {
-        const auto words_end(v.find_last_not_of(" \t\n\r"));
-        if (words_end != std::string_view::npos) {
+        if (const auto words_end(v.find_last_not_of(" \t\n\r")); words_end != std::string_view::npos) {
             v.remove_suffix(v.size() - words_end - 1);
         }
         const auto words_begin(v.find_first_not_of(" \t\n\r"));
@@ -282,11 +279,14 @@ namespace moon
 
     inline void replace(std::string& src, std::string_view old, std::string_view strnew)
     {
-        for (std::string::size_type pos(0); pos != std::string::npos; pos += strnew.size()) {
-            if ((pos = src.find(old, pos)) != std::string::npos)
-                src.replace(pos, old.size(), strnew);
-            else
-                break;
+        if (old.empty()) {
+            return;
+        }
+
+        std::string::size_type pos = 0;
+        while ((pos = src.find(old, pos)) != std::string::npos) {
+            src.replace(pos, old.size(), strnew);
+            pos += strnew.size();
         }
     }
 
@@ -316,7 +316,7 @@ namespace moon
     }
 
     //! case insensitive
-    inline bool iequal_string_locale(const std::string&str1, const std::string& str2, const std::locale& Loc = std::locale())
+    inline bool iequal_string_locale(std::string_view str1, std::string_view str2, const std::locale& Loc = std::locale())
     {
         if (str1.size() != str2.size())
             return false;
@@ -369,6 +369,22 @@ namespace moon
             res[i * 2] = hex[c >> 4];
             res[i * 2 + 1] = hex[c & 0xf];
             ++i;
+        }
+        return res;
+    }
+
+    inline std::string escape_non_printable(std::string_view input) {
+        static constexpr std::string_view hex = "0123456789abcdef";
+        std::string res;
+        for (char ch : input) {
+            if (isprint(static_cast<unsigned char>(ch))) {
+                res.push_back(ch);
+            } else {
+                res.push_back('\\');
+                res.push_back('x');
+                res.push_back(hex[ch >> 4]);
+                res.push_back(hex[ch & 0xf]);
+            }
         }
         return res;
     }

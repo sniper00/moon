@@ -192,7 +192,7 @@ namespace moon
     {
         static detail::error_codes const cat{};
         return std::error_code{ static_cast<
-            std::underlying_type<error>::type>(e), cat };
+            std::underlying_type_t<error>>(e), cat };
     }
 
     inline std::error_condition
@@ -200,6 +200,6 @@ namespace moon
     {
         static detail::error_conditions const cat{};
         return std::error_condition{ static_cast<
-            std::underlying_type<condition>::type>(c), cat };
+            std::underlying_type_t<condition>>(c), cat };
     }
 }

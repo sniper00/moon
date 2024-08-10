@@ -8,35 +8,13 @@ namespace moon
     class streambuf
     {
     public:
-        typedef asio::const_buffer const_buffers_type;
-        typedef asio::mutable_buffer mutable_buffers_type;
+        using const_buffers_type = asio::const_buffer;
+        using mutable_buffers_type = asio::mutable_buffer;
 
-        streambuf(buffer_t* buf, std::size_t maxsize = (std::numeric_limits<std::size_t>::max)())
+        streambuf(buffer_t* buf, std::size_t maxsize = std::numeric_limits<std::size_t>::max())
             :buffer_(buf)
             , max_size_(maxsize)
         {
-
-        }
-
-        streambuf(const streambuf&) = delete;
-
-        streambuf& operator=(const streambuf&) = delete;
-
-        streambuf(streambuf&& other) noexcept
-            :buffer_(other.buffer_)
-            , max_size_(other.max_size_)
-        {
-            other.buffer_ = nullptr;
-            other.max_size_ = 0;
-        }
-
-        streambuf& operator=(streambuf&& other) noexcept
-        {
-            buffer_ = other.buffer_;
-            max_size_ = other.max_size_;
-            other.buffer_ = nullptr;
-            other.max_size_ = 0;
-            return *this;
         }
 
         std::size_t size() const noexcept
@@ -65,8 +43,8 @@ namespace moon
         mutable_buffers_type prepare(std::size_t n)
         {
             if (nullptr == buffer_) return asio::mutable_buffer{nullptr, 0};
-            auto space = buffer_->prepare(n);
-            return asio::mutable_buffer{space.first, space.second};
+            auto [k, v] = buffer_->prepare(n);
+            return asio::mutable_buffer{k, v};
         }
 
         void commit(std::size_t n)

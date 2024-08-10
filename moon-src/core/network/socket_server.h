@@ -57,14 +57,12 @@ namespace moon
             static constexpr size_t READ_BUFFER_SIZE = 2048;
             udp_context(uint32_t o, asio::io_context& ioc, udp::endpoint ep)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, ep)
             {
             }
 
             udp_context(uint32_t o, asio::io_context& ioc)
                 :owner(o)
-                , msg(READ_BUFFER_SIZE)
                 , sock(ioc, udp::endpoint(udp::v4(), 0))
             {
             }
@@ -72,7 +70,7 @@ namespace moon
             bool closed = false;
             uint32_t owner;
             uint32_t fd = 0;
-            message msg;
+            message msg{READ_BUFFER_SIZE};
             udp::socket sock;
             udp::endpoint from_ep;
         };
@@ -102,11 +100,11 @@ namespace moon
 
         direct_read_result read(uint32_t fd, size_t n, std::string_view delim, int64_t sessionid);
 
-        bool write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask = socket_send_mask::none);
+        bool write(uint32_t fd, buffer_shr_ptr_t data, socket_send_mask mask = socket_send_mask::none);
 
         bool close(uint32_t fd);
 
-        void close_all();
+        void close_all() const;
 
         bool settimeout(uint32_t fd, uint32_t seconds);
 
@@ -116,13 +114,14 @@ namespace moon
 
         bool set_send_queue_limit(uint32_t fd, uint16_t warnsize, uint16_t errorsize);
 
-        bool send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t&& data);
+        bool send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t data);
 
         std::string getaddress(uint32_t fd);
 
         bool switch_type(uint32_t fd, uint8_t new_type);
 
-        static size_t encode_endpoint(char* buf, const address& addr, port_type port);
+        static std::array<char,socket_server::addr_v6_size>
+            encode_endpoint(const address& addr, port_type port);
     private:
         connection_ptr_t make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock);
 

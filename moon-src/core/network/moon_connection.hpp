@@ -32,7 +32,7 @@ namespace moon
             read_header();
         }
 
-        bool send(buffer_shr_ptr_t&& data) override
+        bool send(buffer_shr_ptr_t data) override
         {
             if (data->size() >= MESSAGE_CONTINUED_FLAG && !enum_has_any_bitmask(flag_, enable_chunked::send))
             {
@@ -171,7 +171,7 @@ namespace moon
             read_header();
         }
 
-    protected:
+    private:
         enable_chunked flag_;
         buffer cache_;
         buffer_ptr_t data_;

@@ -45,12 +45,12 @@ namespace moon
             return *this;
         }
 
-        bool operator!=(const skip_list_iterator_sentinel) const {
-            return node_ != nullptr;
+        friend bool operator!=(skip_list_iterator self, skip_list_iterator_sentinel) {
+            return self.node_ != nullptr;
         }
 
-        bool operator==(const skip_list_iterator_sentinel) const {
-            return node_ == nullptr;
+        friend bool operator==(skip_list_iterator self, skip_list_iterator_sentinel) {
+            return self.node_ == nullptr;
         }
     };
 
@@ -161,7 +161,7 @@ namespace moon
         friend class skip_list_iterator< skip_list>;
         using const_iterator = skip_list_iterator< skip_list>;
 
-        skip_list(const allocator_type& alloc = allocator_type())
+        explicit skip_list(const allocator_type& alloc = allocator_type())
             :alloc_(alloc)
             , gen_(std::random_device{}())
         {
@@ -409,42 +409,42 @@ namespace moon
             int64_t score = 0;
             int64_t timestamp = 0;
 
-            bool operator==(const context& val) const
+            friend bool operator==(const context& self, const context& val)
             {
-                return key == val.key;
+                return self.key == val.key;
             }
 
-            bool operator<(const context& val) const
+            friend bool operator<(const context& self, const context& val)
             {
-                if (score == val.score)
+                if (self.score == val.score)
                 {
-                    if (timestamp == val.timestamp)
+                    if (self.timestamp == val.timestamp)
                     {
-                        return key < val.key;
+                        return self.key < val.key;
                     }
-                    return timestamp < val.timestamp;
+                    return self.timestamp < val.timestamp;
                 }
-                return score > val.score;
+                return self.score > val.score;
             }
 
-            bool operator<=(const context& val) const
+            friend bool operator<=(const context& self, const context& val)
             {
-                if (key == val.key)
+                if (self.key == val.key)
                     return true;
-                return operator<(val);
+                return operator<(self, val);
             }
 
-            bool operator>(const context& val) const
+            friend bool operator>(const context& self, const context& val)
             {
-                if (score == val.score)
+                if (self.score == val.score)
                 {
-                    if (timestamp == val.timestamp)
+                    if (self.timestamp == val.timestamp)
                     {
-                        return key > val.key;
+                        return self.key > val.key;
                     }
-                    return timestamp > val.timestamp;
+                    return self.timestamp > val.timestamp;
                 }
-                return score < val.score;
+                return self.score < val.score;
             }
         };
     public:

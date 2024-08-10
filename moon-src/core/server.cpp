@@ -26,7 +26,7 @@ namespace moon
             timer_.emplace_back(std::make_unique<timer_type>());
         }
 
-        for (auto& w : workers_)
+        for (const auto& w : workers_)
         {
             w->run();
         }
@@ -46,15 +46,15 @@ namespace moon
         {
             now_ = time::now();
 
-            if (exitcode_ < 0 )
+            if (exitcode_.load(std::memory_order_acquire) < 0 )
             {
                 break;
             }
 
-            if (exitcode_ != std::numeric_limits<int>::max() && !stop_once)
+            if (exitcode_.load(std::memory_order_acquire) != std::numeric_limits<int>::max() && !stop_once)
             {
                 stop_once = true;
-                CONSOLE_WARN("Received signal code %d", exitcode_);
+                CONSOLE_WARN("Received signal code %d", exitcode_.load(std::memory_order_acquire));
                 for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter)
                 {
                     (*iter)->stop();
@@ -78,7 +78,7 @@ namespace moon
                 }
             }
 
-            for (auto& t : timer_)
+            for (const auto& t : timer_)
             {
                 t->update(now_);
             }
@@ -86,14 +86,14 @@ namespace moon
             timer.wait(ignore);
         }
         wait();
-        if(exitcode_ == std::numeric_limits<int>::max())
-            exitcode_ = 0;
-        return exitcode_;
+        if(exitcode_.load(std::memory_order_acquire) == std::numeric_limits<int>::max())
+            exitcode_.store(0, std::memory_order_release);
+        return exitcode_.load();
     }
 
     void server::stop(int exitcode)
     {
-        exitcode_ = exitcode;
+        exitcode_.store(exitcode, std::memory_order_release);
     }
 
     void server::wait()
@@ -173,7 +173,7 @@ namespace moon
     worker* server::get_worker(uint32_t workerid, uint32_t serviceid) const
     {
         workerid = workerid? workerid: worker_id(serviceid);
-        if ((workerid == 0 || workerid > static_cast<uint32_t>(workers_.size())))
+        if (workerid == 0 || workerid > static_cast<uint32_t>(workers_.size()))
         {
             return nullptr;
         }
@@ -192,7 +192,7 @@ namespace moon
         timer_[workerid-1]->add(now_+ interval, serviceid, timerid, this);
     }
 
-    void server::on_timer(uint32_t serviceid, int64_t timerid)
+    void server::on_timer(uint32_t serviceid, int64_t timerid) const
     {
         auto msg = message::with_empty();
         msg.set_type(PTYPE_TIMER);
@@ -215,7 +215,7 @@ namespace moon
         w->new_service(std::move(conf));
     }
 
-    void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid)
+    void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid) const
     {
         worker* w = get_worker(0, serviceid);
         if (nullptr != w)
@@ -254,7 +254,7 @@ namespace moon
     bool server::send(uint32_t sender, uint32_t receiver, buffer_ptr_t data, int64_t sessionid, uint8_t type) const
     {
         sessionid = -sessionid;
-        message m = message{ std::move(data) };
+        message m{std::move(data)};
         m.set_sender(sender);
         m.set_receiver(receiver);
         m.set_type(type);
@@ -275,7 +275,7 @@ namespace moon
 
     bool server::register_service(const std::string& type, register_func f)
     {
-        auto ret = regservices_.emplace(type, f);
+        auto ret = regservices_.try_emplace(type, f);
         MOON_ASSERT(ret.second
             , moon::format("already registed service type[%s].", type.data()).data());
         return ret.second;
@@ -283,8 +283,7 @@ namespace moon
 
     service_ptr_t server::make_service(const std::string& type)
     {
-        auto iter = regservices_.find(type);
-        if (iter != regservices_.end())
+        if (auto iter = regservices_.find(type); iter != regservices_.end())
         {
             return iter->second();
         }
@@ -293,8 +292,7 @@ namespace moon
 
     std::shared_ptr<const std::string> server::get_env(const std::string& name) const
     {
-        std::shared_ptr<const std::string> value;
-        if (env_.try_get_value(name, value))
+        if (std::shared_ptr<const std::string> value; env_.try_get_value(name, value))
         {
             return value;
         }

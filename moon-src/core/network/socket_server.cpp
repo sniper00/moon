@@ -66,7 +66,7 @@ std::pair<uint32_t, tcp::endpoint> socket_server::listen(const std::string & hos
         ctx->reset_reserve();
         auto id = server_->nextfd();
         ctx->fd = id;
-        acceptors_.emplace(id, ctx);
+        acceptors_.try_emplace(id, ctx);
         return std::make_pair(id, ctx->acceptor.local_endpoint());
     }
     catch (const asio::system_error& e)
@@ -94,7 +94,7 @@ uint32_t socket_server::udp_open(uint32_t owner, std::string_view host, uint16_t
         auto id = server_->nextfd();
         ctx->fd = id;
         do_receive(ctx);
-        udp_.emplace(id, std::move(ctx));
+        udp_.try_emplace(id, std::move(ctx));
         return id;
     }
     catch (const asio::system_error& e)
@@ -132,7 +132,7 @@ bool socket_server::accept(uint32_t fd, int64_t sessionid, uint32_t owner)
         return false;
     }
 
-    auto& ctx = iter->second;
+    auto const& ctx = iter->second;
     if (!ctx->acceptor.is_open())
     {
         return false;
@@ -166,12 +166,9 @@ bool socket_server::accept(uint32_t fd, int64_t sessionid, uint32_t owner)
             if (e == asio::error::operation_aborted)
                 return;
 
-            if (e == asio::error::no_descriptors)
+            if (e == asio::error::no_descriptors && ctx->reserve.is_open())
             {
-                if (ctx->reserve.is_open())
-                {
-                    ctx->reserve.close();
-                }
+                ctx->reserve.close();
             }
 
             response(ctx->fd, ctx->owner, moon::format("socket_server::accept %s(%d)", e.message().data(), e.value()),
@@ -186,64 +183,67 @@ bool socket_server::accept(uint32_t fd, int64_t sessionid, uint32_t owner)
     return true;
 }
 
-void socket_server::connect(const std::string& host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds)
+void socket_server::connect(const std::string &host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid, uint32_t millseconds)
 {
-    std::shared_ptr<tcp::resolver> resolver = std::make_shared<tcp::resolver>(context_);
+    struct connect_params
+    {
+        uint16_t port;
+        uint32_t owner;
+        int64_t millseconds;
+        int64_t sessionid;
+        std::string host;
+    };
+
+    auto params = std::make_shared<connect_params>(connect_params{port, owner, millseconds, sessionid, host});
+
+    auto conn = make_connection(owner, type, tcp::socket(context_));
+
+    if (millseconds > 0)
+    {
+        auto timer = std::make_unique<asio::steady_timer>(context_);
+        timer->expires_after(std::chrono::milliseconds(millseconds));
+        timer->async_wait([this, params, conn, _ = std::move(timer)](const asio::error_code &ec)
+                          {
+            if (ec)
+                return;
+            if(conn->fd() == 0){
+                conn->close();
+                response(0, params->owner, moon::format("connect %s:%d timeout", params->host.data(), params->port), params->sessionid, PTYPE_ERROR);
+            } });
+    }
+
+    auto resolver = std::make_unique<tcp::resolver>(context_);
     resolver->async_resolve(host, std::to_string(port),
-        [this, millseconds, type, owner, sessionid, host, port, resolver](const asio::error_code& ec, tcp::resolver::results_type results)
+        [this, params, resolver = std::move(resolver), conn = std::move(conn)](const asio::error_code &ec, tcp::resolver::results_type results) mutable
         {
+            if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
+                return;
+
             if (!ec)
             {
-                auto c = make_connection(owner, type, tcp::socket(context_));
-                std::shared_ptr<asio::steady_timer> timer;
-                if (millseconds > 0)
-                {
-                    timer = std::make_shared<asio::steady_timer>(context_);
-                    timer->expires_after(std::chrono::milliseconds(millseconds));
-                    timer->async_wait([this, c, owner, sessionid, host, port, timer](const asio::error_code& ec) {
-                        if (!ec)
-                        {
-                            // The timer may have expired, but the callback function has not yet been called(asio's complete-queue).(0 == timer->cancel()).
-                            // Only trigger error code when socket not connected :
-                            if (c->fd() == 0)
-                            {
-                                c->close();
-                                response(0, owner, moon::format("connect %s:%d timeout", host.data(), port), sessionid, PTYPE_ERROR);
-                            }
-                        }
-                        });
-                }
-
-                asio::async_connect(c->socket(), results,
-                    [this, c, host, port, owner, sessionid, timer](const asio::error_code& ec, const tcp::endpoint&)
+                auto &socket = conn->socket();
+                asio::async_connect(socket, results,
+                    [this, params, conn = std::move(conn)](const asio::error_code &ec, const tcp::endpoint &)
                     {
-                        size_t cancelled_timer = 1;
-                        if (timer)
-                        {
-                            try {
-                                cancelled_timer = timer->cancel();
-                            }
-                            catch (...) {
-                            }
-                        }
+                        if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
+                            return;
 
                         if (!ec)
                         {
-                            c->fd(server_->nextfd());
-                            connections_.emplace(c->fd(), c);
-                            c->start(base_connection::role::client);
-                            response(0, owner, std::to_string(c->fd()), sessionid, PTYPE_INTEGER);
+                            conn->fd(server_->nextfd());
+                            connections_.try_emplace(conn->fd(), conn);
+                            conn->start(base_connection::role::client);
+                            response(0, params->owner, std::to_string(conn->fd()), params->sessionid, PTYPE_INTEGER);
                         }
                         else
                         {
-                            if(cancelled_timer>0)
-                                response(0, owner, moon::format("connect %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                            response(0, params->owner, moon::format("connect %s:%d %s(%d)", params->host.data(), params->port, ec.message().data(), ec.value()), params->sessionid, PTYPE_ERROR);
                         }
                     });
             }
             else
             {
-                response(0, owner, moon::format("resolve %s:%d %s(%d)", host.data(), port, ec.message().data(), ec.value()), sessionid, PTYPE_ERROR);
+                response(0, params->owner, moon::format("resolve %s:%d %s(%d)", params->host.data(), params->port, ec.message().data(), ec.value()), params->sessionid, PTYPE_ERROR);
             }
         });
 }
@@ -257,7 +257,7 @@ direct_read_result socket_server::read(uint32_t fd, size_t n, std::string_view d
     return direct_read_result{ false, { "socket.read: closed" } };
 }
 
-bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask mask)
+bool socket_server::write(uint32_t fd, buffer_shr_ptr_t data, socket_send_mask mask)
 {
     if (nullptr == data || 0 == data->size())
         return false;
@@ -270,10 +270,12 @@ bool socket_server::write(uint32_t fd, buffer_shr_ptr_t&& data, socket_send_mask
 
     if (auto iter = udp_.find(fd); iter != udp_.end())
     {
+        auto buf = asio::buffer(data->data(), data->size());
         iter->second->sock.async_send(
-            asio::buffer(data->data(), data->size()),
-            [data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            buf,
+            [_ = std::move(data), ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
             {
+                //do nothing
             });
         return true;
     }
@@ -309,21 +311,21 @@ bool socket_server::close(uint32_t fd)
     return false;
 }
 
-void socket_server::close_all()
+void socket_server::close_all() const
 {
-    for (auto& c : connections_)
+    for (const auto& [_, v] : connections_)
     {
-        c.second->close();
+        v->close();
     }
 
-    for (auto& c : udp_)
+    for (const auto& [_, v] : udp_)
     {
-        c.second->sock.close();
+        v->sock.close();
     }
 
-    for (auto& ac : acceptors_)
+    for (const auto& [_, v] : acceptors_)
     {
-        ac.second->close();
+        v->close();
     }
 }
 
@@ -417,7 +419,7 @@ static bool decode_endpoint(std::string_view address, udp::endpoint& ep)
     return true;
 }
 
-bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t&& data)
+bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_ptr_t data)
 {
     if (address.empty())
         return false;
@@ -426,10 +428,13 @@ bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_
         udp::endpoint ep;
         if (!decode_endpoint(address, ep))
             return false;
+
+        auto buf = asio::buffer(data->data(), data->size());
         iter->second->sock.async_send_to(
-            asio::buffer(data->data(), data->size()), ep,
-            [data, ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
+            buf, ep,
+            [_ = std::move(data), ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/)
             {
+                //do nothing
             });
         return true;
     }
@@ -461,15 +466,17 @@ bool moon::socket_server::switch_type(uint32_t fd, uint8_t new_type)
     return false;
 }
 
-size_t socket_server::encode_endpoint(char* buf, const address& addr, port_type port)
+std::array<char,socket_server::addr_v6_size>
+socket_server::encode_endpoint(const address& addr, port_type port)
 {
+    std::array<char,socket_server::addr_v6_size> buf{};
     size_t size = 0;
     if (addr.is_v4())
     {
         buf[0] = '4';
         size+=1;
         auto bytes = addr.to_v4().to_bytes();
-        memcpy(buf + size, bytes.data(), bytes.size());
+        memcpy(buf.data() + size, bytes.data(), bytes.size());
         size += bytes.size();
     }
     else if (addr.is_v6())
@@ -477,12 +484,11 @@ size_t socket_server::encode_endpoint(char* buf, const address& addr, port_type 
         buf[0] = '6';
         size += 1;
         auto bytes = addr.to_v6().to_bytes();
-        memcpy(buf + size, bytes.data(), bytes.size());
+        memcpy(buf.data() + size, bytes.data(), bytes.size());
         size += bytes.size();
     }
-    memcpy(buf + size, &port, sizeof(port));
-    size += sizeof(port);
-    return size;
+    memcpy(buf.data() + size, &port, sizeof(port));
+    return buf;
 }
 
 connection_ptr_t socket_server::make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock)
@@ -532,7 +538,7 @@ void socket_server::response(uint32_t sender, uint32_t receiver, std::string_vie
 void socket_server::add_connection(socket_server* from, const acceptor_context_ptr_t& ctx, const connection_ptr_t & c, int64_t  sessionid)
 {
     asio::dispatch(context_, [this, from, ctx, c, sessionid] {
-        connections_.emplace(c->fd(), c);
+        connections_.try_emplace(c->fd(), c);
         c->start(base_connection::role::server);
 
         if (sessionid != 0)
@@ -546,7 +552,7 @@ void socket_server::add_connection(socket_server* from, const acceptor_context_p
 
 service* socket_server::find_service(uint32_t serviceid)
 {
-    return worker_->find_service(serviceid);;
+    return worker_->find_service(serviceid);
 }
 
 void socket_server::timeout()
@@ -559,9 +565,9 @@ void socket_server::timeout()
         }
 
         auto now = base_connection::now();
-        for (auto& connection : connections_)
+        for (const auto& [_, v] : connections_)
         {
-            connection.second->timeout(now);
+            v->timeout(now);
         }
         timeout();
     });
@@ -578,18 +584,17 @@ void socket_server::do_receive(const udp_context_ptr_t& ctx)
     buf->commit(addr_v6_size);
     buf->seek(addr_v6_size, buffer::seek_origin::Begin);
 
-    auto space = buf->writeable();
+    auto [k,v] = buf->writeable();
     ctx->sock.async_receive_from(
-        asio::buffer(space.first, space.second), ctx->from_ep,
+        asio::buffer(k, v), ctx->from_ep,
         [this, ctx](std::error_code ec, std::size_t bytes_recvd)
         {
             if (!ec && bytes_recvd >0)
             {
-                auto buf = ctx->msg.as_buffer();
-                buf->commit(bytes_recvd);
-                char arr[32];
-                size_t size = encode_endpoint(arr, ctx->from_ep.address(), ctx->from_ep.port());
-                buf->write_front(arr, size);
+                auto b = ctx->msg.as_buffer();
+                b->commit(bytes_recvd);
+                auto bytes = encode_endpoint(ctx->from_ep.address(), ctx->from_ep.port());
+                b->write_front(bytes.data(), bytes.size());
                 ctx->msg.set_sender(ctx->fd);
                 ctx->msg.set_receiver(0);
                 ctx->msg.set_type(PTYPE_SOCKET_UDP);
