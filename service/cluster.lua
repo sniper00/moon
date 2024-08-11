@@ -157,15 +157,12 @@ local function cluster_service()
 
     function command.Listen()
 
-        local response = httpc.get(conf.etc_host,{
-            path = string.format(conf.etc_path, NODE)
-        })
-
+        local response = httpc.get(string.format(conf.url,NODE))
         if response.status_code ~= 200 then
             error("can not found cluster config for node="..NODE)
         end
 
-        local c = json.decode(response.content)
+        local c = json.decode(response.body)
         assert(c.host and c.port, "require host and port")
 
         local listenfd = socket.listen(c.host, c.port,moon.PTYPE_SOCKET_MOON)
@@ -204,16 +201,14 @@ local function cluster_service()
 
         c = clusters[header.to_node]
         if not c or not c.fd then
-            local response = httpc.get(conf.etc_host,{
-                path = string.format(conf.etc_path, header.to_node)
-            })
+            local response = httpc.get(string.format(conf.url, header.to_node))
             if response.status_code ~= 200 then
-                local errstr = response.content
+                local errstr = response.body
                 moon.error(response.status_code, errstr)
                 moon.response("lua", header.from_addr, header.session, false, errstr)
                 return
             end
-            c = json.decode(response.content)
+            c = json.decode(response.body)
             clusters[header.to_node] = c
             c.fd = connect(header.to_node)
         end

@@ -24,7 +24,8 @@ local httpc = require("moon.http.client")
 
 local arg = moon.args()
 
-local NODE_ETC_HOST = "127.0.0.1:9090"
+local NODE_ETC_URL = "http://127.0.0.1:9090/conf.node?node=%s"
+local CLUSTER_ETC_URL = "http://127.0.0.1:9090/cluster?node=%s"
 
 local function run_send_message()
     --- send message to target node
@@ -61,14 +62,68 @@ local function run_send_message()
     end)
 end
 
+local function run_recv_message()
+    --- recv message from other node
+    local command = {}
+
+    command.ADD =  function(a,b)
+        return a+b
+    end
+
+    command.SUB = function(a,b)
+        return a-b
+    end
+
+    command.MUL = function(a,b)
+        return a*b
+    end
+
+    command.ACCUM = function(...)
+        local numbers = {...}
+        local total = 0
+        for _,v in pairs(numbers) do
+            total = total + v
+        end
+        return total
+    end
+
+    local count = 0
+    local tcount = 0
+    local bt = 0
+    command.COUNTER = function(t)
+        count = count + 1
+        if bt == 0 then
+            bt = t
+        end
+        tcount = tcount + 1
+
+        if count == 10000 then
+            print("10000 cost", (t-bt), "ms")
+            count = 0
+            bt = 0
+        end
+    end
+
+    moon.dispatch('lua',function(sender, session, CMD, ...)
+        local f = command[CMD]
+        if f then
+            if CMD ~= 'ADD' then
+                --moon.sleep(20000)
+                moon.response('lua',sender, session,f(...))
+            end
+        else
+            error(string.format("Unknown command %s", tostring(CMD)))
+        end
+    end)
+end
+
 local function init(node_conf)
     local services = {
         {
             unique = true,
             name = "cluster",
             file = "../service/cluster.lua",
-            etc_host = NODE_ETC_HOST,
-            etc_path = "/cluster?node=%s",
+            url = CLUSTER_ETC_URL,
             threadid = 2,
         }
     }
@@ -90,7 +145,13 @@ local function init(node_conf)
 
         --print(moon.call("lua", moon.queryservice("cluster"), "Listen"))
 
-        run_send_message()
+        if arg[1] == "1" then
+            run_send_message()
+        else
+            -- cluster服务开启监听端口
+            print("start cluster Listen", moon.call("lua", moon.queryservice("cluster"), "Listen"))
+            run_recv_message()
+        end
     end)
 
     ---注册进程退出信号处理
@@ -108,17 +169,14 @@ local function init(node_conf)
 end
 
 moon.async(function()
-    local response = httpc.get(NODE_ETC_HOST, {
-        path = "/conf.node?node=" .. tostring(arg[1])
-    })
-
+    local response = httpc.get(string.format(NODE_ETC_URL, arg[1]))
     if response.status_code ~= 200 then
-        moon.error(response.status_code, response.content)
+        moon.error(response.status_code, response.body)
         moon.exit(-1)
         return
     end
 
-    local node_conf = json.decode(response.content)
+    local node_conf = json.decode(response.body)
 
     -- 设置当前节点环境变量，cluster服务需要用到
     moon.env("NODE", arg[1])

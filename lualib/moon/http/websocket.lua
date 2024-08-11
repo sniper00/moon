@@ -43,7 +43,7 @@ end
 function websocket.connect(url, header, timeout)
     local protocol, host, uri = string.match(url, "^(ws)://([^/]+)(.*)$")
     if protocol ~= "ws" then
-        error(string.format("invalid protocol: %s", protocol))
+        error(string.format("Invalid protocol: %s", protocol))
     end
     assert(host)
     local host_addr, host_port = string.match(host, "^([^:]+):?(%d*)$")
@@ -65,8 +65,7 @@ function websocket.connect(url, header, timeout)
         end
     end
 
-    local response = internal.request("GET", host, {
-        path = uri,
+    local response = internal.request("GET", "http://".. host .. uri, {
         timeout = timeout,
         header = request_header
     })
@@ -74,9 +73,9 @@ function websocket.connect(url, header, timeout)
     local recvheader = response.header
 
     if response.status_code ~= 101 then
-        error(string.format("websocket handshake error: code[%s] info:%s", response.status_code, response.content))
+        error(string.format("websocket handshake error: code[%s] info:%s", response.status_code, response.body))
     end
-	--assert(response.content == "")	-- todo: M.read may need handle it
+	--assert(response.body == "")	-- todo: M.read may need handle it
 
     if not recvheader["upgrade"] or recvheader["upgrade"]:lower() ~= "websocket" then
         error("websocket handshake upgrade must websocket")

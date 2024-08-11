@@ -17,7 +17,7 @@ http_server.on("/hello", function(request, response)
 end)
 
 http_server.on("/chat", function(request, response)
-    print_r(request.content)
+    print_r(request.body)
     response:write_header("Content-Type", "text/plain")
     response:write("POST:Hello World/home")
 end)
@@ -28,43 +28,42 @@ http_server.on("/login", function(request, response)
     response:write(json.encode({ score = 112, level = 100, item = { id = 1, count = 2 } }))
 end)
 
+http_server.on("/login2", function(request, response)
+    print_r(json.decode(request.body))
+    response:write_header("Content-Type", "application/json")
+    response:write(json.encode({ score = 112, level = 100, item = { id = 1, count = 2 } }))
+end)
+
 http_server.listen("127.0.0.1", 9991)
 print("http_server start", "127.0.0.1", 9991)
 
 if false then -- Set true to test http proxy
-
     -- Set http proxy
 
     -- Solution 1: Set the environment variable HTTPS_PROXY
     moon.env("HTTPS_PROXY", "http://127.0.0.1:8443")
-
     moon.async(function ()
-        print_r(httpc.get("https://www.google.com.hk", {
-            path = "/",
-            -- Solution 2: Set the proxy parameter
-            --proxy = "http://127.0.0.1:8443"
-        }))
+        print_r(httpc.get("https://www.google.com.hk"))
     end)
+
+    -- Solution 2: Set the proxy parameter
+    --proxy = "http://127.0.0.1:8443"
+    print_r(httpc.get("https://www.google.com.hk", {
+        proxy = "http://127.0.0.1:8443"
+    }))
 end
 
 moon.async(function()
-    httpc.get("http://127.0.0.1:9991", {
-        path = "/hello?a=1&b=2",
-        keepalive = 300
-    })
+    print_r(httpc.get("http://127.0.0.1:9991/hello?a=1&b=2"))
 
-    httpc.post("http://127.0.0.1:9991", "Hello Post", {
-        path = "/chat",
-        keepalive = 300
-    })
+    print_r(httpc.post("http://127.0.0.1:9991/chat", "Hello Post"))
 
     local form = { username = "wang", passwd = "456", age = 110 }
-    local response = httpc.postform("http://127.0.0.1:9991", form, {
-        path = "/login",
-        keepalive = 300
-    })
-
+    local response = httpc.post_form("http://127.0.0.1:9991/login", form)
     print_r(response:json())
+
+    local response = httpc.post_json("http://127.0.0.1:9991/login2", { username = "wang", passwd = "456", age = 110 })
+    print_r(response.body)
 
     moon.exit(100)
 end)
