@@ -40,7 +40,7 @@ function websocket.close(fd)
     socket.close(fd)
 end
 
-function websocket.connect(url, header, timeout)
+function websocket.connect(url, headers, timeout)
     local protocol, host, uri = string.match(url, "^(ws)://([^/]+)(.*)$")
     if protocol ~= "ws" then
         error(string.format("Invalid protocol: %s", protocol))
@@ -58,8 +58,8 @@ function websocket.connect(url, header, timeout)
         ["Sec-WebSocket-Key"] = key
     }
 
-    if header then
-        for k,v in pairs(header) do
+    if headers then
+        for k,v in pairs(headers) do
             assert(request_header[k] == nil, k)
             request_header[k] = v
         end
@@ -67,10 +67,10 @@ function websocket.connect(url, header, timeout)
 
     local response = internal.request("GET", "http://".. host .. uri, {
         timeout = timeout,
-        header = request_header
+        headers = request_header
     })
 
-    local recvheader = response.header
+    local recvheader = response.headers
 
     if response.status_code ~= 101 then
         error(string.format("websocket handshake error: code[%s] info:%s", response.status_code, response.body))
@@ -110,8 +110,8 @@ end
 ---@param cb fun(fd:integer, HttpRequest)
 function websocket.on_accept(cb)
     wscallbacks[socket_data_type.accept] = function (fd, msg)
-        local header = internal.parse_header(moon.decode(msg, "Z"))
-        cb(fd, header)
+        local headers = internal.parse_header(moon.decode(msg, "Z"))
+        cb(fd, headers)
     end
 end
 

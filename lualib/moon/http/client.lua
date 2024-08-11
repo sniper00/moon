@@ -53,8 +53,8 @@ end
 ---@return HttpResponse
 function M.post_form(url, form, options)
     options = options or {}
-    options.header = options.header or {}
-    options.header["content-type"] = "application/x-www-form-urlencoded"
+    options.headers = options.headers or {}
+    options.headers["content-type"] = "application/x-www-form-urlencoded"
     for k, v in pairs(form) do
         form[k] = tostring(v)
     end

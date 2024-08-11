@@ -24,7 +24,7 @@ static int lhttp_parse_request(lua_State* L)
     luaL_rawsetfield(L, -3, "query_string", lua_pushlstring(L, query_string.data(), query_string.size()));
     luaL_rawsetfield(L, -3, "version", lua_pushlstring(L, version.data(), version.size()));
 
-    lua_pushliteral(L, "header");
+    lua_pushliteral(L, "headers");
     lua_createtable(L, 0, (int)header.size());
     std::string tmp;
     for (const auto&[k,v] : header)
@@ -54,7 +54,7 @@ static int lhttp_parse_response(lua_State* L)
     lua_createtable(L, 0, 6);
     luaL_rawsetfield(L, -3, "version", lua_pushlstring(L, version.data(), version.size()));
     luaL_rawsetfield(L, -3, "status_code", lua_pushlstring(L, status_code.data(), status_code.size()));
-    lua_pushliteral(L, "header");
+    lua_pushliteral(L, "headers");
     lua_createtable(L, 0, (int)header.size());
     std::string tmp;
     for (const auto& [k,v] : header)

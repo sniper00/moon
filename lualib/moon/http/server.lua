@@ -51,6 +51,8 @@ local routers = {}
 local traceback = debug.traceback
 
 ---return keepalive
+---@param fd integer
+---@param request HttpRequest
 local function request_handler(fd, request)
     local response = http_response.new()
 
@@ -60,7 +62,7 @@ local function request_handler(fd, request)
         if static_src then
             response:write_header("Content-Type", static_src.mime)
             response:write(static_src.bin)
-            if not M.keepalive or request.header["connection"] == "close" then
+            if not M.keepalive or request.headers["connection"] == "close" then
                 response:write_header("Connection", "close")
                 socket.write_then_close(fd, buffer.concat(response:tb()))
                 return
@@ -81,7 +83,7 @@ local function request_handler(fd, request)
                 moon.error(err)
             end
 
-            request.header["connection"] = "close"
+            request.headers["connection"] = "close"
 
             response.status_code = 500
             response:write_header("Content-Type", "text/plain")
@@ -96,7 +98,7 @@ local function request_handler(fd, request)
         response:write(string.format("Cannot %s %s", request.method, request.path))
     end
 
-    if not M.keepalive or request.header["connection"] == "close" then
+    if not M.keepalive or request.headers["connection"] == "close" then
         response:write_header("Connection", "close")
         socket.write_then_close(fd, buffer.concat(response:tb()))
     else

@@ -1,3 +1,14 @@
+# 2024-08-11
+- Break changes
+```
+    Rename
+    request.header -> request.headers
+    response.header -> response.headers
+
+    Url support path and query now. Remove options's path field.
+    httpc.get("http://127.0.0.1:9991/hello?a=1&b=2")
+```
+
 # v0.8 2023-04-27
 - Optimize send over 64byte socket message
 - fs.join support one or more param

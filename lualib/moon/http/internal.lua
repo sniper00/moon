@@ -1,5 +1,5 @@
 ---@class HttpOptions
----@field public header? table<string,string>
+---@field public headers? table<string,string>
 ---@field public keepalive? integer @ seconds
 ---@field public timeout? integer @ The timeout is applied from when the request starts connecting until the response body has finished. milliseconds, default 10000
 ---@field public proxy? string @ host:port
@@ -7,7 +7,7 @@
 ---@class HttpRequest
 ---@field method string
 ---@field path string
----@field header table<string,string>
+---@field headers table<string,string>
 ---@field query_string string
 ---@field version string
 ---@field body string
@@ -118,17 +118,17 @@ local http_status_msg = {
 ---@class HttpResponse
 ---@field public version string @ http version
 ---@field public status_code integer @ Integer Code of responded HTTP Status, e.g. 404 or 200. -1 means socket error and content is error message
----@field public header table<string,any> @in lower-case key
+---@field public headers table<string,any> @in lower-case key
 ---@field public body string @ raw body string
 ---@field public json? fun(response:HttpResponse):table @ Returns the json-encoded content of a response, if decode failed return nil and error string. if status_code not 200, return nil
----@field public socket_fd? integer @ socket fd if response.header["connection"]:lower() == "upgrade"
+---@field public socket_fd? integer @ socket fd if response.headers["connection"]:lower() == "upgrade"
 local http_response = {}
 
 http_response.__index = http_response
 
 function http_response.new()
     local o = {}
-    o.header = {}
+    o.headers = {}
     o.status_code = 200
     return setmetatable(o, http_response)
 end
@@ -136,14 +136,14 @@ end
 ---@param field string
 ---@param value string
 function http_response:write_header(field, value)
-    self.header[tostring(field)] = tostring(value)
+    self.headers[tostring(field)] = tostring(value)
 end
 
 ---@param content string
 function http_response:write(content)
     self.body = content
     if content then
-        self.header['Content-Length'] = #content
+        self.headers['Content-Length'] = #content
     end
 end
 
@@ -161,7 +161,7 @@ function http_response:tb()
     cache[#cache + 1] = status_msg
     cache[#cache + 1] = "\r\n"
 
-    for k, v in pairs(self.header) do
+    for k, v in pairs(self.headers) do
         cache[#cache + 1] = k
         cache[#cache + 1] = ": "
         cache[#cache + 1] = v
@@ -232,23 +232,23 @@ local function read_response(fd, method)
     ---@type HttpResponse
     local response, err = c.parse_response(data)
     if err then
-        return { error = "Invalid HTTP response header" }
+        return { error = "Invalid HTTP response headers" }
     end
 
     ---@diagnostic disable-next-line: assign-type-mismatch
     response.status_code = tointeger(string.match(response.status_code, "%d+"))
 
-    local header = response.header
+    local headers = response.headers
 
     if method == "HEAD" then
         return response
     end
 
-    if header["transfer-encoding"] ~= 'chunked' and not header["content-length"] then
-        header["content-length"] = "0"
+    if headers["transfer-encoding"] ~= 'chunked' and not headers["content-length"] then
+        headers["content-length"] = "0"
     end
 
-    local content_length = header["content-length"]
+    local content_length = headers["content-length"]
     if content_length then
         ---@diagnostic disable-next-line: cast-local-type
         content_length = tointeger(content_length)
@@ -264,14 +264,14 @@ local function read_response(fd, method)
             end
             response.body = data
         end
-    elseif header["transfer-encoding"] == 'chunked' then
+    elseif headers["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd)
         if chunkdata.error then
             return chunkdata
         end
         response.body = table.concat(chunkdata)
     else
-        return { error = "Unsupport transfer-encoding:" .. tostring(header["transfer-encoding"]) }
+        return { error = "Unsupport transfer-encoding:" .. tostring(headers["transfer-encoding"]) }
     end
 
     return response
@@ -290,7 +290,7 @@ local function parse_header(data)
     ---@type HttpRequest
     local request, err = c.parse_request(data)
     if err then
-        return { protocol_error = "Invalid HTTP request header" }
+        return { protocol_error = "Invalid HTTP request headers" }
     end
 
     if request.method == "HEAD" then
@@ -327,13 +327,13 @@ function M.read_request(fd, prefix_data, opt)
         return request
     end
 
-    local header = request.header
+    local headers = request.headers
 
-    if header["transfer-encoding"] ~= 'chunked' and not header["content-length"] then
-        header["content-length"] = "0"
+    if headers["transfer-encoding"] ~= 'chunked' and not headers["content-length"] then
+        headers["content-length"] = "0"
     end
 
-    local content_length = header["content-length"]
+    local content_length = headers["content-length"]
     if content_length then
         ---@diagnostic disable-next-line: cast-local-type
         content_length = tointeger(content_length)
@@ -359,14 +359,14 @@ function M.read_request(fd, prefix_data, opt)
         end
         --print("Content-Length",content_length)
         request.body = data
-    elseif header["transfer-encoding"] == 'chunked' then
+    elseif headers["transfer-encoding"] == 'chunked' then
         local chunkdata = read_chunked(fd, content_max_len)
         if chunkdata.error then
             return chunkdata
         end
         request.body = table.concat(chunkdata)
     else
-        return { error = "Unsupport transfer-encoding:" .. header["transfer-encoding"] }
+        return { error = "Unsupport transfer-encoding:" .. headers["transfer-encoding"] }
     end
 
     return request
@@ -424,9 +424,9 @@ local function do_request(baseaddress, options, req, method, protocol)
         return response
     end
 
-    if tostring(response.header["connection"]):lower() == "upgrade" then
+    if tostring(response.headers["connection"]):lower() == "upgrade" then
         response.socket_fd = fd
-    elseif not options.keepalive or response.header["connection"] == "close" or #pool >= max_pool_num then
+    elseif not options.keepalive or response.headers["connection"] == "close" or #pool >= max_pool_num then
         socket.close(fd)
     else
         table.insert(pool, fd)
@@ -550,8 +550,8 @@ function M.request(method, str_url, options, content)
     cache[#cache + 1] = host
     cache[#cache + 1] = "\r\n"
 
-    if options.header then
-        for k, v in pairs(options.header) do
+    if options.headers then
+        for k, v in pairs(options.headers) do
             cache[#cache + 1] = k
             cache[#cache + 1] = ": "
             cache[#cache + 1] = tostring(v)
@@ -560,10 +560,10 @@ function M.request(method, str_url, options, content)
     end
 
     if content and #content > 0 then
-        options.header = options.header or {}
-        local v = options.header["Content-Length"]
+        options.headers = options.headers or {}
+        local v = options.headers["Content-Length"]
         if not v then
-            v = options.header["Transfer-Encoding"]
+            v = options.headers["Transfer-Encoding"]
             if not v or v ~= "chunked" then
                 cache[#cache + 1] = "Content-Length: "
                 cache[#cache + 1] = tostring(#content)
