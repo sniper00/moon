@@ -2,6 +2,8 @@
 
 local MOON_ENABLE_MIMALLOC = true
 
+local LUA_BUILD_AS_DLL = true
+
 workspace "Server"
     configurations { "Debug", "Release" }
     flags{"NoPCH","RelativeLinks"}
@@ -25,6 +27,9 @@ workspace "Server"
         warnings "Extra"
         cdialect "C11"
         buildoptions{"/experimental:c11atomics"}
+        if LUA_BUILD_AS_DLL then
+            staticruntime "off"
+        end
 
     filter { "system:linux" }
         warnings "High"
@@ -32,21 +37,38 @@ workspace "Server"
     filter { "system:macosx" }
         warnings "High"
 
-project "lua"
-    location "build/projects/%{prj.name}"
-    objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
-    targetdir "build/bin/%{cfg.buildcfg}"
-    kind "StaticLib"
-    language "C"
-    includedirs {"./third/lua"}
-    files {"./third/lua/onelua.c"}
-    defines {"MAKE_LIB"}
-    filter { "system:windows" }
-        disablewarnings { "4244","4324","4702","4310", "4701"}
-    filter { "system:linux" }
-        defines {"LUA_USE_LINUX"}
-    filter { "system:macosx" }
-        defines {"LUA_USE_MACOSX"}
+if LUA_BUILD_AS_DLL and os.host() == "windows" then
+    project "lua"
+        location "build/projects/%{prj.name}"
+        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+        targetdir "build/bin/%{cfg.buildcfg}"
+        kind "SharedLib"
+        language "C"
+        includedirs {"./third/lua"}
+        files {"./third/lua/onelua.c"}
+        defines {"MAKE_LIB"}
+        filter { "system:windows" }
+            defines {"LUA_BUILD_AS_DLL"}
+            disablewarnings { "4244","4324","4702","4310", "4701"}
+            filter{"configurations:*"}
+                postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
+else
+    project "lua"
+        location "build/projects/%{prj.name}"
+        objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
+        targetdir "build/bin/%{cfg.buildcfg}"
+        kind "StaticLib"
+        language "C"
+        includedirs {"./third/lua"}
+        files {"./third/lua/onelua.c"}
+        defines {"MAKE_LIB"}
+        filter { "system:windows" }
+            disablewarnings { "4244","4324","4702","4310", "4701"}
+        filter { "system:linux" }
+            defines {"LUA_USE_LINUX"}
+        filter { "system:macosx" }
+            defines {"LUA_USE_MACOSX"}
+end
 
 if MOON_ENABLE_MIMALLOC then
     os.execute("git submodule init")
@@ -95,7 +117,7 @@ project "moon"
         linkoptions { '/STACK:"8388608"' }
     filter {"system:linux"}
         links{"dl","pthread","stdc++fs"}
-        linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-rpath=./","-Wl,--as-needed"}
+        linkoptions {"-static-libstdc++ -static-libgcc", "-Wl,-E,--as-needed,-rpath=./"}
     filter {"system:macosx"}
         links{"dl","pthread"}
         linkoptions {"-Wl,-rpath,./"}

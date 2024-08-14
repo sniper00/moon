@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
         }
         arg.append("}");
 
-        std::shared_ptr<server> server_ = std::make_shared<server>();
+        auto server_ = std::make_shared<server>();
         wk_server = server_;
 
         if(file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos)
@@ -194,6 +194,12 @@ int main(int argc, char* argv[])
                 path = moon::format("package.path='%s;'..package.path;", path.data());
                 server_->set_env("PATH", path);
             }
+
+            path = lua_opt_field<std::string>(L, -1, "cpath", "");
+            if(!path.empty()){
+                path = moon::format("package.cpath='%s;'..package.cpath;", path.data());
+                server_->set_env("CPATH", path);
+            }
         }
 
         server_->register_service("lua", []()->service_ptr_t {
@@ -218,6 +224,20 @@ int main(int argc, char* argv[])
             server_->set_env("PATH", moon::format("package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;", strpath.data(), strpath.data()));
         }
 
+        if(!server_->get_env("CPATH"))
+        {
+            // By default, clib directory are added to the lua c module search path
+            auto search_path = fs::absolute(fs::current_path());
+            if (!fs::exists(search_path / "clib"))
+                search_path = fs::absolute(directory::module_path());
+            if (fs::exists(search_path / "clib")){
+                auto strpath = search_path.string();
+                moon::replace(strpath, "\\", "/");
+                auto ext = server_->get_env("LUA_CPATH_EXT");
+                server_->set_env("CPATH", moon::format("package.cpath='%s/clib/%s;'..package.cpath;", strpath.data(), ext->data(), strpath.data()));
+            }    
+        }
+
         //Change the working directory to the directory where the opened file is located.
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());
         directory::working_directory = fs::current_path();
@@ -231,14 +251,15 @@ int main(int argc, char* argv[])
 
         server_->init(thread_count);
 
-        std::unique_ptr<moon::service_conf> conf = std::make_unique<moon::service_conf>();
+        auto conf = std::make_unique<moon::service_conf>();
         conf->type = "lua";
         conf->name = "bootstrap";
         conf->source = fs::path(bootstrap).filename().string();
         conf->memlimit = std::numeric_limits<ssize_t>::max();
-        auto path = server_->get_env("PATH");
-        if (path)
+        if (auto path = server_->get_env("PATH"); path)
             conf->params.append(*path);
+        if (auto cpath = server_->get_env("CPATH"); cpath)
+            conf->params.append(*cpath);
         conf->params.append("return {}");
         server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);

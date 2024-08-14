@@ -245,8 +245,10 @@ static int lmoon_new_service(lua_State* L)
     conf->unique = lua_opt_field<bool>(L, 1, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 1, "threadid", 0);
 
-    if(auto path = S->get_server()->get_env("PATH"); path)
+    if (auto path = S->get_server()->get_env("PATH"); path)
         conf->params.append(*path);
+    if (auto cpath = S->get_server()->get_env("CPATH"); cpath)
+        conf->params.append(*cpath);
     conf->params.append("return ");
     table_tostring(conf->params, L, 1);
 
