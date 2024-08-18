@@ -10,17 +10,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Setup premake
-        uses: abel0b/setup-premake@v2.2
-        with:
-          version: "5.0.0-beta1"
+      - name: Installing premake5
+        uses: Jarod42/install-premake5@v1
       - name: setup msbuild
         uses: microsoft/setup-msbuild@v1.1
       - name: Build
         run: |
+          premake5 vs2022
           msbuild /m Server.sln /p:configuration="release"
       - name: Test
         run: .\moon.exe test/main_test.lua

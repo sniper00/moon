@@ -9,16 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Setup premake
-        uses: abel0b/setup-premake@v2.2
-        with:
-          version: "5.0.0-beta1"
+      - name: Installing premake5
+        uses: Jarod42/install-premake5@v1
       - name: Build
         run: |
           premake5 gmake --cc=clang
-          make -j2 config=release
+          make -j8 config=release
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
