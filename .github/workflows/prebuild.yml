@@ -1,0 +1,148 @@
+name: prebuild
+permissions:
+  contents: write
+on:
+  schedule:
+    - cron: '0 10 * * 1-5'
+  push:
+    paths:
+      - '.github/workflows/prebuild.yml'
+  workflow_dispatch: {}
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/github-script@v7 
+      with: 
+        script: |
+          const releases = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          for (const release of releases.data) {
+            if (release.tag_name === 'prebuilt') {
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id,
+              });
+            }
+          }
+          try {
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/prebuilt`,
+            });
+          } catch (error) {}
+  windows-vs2022:
+    needs: init
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup premake
+        uses: abel0b/setup-premake@v2.2
+        with:
+          version: 5.0.0-beta1
+      - name: setup msbuild
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Build
+        run: |
+            msbuild /m Server.sln /p:configuration="release"
+      - name: Test
+        run: .\moon.exe test/main_test.lua
+      - uses: actboy168/action-zip@main
+        id: zip
+        with:
+          name: moon-windows
+          path: |
+            lualib/
+            service/
+            example/
+            test/
+            moon.exe
+            README.md
+      - uses: softprops/action-gh-release@v1
+        with:
+          name: build
+          tag_name: build
+          fail_on_unmatched_files: true
+          files: '${{  steps.zip.outputs.output }}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ubuntu-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup premake
+        uses: abel0b/setup-premake@v2.2
+        with:
+          version: "5.0.0-beta1"
+      - name: Build
+        run: |
+          chmod +x build.sh
+          ./build.sh
+      - name: Test
+        run: chmod +x moon && ./moon test/main_test.lua
+      - uses: actboy168/action-zip@main
+        id: zip
+        with:
+          name: moon-linux
+          path: |
+            lualib/
+            service/
+            example/
+            test/
+            moon
+            README.md
+      - uses: softprops/action-gh-release@v1
+        with:
+          name: build
+          tag_name: build
+          fail_on_unmatched_files: true
+          files: '${{  steps.zip.outputs.output }}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  macos-clang:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup premake
+        uses: abel0b/setup-premake@v2.2
+        with:
+          version: "5.0.0-beta1"
+      - name: Build
+        run: |
+          chmod +x build.sh
+          ./build.sh
+      - name: Test
+        run: chmod +x moon && ./moon test/main_test.lua
+      - uses: actboy168/action-zip@main
+        id: zip
+        with:
+          name: moon-darwin
+          path: |
+            lualib/
+            service/
+            example/
+            test/
+            moon
+            README.md
+      - uses: softprops/action-gh-release@v1
+        with:
+          name: build
+          tag_name: build
+          fail_on_unmatched_files: true
+          files: '${{  steps.zip.outputs.output }}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
