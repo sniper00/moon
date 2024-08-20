@@ -64,6 +64,7 @@ jobs:
             example/
             test/
             moon.exe
+            lua.dll
             README.md
       - uses: softprops/action-gh-release@v1
         with:
