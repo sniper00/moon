@@ -277,6 +277,7 @@ newaction {
                 os.execute("premake5.exe clean")
                 os.execute("premake5.exe vs2022")
                 local vswhere = os.getenv("programfiles")..[[ (x86)\Microsoft Visual Studio\Installer\vswhere.exe]]
+                vswhere = string_trim(vswhere)
                 local command = string.format('"%s" %s', vswhere, " -latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
                 local handle = assert(io.popen(command))
                 local result = handle:read("*a")
