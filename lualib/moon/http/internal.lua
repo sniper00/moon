@@ -139,11 +139,11 @@ function http_response:write_header(field, value)
     self.headers[tostring(field)] = tostring(value)
 end
 
----@param content string
-function http_response:write(content)
-    self.body = content
-    if content then
-        self.headers['Content-Length'] = #content
+---@param body string
+function http_response:write(body)
+    self.body = body
+    if body then
+        self.headers['Content-Length'] = #body
     end
 end
 
@@ -506,9 +506,9 @@ end
 ---@param method string
 ---@param str_url string
 ---@param options HttpOptions
----@param content? string
+---@param body? string
 ---@return HttpResponse
-function M.request(method, str_url, options, content)
+function M.request(method, str_url, options, body)
     local url = M.parse_url(str_url)
     local protocol = url.protocol
     local host = url.host
@@ -559,14 +559,14 @@ function M.request(method, str_url, options, content)
         end
     end
 
-    if content and #content > 0 then
+    if body and #body > 0 then
         options.headers = options.headers or {}
         local v = options.headers["Content-Length"]
         if not v then
             v = options.headers["Transfer-Encoding"]
             if not v or v ~= "chunked" then
                 cache[#cache + 1] = "Content-Length: "
-                cache[#cache + 1] = tostring(#content)
+                cache[#cache + 1] = tostring(#body)
                 cache[#cache + 1] = "\r\n"
             end
         end
@@ -580,7 +580,7 @@ function M.request(method, str_url, options, content)
         cache[#cache + 1] = "\r\n"
     end
     cache[#cache + 1] = "\r\n"
-    cache[#cache + 1] = content
+    cache[#cache + 1] = body
 
     if options.proxy then
         protocol, host = check_protocol(options.proxy)
@@ -595,7 +595,7 @@ function M.request(method, str_url, options, content)
         response.json = tojson
         return response
     else
-        return { status_code = -1, content = response.error }
+        return { status_code = -1, body = response.error }
     end
 end
 

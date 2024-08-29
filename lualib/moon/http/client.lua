@@ -32,19 +32,20 @@ end
 
 ---@param url string
 ---@param options? HttpOptions
+---@param body string
 ---@return HttpResponse
-function M.put(url, content, options)
+function M.put(url, body, options)
     options = options or {}
-    return internal.request("PUT", url, options, content)
+    return internal.request("PUT", url, options, body)
 end
 
 ---@param url string
----@param content string
+---@param body string
 ---@param options? HttpOptions
 ---@return HttpResponse
-function M.post(url, content, options)
+function M.post(url, body, options)
     options = options or {}
-    return internal.request("POST", url, options, content)
+    return internal.request("POST", url, options, body)
 end
 
 ---@param url string
