@@ -13,6 +13,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Installing premake5
+        uses: Jarod42/install-premake5@v1
       - name: Build
         run: |
           premake5 build
