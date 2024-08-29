@@ -49,11 +49,12 @@ project "lua"
     files {"./third/lua/onelua.c"}
     defines {"MAKE_LIB"}
     filter { "system:windows" }
+        disablewarnings { "4244","4324","4702","4310", "4701"}
         if LUA_BUILD_AS_DLL then
             kind "SharedLib"
             defines {"LUA_BUILD_AS_DLL"}
+            postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
         end
-        disablewarnings { "4244","4324","4702","4310", "4701"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
     filter { "system:macosx" }
