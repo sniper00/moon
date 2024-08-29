@@ -16,8 +16,7 @@ jobs:
         uses: Jarod42/install-premake5@v1
       - name: Build
         run: |
-          premake5 gmake
-          make -j8 config=release
+          premake5 build
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua
 

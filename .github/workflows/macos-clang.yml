@@ -15,7 +15,6 @@ jobs:
           submodules: true
       - name: Build
         run: |
-          chmod +x ./build.sh
-          ./build.sh
+          premake5 build
       - name: Test
         run: chmod +x moon && ./moon test/main_test.lua

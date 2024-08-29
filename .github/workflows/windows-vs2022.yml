@@ -19,8 +19,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
       - name: Build
         run: |
-          premake5 vs2022
-          msbuild /m Server.sln /p:configuration="release"
+          premake5 build
       - name: Test
         run: .\moon.exe test/main_test.lua
 
