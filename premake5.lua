@@ -276,17 +276,12 @@ newaction {
             windows = function ()
                 os.execute("premake5.exe clean")
                 os.execute("premake5.exe vs2022")
-                local vswhere = os.getenv("programfiles")..[[ (x86)\Microsoft Visual Studio\Installer\vswhere.exe]]
-                print("1", vswhere)
-                vswhere = string_trim(vswhere)
-                local command = string.format('"%s" %s', vswhere, " -latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
-                print("2", command)
+                local command = os.getenv("ProgramFiles(x86)")..[[\Microsoft Visual Studio\Installer\vswhere.exe]]
+                command = string.format('"%s" %s', string_trim(command), " -latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
                 local handle = assert(io.popen(command))
-                local result = handle:read("*a")
+                command = handle:read("*a")
                 handle:close()
-                result = string_trim(result)
-                print("3", result)
-                os.execute(string.format('"%s%s" -maxcpucount:4 Server.sln /t:rebuild /p:Configuration=Release ', result, [[\MSBuild\Current\Bin\MSBuild.exe]]))
+                os.execute(string.format('"%s%s" -maxcpucount:4 Server.sln /t:rebuild /p:Configuration=Release ', string_trim(command), [[\MSBuild\Current\Bin\MSBuild.exe]]))
             end,
             linux = function ()
                 os.execute("premake5 clean")
