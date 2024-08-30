@@ -1,55 +1,48 @@
-#include <algorithm>
 #include "common/zset.hpp"
 #include "lua.hpp"
+#include <algorithm>
 
 #define METANAME "lzet"
 
 #ifdef MOON_ENABLE_MIMALLOC
-#include "mimalloc.h"
+    #include "mimalloc.h"
 using zset_type = moon::zset<mi_stl_allocator>;
 #else
 using zset_type = moon::zset<std::allocator>;
 #endif
 
-static int lupdate(lua_State* L)
-{
+static int lupdate(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
-    try
-    {
+    try {
         int64_t key = (int64_t)luaL_checkinteger(L, 2);
         int64_t score = (int64_t)luaL_checkinteger(L, 3);
         int64_t timestamp = (int64_t)luaL_checkinteger(L, 4);
         zset->update(key, score, timestamp);
         return 0;
-    }
-    catch (const std::exception& ex)
-    {
+    } catch (const std::exception& ex) {
         lua_pushstring(L, ex.what());
     }
     return lua_error(L);
 }
 
-static int lrank(lua_State* L)
-{
+static int lrank(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
     int64_t key = (int64_t)luaL_checkinteger(L, 2);
     auto v = zset->rank(key);
-    if(v>0)
-    {
+    if (v > 0) {
         lua_pushinteger(L, zset->rank(key));
         return 1;
     }
     return 0;
 }
 
-static int lkey_by_rank(lua_State* L)
-{
+static int lkey_by_rank(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -58,7 +51,7 @@ static int lkey_by_rank(lua_State* L)
 
     if (zset->size() == 0 || zset->size() < rank)
         return 0;
-    
+
     zset_type::const_iterator it = (rank == 1 ? zset->begin() : zset->find_by_rank(rank));
 
     if (it != zset->end()) {
@@ -68,8 +61,7 @@ static int lkey_by_rank(lua_State* L)
     return 0;
 }
 
-static int lscore(lua_State* L)
-{
+static int lscore(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -79,19 +71,17 @@ static int lscore(lua_State* L)
     return 1;
 }
 
-static int lhas(lua_State* L)
-{
+static int lhas(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
 
     int64_t key = (int64_t)luaL_checkinteger(L, 2);
-    lua_pushboolean(L, zset->has(key)?1:0);
+    lua_pushboolean(L, zset->has(key) ? 1 : 0);
     return 1;
 }
 
-static int lsize(lua_State* L)
-{
+static int lsize(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -100,8 +90,7 @@ static int lsize(lua_State* L)
     return 1;
 }
 
-static int lclear(lua_State* L)
-{
+static int lclear(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -109,8 +98,7 @@ static int lclear(lua_State* L)
     return 0;
 }
 
-static int lerase(lua_State* L)
-{
+static int lerase(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -119,13 +107,12 @@ static int lerase(lua_State* L)
     return 1;
 }
 
-static int lrange(lua_State* L)
-{
+static int lrange(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
-    int64_t start = luaL_checkinteger(L, 2)-1;
-    int64_t end = luaL_checkinteger(L, 3)-1;
+    int64_t start = luaL_checkinteger(L, 2) - 1;
+    int64_t end = luaL_checkinteger(L, 3) - 1;
     bool reverse = lua_toboolean(L, 4) != 0;
     int64_t llen = (int64_t)zset->size();
 
@@ -146,14 +133,12 @@ static int lrange(lua_State* L)
     if (ranglen >= std::numeric_limits<int>::max())
         return luaL_error(L, "zset.range out off limit");
 
-    zset_type::const_iterator it{nullptr};
+    zset_type::const_iterator it { nullptr };
     if (reverse) {
         it = zset->tail();
         if (start > 0)
             it = zset->find_by_rank(llen - start);
-    }
-    else
-    {
+    } else {
         it = zset->begin();
         if (start > 0)
             it = zset->find_by_rank(start + 1);
@@ -169,8 +154,7 @@ static int lrange(lua_State* L)
     return 1;
 };
 
-static int lrelease(lua_State* L)
-{
+static int lrelease(lua_State* L) {
     zset_type* zset = (zset_type*)lua_touserdata(L, 1);
     if (nullptr == zset)
         return luaL_argerror(L, 1, "invalid lua-zset pointer");
@@ -178,44 +162,31 @@ static int lrelease(lua_State* L)
     return 0;
 }
 
-static int lcreate(lua_State* L)
-{
+static int lcreate(lua_State* L) {
     size_t max_count = (size_t)luaL_checkinteger(L, 1);
     bool reverse = lua_toboolean(L, 2) != 0;
     void* p = lua_newuserdatauv(L, sizeof(zset_type), 0);
     new (p) zset_type(max_count, reverse);
-    if (luaL_newmetatable(L, METANAME))//mt
+    if (luaL_newmetatable(L, METANAME)) //mt
     {
-        luaL_Reg l[] = {
-            { "update", lupdate },
-            { "has", lhas},
-            { "rank", lrank},
-            { "key_by_rank", lkey_by_rank},
-            { "score", lscore},
-            { "range", lrange},
-            { "clear", lclear},
-            { "size", lsize},
-            { "erase", lerase},
-            { NULL,NULL }
-        };
+        luaL_Reg l[] = { { "update", lupdate }, { "has", lhas },
+                         { "rank", lrank },     { "key_by_rank", lkey_by_rank },
+                         { "score", lscore },   { "range", lrange },
+                         { "clear", lclear },   { "size", lsize },
+                         { "erase", lerase },   { NULL, NULL } };
         luaL_newlib(L, l); //{}
-        lua_setfield(L, -2, "__index");//mt[__index] = {}
+        lua_setfield(L, -2, "__index"); //mt[__index] = {}
         lua_pushcfunction(L, lrelease);
-        lua_setfield(L, -2, "__gc");//mt[__gc] = lrelease
+        lua_setfield(L, -2, "__gc"); //mt[__gc] = lrelease
     }
-    lua_setmetatable(L, -2);// set userdata metatable
+    lua_setmetatable(L, -2); // set userdata metatable
     return 1;
 }
 
 extern "C" {
-    int LUAMOD_API luaopen_zset(lua_State* L)
-    {
-        luaL_Reg l[] = {
-            {"new",lcreate},
-            {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+int LUAMOD_API luaopen_zset(lua_State* L) {
+    luaL_Reg l[] = { { "new", lcreate }, { NULL, NULL } };
+    luaL_newlib(L, l);
+    return 1;
 }
-
+}

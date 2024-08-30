@@ -1,78 +1,68 @@
-#include <csignal>
 #include "common/directory.hpp"
-#include "common/string.hpp"
 #include "common/file.hpp"
 #include "common/lua_utility.hpp"
+#include "common/string.hpp"
 #include "server.h"
 #include "services/lua_service.h"
+#include <csignal>
 
-static std::weak_ptr<moon::server>  wk_server;
+static std::weak_ptr<moon::server> wk_server;
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
-{
+static BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType) {
     auto svr = wk_server.lock();
-    if (nullptr == svr)
-    {
+    if (nullptr == svr) {
         return TRUE;
     }
 
-    switch (dwCtrlType)
-    {
-    case CTRL_C_EVENT:
-        svr->stop(dwCtrlType);
-        return TRUE;
-    case CTRL_CLOSE_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
-    case CTRL_LOGOFF_EVENT://atmost 10 second,will force closed by system
-        svr->stop(dwCtrlType);
-        while (svr->get_state() != moon::state::stopped)
-        {
-            std::this_thread::yield();
-        }
-        return TRUE;
-    default:
-        break;
+    switch (dwCtrlType) {
+        case CTRL_C_EVENT:
+            svr->stop(dwCtrlType);
+            return TRUE;
+        case CTRL_CLOSE_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
+        case CTRL_LOGOFF_EVENT: //atmost 10 second,will force closed by system
+            svr->stop(dwCtrlType);
+            while (svr->get_state() != moon::state::stopped) {
+                std::this_thread::yield();
+            }
+            return TRUE;
+        default:
+            break;
     }
     return FALSE;
 }
 #else
-static void signal_handler(int signal)
-{
+static void signal_handler(int signal) {
     auto svr = wk_server.lock();
-    if (nullptr == svr)
-    {
+    if (nullptr == svr) {
         return;
     }
 
     std::string_view msg;
-    switch (signal)
-    {
-    case SIGTERM:
-        msg = "Received SIGTERM,shutdown...\n";
-        break;
-    case SIGINT:
-        msg = "Received SIGINT,shutdown...\n";
-        break;
-    default:
-        msg = "Received shutdown signal,shutdown...\n";
-        break;
+    switch (signal) {
+        case SIGTERM:
+            msg = "Received SIGTERM,shutdown...\n";
+            break;
+        case SIGINT:
+            msg = "Received SIGINT,shutdown...\n";
+            break;
+        default:
+            msg = "Received shutdown signal,shutdown...\n";
+            break;
     }
     svr->stop(signal);
     [[maybe_unused]] auto n = write(STDERR_FILENO, msg.data(), msg.size());
 }
 #endif
 
-static void register_signal(int argc, char* argv[])
-{
+static void register_signal(int argc, char* argv[]) {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
     SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
     std::string str;
-    for (int i = 0; i < argc; ++i)
-    {
+    for (int i = 0; i < argc; ++i) {
         str.append(argv[i]);
-        if (i == 0)
-        {
+        if (i == 0) {
             str.append("(PID: ");
             str.append(std::to_string(GetCurrentProcessId()));
             str.append(")");
@@ -90,13 +80,11 @@ static void register_signal(int argc, char* argv[])
 }
 
 #ifdef MOON_ENABLE_MIMALLOC
-#include "mimalloc.h"
-void print_mem_stats()
-{
+    #include "mimalloc.h"
+void print_mem_stats() {
     std::string stats;
     stats.append("mimalloc memory stats:\n");
-    auto fn = [](const char* msg, void* arg)
-    {
+    auto fn = [](const char* msg, void* arg) {
         auto p = static_cast<std::string*>(arg);
         p->append(msg);
     };
@@ -106,9 +94,7 @@ void print_mem_stats()
     CONSOLE_INFO(stats.data());
 }
 #else
-void print_mem_stats()
-{
-}
+void print_mem_stats() {}
 #endif
 
 static void usage(void) {
@@ -118,8 +104,7 @@ static void usage(void) {
     std::cout << "        moon main.lua hello\n";
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     using namespace moon;
 
     int exitcode = -1;
@@ -131,8 +116,7 @@ int main(int argc, char* argv[])
 #ifdef LUA_CACHELIB
     luaL_initcodecache();
 #endif
-    try
-    {
+    try {
         uint32_t thread_count = std::thread::hardware_concurrency();
         bool enable_stdout = true;
         std::string logfile;
@@ -140,22 +124,19 @@ int main(int argc, char* argv[])
         std::string loglevel;
 
         int argn = 1;
-        if (argc <= argn)
-        {
+        if (argc <= argn) {
             usage();
             return exitcode;
         }
         bootstrap = argv[argn++];
 
-        if (fs::path(bootstrap).extension() != ".lua")
-        {
+        if (fs::path(bootstrap).extension() != ".lua") {
             usage();
             return exitcode;
         }
 
         std::string arg = "return {";
-        for (int i = argn; i < argc; ++i)
-        {
+        for (int i = argn; i < argc; ++i) {
             arg.append("'");
             arg.append(argv[i]);
             arg.append("',");
@@ -165,9 +146,8 @@ int main(int argc, char* argv[])
         auto server_ = std::make_shared<server>();
         wk_server = server_;
 
-        if(file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos)
-        {
-            std::unique_ptr<lua_State, moon::state_deleter> lua_{ luaL_newstate() };
+        if (file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos) {
+            std::unique_ptr<lua_State, moon::state_deleter> lua_ { luaL_newstate() };
             lua_State* L = lua_.get();
             luaL_openlibs(L);
             lua_pushboolean(L, true);
@@ -190,21 +170,21 @@ int main(int argc, char* argv[])
             enable_stdout = lua_opt_field<bool>(L, -1, "enable_stdout", enable_stdout);
             loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
             std::string path = lua_opt_field<std::string>(L, -1, "path", "");
-            if(!path.empty()){
+            if (!path.empty()) {
                 path = moon::format("package.path='%s;'..package.path;", path.data());
                 server_->set_env("PATH", path);
             }
 
             path = lua_opt_field<std::string>(L, -1, "cpath", "");
-            if(!path.empty()){
+            if (!path.empty()) {
                 path = moon::format("package.cpath='%s;'..package.cpath;", path.data());
                 server_->set_env("CPATH", path);
             }
         }
 
-        server_->register_service("lua", []()->service_ptr_t {
+        server_->register_service("lua", []() -> service_ptr_t {
             return std::make_unique<lua_service>();
-            });
+        });
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
         server_->set_env("LUA_CPATH_EXT", "/?.dll;");
@@ -212,8 +192,7 @@ int main(int argc, char* argv[])
         server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
-        if(!server_->get_env("PATH"))
-        {
+        if (!server_->get_env("PATH")) {
             // By default, lualib and service directories are added to the lua search path
             auto search_path = fs::absolute(fs::current_path());
             if (!fs::exists(search_path / "lualib"))
@@ -221,21 +200,35 @@ int main(int argc, char* argv[])
             MOON_CHECK(fs::exists(search_path / "lualib"), "can not find moon lualib path.");
             auto strpath = search_path.string();
             moon::replace(strpath, "\\", "/");
-            server_->set_env("PATH", moon::format("package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;", strpath.data(), strpath.data()));
+            server_->set_env(
+                "PATH",
+                moon::format(
+                    "package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;",
+                    strpath.data(),
+                    strpath.data()
+                )
+            );
         }
 
-        if(!server_->get_env("CPATH"))
-        {
+        if (!server_->get_env("CPATH")) {
             // By default, clib directory are added to the lua c module search path
             auto search_path = fs::absolute(fs::current_path());
             if (!fs::exists(search_path / "clib"))
                 search_path = fs::absolute(directory::module_path());
-            if (fs::exists(search_path / "clib")){
+            if (fs::exists(search_path / "clib")) {
                 auto strpath = search_path.string();
                 moon::replace(strpath, "\\", "/");
                 auto ext = server_->get_env("LUA_CPATH_EXT");
-                server_->set_env("CPATH", moon::format("package.cpath='%s/clib/%s;'..package.cpath;", strpath.data(), ext->data(), strpath.data()));
-            }    
+                server_->set_env(
+                    "CPATH",
+                    moon::format(
+                        "package.cpath='%s/clib/%s;'..package.cpath;",
+                        strpath.data(),
+                        ext->data(),
+                        strpath.data()
+                    )
+                );
+            }
         }
 
         //Change the working directory to the directory where the opened file is located.
@@ -265,9 +258,7 @@ int main(int argc, char* argv[])
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
 
         exitcode = server_->run();
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
         if (!log::instance().is_ready()) {
             log::instance().init("");
         }
@@ -275,23 +266,20 @@ int main(int argc, char* argv[])
         CONSOLE_ERROR("ERROR:%s", e.what());
     }
     CONSOLE_INFO("STOP");
-    while(log::instance().size()>0)
+    while (log::instance().size() > 0)
         thread_sleep(10);
     print_mem_stats();
     log::instance().wait();
     return exitcode;
 }
 
-#define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn)\
-            int lua_c_fn(lua_State*);\
-            luaL_requiref(L, name, lua_c_fn, 0);\
-            lua_pop(L, 1);  /* remove lib */\
-
+#define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn) \
+    int lua_c_fn(lua_State*); \
+    luaL_requiref(L, name, lua_c_fn, 0); \
+    lua_pop(L, 1); /* remove lib */
 
 extern "C" {
-void open_custom_libs(lua_State* L)
-{
-
+void open_custom_libs(lua_State* L) {
 #ifdef LUA_CACHELIB
     REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
 #endif
@@ -323,4 +311,3 @@ void open_custom_libs(lua_State* L)
     REGISTER_CUSTOM_LIBRARY("schema", luaopen_schema);
 }
 }
-

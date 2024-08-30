@@ -1,17 +1,15 @@
-#include "lua.hpp"
-#include "common/navmesh.hpp"
 #include "common/lua_utility.hpp"
+#include "common/navmesh.hpp"
+#include "lua.hpp"
 
 #define METANAME "lnavmesh"
 
 using navmesh_type = moon::navmesh;
 
-static int load_static(lua_State* L)
-{
+static int load_static(lua_State* L) {
     auto meshfile = moon::lua_check<std::string>(L, 1);
     std::string err;
-    if (moon::navmesh::load_static(meshfile, err))
-    {
+    if (moon::navmesh::load_static(meshfile, err)) {
         lua_pushboolean(L, 1);
         return 1;
     }
@@ -20,16 +18,14 @@ static int load_static(lua_State* L)
     return 2;
 }
 
-static int load_dynamic(lua_State* L)
-{
+static int load_dynamic(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
 
     auto meshfile = moon::lua_check<std::string>(L, 2);
     std::string err;
-    if (p->load_dynamic(meshfile, err))
-    {
+    if (p->load_dynamic(meshfile, err)) {
         lua_pushboolean(L, 1);
         return 1;
     }
@@ -38,8 +34,7 @@ static int load_dynamic(lua_State* L)
     return 2;
 }
 
-static int find_straight_path(lua_State* L)
-{
+static int find_straight_path(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -50,11 +45,9 @@ static int find_straight_path(lua_State* L)
     auto ey = moon::lua_check<float>(L, 6);
     auto ez = moon::lua_check<float>(L, 7);
     std::vector<float> paths;
-    if (p->find_straight_path(sx, sy, sz, ex, ey, ez, paths))
-    {
+    if (p->find_straight_path(sx, sy, sz, ex, ey, ez, paths)) {
         lua_createtable(L, (int)paths.size(), 0);
-        for (size_t i = 0; i < paths.size(); ++i)
-        {
+        for (size_t i = 0; i < paths.size(); ++i) {
             lua_pushnumber(L, paths[i]);
             lua_rawseti(L, -2, i + 1);
         }
@@ -65,8 +58,7 @@ static int find_straight_path(lua_State* L)
     return 2;
 }
 
-static int valid(lua_State* L)
-{
+static int valid(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -78,14 +70,12 @@ static int valid(lua_State* L)
     return 1;
 }
 
-static int random_position(lua_State* L)
-{
+static int random_position(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
     float pos[3];
-    if (p->random_position(pos))
-    {
+    if (p->random_position(pos)) {
         lua_pushnumber(L, pos[0]);
         lua_pushnumber(L, pos[1]);
         lua_pushnumber(L, pos[2]);
@@ -95,8 +85,7 @@ static int random_position(lua_State* L)
     return 1;
 }
 
-static int random_position_around_circle(lua_State* L)
-{
+static int random_position_around_circle(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -107,8 +96,7 @@ static int random_position_around_circle(lua_State* L)
     auto r = moon::lua_check<float>(L, 5);
 
     float pos[3];
-    if (p->random_position_around_circle(x, y, z, r, pos))
-    {
+    if (p->random_position_around_circle(x, y, z, r, pos)) {
         lua_pushnumber(L, pos[0]);
         lua_pushnumber(L, pos[1]);
         lua_pushnumber(L, pos[2]);
@@ -118,8 +106,7 @@ static int random_position_around_circle(lua_State* L)
     return 1;
 }
 
-static int recast(lua_State* L)
-{
+static int recast(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -140,8 +127,7 @@ static int recast(lua_State* L)
     return 4;
 }
 
-static int add_capsule_obstacle(lua_State* L)
-{
+static int add_capsule_obstacle(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -152,16 +138,14 @@ static int add_capsule_obstacle(lua_State* L)
     auto r = moon::lua_check<float>(L, 5);
     auto h = moon::lua_check<float>(L, 6);
     auto obstacleId = p->add_capsule_obstacle(x, y, z, r, h);
-    if (obstacleId > 0)
-    {
+    if (obstacleId > 0) {
         lua_pushinteger(L, obstacleId);
         return 1;
     }
     return 0;
 }
 
-static int remove_obstacle(lua_State* L)
-{
+static int remove_obstacle(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -172,8 +156,7 @@ static int remove_obstacle(lua_State* L)
     return 1;
 }
 
-static int clear_all_obstacle(lua_State* L)
-{
+static int clear_all_obstacle(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -181,8 +164,7 @@ static int clear_all_obstacle(lua_State* L)
     return 0;
 }
 
-static int update(lua_State* L)
-{
+static int update(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -191,8 +173,7 @@ static int update(lua_State* L)
     return 0;
 }
 
-static int lrelease(lua_State* L)
-{
+static int lrelease(lua_State* L) {
     navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
     if (nullptr == p)
         return luaL_error(L, "Invalid navmesh pointer");
@@ -200,48 +181,40 @@ static int lrelease(lua_State* L)
     return 0;
 }
 
-static int lcreate(lua_State* L)
-{
+static int lcreate(lua_State* L) {
     std::string meshfile = luaL_optstring(L, 1, "");
-    int mask =  (int)luaL_optinteger(L, 2, 0);
+    int mask = (int)luaL_optinteger(L, 2, 0);
 
     navmesh_type* p = (navmesh_type*)lua_newuserdatauv(L, sizeof(navmesh_type), 0);
     new (p) navmesh_type(meshfile, mask);
 
-    if (luaL_newmetatable(L, METANAME))//mt
+    if (luaL_newmetatable(L, METANAME)) //mt
     {
-        luaL_Reg l[] = {
-            { "load_dynamic",load_dynamic },
-            { "find_straight_path",find_straight_path },
-            { "valid", valid},
-            { "random_position",random_position },
-            { "random_position_around_circle",random_position_around_circle },
-            { "recast",recast },
-            { "add_capsule_obstacle",add_capsule_obstacle },
-            { "remove_obstacle", remove_obstacle},
-            { "clear_all_obstacle", clear_all_obstacle},
-            { "update", update},
-            { NULL,NULL }
-        };
+        luaL_Reg l[] = { { "load_dynamic", load_dynamic },
+                         { "find_straight_path", find_straight_path },
+                         { "valid", valid },
+                         { "random_position", random_position },
+                         { "random_position_around_circle", random_position_around_circle },
+                         { "recast", recast },
+                         { "add_capsule_obstacle", add_capsule_obstacle },
+                         { "remove_obstacle", remove_obstacle },
+                         { "clear_all_obstacle", clear_all_obstacle },
+                         { "update", update },
+                         { NULL, NULL } };
         luaL_newlib(L, l); //{}
-        lua_setfield(L, -2, "__index");//mt[__index] = {}
+        lua_setfield(L, -2, "__index"); //mt[__index] = {}
         lua_pushcfunction(L, lrelease);
-        lua_setfield(L, -2, "__gc");//mt[__gc] = lrelease
+        lua_setfield(L, -2, "__gc"); //mt[__gc] = lrelease
     }
-    lua_setmetatable(L, -2);// set userdata metatable
+    lua_setmetatable(L, -2); // set userdata metatable
     lua_pushlightuserdata(L, p);
     return 2;
 }
 
 extern "C" {
-    int LUAMOD_API luaopen_navmesh(lua_State* L)
-    {
-        luaL_Reg l[] = {
-            {"new",lcreate},
-            {"load_static",load_static},
-            {NULL,NULL}
-        };
-        luaL_newlib(L, l);
-        return 1;
-    }
+int LUAMOD_API luaopen_navmesh(lua_State* L) {
+    luaL_Reg l[] = { { "new", lcreate }, { "load_static", load_static }, { NULL, NULL } };
+    luaL_newlib(L, l);
+    return 1;
+}
 }

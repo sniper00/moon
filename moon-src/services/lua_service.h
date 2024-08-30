@@ -2,13 +2,11 @@
 #include "common/lua_utility.hpp"
 #include "service.hpp"
 
-struct callback_context
-{
+struct callback_context {
     lua_State* L = nullptr;
 };
 
-class lua_service final : public moon::service
-{
+class lua_service final: public moon::service {
 public:
     lua_service();
 
@@ -30,6 +28,7 @@ public:
     static int set_callback(lua_State* L);
 
     int64_t next_sequence();
+
 private:
     ssize_t mem = 0;
     ssize_t mem_limit = std::numeric_limits<ssize_t>::max();
