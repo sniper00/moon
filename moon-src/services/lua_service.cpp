@@ -19,7 +19,7 @@ extern "C" void open_custom_libs(lua_State * L);
 
 void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
 {
-    lua_service* l = reinterpret_cast<lua_service*>(ud);
+    auto* l = static_cast<lua_service*>(ud);
 
     if (nsize == 0)
     {
@@ -35,27 +35,21 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize)
         return nullptr;
     }
 
-    auto mem_diff = static_cast<ssize_t>(nsize);
-    if(nullptr != ptr)
-    {
-        mem_diff -= static_cast<ssize_t>(osize);
-    }
+    auto mem_diff = static_cast<ssize_t>(nsize) - static_cast<ssize_t>(osize);
 
-    auto new_used_memory = l->mem + mem_diff;
-
-    if (new_used_memory > l->mem_limit && (ptr == nullptr || nsize > osize))
-    {
-        log::instance().logstring(true, moon::LogLevel::Error,
-            moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
-                (float)l->mem_limit / mb_memory),
-            l->id());
-        return nullptr;
-    }
-    
     l->mem += mem_diff;
-    
-    if (new_used_memory > l->mem_report)
+
+    if (l->mem > l->mem_report)
     {
+        if (l->mem > l->mem_limit && (ptr == nullptr || nsize > osize))
+        {
+            log::instance().logstring(true, moon::LogLevel::Error,
+                moon::format("%s Memory error current %.2f M, limit %.2f M", l->name().data(), (float)(l->mem) / mb_memory,
+                    (float)l->mem_limit / mb_memory),
+                l->id());
+            return nullptr;
+        }
+
         l->mem_report *= 2;
         log::instance().logstring(
             true, moon::LogLevel::Warn, moon::format("%s Memory warning %.2f M", l->name().data(), (float)l->mem / mb_memory), l->id());
@@ -87,7 +81,7 @@ lua_service::~lua_service()
 
 static int protect_init(lua_State* L)
 {
-    const moon::service_conf* conf = (const moon::service_conf*)lua_touserdata(L, 1);
+    auto conf = (const moon::service_conf*)lua_touserdata(L, 1);
     
     if (nullptr == conf) {
         luaL_error(L, "Invalid service conf");
@@ -154,7 +148,7 @@ int lua_service::set_callback(lua_State* L) {
     lua_service* S = lua_service::get(L);
     luaL_checktype(L, 1, LUA_TFUNCTION);
     lua_settop(L, 1);
-    callback_context* cb_ctx = (callback_context*)lua_newuserdata(L, sizeof(callback_context)); // L [-0, +1]
+    auto cb_ctx = (callback_context*)lua_newuserdata(L, sizeof(callback_context)); // L [-0, +1]
     cb_ctx->L = lua_newthread(L);                                                               // L [-0, +1]
     lua_pushcfunction(cb_ctx->L, traceback);                                                    // cb_ctx->L [-0, +1]
     lua_setuservalue(L, -2);                                // L [-1, +0]  associate cb_ctx->L to the userdata
