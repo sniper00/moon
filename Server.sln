@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crypt", "build\projects\crypt\crypt.vcxproj", "{D70E3F0F-4323-67C0-0CA5-0A20787863F1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lfmt", "build\projects\lfmt\lfmt.vcxproj", "{D8089A7C-C43F-9B0D-6D2C-81105942170F}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "build\projects\lua\lua.vcxproj", "{C78D880B-3397-887C-BC12-9F7C281B947C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lualib", "build\projects\lualib\lualib.vcxproj", "{BE65480C-AA07-73E2-93C2-86367F03FA32}"
@@ -27,6 +29,10 @@ Global
 		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Debug|x64.Build.0 = Debug|x64
 		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Release|x64.ActiveCfg = Release|x64
 		{D70E3F0F-4323-67C0-0CA5-0A20787863F1}.Release|x64.Build.0 = Release|x64
+		{D8089A7C-C43F-9B0D-6D2C-81105942170F}.Debug|x64.ActiveCfg = Debug|x64
+		{D8089A7C-C43F-9B0D-6D2C-81105942170F}.Debug|x64.Build.0 = Debug|x64
+		{D8089A7C-C43F-9B0D-6D2C-81105942170F}.Release|x64.ActiveCfg = Release|x64
+		{D8089A7C-C43F-9B0D-6D2C-81105942170F}.Release|x64.Build.0 = Release|x64
 		{C78D880B-3397-887C-BC12-9F7C281B947C}.Debug|x64.ActiveCfg = Debug|x64
 		{C78D880B-3397-887C-BC12-9F7C281B947C}.Debug|x64.Build.0 = Debug|x64
 		{C78D880B-3397-887C-BC12-9F7C281B947C}.Release|x64.ActiveCfg = Release|x64

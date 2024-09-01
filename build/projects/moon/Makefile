@@ -23,7 +23,7 @@ INCLUDES += -I../../.. -I../../../moon-src -I../../../moon-src/core -I../../../t
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-LIBS += -llua -llualib -lcrypt -lpb -lsharetable -lmongo -lmimalloc -ldl -lpthread -lstdc++fs
+LIBS += -llua -llualib -lcrypt -lpb -lsharetable -lmongo -lmimalloc -llfmt -ldl -lpthread -lstdc++fs
 LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
 define PREBUILDCMDS
 endef
@@ -37,7 +37,7 @@ OBJDIR = ../../obj/moon/Debug
 DEFINES += -DDEBUG -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -std=c++17
-LDDEPS += ../../bin/Debug/liblua.a ../../bin/Debug/liblualib.a ../../bin/Debug/libcrypt.a ../../bin/Debug/libpb.a ../../bin/Debug/libsharetable.a ../../bin/Debug/libmongo.a ../../bin/Debug/libmimalloc.a
+LDDEPS += ../../bin/Debug/liblua.a ../../bin/Debug/liblualib.a ../../bin/Debug/libcrypt.a ../../bin/Debug/libpb.a ../../bin/Debug/libsharetable.a ../../bin/Debug/libmongo.a ../../bin/Debug/libmimalloc.a ../../bin/Debug/liblfmt.a
 ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Debug -L/usr/lib64 -m64 -static-libstdc++ -static-libgcc -Wl,-E,--as-needed,-rpath=./
 define POSTBUILDCMDS
 	@echo Running postbuild commands
@@ -51,7 +51,7 @@ OBJDIR = ../../obj/moon/Release
 DEFINES += -DNDEBUG -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall -std=c++17
-LDDEPS += ../../bin/Release/liblua.a ../../bin/Release/liblualib.a ../../bin/Release/libcrypt.a ../../bin/Release/libpb.a ../../bin/Release/libsharetable.a ../../bin/Release/libmongo.a ../../bin/Release/libmimalloc.a
+LDDEPS += ../../bin/Release/liblua.a ../../bin/Release/liblualib.a ../../bin/Release/libcrypt.a ../../bin/Release/libpb.a ../../bin/Release/libsharetable.a ../../bin/Release/libmongo.a ../../bin/Release/libmimalloc.a ../../bin/Release/liblfmt.a
 ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Release -L/usr/lib64 -m64 -static-libstdc++ -static-libgcc -Wl,-E,--as-needed,-rpath=./
 define POSTBUILDCMDS
 	@echo Running postbuild commands

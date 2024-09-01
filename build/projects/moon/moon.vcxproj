@@ -152,6 +152,9 @@
     <ProjectReference Include="..\mimalloc\mimalloc.vcxproj">
       <Project>{7381B8AB-5F4E-13B7-8867-015F74934845}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\lfmt\lfmt.vcxproj">
+      <Project>{D8089A7C-C43F-9B0D-6D2C-81105942170F}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

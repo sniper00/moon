@@ -15,6 +15,7 @@ ifeq ($(config),debug)
   sharetable_config = debug
   crypt_config = debug
   pb_config = debug
+  lfmt_config = debug
   mongo_config = debug
   lualib_config = debug
 
@@ -25,6 +26,7 @@ else ifeq ($(config),release)
   sharetable_config = release
   crypt_config = release
   pb_config = release
+  lfmt_config = release
   mongo_config = release
   lualib_config = release
 
@@ -32,7 +34,7 @@ else
   $(error "invalid configuration $(config)")
 endif
 
-PROJECTS := lua mimalloc moon sharetable crypt pb mongo lualib
+PROJECTS := lua mimalloc moon sharetable crypt pb lfmt mongo lualib
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -50,7 +52,7 @@ ifneq (,$(mimalloc_config))
 	@${MAKE} --no-print-directory -C build/projects/mimalloc -f Makefile config=$(mimalloc_config)
 endif
 
-moon: lua lualib crypt pb sharetable mongo mimalloc
+moon: lua lualib crypt pb sharetable mongo mimalloc lfmt
 ifneq (,$(moon_config))
 	@echo "==== Building moon ($(moon_config)) ===="
 	@${MAKE} --no-print-directory -C build/projects/moon -f Makefile config=$(moon_config)
@@ -74,6 +76,12 @@ ifneq (,$(pb_config))
 	@${MAKE} --no-print-directory -C build/projects/pb -f Makefile config=$(pb_config)
 endif
 
+lfmt:
+ifneq (,$(lfmt_config))
+	@echo "==== Building lfmt ($(lfmt_config)) ===="
+	@${MAKE} --no-print-directory -C build/projects/lfmt -f Makefile config=$(lfmt_config)
+endif
+
 mongo:
 ifneq (,$(mongo_config))
 	@echo "==== Building mongo ($(mongo_config)) ===="
@@ -93,6 +101,7 @@ clean:
 	@${MAKE} --no-print-directory -C build/projects/sharetable -f Makefile clean
 	@${MAKE} --no-print-directory -C build/projects/crypt -f Makefile clean
 	@${MAKE} --no-print-directory -C build/projects/pb -f Makefile clean
+	@${MAKE} --no-print-directory -C build/projects/lfmt -f Makefile clean
 	@${MAKE} --no-print-directory -C build/projects/mongo -f Makefile clean
 	@${MAKE} --no-print-directory -C build/projects/lualib -f Makefile clean
 
@@ -112,6 +121,7 @@ help:
 	@echo "   sharetable"
 	@echo "   crypt"
 	@echo "   pb"
+	@echo "   lfmt"
 	@echo "   mongo"
 	@echo "   lualib"
 	@echo ""

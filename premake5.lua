@@ -100,7 +100,8 @@ project "moon"
         "pb",
         "sharetable",
         "mongo",
-        "mimalloc"
+        "mimalloc",
+        "lfmt"
     }
 
     defines {
@@ -202,6 +203,11 @@ add_lua_module(
 )--protobuf
 
 add_lua_module(
+    "./third/lfmt",
+    "lfmt"
+)
+
+add_lua_module(
     "./third/lmongo",
     "mongo",
     {
@@ -269,7 +275,7 @@ end
 
 newaction {
     trigger = "build",
-    description = "Creates source and binary packages",
+    description = "Build",
     execute = function ()
         local host = os.host()
         local switch = {
