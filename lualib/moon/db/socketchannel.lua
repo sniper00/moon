@@ -71,11 +71,11 @@ end
 
 function socketchannel:request(req,resp)
     socket.write(self._fd, req)
+    if resp == nil then
+        -- no response
+        return
+    end
     if self._opts.response then
-        if resp == nil then
-            -- no response
-            return
-        end
         self._threads[resp] = coroutine.running()
         local ok, data = moon.wait()
         if not ok then
