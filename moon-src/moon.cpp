@@ -122,6 +122,7 @@ int main(int argc, char* argv[]) {
         std::string logfile;
         std::string bootstrap;
         std::string loglevel;
+        std::string stat;
 
         int argn = 1;
         if (argc <= argn) {
@@ -129,6 +130,14 @@ int main(int argc, char* argv[]) {
             return exitcode;
         }
         bootstrap = argv[argn++];
+        if(bootstrap == "-e"){
+            if(argc <= argn+1){
+                usage();
+                return exitcode;
+            }
+            stat = argv[argn++];
+            bootstrap = argv[argn++];
+        }
 
         if (fs::path(bootstrap).extension() != ".lua") {
             usage();
@@ -253,6 +262,7 @@ int main(int argc, char* argv[]) {
             conf->params.append(*path);
         if (auto cpath = server_->get_env("CPATH"); cpath)
             conf->params.append(*cpath);
+        conf->params.append(stat);
         conf->params.append("return {}");
         server_->new_service(std::move(conf));
         server_->set_unique_service("bootstrap", BOOTSTRAP_ADDR);
