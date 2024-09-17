@@ -83,7 +83,7 @@ setmetatable(
     }
 )
 
--- disable create unexpected global variable
+-- Disable create unexpected global variable
 setmetatable(
     _g,
     {
@@ -102,6 +102,7 @@ local session_id_coroutine = {}
 local protocol = {}
 local session_watcher = {}
 local timer_routine = {}
+local timer_profile_trace = {}
 
 local function coresume(co, ...)
     local ok, err = co_resume(co, ...)
@@ -264,6 +265,7 @@ function moon.async(fn, ...)
 end
 
 --- Suspends the current coroutine.
+--- @async
 --- @param session? integer @ An optional session ID used to map the coroutine for wakeup.
 --- @param receiver? integer @ An optional receiver's service ID.
 --- @return ... @ Returns the unpacked message if the coroutine is resumed by a message. If the coroutine is resumed by `moon.wakeup`, it returns the additional parameters passed by `moon.wakeup`. If the coroutine is broken, it returns `false` and "BREAK".
@@ -320,7 +322,9 @@ end
 
 ------------------------------------------
 
----获取指定线程中所有的服务name和id, json格式
+--- Get all service names and IDs in the specified thread, in JSON format
+---@async
+---@param workerid integer @ The worker thread ID.
 ---@return string
 function moon.scan_services(workerid)
     return moon.wait(_scan_services(workerid))
@@ -343,7 +347,7 @@ function moon.call(PTYPE, receiver, ...)
     if receiver == 0 then
         error("moon call receiver == 0")
     end
-    
+
     return moon.wait(_send(p.PTYPE, receiver, p.pack(...)))
 end
 
@@ -605,16 +609,22 @@ reg_protocol {
     israw = true,
     dispatch = function(msg)
         local timerid = -_decode(msg, "E")
-        assert(timerid>0)
         local v = timer_routine[timerid]
         timer_routine[timerid] = nil
+        local trace = timer_profile_trace[timerid]
+        timer_profile_trace[timerid] = nil
         if not v then
             return
         end
+        local st = moon.clock()
         if type(v) == "thread" then
             coresume(v, timerid)
         else
             v()
+        end
+        local elapsed = moon.clock() - st
+        if trace and elapsed > 0.1 then
+            moon.warn(string.format("Timer %s cost %ss trace '%s'", timerid, elapsed, trace))
         end
     end
 }
@@ -630,19 +640,24 @@ end
 --- Creates a timer that triggers a callback function after waiting for a specified number of milliseconds. If `mills <= 0`, the behavior of this function degenerates into posting a message to the message queue, which is very useful for operations that need to be delayed.
 --- @param mills integer @ The number of milliseconds to wait.
 --- @param fn function @ The callback function to be triggered.
+--- @param profile_trace? string @ Trace for timer profile.
 --- @return integer @ Returns the timer ID. You can use `moon.remove_timer` to remove the timer.
-function moon.timeout(mills, fn)
+function moon.timeout(mills, fn, profile_trace)
     local timerid = _timeout(mills)
     timer_routine[timerid] = fn
+    timer_profile_trace[timerid] = profile_trace
     return timerid
 end
 
 --- Suspends the current coroutine for at least `mills` milliseconds.
+--- @async
 --- @param mills integer @ The number of milliseconds to suspend.
+--- @param profile_trace? string @ Trace for timer profile.
 --- @return boolean, string? @ If the timer is awakened by `moon.wakeup`, it returns `false`. If the timer is triggered normally, it returns `true`.
-function moon.sleep(mills)
+function moon.sleep(mills, profile_trace)
     local timerid = _timeout(mills)
     timer_routine[timerid] = co_running()
+    timer_profile_trace[timerid] = profile_trace
     local id, reason = co_yield()
     if id ~= timerid then
         timer_routine[timerid] = false
@@ -655,23 +670,22 @@ end
 
 local debug_command = {}
 
-debug_command.gc = function(sender, sessionid)
+debug_command.gc = function()
     collectgarbage("collect")
-    moon.response("debug", sender, sessionid, collectgarbage("count"))
+    return collectgarbage("count")
 end
 
-debug_command.mem = function(sender, sessionid)
-    moon.response("debug", sender, sessionid, collectgarbage("count"))
+debug_command.mem = function()
+    return collectgarbage("count")
 end
 
-debug_command.ping = function(sender, sessionid)
-    moon.response("debug", sender, sessionid, "pong")
+debug_command.ping = function()
+    return "pong"
 end
 
-debug_command.state = function(sender, sessionid)
+debug_command.state = function()
     local running_num, free_num = moon.coroutine_num()
-    local s = string.format("co-running %d co-free %d cpu:%d", running_num, free_num, moon.cpu())
-    moon.response("debug", sender, sessionid, s)
+    return string.format("coroutine: running %d free %d. cpu:%d", running_num, free_num, moon.cpu())
 end
 
 reg_protocol {
@@ -682,7 +696,7 @@ reg_protocol {
     dispatch = function(sender, session, cmd, ...)
         local func = debug_command[cmd]
         if func then
-            func(sender, session, ...)
+            moon.response("debug", sender, session, func(sender, session, ...))
         else
             moon.response("debug", sender, session, "unknow debug cmd " .. cmd)
         end

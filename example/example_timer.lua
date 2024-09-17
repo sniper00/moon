@@ -7,9 +7,12 @@ moon.remove_timer(timerid)
 
 moon.async(function()
     print("coroutine timer start")
-    moon.sleep(1000)
+    moon.sleep(1000, "tag1")
+    for i=1,100000000 do
+        -- body
+    end
     print("coroutine timer tick 1 seconds")
-    moon.sleep(1000)
+    moon.sleep(1000, "tag2")
     print("coroutine timer tick 1 seconds")
     moon.sleep(1000)
     print("coroutine timer tick 1 seconds")
@@ -18,6 +21,7 @@ moon.async(function()
     moon.sleep(1000)
     print("coroutine timer tick 1 seconds")
     print("coroutine timer end")
+    moon.quit()
 end)
 
 local has_timeout = false
