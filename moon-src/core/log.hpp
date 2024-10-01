@@ -13,7 +13,7 @@ enum class LogLevel : char { Error = 1, Warn, Info, Debug, Max };
 class log final {
     using queue_type = concurrent_queue<buffer, std::mutex, std::vector>;
 
-    log(): state_(state::init), level_(LogLevel::Debug), thread_(&log::write, this) {}
+    log(): thread_(&log::write, this) {}
 
 public:
     static log& instance() {
@@ -32,8 +32,9 @@ public:
     void init(const std::string& logfile) {
         if (!logfile.empty()) {
             std::error_code ec;
-            auto parent_path = fs::path(logfile).parent_path();
-            if (!parent_path.empty() && !fs::exists(parent_path, ec)) {
+            if (auto parent_path = fs::path(logfile).parent_path();
+                !parent_path.empty() && !fs::exists(parent_path, ec))
+            {
                 fs::create_directories(parent_path, ec);
                 MOON_CHECK(!ec, ec.message().data());
             }
@@ -104,7 +105,7 @@ public:
             line.write_back(s.data(), s.size());
             log_queue_.push_back(std::move(line));
             ++size_;
-        } catch (std::exception& e) {
+        } catch (const std::exception& e) {
             std::cerr << "logstring exception:" << e.what() << std::endl;
         }
     }
@@ -113,7 +114,7 @@ public:
         level_ = level;
     }
 
-    LogLevel get_level() {
+    LogLevel get_level() const {
         return level_;
     }
 
@@ -156,9 +157,14 @@ public:
 private:
     size_t format_header(char* buf, LogLevel level, uint64_t serviceid) const {
         size_t offset = 0;
+        // Format the timestamp
         offset += time::milltimestamp(time::now(), buf, 23);
-        memcpy(buf + offset, " | ", 3);
-        offset += 3;
+
+        std::string_view strlevel = to_string(level);
+        memcpy(buf + offset, strlevel.data(), strlevel.size());
+        offset += strlevel.size();
+
+        // Format the service ID or thread ID
         size_t len = 0;
         if (serviceid == 0) {
             len = moon::uint64_to_str(moon::thread_id(), buf + offset);
@@ -167,13 +173,15 @@ private:
             len = moon::uint64_to_hexstr(serviceid, buf + offset + 1, 8) + 1;
         }
         offset += len;
+
+        // Pad with spaces if necessary
         if (len < 9) {
-            memcpy(buf + offset, "        ", 9 - len);
+            memset(buf + offset, ' ', 9 - len);
             offset += 9 - len;
         }
-        std::string_view strlevel = to_string(level);
-        memcpy(buf + offset, strlevel.data(), strlevel.size());
-        offset += strlevel.size();
+        buf[offset++] = '|';
+        buf[offset++] = ' ';
+
         return offset;
     }
 
@@ -246,15 +254,15 @@ private:
     static constexpr std::string_view to_string(LogLevel lv) {
         switch (lv) {
             case LogLevel::Error:
-                return " | ERROR | ";
+                return " EROR|";
             case LogLevel::Warn:
-                return " | WARN  | ";
+                return " WARN|";
             case LogLevel::Info:
-                return " | INFO  | ";
+                return " INFO|";
             case LogLevel::Debug:
-                return " | DEBUG | ";
+                return " DBUG|";
             default:
-                return " | NULL  | ";
+                return " NULL|";
         }
     }
 
@@ -268,9 +276,9 @@ private:
     };
 
     bool enable_stdout_ = true;
-    std::atomic<state> state_;
+    std::atomic<state> state_ = state::init;
     std::atomic_uint32_t size_ = 0;
-    std::atomic<LogLevel> level_;
+    std::atomic<LogLevel> level_ = LogLevel::Debug;
     size_t error_count_ = 0;
     std::unique_ptr<std::FILE, file_deleter> fp_;
     std::thread thread_;
