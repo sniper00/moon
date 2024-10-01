@@ -216,7 +216,7 @@ void socket_server::connect(
             const asio::error_code& ec,
             tcp::resolver::results_type results
         ) mutable {
-            if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
+            if (params->millseconds > 0 && conn.use_count() == 1) // Already timed out
                 return;
 
             if (!ec) {
@@ -227,7 +227,7 @@ void socket_server::connect(
                     [this,
                      params,
                      conn = std::move(conn)](const asio::error_code& ec, const tcp::endpoint&) {
-                        if (params->millseconds > 0 && conn.use_count() == 1) // has timeout timer
+                        if (params->millseconds > 0 && conn.use_count() == 1) // Already timed out
                             return;
 
                         if (!ec) {
@@ -242,6 +242,8 @@ void socket_server::connect(
                                 PTYPE_INTEGER
                             );
                         } else {
+                            //Set the fd flag to prevent timeout handling
+                            conn->fd(std::numeric_limits<uint32_t>::max()); 
                             response(
                                 0,
                                 params->owner,
@@ -259,6 +261,8 @@ void socket_server::connect(
                     }
                 );
             } else {
+                //Set the fd flag to prevent timeout handling
+                conn->fd(std::numeric_limits<uint32_t>::max());
                 response(
                     0,
                     params->owner,
