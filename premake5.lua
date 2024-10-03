@@ -4,7 +4,7 @@ os.execute("git pull")
 os.execute("git submodule init")
 os.execute("git submodule update")
 
-local LUA_BUILD_AS_DLL = true
+local LUA_BUILD_AS_SHARED = true
 
 workspace "Server"
     configurations { "Debug", "Release" }
@@ -43,23 +43,25 @@ project "lua"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
-    kind "StaticLib"
+    if LUA_BUILD_AS_SHARED then
+        kind "SharedLib"
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
+    else
+        kind "StaticLib"
+    end
     language "C"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.c"}
     defines {"MAKE_LIB"}
     filter { "system:windows" }
         disablewarnings { "4244","4324","4702","4310", "4701"}
-        if LUA_BUILD_AS_DLL then
-            kind "SharedLib"
+        if LUA_BUILD_AS_SHARED then
             defines {"LUA_BUILD_AS_DLL"}
-            postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
         end
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
     filter { "system:macosx" }
         defines {"LUA_USE_MACOSX"}
-
 
 project "mimalloc"
     location "build/projects/%{prj.name}"

@@ -197,8 +197,10 @@ int main(int argc, char* argv[]) {
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
         server_->set_env("LUA_CPATH_EXT", "/?.dll;");
+#elif TARGET_PLATFORM == PLATFORM_MAC
+    server_->set_env("LUA_CPATH_EXT", "/?.dylib;");
 #else
-        server_->set_env("LUA_CPATH_EXT", "/?.so;");
+    server_->set_env("LUA_CPATH_EXT", "/?.so;");
 #endif
 
         if (!server_->get_env("PATH")) {
