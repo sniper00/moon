@@ -130,8 +130,8 @@ int main(int argc, char* argv[]) {
             return exitcode;
         }
         bootstrap = argv[argn++];
-        if(bootstrap == "-e"){
-            if(argc <= argn+1){
+        if (bootstrap == "-e") {
+            if (argc <= argn + 1) {
                 usage();
                 return exitcode;
             }
@@ -285,16 +285,34 @@ int main(int argc, char* argv[]) {
     return exitcode;
 }
 
+extern "C" {
+static void
+send_message(uint8_t type, uint32_t receiver, int64_t session, const char* data, size_t len) {
+    auto svr = wk_server.lock();
+    if (nullptr == svr)
+        return;
+    moon::message msg(len);
+    msg.set_type(type);
+    msg.set_receiver(receiver);
+    msg.set_sessionid(session);
+    msg.write_data(std::string_view(data, len));
+    svr->send_message(std::move(msg));
+}
+}
+
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn) \
     int lua_c_fn(lua_State*); \
     luaL_requiref(L, name, lua_c_fn, 0); \
-    lua_pop(L, 1); /* remove lib */
+    lua_pop(L, 1) /* remove lib */
 
 extern "C" {
 void open_custom_libs(lua_State* L) {
 #ifdef LUA_CACHELIB
     REGISTER_CUSTOM_LIBRARY("codecache", luaopen_cache);
 #endif
+    //Save the function pointer for the lua dynamic extension library to send messages to the message queue of the moon
+    lua_pushlightuserdata(L, (void*)send_message);
+    lua_setglobal(L, "send_message");
 
     //core
     REGISTER_CUSTOM_LIBRARY("moon.core", luaopen_moon_core);
