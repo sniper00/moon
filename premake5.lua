@@ -1,8 +1,10 @@
----@diagnostic disable: undefined-global
+---@diagnostic disable: undefined-global, undefined-field
 
-os.execute("git pull")
-os.execute("git submodule init")
-os.execute("git submodule update")
+if _ACTION ~= "build" and _ACTION ~= "clean" and _ACTION ~= "publish" then
+    os.execute("git pull")
+    os.execute("git submodule init")
+    os.execute("git submodule update")
+end
 
 local LUA_BUILD_AS_SHARED = true
 
@@ -12,7 +14,9 @@ workspace "Server"
     cppdialect "C++17"
     location "./"
     architecture "x64"
-    staticruntime "on"
+    if not LUA_BUILD_AS_SHARED then
+        staticruntime "on"
+    end
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -29,9 +33,6 @@ workspace "Server"
         warnings "Extra"
         cdialect "C11"
         buildoptions{"/experimental:c11atomics"}
-        if LUA_BUILD_AS_DLL then
-            staticruntime "off"
-        end
 
     filter { "system:linux" }
         warnings "High"
@@ -119,7 +120,7 @@ project "moon"
         links{"dl","pthread","stdc++fs"}
         linkoptions {
             "-static-libstdc++ -static-libgcc",
-            "-Wl,-E,--as-needed,-rpath=./"
+            "-Wl,--as-needed,-rpath=./"
         }
     filter {"system:macosx"}
         links{"dl","pthread"}
@@ -275,6 +276,18 @@ local function string_trim(input, chars)
     return string.gsub(input, pattern, "")
 end
 
+local function cleanup()
+    os.remove("moon")
+    os.remove("moon.debug")
+    os.rmdir("build/obj")
+    os.rmdir("build/bin")
+    os.rmdir(".vs")
+end
+
+if _ACTION == "clean" then
+    cleanup()
+end
+
 newaction {
     trigger = "build",
     description = "Build",
@@ -282,7 +295,6 @@ newaction {
         local host = os.host()
         local switch = {
             windows = function ()
-                os.execute("premake5.exe clean")
                 os.execute("premake5.exe vs2022")
                 local command = os.getenv("ProgramFiles(x86)")..[[\Microsoft Visual Studio\Installer\vswhere.exe]]
                 command = string.format('"%s" %s', string_trim(command), " -latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
@@ -292,23 +304,64 @@ newaction {
                 os.execute(string.format('"%s%s" -maxcpucount:4 Server.sln /t:rebuild /p:Configuration=Release ', string_trim(command), [[\MSBuild\Current\Bin\MSBuild.exe]]))
             end,
             linux = function ()
-                os.execute("premake5 clean")
                 os.execute("premake5 gmake2")
                 os.execute("make -j4 config=release")
+                os.execute([[
+                    #!/bin/bash
+                    if objdump --section-headers "moon" | grep -q ".debug_info"; then
+                        objcopy --only-keep-debug moon moon.debug
+                        objcopy --only-keep-debug liblua.so liblua.so.debug
+                        strip moon
+                        strip liblua.so
+                        objcopy --add-gnu-debuglink=moon.debug moon
+                        objcopy --add-gnu-debuglink=liblua.so.debug liblua.so
+                    fi
+                ]])
             end,
             macosx = function ()
-                os.execute("premake5 clean")
                 os.execute("premake5 gmake2 --cc=clang")
                 os.execute("make -j4 config=release")
+            end,
+        }
+
+        -- cleanup()
+        switch[host]()
+    end
+}
+
+newaction {
+    trigger = "publish",
+    description = "Publish",
+    execute = function ()
+        local host = os.host()
+        local switch = {
+            windows = function ()
+                os.execute("if exist moon-windows.zip del /f moon-windows.zip")
+                os.execute("if not exist clib mkdir clib")
+                os.execute("echo Compressing files into moon-windows.zip...")
+                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib -DestinationPath moon-windows.zip")
+                os.execute("echo Checking if moon-windows.zip was created...")
+                os.execute("if exist moon-windows.zip (echo moon-windows.zip created successfully.) else (echo Failed to create moon-windows.zip.)")
+            end,
+            linux = function ()
+                os.execute([[
+                    #!/bin/bash
+                    rm -f moon-linux.zip
+                    mkdir -p clib
+                    zip -r moon-linux.zip moon liblua.so lualib service clib/*.so moon.debug liblua.so.debug
+                    # zip -r moon-linux-debuginfo.zip moon.debug liblua.so.debug
+                ]])
+            end,
+            macosx = function ()
+                os.execute([[
+                    #!/bin/bash
+                    rm -f moon-linux.zip
+                    mkdir -p clib
+                    zip -r moon-linux.zip moon liblua.dylib lualib service clib/*.dylib
+                ]])
             end,
         }
 
         switch[host]()
     end
 }
-
-if _ACTION == "clean" then
-    os.rmdir("build/obj")
-    os.rmdir("build/bin")
-    os.rmdir(".vs")
-end
