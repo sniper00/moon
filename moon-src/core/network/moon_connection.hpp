@@ -18,16 +18,15 @@ public:
             int> = 0>
     explicit moon_connection(Args&&... args):
         base_connection(std::forward<Args>(args)...),
-        flag_(enable_chunked::none),
         cache_(512) {}
 
-    void start(role r) override {
-        base_connection_t::start(r);
+    void start(bool server) override {
+        base_connection_t::start(server);
         message m {};
         m.set_type(type_);
         m.write_data(address());
         m.set_receiver(static_cast<uint8_t>(
-            r == role::server ? socket_data_type::socket_accept : socket_data_type::socket_connect
+            server ? socket_data_type::socket_accept : socket_data_type::socket_connect
         ));
         handle_message(std::move(m));
         read_header();
@@ -35,7 +34,7 @@ public:
 
     bool send(buffer_shr_ptr_t data) override {
         if (data->size() >= MESSAGE_CONTINUED_FLAG
-            && !enum_has_any_bitmask(flag_, enable_chunked::send))
+            && !enum_has_any_bitmask(mask_, connection_mask::chunked_send))
         {
             asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                 error(make_error_code(moon::error::write_message_too_big));
@@ -45,44 +44,51 @@ public:
         return base_connection_t::send(std::move(data));
     }
 
-    void set_enable_chunked(enable_chunked v) {
-        flag_ = v;
+    void set_enable_chunked(connection_mask v) {
+        if(enum_has_any_bitmask(v, connection_mask::chunked_send)) {
+            mask_ = mask_ | connection_mask::chunked_send;
+        } else {
+            mask_ = enum_unset_bitmask(mask_, connection_mask::chunked_send);
+        }
+
+        if(enum_has_any_bitmask(v, connection_mask::chunked_recv)) {
+            mask_ = mask_ | connection_mask::chunked_recv;
+        } else {
+            mask_ = enum_unset_bitmask(mask_, connection_mask::chunked_recv);
+        }
     }
 
 private:
     void prepare_send(size_t default_once_send_bytes) override {
-        size_t bytes = 0;
-        size_t queue_size = queue_.size();
-        for (size_t i = 0; i < queue_size; ++i) {
-            const auto& elm = queue_[i];
-            size_t size = elm->size();
-            const char* data = elm->data();
-            bytes += size;
-            if (!elm->has_bitmask(socket_send_mask::raw)) {
-                wbuffers_.begin_write_slice();
-                message_size_t slice_size = 0;
-                message_size_t header = 0;
-                do {
-                    header = slice_size = (size >= MESSAGE_CONTINUED_FLAG)
-                        ? MESSAGE_CONTINUED_FLAG
-                        : static_cast<message_size_t>(size);
-                    host2net(header);
-                    wbuffers_.write_slice(&header, sizeof(header), data, slice_size);
-                    size -= slice_size;
-                    data += slice_size;
-                } while (size != 0);
+        wqueue_.prepare_buffers(
+            [this](const buffer_shr_ptr_t& elm) {
+                size_t size = elm->size();
+                const char* data = elm->data();
+                if (!elm->has_bitmask(socket_send_mask::raw)) {
+                    wqueue_.consume();
+                    message_size_t slice_size = 0;
+                    message_size_t header = 0;
+                    do {
+                        header = slice_size = (size >= MESSAGE_CONTINUED_FLAG)
+                            ? MESSAGE_CONTINUED_FLAG
+                            : static_cast<message_size_t>(size);
+                        host2net(header);
+                        wqueue_.prepare_with_padding(&header, sizeof(header), data, slice_size);
+                        size -= slice_size;
+                        data += slice_size;
+                    } while (size != 0);
 
-                if (slice_size == MESSAGE_CONTINUED_FLAG) {
-                    header = 0;
-                    wbuffers_.write_slice(&header, sizeof(header), nullptr, 0); //end flag
+                    if (slice_size == MESSAGE_CONTINUED_FLAG) {
+                        header = 0;
+                        wqueue_
+                            .prepare_with_padding(&header, sizeof(header), nullptr, 0); //end flag
+                    }
+                } else {
+                    wqueue_.consume(data, size);
                 }
-            } else {
-                wbuffers_.write(data, size);
-            }
-            if (bytes >= default_once_send_bytes) {
-                break;
-            }
-        }
+            },
+            default_once_send_bytes
+        );
     }
 
     void read_header() {
@@ -111,7 +117,7 @@ private:
         net2host(header);
 
         bool fin = (header != MESSAGE_CONTINUED_FLAG);
-        if (!fin && !enum_has_any_bitmask(flag_, enable_chunked::receive)) {
+        if (!fin && !enum_has_any_bitmask(mask_, connection_mask::chunked_recv)) {
             error(make_error_code(moon::error::read_message_too_big));
             return;
         }
@@ -169,7 +175,6 @@ private:
     }
 
 private:
-    enable_chunked flag_;
     buffer cache_;
     buffer_ptr_t data_;
 };

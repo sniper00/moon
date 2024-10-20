@@ -141,8 +141,7 @@ static int lmoon_log(lua_State* L) {
     }
 
     if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar)) {
-        line.write_back("    ", 4);
-        line.write_back('(');
+        line.write_back("    (", 5);
         if (ar.srclen > 1)
             line.write_back(ar.source + 1, ar.srclen - 1);
         line.write_back(':');

@@ -5,13 +5,26 @@
 #include "config.hpp"
 #include "error.hpp"
 #include "message.hpp"
-#include "write_buffer.hpp"
+#include "write_queue.hpp"
 
 namespace moon {
+enum class connection_mask : uint8_t {
+    none = 0,
+    server = 1 << 0,
+    would_close = 1 << 1,
+    reading = 1 << 2,
+    chunked_recv = 1 << 3,
+    chunked_send = 1 << 4,
+    chunked_both = 1 << 5,
+};
+
+template<>
+struct enum_enable_bitmask_operators<connection_mask> {
+    static constexpr bool enable = true;
+};
+
 class base_connection: public std::enable_shared_from_this<base_connection> {
 public:
-    enum class role : uint8_t { none, client, server };
-
     using socket_t = asio::ip::tcp::socket;
 
     template<typename... Args>
@@ -32,8 +45,10 @@ public:
 
     virtual ~base_connection() = default;
 
-    virtual void start(role r) {
-        role_ = r;
+    virtual void start(bool server) {
+        if (!server) {
+            mask_ = enum_unset_bitmask(mask_, connection_mask::server);
+        }
         recvtime_ = now();
     }
 
@@ -49,9 +64,9 @@ public:
             return false;
         }
 
-        if (wq_warn_size_ != 0 && queue_.size() >= wq_warn_size_) {
-            CONSOLE_WARN("network send queue too long. size:%zu", queue_.size());
-            if (wq_error_size_ != 0 && queue_.size() >= wq_error_size_) {
+        if (wq_warn_size_ != 0 && wqueue_.writeable() >= wq_warn_size_) {
+            CONSOLE_WARN("network send queue too long. size:%zu", wqueue_.writeable());
+            if (wq_error_size_ != 0 && wqueue_.writeable() >= wq_error_size_) {
                 asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                     error(make_error_code(moon::error::send_queue_too_big));
                 });
@@ -59,9 +74,11 @@ public:
             }
         }
 
-        will_close_ = data->has_bitmask(socket_send_mask::close) ? true : will_close_;
+        if (data->has_bitmask(socket_send_mask::close)) {
+            mask_ = mask_ | connection_mask::would_close;
+        }
 
-        if (queue_.emplace_back(std::move(data)); queue_.size() == 1) {
+        if (wqueue_.enqueue(std::move(data)) == 1) {
             post_send();
         }
 
@@ -100,8 +117,8 @@ public:
         return serviceid_;
     }
 
-    role get_role() const {
-        return role_;
+    bool is_server() const {
+        return enum_has_any_bitmask(mask_, connection_mask::server);
     }
 
     void timeout(time_t now) {
@@ -149,16 +166,10 @@ public:
 
 protected:
     virtual void prepare_send(size_t default_once_send_bytes) {
-        size_t bytes = 0;
-        size_t queue_size = queue_.size();
-        for (size_t i = 0; i < queue_size; ++i) {
-            const auto& elm = queue_[i];
-            wbuffers_.write(elm->data(), elm->size());
-            bytes += elm->size();
-            if (bytes >= default_once_send_bytes) {
-                break;
-            }
-        }
+        wqueue_.prepare_buffers(
+            [this](const buffer_shr_ptr_t& elm) { wqueue_.consume(elm->data(), elm->size()); },
+            default_once_send_bytes
+        );
     }
 
     void post_send() {
@@ -166,22 +177,20 @@ protected:
 
         asio::async_write(
             socket_,
-            make_buffers_ref(wbuffers_.buffers()),
+            make_buffers_ref(wqueue_.buffer_sequence()),
             [this, self = shared_from_this()](const asio::error_code& e, std::size_t) {
                 if (e) {
                     error(e);
                     return;
                 }
 
-                for (size_t i = 0; i < wbuffers_.size(); ++i) {
-                    queue_.pop_front();
-                }
+                wqueue_.commit_written();
 
-                wbuffers_.clear();
-
-                if (!queue_.empty()) {
+                if (wqueue_.writeable() > 0) {
                     post_send();
-                } else if (will_close_ && parent_ != nullptr) {
+                } else if (enum_has_any_bitmask(mask_, connection_mask::would_close)
+                           && parent_ != nullptr)
+                {
                     parent_->close(fd_);
                     parent_ = nullptr;
                 }
@@ -226,9 +235,7 @@ protected:
     }
 
 protected:
-    bool will_close_ = false;
-    bool read_in_progress_ = false;
-    role role_ = role::none;
+    connection_mask mask_ = connection_mask::server;
     uint8_t type_ = 0;
     uint16_t wq_warn_size_ = 0;
     uint16_t wq_error_size_ = 0;
@@ -237,8 +244,7 @@ protected:
     uint32_t serviceid_ = 0;
     time_t recvtime_ = 0;
     moon::socket_server* parent_;
-    write_buffer wbuffers_;
-    VecDeque<buffer_shr_ptr_t> queue_;
+    write_queue wqueue_;
     socket_t socket_;
 };
 } // namespace moon

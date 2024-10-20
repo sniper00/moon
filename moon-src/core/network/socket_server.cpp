@@ -233,7 +233,7 @@ void socket_server::connect(
                         if (!ec) {
                             conn->fd(server_->nextfd());
                             connections_.try_emplace(conn->fd(), conn);
-                            conn->start(base_connection::role::client);
+                            conn->start(false);
                             response(
                                 0,
                                 params->owner,
@@ -243,7 +243,7 @@ void socket_server::connect(
                             );
                         } else {
                             //Set the fd flag to prevent timeout handling
-                            conn->fd(std::numeric_limits<uint32_t>::max()); 
+                            conn->fd(std::numeric_limits<uint32_t>::max());
                             response(
                                 0,
                                 params->owner,
@@ -367,16 +367,16 @@ bool socket_server::setnodelay(uint32_t fd) {
 }
 
 bool socket_server::set_enable_chunked(uint32_t fd, std::string_view flag) {
-    auto v = enable_chunked::none;
+    auto v = connection_mask::none;
     for (const auto& c: flag) {
         switch (c) {
             case 'r':
             case 'R':
-                v = v | moon::enable_chunked::receive;
+                v = v | moon::connection_mask::chunked_recv;
                 break;
             case 'w':
             case 'W':
-                v = v | moon::enable_chunked::send;
+                v = v | moon::connection_mask::chunked_send;
                 break;
             default:
                 CONSOLE_WARN(
@@ -466,7 +466,7 @@ bool moon::socket_server::switch_type(uint32_t fd, uint8_t new_type) {
         auto newc = make_connection(c->owner(), new_type, std::move(c->socket()));
         newc->fd(fd);
         iter->second = newc;
-        newc->start(c->get_role());
+        newc->start(c->is_server());
         return true;
     }
     return false;
@@ -546,7 +546,7 @@ void socket_server::add_connection(
 ) {
     asio::dispatch(context_, [this, from, ctx, c, sessionid] {
         connections_.try_emplace(c->fd(), c);
-        c->start(base_connection::role::server);
+        c->start(true);
 
         if (sessionid != 0) {
             asio::dispatch(from->context_, [from, ctx, sessionid, fd = c->fd()] {

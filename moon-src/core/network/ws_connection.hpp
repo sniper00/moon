@@ -125,9 +125,9 @@ public:
         base_connection_t(std::forward<Args>(args)...),
         cache_(HANDSHAKE_STREAMBUF_SIZE) {}
 
-    void start(role r) override {
-        base_connection_t::start(r);
-        if (role::server == r) {
+    void start(bool server) override {
+        base_connection_t::start(server);
+        if (server) {
             read_handshake();
         } else {
             read_payload(2);
@@ -289,7 +289,7 @@ private:
 
         fh.mask = (frame_data[1] & 0x80) != 0;
         //message client to server must mask.
-        if (!fh.mask && role_ == role::server) {
+        if (!fh.mask && is_server()) {
             return error(make_error_code(moon::error::ws_bad_unmasked_frame));
         }
 
@@ -347,7 +347,7 @@ private:
                 break;
             }
             case PAYLOAD_MAX_LEN: {
-                if (role_ == role::server) {
+                if (is_server()) {
                     //server not support PAYLOAD_MAX_LEN frame.
                     return error(make_error_code(moon::error::ws_bad_size));
                 } else {
@@ -465,23 +465,23 @@ private:
     }
 
     void prepare_send(size_t default_once_send_bytes) override {
-        size_t bytes = 0;
-        size_t queue_size = queue_.size();
-        for (size_t i = 0; i < queue_size; ++i) {
-            const auto& elm = queue_[i];
-            if (!elm->has_bitmask(socket_send_mask::raw)) {
-                buffer payload = encode_frame(elm);
-                wbuffers_.begin_write_slice();
-                wbuffers_.write_slice(payload.data(), payload.size(), elm->data(), elm->size());
-            } else {
-                wbuffers_.write(elm->data(), elm->size());
-            }
-
-            bytes += elm->size();
-            if (bytes >= default_once_send_bytes) {
-                break;
-            }
-        }
+        wqueue_.prepare_buffers(
+            [this](const buffer_shr_ptr_t& elm) {
+                if (!elm->has_bitmask(socket_send_mask::raw)) {
+                    buffer payload = encode_frame(elm);
+                    wqueue_.consume();
+                    wqueue_.prepare_with_padding(
+                        payload.data(),
+                        payload.size(),
+                        elm->data(),
+                        elm->size()
+                    );
+                } else {
+                    wqueue_.consume(elm->data(), elm->size());
+                }
+            },
+            default_once_send_bytes
+        );
     }
 
     buffer encode_frame(const buffer_shr_ptr_t& data) const {
@@ -491,7 +491,7 @@ private:
 
         uint64_t size = data->size();
 
-        if (role_ == role::client) {
+        if (!is_server()) {
             auto d = reinterpret_cast<uint8_t*>(data->data());
             auto mask = randkey();
             for (uint64_t i = 0; i < size; i++) {
@@ -515,7 +515,7 @@ private:
         }
 
         //messages from the client must be masked
-        if (role_ == role::client) {
+        if (!is_server()) {
             payload_len |= 0x80;
         }
 

@@ -33,7 +33,7 @@ public:
         read_cache_(8192) {}
 
     direct_read_result read(size_t size, std::string_view delim, int64_t session) override {
-        if (!is_open() || read_in_progress_) {
+        if (!is_open() || enum_has_any_bitmask(mask_, connection_mask::reading)) {
             CONSOLE_ERROR("invalid read operation. %u", fd_);
             return direct_read_result { false, { "Invalid read operation" } };
         }
@@ -42,7 +42,7 @@ public:
         buf->commit(std::exchange(more_bytes_, 0));
         buf->consume(std::exchange(consume_, 0));
 
-        read_in_progress_ = true;
+        mask_ = mask_ | connection_mask::reading;
         read_cache_.set_sessionid(session);
 
         return delim.empty() ? read(read_exactly { size }) : read(read_until { size, delim });
@@ -54,7 +54,7 @@ private:
             std::string_view data { read_cache_.data(), read_cache_.size() };
             std::default_searcher searcher { op.delim.data(), op.delim.data() + delim_size };
             if (auto it = std::search(data.begin(), data.end(), searcher); it != data.end()) {
-                read_in_progress_ = false;
+                mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
                 auto count = std::distance(data.begin(), it);
                 read_cache_.as_buffer()->consume(count + delim_size);
                 return direct_read_result { true, { data.data(), static_cast<size_t>(count) } };
@@ -80,7 +80,7 @@ private:
 
     direct_read_result read(read_exactly op) {
         if (read_cache_.size() >= op.size) {
-            read_in_progress_ = false;
+            mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
             consume_ = op.size;
             return direct_read_result { true, { read_cache_.data(), op.size } };
         }
@@ -125,7 +125,7 @@ private:
         }
 
         parent_->close(fd_);
-        if (read_in_progress_) {
+        if (enum_has_any_bitmask(mask_, connection_mask::reading)) {
             response(read_cache_.size(), 0, PTYPE_ERROR);
         }
         parent_ = nullptr;
@@ -146,7 +146,7 @@ private:
         read_cache_.set_type(type);
         read_cache_.set_sender(fd_);
 
-        read_in_progress_ = false;
+        mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
 
         assert(read_cache_.sessionid() != 0);
         handle_message(read_cache_);

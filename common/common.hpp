@@ -277,6 +277,14 @@ operator&(Enum a, Enum b) {
     );
 }
 
+template<typename Enum>
+inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum>
+enum_unset_bitmask(Enum mask, Enum value) {
+    return static_cast<Enum>(
+        static_cast<std::underlying_type_t<Enum>>(mask) & ~static_cast<std::underlying_type_t<Enum>>(value)
+    );
+}
+
 template<
     typename Enum,
     typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, int> = 0>
