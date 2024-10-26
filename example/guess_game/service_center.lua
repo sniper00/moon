@@ -15,7 +15,7 @@ local function update_match()
     if #match_queue >= max_player_number then
         local addr_room = moon.new_service( {
             name = "room",
-            file = "game/service_room.lua"
+            file = "service_room.lua"
         })
         if addr_room == 0 then
             moon.error("create room failed!")

@@ -19,7 +19,7 @@ endif
 # #############################################
 
 RESCOMP = windres
-INCLUDES += -I../../.. -I../../../moon-src -I../../../moon-src/core -I../../../third -I../../../third/lua -I../../../third/mimalloc/include
+INCLUDES += -I../../../src -I../../../src/moon -I../../../src/moon/core -I../../../third -I../../../third/lua -I../../../third/mimalloc/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -71,12 +71,12 @@ GENERATED :=
 OBJECTS :=
 
 GENERATED += $(OBJDIR)/lua_service.o
-GENERATED += $(OBJDIR)/moon.o
+GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/server.o
 GENERATED += $(OBJDIR)/socket_server.o
 GENERATED += $(OBJDIR)/worker.o
 OBJECTS += $(OBJDIR)/lua_service.o
-OBJECTS += $(OBJDIR)/moon.o
+OBJECTS += $(OBJDIR)/main.o
 OBJECTS += $(OBJDIR)/server.o
 OBJECTS += $(OBJDIR)/socket_server.o
 OBJECTS += $(OBJDIR)/worker.o
@@ -143,19 +143,19 @@ endif
 # File Rules
 # #############################################
 
-$(OBJDIR)/socket_server.o: ../../../moon-src/core/network/socket_server.cpp
+$(OBJDIR)/socket_server.o: ../../../src/moon/core/network/socket_server.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/server.o: ../../../moon-src/core/server.cpp
+$(OBJDIR)/server.o: ../../../src/moon/core/server.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/worker.o: ../../../moon-src/core/worker.cpp
+$(OBJDIR)/worker.o: ../../../src/moon/core/worker.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/moon.o: ../../../moon-src/moon.cpp
+$(OBJDIR)/main.o: ../../../src/moon/main.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/lua_service.o: ../../../moon-src/services/lua_service.cpp
+$(OBJDIR)/lua_service.o: ../../../src/moon/services/lua_service.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

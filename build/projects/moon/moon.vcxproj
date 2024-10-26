@@ -59,7 +59,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>DEBUG;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third;..\..\..\third\lua;..\..\..\third\mimalloc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third;..\..\..\third\lua;..\..\..\third\mimalloc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <AdditionalOptions>/experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
@@ -81,7 +81,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third;..\..\..\third\lua;..\..\..\third\mimalloc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third;..\..\..\third\lua;..\..\..\third\mimalloc\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -105,28 +105,28 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\moon-src\core\config.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\log.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\message.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\base_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\error.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\moon_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\socket_server.h" />
-    <ClInclude Include="..\..\..\moon-src\core\network\stream_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\streambuf.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\write_buffer.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\network\ws_connection.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\server.h" />
-    <ClInclude Include="..\..\..\moon-src\core\service.hpp" />
-    <ClInclude Include="..\..\..\moon-src\core\worker.h" />
-    <ClInclude Include="..\..\..\moon-src\services\lua_service.h" />
+    <ClInclude Include="..\..\..\src\moon\core\config.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\log.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\message.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\base_connection.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\error.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\moon_connection.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\socket_server.h" />
+    <ClInclude Include="..\..\..\src\moon\core\network\stream_connection.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\streambuf.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\write_queue.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\network\ws_connection.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\server.h" />
+    <ClInclude Include="..\..\..\src\moon\core\service.hpp" />
+    <ClInclude Include="..\..\..\src\moon\core\worker.h" />
+    <ClInclude Include="..\..\..\src\moon\services\lua_service.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\moon-src\core\network\socket_server.cpp" />
-    <ClCompile Include="..\..\..\moon-src\core\server.cpp" />
-    <ClCompile Include="..\..\..\moon-src\core\worker.cpp" />
-    <ClCompile Include="..\..\..\moon-src\moon.cpp" />
-    <ClCompile Include="..\..\..\moon-src\services\lua_service.cpp" />
+    <ClCompile Include="..\..\..\src\moon\core\network\socket_server.cpp" />
+    <ClCompile Include="..\..\..\src\moon\core\server.cpp" />
+    <ClCompile Include="..\..\..\src\moon\core\worker.cpp" />
+    <ClCompile Include="..\..\..\src\moon\main.cpp" />
+    <ClCompile Include="..\..\..\src\moon\services\lua_service.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lua\lua.vcxproj">

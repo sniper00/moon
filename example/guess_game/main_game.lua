@@ -6,13 +6,6 @@ if _G["__init__"] then
         enable_stdout = true,
         logfile = string.format("log/game-%s.log", os.date("%Y-%m-%d-%H-%M-%S")),
         loglevel = "DEBUG", ---默认日志等级
-        path = table.concat({
-            "./?.lua",
-            "./?/init.lua",
-            "../lualib/?.lua",   -- moon lualib 搜索路径
-            "../service/?.lua",  -- moon 自带的服务搜索路径，需要用到redisd服务
-            -- Append your lua module search path
-        }, ";")
     }
 end
 
@@ -31,7 +24,7 @@ local services = {
     {
         unique = true,
         name = "db",
-        file = "../service/redisd.lua",
+        file = "redisd.lua",
         threadid = 1, ---独占线程
         poolsize = 5, ---连接池
         opts = db_conf
@@ -39,7 +32,7 @@ local services = {
     {
         unique = true,
         name = "center",
-        file = "game/service_center.lua",
+        file = "service_center.lua",
         threadid = 2,
     },
 }
@@ -64,7 +57,7 @@ moon.async(function ()
     while true do
         local id = moon.new_service( {
             name = "user",
-            file = "game/service_user.lua"
+            file = "service_user.lua"
         })
 
         local fd, err = socket.accept(listenfd, id)

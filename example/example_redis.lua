@@ -127,7 +127,7 @@ local function run_example()
         redis_db = moon.new_service(    {
             unique = true,
             name = "db",
-            file = "../service/redisd.lua",
+            file = "redisd.lua",
             threadid = 1, ---独占线程
             poolsize = 5, ---连接池
             opts = db_conf

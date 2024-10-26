@@ -57,7 +57,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>DEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..;..\..\..\third;..\..\..\third\lua;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\third;..\..\..\third\lua;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <AdditionalOptions>/experimental:c11atomics %(AdditionalOptions)</AdditionalOptions>
@@ -75,7 +75,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\..;..\..\..\third;..\..\..\third\lua;..\..\..\moon-src;..\..\..\moon-src\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\third;..\..\..\third\lua;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -120,21 +120,21 @@
     <ClInclude Include="..\..\..\third\yyjson\yyjson.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\lualib-src\lua_aoi.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_buffer.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_coroutine.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_fs.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_http.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_json.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_kcp.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_moon.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_navmesh.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_random.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_schema.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_serialize.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_socket.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_uuid.cpp" />
-    <ClCompile Include="..\..\..\lualib-src\lua_zset.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_aoi.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_buffer.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_coroutine.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_fs.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_http.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_json.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_kcp.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_moon.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_navmesh.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_random.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_schema.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_serialize.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_socket.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_uuid.cpp" />
+    <ClCompile Include="..\..\..\src\lualib-src\lua_zset.cpp" />
     <ClCompile Include="..\..\..\third\fastlz\fastlz.c" />
     <ClCompile Include="..\..\..\third\kcp\ikcp.c" />
     <ClCompile Include="..\..\..\third\recastnavigation\Detour\Source\DetourAlloc.cpp" />

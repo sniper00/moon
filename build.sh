@@ -19,7 +19,7 @@ elif [ "$os" == "Darwin" ]; then
     cpu_num=$(sysctl -n machdep.cpu.thread_count)
     brew install premake
     premake5 gmake --cc=clang
-    make config=release
+    make config=release -j$cpu_num
 else
   echo "Unknown operating system"
   exit 1

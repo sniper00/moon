@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="lualib-src">
-      <UniqueIdentifier>{13BA7B21-FF71-BD6E-6879-96CA5450585F}</UniqueIdentifier>
+    <Filter Include="src">
+      <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lualib-src">
+      <UniqueIdentifier>{CA568258-B624-765E-9FB8-E6848B2552C3}</UniqueIdentifier>
     </Filter>
     <Filter Include="third">
       <UniqueIdentifier>{C0EF6C10-2C04-95C1-F585-3821615991F2}</UniqueIdentifier>
@@ -128,50 +131,50 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\lualib-src\lua_aoi.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_aoi.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_buffer.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_buffer.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_coroutine.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_coroutine.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_fs.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_fs.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_http.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_http.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_json.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_json.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_kcp.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_kcp.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_moon.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_moon.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_navmesh.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_navmesh.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_random.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_random.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_schema.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_schema.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_serialize.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_serialize.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_socket.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_socket.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_uuid.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_uuid.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lualib-src\lua_zset.cpp">
-      <Filter>lualib-src</Filter>
+    <ClCompile Include="..\..\..\src\lualib-src\lua_zset.cpp">
+      <Filter>src\lualib-src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\third\fastlz\fastlz.c">
       <Filter>third\fastlz</Filter>

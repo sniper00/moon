@@ -8,7 +8,7 @@ local db_config = {
     port = 5432,
     database = "postgres",
     user = "postgres",
-    password = "123456", -- only support md5 auth
+    password = "654123", -- only support md5 auth
     connect_timeout = 1000,
 }
 
@@ -89,7 +89,7 @@ local function test_big_json_value()
     db:query("drop table if exists game_user")
     print_r(db:query("CREATE TABLE game_user (uid bigint primary key, data text)"))
 
-    local big_json_str = json.encode(json.decode(io.readfile("../test/twitter.json")))
+    local big_json_str = json.encode(json.decode(io.readfile("test/twitter.json")))
 
     local sql = string.format(
         "INSERT INTO game_user (uid, data) VALUES (1, '%s') on conflict (uid) do update set data = excluded.data",
@@ -120,7 +120,7 @@ local function test_jsonb()
         insert into game_user(uid, data) VALUES(1, '%s') on conflict(uid) do update set data = EXCLUDED.data;
     ]]
 
-    sql0 = string.format(sql0, io.readfile("../test/twitter.json"))
+    sql0 = string.format(sql0, io.readfile("test/twitter.json"))
 
     print_r(db:query(sql0))
 
@@ -348,7 +348,7 @@ local function test_sql_driver()
     local db = moon.new_service {
         unique = true,
         name = "db_game",
-        file = "../service/sqldriver.lua",
+        file = "sqldriver.lua",
         provider = "moon.db.pg",
         threadid = 2,
         poolsize = 5,
@@ -380,9 +380,7 @@ $$ LANGUAGE plpgsql;
            );
     ]])
 
-    print(1)
     sqldriver.query(db, sql)
-    print(2)
 
     local res = sqldriver.query(db, fn_sql)
     assert(not res.code, res.message)

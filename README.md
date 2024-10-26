@@ -38,7 +38,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 ## Framework
 
-![image](https://github.com/sniper00/MoonNetLua/raw/master/image/01.png)
+![image](https://github.com/sniper00/MoonNetLua/raw/master/src/image/01.png)
 
 # Community
 
@@ -59,7 +59,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 ```shell
 # Run test
-./moon test/main_test.lua
+./moon example/test/main_test.lua
 
 # Run script in the example directory, e:
 ./moon example/example_timer.lua

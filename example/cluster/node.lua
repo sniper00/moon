@@ -7,18 +7,16 @@ if _G["__init__"] then
         logfile = string.format("log/node-%s-%s.log", arg[1], os.date("%Y-%m-%d-%H-%M-%S")),
         loglevel = "DEBUG",
         path = table.concat({ --Define lua module search dir, all services use same lua search path
-            "./?.lua",
-            "./?/init.lua",
-            "../lualib/?.lua",
-            "../service/?.lua",
-            -- Append your lua module search path
-        }, ";")
+        "./?.lua",
+        "./?/init.lua",
+        -- Append your lua module search path
+    }, ";")
     }
 end
 
 local moon = require("moon")
 
-local socket = require "moon.socket"
+local fs = require "fs"
 local json = require("json")
 local httpc = require("moon.http.client")
 
@@ -122,7 +120,7 @@ local function init(node_conf)
         {
             unique = true,
             name = "cluster",
-            file = "../service/cluster.lua",
+            file = "cluster.lua",
             url = CLUSTER_ETC_URL,
             threadid = 2,
         }

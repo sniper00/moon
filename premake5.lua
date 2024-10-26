@@ -82,18 +82,18 @@ project "moon"
     kind "ConsoleApp"
     language "C++"
     includedirs {
-        "./",
-        "./moon-src",
-        "./moon-src/core",
+        "./src",
+        "./src/moon",
+        "./src/moon/core",
         "./third",
         "./third/lua",
         "./third/mimalloc/include"
     }
 
     files {
-        "./moon-src/**.h",
-        "./moon-src/**.hpp",
-        "./moon-src/**.cpp"
+        "./src/moon/**.h",
+        "./src/moon/**.hpp",
+        "./src/moon/**.cpp"
     }
 
     links{
@@ -156,7 +156,7 @@ local function add_lua_module(dir, name, options )
 
         language "C"
         kind "StaticLib"
-        includedirs {"./", "./third","./third/lua"}
+        includedirs {"./src", "./third","./third/lua"}
         files { dir.."/**.h",dir.."/**.hpp", dir.."/**.c",dir.."/**.cpp"}
 
         defines{"SOL_ALL_SAFETIES_ON"}
@@ -221,12 +221,12 @@ add_lua_module(
 )
 
 add_lua_module(
-    "./lualib-src",
+    "./src/lualib-src",
     "lualib",
     {
         all = function()
             language "C++"
-            includedirs {"./moon-src", "./moon-src/core", "./third/mimalloc/include"}
+            includedirs {"./src/moon", "./src/moon/core", "./third/mimalloc/include"}
             defines {
                 "ASIO_STANDALONE" ,
                 "ASIO_NO_DEPRECATED",
@@ -278,15 +278,29 @@ end
 
 local function cleanup()
     os.remove("moon")
+    os.remove("moon.exe")
     os.remove("moon.debug")
+    os.remove("lua.dll")
+    os.remove("liblua.so")
+    os.remove("liblua.so.debug")
+    os.remove("liblua.dylib")
     os.rmdir("build/obj")
     os.rmdir("build/bin")
     os.rmdir(".vs")
 end
 
-if _ACTION == "clean" then
-    cleanup()
-end
+-- if _ACTION == "clean" then
+--     cleanup()
+-- end
+
+newaction {
+    trigger = "clean",
+    description = "Cleanup",
+    execute = function ()
+        cleanup()
+    end
+}
+
 
 newaction {
     trigger = "build",
@@ -301,7 +315,7 @@ newaction {
                 local handle = assert(io.popen(command))
                 command = handle:read("*a")
                 handle:close()
-                os.execute(string.format('"%s%s" -maxcpucount:4 Server.sln /t:rebuild /p:Configuration=Release ', string_trim(command), [[\MSBuild\Current\Bin\MSBuild.exe]]))
+                os.execute(string.format('"%s%s" -maxcpucount:4 Server.sln /t:build /p:Configuration=Release ', string_trim(command), [[\MSBuild\Current\Bin\MSBuild.exe]]))
             end,
             linux = function ()
                 os.execute("premake5 gmake2")
@@ -349,7 +363,6 @@ newaction {
                     rm -f moon-linux.zip
                     mkdir -p clib
                     zip -r moon-linux.zip moon liblua.so lualib service clib/*.so moon.debug liblua.so.debug
-                    # zip -r moon-linux-debuginfo.zip moon.debug liblua.so.debug
                 ]])
             end,
             macosx = function ()

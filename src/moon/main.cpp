@@ -155,6 +155,7 @@ int main(int argc, char* argv[]) {
         auto server_ = std::make_shared<server>();
         wk_server = server_;
 
+        std::string lua_search_path = "";
         if (file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos) {
             std::unique_ptr<lua_State, moon::state_deleter> lua_ { luaL_newstate() };
             lua_State* L = lua_.get();
@@ -178,32 +179,17 @@ int main(int argc, char* argv[]) {
             logfile = lua_opt_field<std::string>(L, -1, "logfile");
             enable_stdout = lua_opt_field<bool>(L, -1, "enable_stdout", enable_stdout);
             loglevel = lua_opt_field<std::string>(L, -1, "loglevel", loglevel);
-            std::string path = lua_opt_field<std::string>(L, -1, "path", "");
-            if (!path.empty()) {
-                path = moon::format("package.path='%s;'..package.path;", path.data());
-                server_->set_env("PATH", path);
-            }
-
-            path = lua_opt_field<std::string>(L, -1, "cpath", "");
-            if (!path.empty()) {
-                path = moon::format("package.cpath='%s;'..package.cpath;", path.data());
-                server_->set_env("CPATH", path);
+            lua_search_path = lua_opt_field<std::string>(L, -1, "path", "");
+            std::string cpath = lua_opt_field<std::string>(L, -1, "cpath", "");
+            if (!cpath.empty()) {
+                server_->set_env(
+                    "CPATH",
+                    moon::format("package.cpath='%s;'..package.cpath;", cpath.data())
+                );
             }
         }
 
-        server_->register_service("lua", []() -> service_ptr_t {
-            return std::make_unique<lua_service>();
-        });
-
-#if TARGET_PLATFORM == PLATFORM_WINDOWS
-        server_->set_env("LUA_CPATH_EXT", "/?.dll;");
-#elif TARGET_PLATFORM == PLATFORM_MAC
-    server_->set_env("LUA_CPATH_EXT", "/?.dylib;");
-#else
-    server_->set_env("LUA_CPATH_EXT", "/?.so;");
-#endif
-
-        if (!server_->get_env("PATH")) {
+        if (lua_search_path.find("lualib/?.lua") == std::string::npos) {
             // By default, lualib and service directories are added to the lua search path
             auto search_path = fs::absolute(fs::current_path());
             if (!fs::exists(search_path / "lualib"))
@@ -211,15 +197,25 @@ int main(int argc, char* argv[]) {
             MOON_CHECK(fs::exists(search_path / "lualib"), "can not find moon lualib path.");
             auto strpath = search_path.string();
             moon::replace(strpath, "\\", "/");
-            server_->set_env(
-                "PATH",
-                moon::format(
-                    "package.path='%s/lualib/?.lua;%s/service/?.lua;'..package.path;",
-                    strpath.data(),
-                    strpath.data()
-                )
+            if(!lua_search_path.empty() && lua_search_path.back() != ';')
+                lua_search_path.append(";");
+            lua_search_path.append(
+                moon::format("%s/lualib/?.lua;%s/service/?.lua;", strpath.data(), strpath.data())
             );
         }
+
+        server_->set_env(
+            "PATH",
+            moon::format("package.path='%s;'..package.path;", lua_search_path.data())
+        );
+
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+        server_->set_env("LUA_CPATH_EXT", "/?.dll;");
+#elif TARGET_PLATFORM == PLATFORM_MAC
+        server_->set_env("LUA_CPATH_EXT", "/?.dylib;");
+#else
+        server_->set_env("LUA_CPATH_EXT", "/?.so;");
+#endif
 
         if (!server_->get_env("CPATH")) {
             // By default, clib directory are added to the lua c module search path
@@ -241,6 +237,10 @@ int main(int argc, char* argv[]) {
                 );
             }
         }
+
+        server_->register_service("lua", []() -> service_ptr_t {
+            return std::make_unique<lua_service>();
+        });
 
         //Change the working directory to the directory where the opened file is located.
         fs::current_path(fs::absolute(fs::path(bootstrap)).parent_path());

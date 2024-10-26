@@ -226,6 +226,26 @@ static void table_tostring(std::string& res, lua_State* L, int index) {
     res.append("}");
 }
 
+static std::optional<std::string>
+search_file(std::string_view lua_search_path, std::string_view source) {
+    size_t first_quote_pos = lua_search_path.find_first_of("'");
+    if (first_quote_pos != std::string_view::npos) {
+        size_t second_quote_pos = lua_search_path.find_first_of("'", first_quote_pos + 1);
+        if (second_quote_pos != std::string_view::npos) {
+            auto extracted_path =
+                lua_search_path.substr(first_quote_pos + 1, second_quote_pos - first_quote_pos - 1);
+            auto path_array = moon::split<std::string>(extracted_path, ";");
+            for (auto& path: path_array) {
+                moon::replace(path, "?.lua", source);
+                if (fs::exists(path)) {
+                    return path;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 static int lmoon_new_service(lua_State* L) {
     luaL_checktype(L, 1, LUA_TTABLE);
 
@@ -242,8 +262,15 @@ static int lmoon_new_service(lua_State* L) {
     conf->unique = lua_opt_field<bool>(L, 1, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 1, "threadid", 0);
 
-    if (auto path = S->get_server()->get_env("PATH"); path)
+    if (auto path = S->get_server()->get_env("PATH"); path) {
         conf->params.append(*path);
+        if (!fs::exists(conf->source)) {
+            if (auto maybe_path = search_file(*path, conf->source)) {
+                conf->source = maybe_path.value();
+            }
+        }
+    }
+
     if (auto cpath = S->get_server()->get_env("CPATH"); cpath)
         conf->params.append(*cpath);
     conf->params.append("return ");
