@@ -122,7 +122,7 @@ static int lmoon_log(lua_State* L) {
             }
             case LUA_TBOOLEAN: {
                 int v = lua_toboolean(L, i);
-                constexpr std::string_view s[2] = { "true", "false" };
+                constexpr std::string_view s[2] = { "false", "true" };
                 line.write_back(s[v].data(), s[v].size());
                 break;
             }
