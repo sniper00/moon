@@ -278,12 +278,9 @@ end
 
 local function cleanup()
     os.remove("moon")
-    os.remove("moon.exe")
-    os.remove("moon.debug")
-    os.remove("lua.dll")
-    os.remove("liblua.so")
-    os.remove("liblua.so.debug")
-    os.remove("liblua.dylib")
+    os.remove("moon.*")
+    os.remove("lua.*")
+    os.remove("liblua.*")
     os.rmdir("build/obj")
     os.rmdir("build/bin")
     os.rmdir(".vs")
@@ -353,7 +350,7 @@ newaction {
                 os.execute("if exist moon-windows.zip del /f moon-windows.zip")
                 os.execute("if not exist clib mkdir clib")
                 os.execute("echo Compressing files into moon-windows.zip...")
-                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib -DestinationPath moon-windows.zip")
+                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib -DestinationPath moon-windows.zip README.md")
                 os.execute("echo Checking if moon-windows.zip was created...")
                 os.execute("if exist moon-windows.zip (echo moon-windows.zip created successfully.) else (echo Failed to create moon-windows.zip.)")
             end,
@@ -362,15 +359,15 @@ newaction {
                     #!/bin/bash
                     rm -f moon-linux.zip
                     mkdir -p clib
-                    zip -r moon-linux.zip moon liblua.so lualib service clib/*.so moon.debug liblua.so.debug
+                    zip -r moon-linux.zip moon liblua.so lualib service clib/*.so moon.debug liblua.so.debug README.md
                 ]])
             end,
             macosx = function ()
                 os.execute([[
                     #!/bin/bash
-                    rm -f moon-linux.zip
+                    rm -f moon-macosx.zip
                     mkdir -p clib
-                    zip -r moon-linux.zip moon liblua.dylib lualib service clib/*.dylib
+                    zip -r moon-macosx.zip moon liblua.dylib lualib service clib/*.dylib README.md
                 ]])
             end,
         }
