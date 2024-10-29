@@ -330,6 +330,7 @@ newaction {
                 ]])
             end,
             macosx = function ()
+                os.execute("brew install premake")
                 os.execute("premake5 gmake2 --cc=clang")
                 os.execute("make -j4 config=release")
             end,
