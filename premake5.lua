@@ -350,7 +350,7 @@ newaction {
                 os.execute("if exist moon-windows.zip del /f moon-windows.zip")
                 os.execute("if not exist clib mkdir clib")
                 os.execute("echo Compressing files into moon-windows.zip...")
-                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib -DestinationPath moon-windows.zip README.md")
+                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib, README.md -DestinationPath moon-windows.zip ")
                 os.execute("echo Checking if moon-windows.zip was created...")
                 os.execute("if exist moon-windows.zip (echo moon-windows.zip created successfully.) else (echo Failed to create moon-windows.zip.)")
             end,
