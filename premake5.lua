@@ -353,7 +353,6 @@ newaction {
                 os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib -DestinationPath moon-windows.zip README.md")
                 os.execute("echo Checking if moon-windows.zip was created...")
                 os.execute("if exist moon-windows.zip (echo moon-windows.zip created successfully.) else (echo Failed to create moon-windows.zip.)")
-                os.execute([[echo "moon-windows.zip" > .zip_name]])
             end,
             linux = function ()
                 os.execute([[
@@ -361,7 +360,6 @@ newaction {
                     rm -f moon-linux.zip
                     mkdir -p clib
                     zip -r moon-linux.zip moon liblua.so lualib service clib/*.so moon.debug liblua.so.debug README.md
-                    echo "moon-linux.zip" > .zip_name
                 ]])
             end,
             macosx = function ()
@@ -370,7 +368,6 @@ newaction {
                     rm -f moon-macosx.zip
                     mkdir -p clib
                     zip -r moon-macosx.zip moon liblua.dylib lualib service clib/*.dylib README.md
-                    echo "moon-macosx.zip" > .zip_name
                 ]])
             end,
         }
