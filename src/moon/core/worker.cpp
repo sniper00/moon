@@ -190,7 +190,7 @@ void worker::send(message&& msg) {
                 service* s = nullptr;
                 for (auto& m: read_queue) {
                     s = handle_one(s, std::move(m));
-                    --mqsize_;
+                    mqsize_.fetch_sub(1, std::memory_order_acq_rel);
                 }
                 read_queue.clear();
             }
