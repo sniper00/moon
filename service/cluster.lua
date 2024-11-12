@@ -239,8 +239,10 @@ local function cluster_service()
             for _,senders in pairs(send_watch) do
                 for key, t in pairs(senders) do
                     if moon.time() - t > 10 then
-                        local sender = key&0xFFFFFFFF
-                        local sessionid = (key>>32)
+                        local arr = string.split(key,"-")
+                        local sessionid = tonumber(arr[1])
+                        local sender = tonumber(arr[2])
+                        ---@diagnostic disable-next-line: param-type-mismatch
                         moon.response("lua", sender, -sessionid, false, "cluster:socket read timeout")
                         senders[key] = nil
                     end
