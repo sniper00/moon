@@ -25,6 +25,8 @@ function socketchannel:connect(_)
         return {code = "SOCKET", message = err}
     end
     self._fd = fd
+    socket.setnodelay(fd)
+    socket.settimeout(fd, 10)
 
     local response = self._opts.response
     if response then

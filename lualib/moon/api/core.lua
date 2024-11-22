@@ -118,6 +118,11 @@ function core.decode(msg, pattern) end
 ---redirect a message to other service
 function core.redirect(msg, receiver, mtype, sender, sessionid) end
 
+--- escape non printable to hex
+--- @param str string
+--- @return string
+function core.escape_print(str) end
+
 ---@class asio
 local asio = {}
 

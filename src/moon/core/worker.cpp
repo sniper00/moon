@@ -233,13 +233,13 @@ service* worker::handle_one(service* s, message&& msg) {
                             "Dead service [%08X] recv message from [%08X]: %s.",
                             receiver,
                             sender,
-                            moon::escape_non_printable({ msg.data(), msg.size() }).data()
+                            moon::escape_print({ msg.data(), msg.size() }).data()
                         );
                     } else {
                         std::string str = moon::format(
                             "Attemp call dead service [%08X]: %s.",
                             receiver,
-                            moon::escape_non_printable({ msg.data(), msg.size() }).data()
+                            moon::escape_print({ msg.data(), msg.size() }).data()
                         );
                         msg.set_sessionid(-msg.sessionid());
                         server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);

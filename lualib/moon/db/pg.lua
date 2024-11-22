@@ -131,6 +131,7 @@ local function receive_message(self)
     if not self.sock then
         return socket_error,"not connect"
     end
+    socket.settimeout(self.sock, 10)
     local header, err, content
     ---header: 1byte type + 4byte len
     header, err = socket.read(self.sock, 5)
@@ -145,6 +146,7 @@ local function receive_message(self)
         disconnect(self)
         return socket_error, err
     end
+    socket.settimeout(self.sock, 0)
     return t, content
 end
 
@@ -312,8 +314,6 @@ function pg.connect(opts)
     if not sock then
         return {code = "SOCKET", message = err}
     end
-
-    socket.settimeout(sock, 10)
 
     local obj = table.deepcopy(opts)
     obj.sock = sock

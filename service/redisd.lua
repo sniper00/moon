@@ -1,7 +1,7 @@
 local moon = require("moon")
 local seri = require("seri")
+local json = require("json")
 local buffer = require("buffer")
-local crypt = require("crypt")
 local socket = require("moon.socket")
 local redis = require("moon.db.redis")
 
@@ -10,79 +10,51 @@ local tbinsert = table.insert
 local conf = ...
 
 if conf.name then
-    local function connect(opts, auto_reconnect)
-        local db, err
-        repeat
-            db, err = redis.connect(opts)
-            if not db then
-                moon.error(err)
-                break
-            end
-
-            if db == redis.socket_error then
-                db = nil
-            end
-
-            if not db and auto_reconnect then
-                moon.sleep(1000)
-            end
-        until (not auto_reconnect or db)
-        return db, err
-    end
-
     ---@param cmd buffer_shr_ptr
     local function exec_one(db, cmd, sender, sessionid, opt)
-        local reconnect_times = 1
-
-        local auto_reconnect = sessionid == 0
-
-        if auto_reconnect then
-            reconnect_times = -1
-        end
-
-        repeat
-            local err, res
-            if not db then
-                db, err = connect(conf.opts, auto_reconnect)
-                if not db then
-                    if sessionid == 0 then
-                        moon.error(err)
-                    else
-                        moon.response("lua", sender, sessionid, false, err)
-                    end
-                    return
+        local faild_times = 0
+        local err, res
+        while true do
+            if db then
+                if opt == "Q" then
+                    res, err = redis.raw_send(db, cmd)
+                else
+                    local t = { moon.unpack(buffer.unpack(cmd, "C")) }
+                    res, err = db[t[1]](db, table.unpack(t, 2))
                 end
-            end
-
-            if opt == "Q" then
-                res, err = redis.raw_send(db, cmd)
+                if redis.socket_error == res then
+                    --- A socket error may occur during the query, close the connection and trigger a reconnect
+                    db:disconnect()
+                    db = nil
+                    faild_times = faild_times + 1
+                else
+                    if sessionid == 0 and not res then
+                        moon.error(err, moon.escape_print(buffer.unpack(cmd)))
+                    else
+                        moon.response("lua", sender, sessionid, res, err)
+                    end
+                    return db, res
+                end
             else
-                local t = { moon.unpack(buffer.unpack(cmd, "C")) }
-                res, err = db[t[1]](db, table.unpack(t, 2))
-            end
-
-            if redis.socket_error == res then
-                db = nil
-                moon.error("A network error occurred, preparing to reconnect.", err)
-                if reconnect_times == 0 then
+                if err and faild_times > 1 then
+                    moon.error(json.encode {
+                        error = string.format("A network error occurred %s, reconnecting db.", err),
+                        opts = conf.opts,
+                        request = moon.escape_print(buffer.unpack(cmd))
+                    })
+                end
+                db, err = redis.connect(conf.opts)
+                if not db then
                     if sessionid ~= 0 then
                         moon.response("lua", sender, sessionid, false, err)
+                        return
                     end
-                    return
+                    db = nil
+                    faild_times = faild_times + 1
+                    moon.sleep(1000)
                 end
-            else
-                if sessionid == 0 and not res then
-                    moon.error(err, crypt.base64encode(buffer.unpack(cmd)))
-                else
-                    if err then
-                        moon.response("lua", sender, sessionid, res, err)
-                    else
-                        moon.response("lua", sender, sessionid, res)
-                    end
-                end
-                return db, res
             end
-        until false
+        end
     end
 
     local db_pool_size = conf.poolsize or 1

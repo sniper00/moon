@@ -328,7 +328,7 @@ inline std::string hex_string(std::string_view text) {
     return res;
 }
 
-inline std::string escape_non_printable(std::string_view input) {
+inline std::string escape_print(std::string_view input) {
     static constexpr std::string_view hex = "0123456789abcdef";
     std::string res;
     for (char ch: input) {

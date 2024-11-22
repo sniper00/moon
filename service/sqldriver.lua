@@ -1,5 +1,6 @@
 local moon = require("moon")
 local buffer = require("buffer")
+local json = require("json")
 local tbinsert = table.insert
 
 local conf = ...
@@ -13,38 +14,48 @@ if conf.name then
 
     ---@param sql buffer_shr_ptr
     local function exec_one(db, sql, sender, sessionid)
+        local faild_times = 0
+        local err
         while true do
             if db then
                 local res = db:query(sql)
                 local code = rawget(res, "code")
                 if code == "SOCKET" then -- socket error
-                    ---socket may disconnect when query , try reconnect
+                    err = res.message
+                    --- A socket error may occur during the query, close the connection and trigger a reconnect
                     db:disconnect()
                     db = nil
+                    faild_times = faild_times + 1
                 else
-                    ---query success but may has sql error
+                    --- Query succeeded, but there may be SQL errors
                     if sessionid == 0 and code then
-                        moon.error(buffer.unpack(sql) ..  "\n" ..table.tostring(res))
+                        moon.error(moon.escape_print(buffer.unpack(sql)) ..  "\n" ..table.tostring(res))
                     else
                         moon.response("lua", sender, sessionid, res)
                     end
                     return db
                 end
             else
+                if err and faild_times > 1 then
+                    moon.error(json.encode {
+                        error = string.format("A network error occurred %s, reconnecting db.", err),
+                        opts = conf.opts,
+                        request = moon.escape_print(buffer.unpack(sql))
+                    })
+                end
+
                 db = provider.connect(conf.opts)
                 if rawget(db, "code") then
-                    if sessionid == 0 then
-                        ---if execute operation print error, then reconnect
-                        moon.error(table.tostring(db))
-                    else
+                    err = rawget(db, "message")
+                    if sessionid ~= 0 then
                         ---if query operation return socket error or auth error
                         moon.response("lua", sender, sessionid, db)
                         return
                     end
                     db = nil
+                    faild_times = faild_times + 1
                     ---sleep then reconnect
                     moon.sleep(1000)
-                    moon.error("db reconnecting...", table.tostring(conf.opts))
                 end
             end
         end

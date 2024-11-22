@@ -135,9 +135,9 @@ static int lmoon_log(lua_State* L) {
             default:
                 size_t l;
                 const char* s = luaL_tolstring(L, i, &l); /* convert it to string */
-                line.write_back(s, l); /* print it */
-                lua_pop(L, 1); /* pop result */
-        }
+        line.write_back(s, l); /* print it */
+        lua_pop(L, 1); /* pop result */
+    }
     }
 
     if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar)) {
@@ -442,6 +442,13 @@ static int lmi_collect(lua_State* L) {
     return 0;
 }
 
+static int escape_print(lua_State* L) {
+    auto s = moon::lua_check<std::string_view>(L, 1);
+    auto res = moon::escape_print(s);
+    lua_pushlstring(L, res.data(), res.size());
+    return 1;
+}
+
 extern "C" {
 int LUAMOD_API luaopen_moon_core(lua_State* L) {
     luaL_Reg l[] = { { "clock", lmoon_clock },
@@ -466,6 +473,7 @@ int LUAMOD_API luaopen_moon_core(lua_State* L) {
                      { "decode", message_decode },
                      { "redirect", message_redirect },
                      { "collect", lmi_collect },
+                     { "escape_print", escape_print},
                      /* placeholders */
                      { "id", NULL },
                      { "name", NULL },

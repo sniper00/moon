@@ -172,7 +172,9 @@ local function request(fd, req, res, israw)
 	if not res then
 		return true
 	end
+    socket.settimeout(fd, 10)
 	local ok, data = res(fd)
+    socket.settimeout(fd, 0)
 	if ok and ok~=socket_error then
 		return data
 	end
