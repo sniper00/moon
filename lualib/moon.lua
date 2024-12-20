@@ -45,6 +45,7 @@ moon.PTYPE_SOCKET_UDP = 9
 moon.PTYPE_SOCKET_WS = 10
 moon.PTYPE_SOCKET_MOON = 11
 moon.PTYPE_INTEGER = 12
+moon.PTYPE_LOG = 13
 
 --moon.codecache = require("codecache")
 
@@ -493,9 +494,8 @@ reg_protocol {
         local data = moon.tostring(sz, len) or "unknown error"
         return false, data
     end,
-    dispatch = function(...)
+    dispatch = function(_, _, ...)
         moon.error(...)
-        error("PTYPE_TEXT dispatch not implemented")
     end
 }
 
@@ -700,6 +700,21 @@ reg_protocol {
         else
             moon.response("debug", sender, session, "unknow debug cmd " .. cmd)
         end
+    end
+}
+
+reg_protocol {
+    name = "log",
+    PTYPE = moon.PTYPE_LOG,
+    pack = function(...)
+        return ...
+    end,
+    unpack = function(sz, len)
+        local s = moon.tostring(sz, len)
+        return math.tointeger(string.sub(s, 1, 1)), string.sub(s, 2)
+    end,
+    dispatch = function(_, _, ...)
+        core.log(...)
     end
 }
 
