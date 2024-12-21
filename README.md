@@ -93,7 +93,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 # Use case
 
-### 若您的项目使用了moon，欢迎联系作者，作者很乐意把您的作品展示出来.
+### If your project uses moon, feel free to contact the author. The author is happy to showcase your work..
 
 | <img src="https://img.tapimg.com/market/icons/91b7979cd1fc8521f0a1635ec6962885_360.png?imageView2/1/w/270/q/80/interlace/1/ignore-error/1" alt="g1" width="128" height="128" /> | <img src="https://img.tapimg.com/market/lcs/d41a7948d794739454458f2dff4ab5c3_360.png?imageView2/1/w/270/q/80/interlace/1/ignore-error/1" alt="g2" width="128" height="128" />|
 | ------------------------------------------------------------ | ------------------------------------------------------------ | 
