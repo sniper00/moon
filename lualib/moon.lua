@@ -383,8 +383,8 @@ local function _dispatch(PTYPE, sender, session, sz, len, m)
     if session > 0 then
         session_watcher[session] = nil
         local co = session_id_coroutine[session]
+        session_id_coroutine[session] = nil
         if co then
-            session_id_coroutine[session] = nil
             --print(coroutine.status(co))
             coresume(co, sz, len, PTYPE)
             --print(coroutine.status(co))
