@@ -60,10 +60,12 @@ typedef __int64 ssize_t;
     #else
 typedef _W64 int ssize_t;
     #endif
+    #define MOON_EXPORT __declspec(dllexport)
 #else
     #include <sys/syscall.h>
     #include <unistd.h>
     #define moon_vsnprintf vsnprintf
+    #define MOON_EXPORT
 #endif
 
 #ifndef __has_feature // Clang - feature checking macros.
