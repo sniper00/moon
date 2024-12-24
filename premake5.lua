@@ -44,12 +44,7 @@ project "lua"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
-    if LUA_BUILD_AS_SHARED then
-        kind "SharedLib"
-        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
-    else
-        kind "StaticLib"
-    end
+    kind "StaticLib"
     language "C"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.c"}
@@ -120,16 +115,11 @@ project "moon"
         links{"dl","pthread","stdc++fs"}
         linkoptions {
             "-static-libstdc++ -static-libgcc",
-            "-Wl,--as-needed,-rpath=./"
+            "-Wl,-E,--as-needed,-rpath=./"
         }
     filter {"system:macosx"}
         links{"dl","pthread"}
-        linkoptions {
-            "-Wl,-rpath,./",
-            "-undefined dynamic_lookup"
-        }
-    filter "configurations:Debug"
-        targetsuffix "-d"
+        linkoptions {"-Wl,-rpath,./"}
     filter{"configurations:*"}
         postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
@@ -339,7 +329,7 @@ newaction {
                 os.execute("if exist moon-windows.zip del /f moon-windows.zip")
                 os.execute("if not exist clib mkdir clib")
                 os.execute("echo Compressing files into moon-windows.zip...")
-                os.execute("powershell Compress-Archive -Path moon.exe, lua.dll, lualib, service, clib, example, README.md -DestinationPath moon-windows.zip ")
+                os.execute("powershell Compress-Archive -Path moon.exe, lualib, service, clib, example, README.md -DestinationPath moon-windows.zip ")
                 os.execute("echo Checking if moon-windows.zip was created...")
                 os.execute("if exist moon-windows.zip (echo moon-windows.zip created successfully.) else (echo Failed to create moon-windows.zip.)")
             end,
@@ -348,7 +338,7 @@ newaction {
                     #!/bin/bash
                     rm -f moon-linux.zip
                     mkdir -p clib
-                    zip -r moon-linux.zip moon liblua.so lualib service clib/*.so README.md example
+                    zip -r moon-linux.zip moon lualib service clib/*.so README.md example
                 ]])
             end,
             macosx = function ()
@@ -356,7 +346,7 @@ newaction {
                     #!/bin/bash
                     rm -f moon-macosx.zip
                     mkdir -p clib
-                    zip -r moon-macosx.zip moon liblua.dylib lualib service clib/*.dylib README.md example
+                    zip -r moon-macosx.zip moon lualib service clib/*.dylib README.md example
                 ]])
             end,
         }
