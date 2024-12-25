@@ -32,6 +32,13 @@ public:
         return write_queue_.size();
     }
 
+    template<typename... Args>
+    size_t emplace_back(Args&&... args) {
+        std::lock_guard<lock_type> lk(mutex_);
+        write_queue_.emplack_back(std::forward<Args>(args)...);
+        return write_queue_.size();
+    }
+
     bool try_pop(T& t) {
         std::lock_guard<lock_type> lk(mutex_);
         if (write_queue_.empty())

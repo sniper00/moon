@@ -194,10 +194,14 @@ void lua_service::dispatch(message* m) {
         int trace = 1;
         lua_pushvalue(L, 2);
 
-        lua_pushinteger(L, m->type());
-        lua_pushinteger(L, m->sender());
-        lua_pushinteger(L, m->sessionid());
-        lua_pushlightuserdata(L, (void*)m->data());
+        lua_pushinteger(L, m->type);
+        lua_pushinteger(L, m->sender);
+        lua_pushinteger(L, m->session);
+        if (m->stub == 0) {
+            lua_pushlightuserdata(L, (void*)m->data());
+        } else {
+            lua_pushinteger(L, m->stub);;
+        }
         lua_pushinteger(L, m->size());
         lua_pushlightuserdata(L, m);
 
@@ -222,11 +226,11 @@ void lua_service::dispatch(message* m) {
 
         lua_pop(L, 1);
 
-        if (m->sessionid() >= 0) {
+        if (m->session >= 0) {
             log::instance().logstring(true, moon::LogLevel::Error, error, id());
         } else {
-            m->set_sessionid(-m->sessionid());
-            server_->response(m->sender(), error, m->sessionid(), PTYPE_ERROR);
+            m->session = -m->session;
+            server_->response(m->sender, error, m->session, PTYPE_ERROR);
         }
     } catch (const std::exception& e) {
         luaL_traceback(L, L, e.what(), 1);

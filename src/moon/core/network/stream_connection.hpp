@@ -43,7 +43,7 @@ public:
         buf->consume(std::exchange(consume_, 0));
 
         mask_ = mask_ | connection_mask::reading;
-        read_cache_.set_sessionid(session);
+        read_cache_.session = session;
 
         return delim.empty() ? read(read_exactly { size }) : read(read_until { size, delim });
     }
@@ -108,17 +108,18 @@ private:
             return;
         }
 
-        read_cache_.as_buffer()->clear();
+        auto b = read_cache_.as_buffer();
+        b->clear();
 
         if (e) {
             if (e == moon::error::read_timeout) {
-                read_cache_.write_data(
+                b->write_back(
                     moon::format("TIMEOUT %s.(%d)", e.message().data(), e.value())
                 );
             } else if (e == asio::error::eof) {
-                read_cache_.write_data(moon::format("EOF %s.(%d)", e.message().data(), e.value()));
+                b->write_back(moon::format("EOF %s.(%d)", e.message().data(), e.value()));
             } else {
-                read_cache_.write_data(
+                b->write_back(
                     moon::format("SOCKET_ERROR %s.(%d)", e.message().data(), e.value())
                 );
             }
@@ -143,12 +144,12 @@ private:
         more_bytes_ = (size - count) + remove_tail;
         consume_ = count;
         buf->revert(more_bytes_);
-        read_cache_.set_type(type);
-        read_cache_.set_sender(fd_);
+        read_cache_.type = type;
+        read_cache_.sender = fd_;
 
         mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
 
-        assert(read_cache_.sessionid() != 0);
+        assert(read_cache_.session != 0);
         handle_message(read_cache_);
     }
 

@@ -92,7 +92,7 @@ static int lmoon_timeout(lua_State* L) {
     lua_service* S = lua_service::get(L);
     int64_t interval = luaL_checkinteger(L, 1);
     int64_t timer_id = S->next_sequence();
-    S->get_server()->timeout(interval, S->id(), -timer_id);
+    S->get_server()->timeout(interval, S->id(), timer_id);
     lua_pushinteger(L, timer_id);
     return 1;
 }
@@ -135,9 +135,9 @@ static int lmoon_log(lua_State* L) {
             default:
                 size_t l;
                 const char* s = luaL_tolstring(L, i, &l); /* convert it to string */
-        line.write_back(s, l); /* print it */
-        lua_pop(L, 1); /* pop result */
-    }
+                line.write_back(s, l); /* print it */
+                lua_pop(L, 1); /* pop result */
+        }
     }
 
     if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar)) {
@@ -375,13 +375,13 @@ static int message_decode(lua_State* L) {
     for (size_t i = 0; i < len; ++i) {
         switch (sz[i]) {
             case 'S':
-                lua_pushinteger(L, m->sender());
+                lua_pushinteger(L, m->sender);
                 break;
             case 'R':
-                lua_pushinteger(L, m->receiver());
+                lua_pushinteger(L, m->receiver);
                 break;
             case 'E':
-                lua_pushinteger(L, m->sessionid());
+                lua_pushinteger(L, m->session);
                 break;
             case 'Z':
                 if (m->data() != nullptr)
@@ -403,13 +403,12 @@ static int message_decode(lua_State* L) {
                 break;
             }
             case 'C': {
-                if (buffer* buf = m->as_buffer(); nullptr == buf) {
-                    lua_pushlightuserdata(L, nullptr);
-                    lua_pushinteger(L, 0);
-                } else {
-                    lua_pushlightuserdata(L, buf->data());
-                    lua_pushinteger(L, buf->size());
+                if(m->stub == 0){
+                    lua_pushlightuserdata(L, (void*)m->data());
+                }else{
+                    lua_pushinteger(L, m->stub);
                 }
+                lua_pushinteger(L, m->size());
                 break;
             }
             default:
@@ -424,11 +423,12 @@ static int message_redirect(lua_State* L) {
     auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
-    m->set_receiver((uint32_t)luaL_checkinteger(L, 2));
-    m->set_type((uint8_t)luaL_checkinteger(L, 3));
+    if(m->receiver = (uint32_t)luaL_checkinteger(L, 2);m->receiver == 0)
+        return luaL_argerror(L, 2, "receiver must > 0");
+    m->type = (uint8_t)luaL_checkinteger(L, 3);
     if (top > 3) {
-        m->set_sender((uint32_t)luaL_checkinteger(L, 4));
-        m->set_sessionid(luaL_checkinteger(L, 5));
+        m->sender = (uint32_t)luaL_checkinteger(L, 4);
+        m->session = luaL_checkinteger(L, 5);
     }
     return 0;
 }
@@ -473,7 +473,7 @@ int LUAMOD_API luaopen_moon_core(lua_State* L) {
                      { "decode", message_decode },
                      { "redirect", message_redirect },
                      { "collect", lmi_collect },
-                     { "escape_print", escape_print},
+                     { "escape_print", escape_print },
                      /* placeholders */
                      { "id", NULL },
                      { "name", NULL },

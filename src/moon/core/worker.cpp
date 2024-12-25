@@ -37,10 +37,9 @@ void worker::run() {
 
 void worker::stop() {
     asio::post(io_ctx_, [this] {
-        message msg = message::with_empty();
-        msg.set_type(PTYPE_SHUTDOWN);
+        message m = message{PTYPE_SHUTDOWN, 0, 0, 0};
         for (auto& it: services_) {
-            it.second->dispatch(&msg);
+            it.second->dispatch(&m);
         }
     });
 }
@@ -104,12 +103,9 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
             services_.emplace(serviceid, std::move(s));
 
             if (0 != conf->session) {
-                server_->response(
-                    conf->creator,
-                    std::to_string(serviceid),
-                    conf->session,
-                    PTYPE_INTEGER
-                );
+                server_->send_message(message{
+                    PTYPE_INTEGER, 0, conf->creator, conf->session, serviceid
+                });
             }
             return;
         } while (false);
@@ -120,7 +116,9 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
         }
 
         if (0 != conf->session) {
-            server_->response(conf->creator, "0"sv, conf->session, PTYPE_INTEGER);
+            server_->send_message(message{
+                PTYPE_INTEGER, 0, conf->creator, conf->session, 0
+            });
         }
     });
 }
@@ -219,16 +217,16 @@ bool worker::shared() const {
 }
 
 service* worker::handle_one(service* s, message&& msg) {
-    uint32_t sender = msg.sender();
-    uint32_t receiver = msg.receiver();
-    uint8_t type = msg.type();
+    uint32_t sender = msg.sender;
+    uint32_t receiver = msg.receiver;
+    uint8_t type = msg.type;
 
     if (receiver > 0) {
         if (nullptr == s || s->id() != receiver) {
             s = find_service(receiver);
             if (nullptr == s || !s->ok()) {
-                if (sender != 0 && msg.type() != PTYPE_TIMER) {
-                    if (msg.sessionid() >= 0) {
+                if (sender != 0 && msg.type != PTYPE_TIMER) {
+                    if (msg.session >= 0) {
                         CONSOLE_DEBUG(
                             "Dead service [%08X] recv message from [%08X]: %s.",
                             receiver,
@@ -241,8 +239,8 @@ service* worker::handle_one(service* s, message&& msg) {
                             receiver,
                             moon::escape_print({ msg.data(), msg.size() }).data()
                         );
-                        msg.set_sessionid(-msg.sessionid());
-                        server_->response(sender, str, msg.sessionid(), PTYPE_ERROR);
+                        msg.session = -msg.session;
+                        server_->response(sender, str, msg.session, PTYPE_ERROR);
                     }
                 }
                 return nullptr;

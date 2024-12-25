@@ -5,7 +5,7 @@
 namespace moon {
 class worker;
 class server;
-class message;
+struct message;
 
 class service {
 public:
@@ -90,10 +90,10 @@ protected:
 
 template<typename Service, typename Message>
 inline void handle_message(Service&& s, Message&& m) {
-    uint32_t receiver = m.receiver();
+    uint32_t receiver = m.receiver;
     s->dispatch(&m);
     //redirect message
-    if (m.receiver() != receiver) {
+    if (m.receiver != receiver) {
         if constexpr (std::is_rvalue_reference_v<decltype(m)>) {
             s->get_server()->send_message(std::forward<message>(m));
         }

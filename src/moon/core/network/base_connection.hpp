@@ -215,13 +215,10 @@ protected:
             str.data()
         );
 
-        message msg {};
-        msg.set_type(type_);
-        msg.write_data(content);
-        msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_close));
-
         parent_->close(fd_);
-        handle_message(std::move(msg));
+        handle_message(message{
+            type_, 0, static_cast<uint8_t>(socket_data_type::socket_close), 0, content
+        });
         parent_ = nullptr;
     }
 
@@ -229,7 +226,7 @@ protected:
     void handle_message(Message&& m) {
         recvtime_ = now();
         if (nullptr != parent_) {
-            m.set_sender(fd_);
+            m.sender = fd_;
             parent_->handle_message(serviceid_, std::forward<Message>(m));
         }
     }

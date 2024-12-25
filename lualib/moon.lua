@@ -476,8 +476,8 @@ reg_protocol {
     pack = function(...)
         return ...
     end,
-    unpack = function(sz, len)
-        return math.tointeger(moon.tostring(sz, len))
+    unpack = function(nval)
+        return nval
     end,
     dispatch = function()
         error("PTYPE_TEXT dispatch not implemented")
@@ -607,8 +607,8 @@ reg_protocol {
     name = "timer",
     PTYPE = moon.PTYPE_TIMER,
     israw = true,
-    dispatch = function(msg)
-        local timerid = -_decode(msg, "E")
+    dispatch = function(m)
+        local timerid = _decode(m, "C")
         local v = timer_routine[timerid]
         timer_routine[timerid] = nil
         local trace = timer_profile_trace[timerid]

@@ -263,6 +263,14 @@ public:
         pair_.writepos += n;
     }
 
+    void write_back(std::string_view data) {
+        if (data.empty())
+            return;
+        auto space = pair_.prepare(data.size());
+        memcpy(space.first, data.data(), data.size());
+        pair_.writepos += data.size();
+    }
+
     void write_back(char c) {
         *(pair_.prepare(1).first) = c;
         ++pair_.writepos;

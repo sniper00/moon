@@ -234,13 +234,13 @@ void socket_server::connect(
                             conn->fd(server_->nextfd());
                             connections_.try_emplace(conn->fd(), conn);
                             conn->start(false);
-                            response(
+                            handle_message(params->owner, message{
+                                PTYPE_INTEGER,
                                 0,
-                                params->owner,
-                                std::to_string(conn->fd()),
+                                0,
                                 params->sessionid,
-                                PTYPE_INTEGER
-                            );
+                                conn->fd()
+                            });
                         } else {
                             //Set the fd flag to prevent timeout handling
                             conn->fd(std::numeric_limits<uint32_t>::max());
@@ -528,14 +528,14 @@ void socket_server::response(
         CONSOLE_ERROR("%s", std::string(content).data());
         return;
     }
-    response_.set_sender(sender);
-    response_.set_receiver(0);
-    response_.as_buffer()->clear();
-    response_.write_data(content);
-    response_.set_sessionid(sessionid);
-    response_.set_type(type);
 
-    handle_message(receiver, response_);
+    handle_message(receiver, message{
+        type,
+        sender,
+        0,
+        sessionid,
+        content
+    });
 }
 
 void socket_server::add_connection(
@@ -550,7 +550,14 @@ void socket_server::add_connection(
 
         if (sessionid != 0) {
             asio::dispatch(from->context_, [from, ctx, sessionid, fd = c->fd()] {
-                from->response(ctx->fd, ctx->owner, std::to_string(fd), sessionid, PTYPE_INTEGER);
+                from->handle_message(ctx->owner, message{
+                    PTYPE_INTEGER,
+                    0,
+                    0,
+                    sessionid,
+                    fd
+                });
+
             });
         }
     });
@@ -595,9 +602,9 @@ void socket_server::do_receive(const udp_context_ptr_t& ctx) {
                 b->commit(bytes_recvd);
                 auto bytes = encode_endpoint(ctx->from_ep.address(), ctx->from_ep.port());
                 b->write_front(bytes.data(), bytes.size());
-                ctx->msg.set_sender(ctx->fd);
-                ctx->msg.set_receiver(0);
-                ctx->msg.set_type(PTYPE_SOCKET_UDP);
+                ctx->msg.sender = ctx->fd;
+                ctx->msg.receiver = 0;
+                ctx->msg.type = PTYPE_SOCKET_UDP;
                 handle_message(ctx->owner, ctx->msg);
             }
             do_receive(ctx);

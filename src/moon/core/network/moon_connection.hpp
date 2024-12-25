@@ -22,13 +22,14 @@ public:
 
     void start(bool server) override {
         base_connection_t::start(server);
-        message m {};
-        m.set_type(type_);
-        m.write_data(address());
-        m.set_receiver(static_cast<uint8_t>(
-            server ? socket_data_type::socket_accept : socket_data_type::socket_connect
-        ));
-        handle_message(std::move(m));
+        handle_message(message {
+            type_,
+            0,
+            static_cast<uint8_t>(
+                server ? socket_data_type::socket_accept : socket_data_type::socket_connect
+            ),
+            0,
+            address() });
         read_header();
     }
 
@@ -45,13 +46,13 @@ public:
     }
 
     void set_enable_chunked(connection_mask v) {
-        if(enum_has_any_bitmask(v, connection_mask::chunked_send)) {
+        if (enum_has_any_bitmask(v, connection_mask::chunked_send)) {
             mask_ = mask_ | connection_mask::chunked_send;
         } else {
             mask_ = enum_unset_bitmask(mask_, connection_mask::chunked_send);
         }
 
-        if(enum_has_any_bitmask(v, connection_mask::chunked_recv)) {
+        if (enum_has_any_bitmask(v, connection_mask::chunked_recv)) {
             mask_ = mask_ | connection_mask::chunked_recv;
         } else {
             mask_ = enum_unset_bitmask(mask_, connection_mask::chunked_recv);
@@ -166,10 +167,11 @@ private:
     void handle_body(bool fin) {
         if (fin) {
             data_->seek(BUFFER_OPTION_CHEAP_PREPEND);
-            auto m = message { std::move(data_) };
-            m.set_type(type_);
-            m.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
-            handle_message(std::move(m));
+            handle_message(message { type_,
+                                     0,
+                                     static_cast<uint8_t>(socket_data_type::socket_recv),
+                                     0,
+                                     std::move(data_) });
         }
         read_header();
     }

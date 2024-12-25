@@ -291,13 +291,17 @@ send_message(uint8_t type, uint32_t receiver, int64_t session, const char* data,
     auto svr = wk_server.lock();
     if (nullptr == svr)
         return;
-    moon::message msg(len);
-    msg.set_type(type);
-    msg.set_receiver(receiver);
-    msg.set_sessionid(session);
-    msg.write_data(std::string_view(data, len));
-    svr->send_message(std::move(msg));
+    svr->send_message(moon::message { type, 0, receiver, session, std::string_view(data, len) });
 }
+
+void MOON_EXPORT
+send_integer_message(uint8_t type, uint32_t receiver, int64_t session, ssize_t val) {
+    auto svr = wk_server.lock();
+    if (nullptr == svr)
+        return;
+    svr->send_message(moon::message { type, 0, receiver, session, val });
+}
+
 }
 
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn) \

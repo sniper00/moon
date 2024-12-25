@@ -3,53 +3,48 @@
 #include "config.hpp"
 
 namespace moon {
-class message final {
-public:
-    static message with_empty() {
-        return message { buffer_ptr_t {} };
-    }
+struct message {
+    uint8_t type = 0;
+    uint32_t sender = 0;
+    uint32_t receiver = 0;
+    int64_t session = 0;
+    ssize_t stub = 0;//Save pointer or integer value
 
+private:
+    buffer_ptr_t data_ = nullptr;
+
+public:
     message(): data_(buffer::make_unique()) {}
 
-    explicit message(size_t capacity): data_(buffer::make_unique(capacity)) {}
+    message(size_t capacity): data_(capacity > 0 ? buffer::make_unique(capacity) : nullptr) {}
 
-    explicit message(buffer_ptr_t&& v): data_(std::move(v)) {}
+    message(uint8_t t, uint32_t s, uint32_t r, int64_t sid):
+        type(t),
+        sender(s),
+        receiver(r),
+        session(sid) {}
 
-    void set_sender(uint32_t serviceid) {
-        sender_ = serviceid;
-    }
+    message(uint8_t t, uint32_t s, uint32_t r, int64_t sid, ssize_t p):
+        type(t),
+        sender(s),
+        receiver(r),
+        session(sid),
+        stub(p) {}
 
-    uint32_t sender() const {
-        return sender_;
-    }
+    message(uint8_t t, uint32_t s, uint32_t r, int64_t sid, buffer_ptr_t&& d):
+        type(t),
+        sender(s),
+        receiver(r),
+        session(sid),
+        data_(std::move(d)) {}
 
-    void set_receiver(uint32_t serviceid) {
-        receiver_ = serviceid;
-    }
-
-    uint32_t receiver() const {
-        return receiver_;
-    }
-
-    void set_sessionid(int64_t v) {
-        sessionid_ = v;
-    }
-
-    int64_t sessionid() const {
-        return sessionid_;
-    }
-
-    void set_type(uint8_t v) {
-        type_ = v;
-    }
-
-    uint8_t type() const {
-        return type_;
-    }
-
-    void write_data(std::string_view s) {
-        assert(data_);
-        data_->write_back(s.data(), s.size());
+    message(uint8_t t, uint32_t s, uint32_t r, int64_t sid, std::string_view d):
+        type(t),
+        sender(s),
+        receiver(r),
+        session(sid),
+        data_(buffer::make_unique(d.size())) {
+        data_->write_back(d.data(), d.size());
     }
 
     const char* data() const {
@@ -67,12 +62,6 @@ public:
     buffer* as_buffer() {
         return data_ ? data_.get() : nullptr;
     }
-
-private:
-    uint8_t type_ = 0;
-    uint32_t sender_ = 0;
-    uint32_t receiver_ = 0;
-    int64_t sessionid_ = 0;
-    std::unique_ptr<buffer> data_;
 };
+
 }; // namespace moon

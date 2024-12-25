@@ -159,11 +159,9 @@ void server::timeout(int64_t interval, uint32_t serviceid, int64_t timerid) {
 }
 
 void server::on_timer(uint32_t serviceid, int64_t timerid) const {
-    auto msg = message::with_empty();
-    msg.set_type(PTYPE_TIMER);
-    msg.set_sessionid(timerid);
-    msg.set_receiver(serviceid);
-    send_message(std::move(msg));
+    send_message(message{
+        PTYPE_TIMER, 0, serviceid, 0, timerid
+    });
 }
 
 void server::new_service(std::unique_ptr<service_conf> conf) {
@@ -195,9 +193,9 @@ void server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid
 }
 
 bool server::send_message(message&& m) const {
-    worker* w = get_worker(0, m.receiver());
+    worker* w = get_worker(0, m.receiver);
     if (nullptr == w) {
-        CONSOLE_ERROR("invalid message receiver id: %X", m.receiver());
+        CONSOLE_ERROR("Invalid message receiver id: %X", m.receiver);
         return false;
     }
     w->send(std::move(m));
@@ -212,20 +210,16 @@ bool server::send(
     uint8_t type
 ) const {
     sessionid = -sessionid;
-    message m { std::move(data) };
-    m.set_sender(sender);
-    m.set_receiver(receiver);
-    m.set_type(type);
-    m.set_sessionid(sessionid);
-    return send_message(std::move(m));
+    return send_message({
+        type, sender, receiver, sessionid, std::move(data)
+    });
 }
 
 void server::broadcast(uint32_t sender, const buffer& buf, uint8_t type) const {
     for (auto& w: workers_) {
-        auto m = message { std::make_unique<buffer>(buf.clone()) };
-        m.set_sender(sender);
-        m.set_type(type);
-        w->send(std::move(m));
+        w->send(message{
+            type, sender, 0, 0, std::make_unique<buffer>(buf.clone())
+        });
     }
 }
 
@@ -278,12 +272,9 @@ void server::response(uint32_t to, std::string_view content, int64_t sessionid, 
         return;
     }
 
-    auto m = message { content.size() };
-    m.set_receiver(to);
-    m.set_type(mtype);
-    m.set_sessionid(sessionid);
-    m.write_data(content);
-    send_message(std::move(m));
+    send_message(message{
+        mtype, 0, to, sessionid, content
+    });
 }
 
 std::string server::info() const {

@@ -212,11 +212,9 @@ private:
 
         auto answer = upgrade_response(sec_ws_key, protocol);
         send_response(answer);
-        auto msg = message { n };
-        msg.set_type(type_);
-        msg.write_data(std::string_view { cache_.data(), n });
-        msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_accept));
-        handle_message(std::move(msg));
+        handle_message(message {
+            type_, 0, static_cast<uint8_t>(socket_data_type::socket_accept), 0, std::string_view { cache_.data(), n }
+        });
 
         cache_.consume(n);
 
@@ -427,24 +425,27 @@ private:
             );
         }
 
-        auto msg = message { std::move(data_) };
-        msg.set_type(type_);
+        // auto msg = message { std::move(data_) };
+        // msg.set_type(type_);
 
+        uint8_t sub_type = 0;
         switch (fh.op) {
             case ws::opcode::ping: {
-                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_ping));
+                sub_type = static_cast<uint8_t>(socket_data_type::socket_ping);
                 break;
             }
             case ws::opcode::pong: {
-                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_pong));
+                sub_type = static_cast<uint8_t>(socket_data_type::socket_pong);
                 break;
             }
             default:
-                msg.set_receiver(static_cast<uint8_t>(socket_data_type::socket_recv));
+                sub_type = static_cast<uint8_t>(socket_data_type::socket_recv);
                 break;
         }
 
-        handle_message(std::move(msg));
+        handle_message(message {
+            type_, 0, sub_type, 0, std::move(data_)
+        });
 
         handle_frame();
     }
