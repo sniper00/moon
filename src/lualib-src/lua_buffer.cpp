@@ -327,6 +327,34 @@ static int add_bitmask(lua_State* L) {
     return 0;
 }
 
+static int append(lua_State* L) {
+    auto buf = get_pointer(L, 1);
+    try {
+        if (int n = lua_gettop(L); n == 2) {
+            auto append = get_pointer(L, 2);
+            buf->write_back(append->data(), append->size());
+        } else {
+            size_t size = 0;
+            for (int i = 2; i <= n; i++) {
+                auto append = get_pointer(L, i);
+                size += append->size();
+            }
+            auto [ptr, _] = buf->prepare(size);
+            size_t offset = 0;
+            for (int i = 2; i <= n; i++) {
+                auto append = get_pointer(L, i);
+                memcpy(ptr + offset, append->data(), append->size());
+                offset += append->size();
+            }
+            buf->commit(offset);
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        lua_pushstring(L, e.what());
+    }
+    return lua_error(L);
+}
+
 extern "C" {
 int LUAMOD_API luaopen_buffer(lua_State* L) {
     luaL_Reg l[] = { { "unsafe_new", unsafe_new },
@@ -345,6 +373,7 @@ int LUAMOD_API luaopen_buffer(lua_State* L) {
                      { "to_shared", to_shared },
                      { "has_bitmask", has_bitmask },
                      { "add_bitmask", add_bitmask },
+                     { "append", append },
                      { NULL, NULL } };
     luaL_newlib(L, l);
     return 1;
