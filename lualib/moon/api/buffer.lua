@@ -98,4 +98,9 @@ function buffer.has_bitmask(buf, mask) end
 ---@param mask integer
 function buffer.add_bitmask(buf, mask) end
 
+--- append rest buffer into first buffer
+---@param buf buffer_ptr
+---@param ... buffer_ptr
+function buffer.append(buf, ...) end
+
 return buffer
