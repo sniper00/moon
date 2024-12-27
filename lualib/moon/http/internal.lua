@@ -5,6 +5,7 @@
 ---@field public proxy? string @ host:port
 
 ---@class HttpRequest
+---@field address string
 ---@field method string
 ---@field path string
 ---@field headers table<string,string>
