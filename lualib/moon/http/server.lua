@@ -47,6 +47,9 @@ M.content_max_len = false
 M.keepalive = true
 
 local routers = {}
+local fallbacks = {}
+fallbacks.prev = fallbacks
+fallbacks.next = fallbacks
 
 local traceback = debug.traceback
 
@@ -73,12 +76,23 @@ local function request_handler(fd, request)
         end
     end
 
+    local cursor = fallbacks.next
+    local function next()
+        if cursor ~= fallbacks then
+            local callback = cursor.callback
+            cursor = cursor.next
+            return callback(request, response, next)
+        end
+        response.status_code = 404
+        response:write_header("Content-Type", "text/plain")
+        response:write(string.format("Cannot %s %s", request.method, request.path))
+    end
     local handler = routers[request.path]
     if handler then
-        local ok, err = xpcall(handler, traceback, request, response)
+        local ok, err = xpcall(handler, traceback, request, response, next)
         if not ok then
             if M.error then
-                M.error(fd, err)
+                M.error(fd, err, false)
             else
                 moon.error(err)
             end
@@ -90,12 +104,20 @@ local function request_handler(fd, request)
             response:write("Server Internal Error")
         end
     else
-        if M.error then
-            M.error(fd, print_r(request, true))
+        local ok, err = xpcall(next, traceback)
+        if not ok then
+            if M.error then
+                M.error(fd, err, false)
+            else
+                moon.error(err)
+            end
+
+            request.headers["connection"] = "close"
+
+            response.status_code = 500
+            response:write_header("Content-Type", "text/plain")
+            response:write("Server Internal Error")
         end
-        response.status_code = 404
-        response:write_header("Content-Type", "text/plain")
-        response:write(string.format("Cannot %s %s", request.method, request.path))
     end
 
     if not M.keepalive or request.headers["connection"] == "close" then
@@ -118,6 +140,7 @@ function M.start(fd, timeout, pre)
     moon.async(function()
         while true do
             local request = internal.read_request(fd, pre, M)
+            request.address = socket.getaddress(fd)
             if pre then
                 pre = nil
             end
@@ -127,7 +150,7 @@ function M.start(fd, timeout, pre)
                 res.status_code = 400
                 socket.write_then_close(fd, buffer.concat(res:tb()))
                 if M.error then
-                    M.error(fd, request.error)
+                    M.error(fd, request.error, request.network_error)
                 elseif not request.network_error then
                     moon.error("HTTP_SERVER_ERROR: " .. request.error)
                 end
@@ -147,7 +170,7 @@ end
 function M.listen(host, port, timeout)
     assert(not listenfd, "http server can only listen port once.")
     listenfd = socket.listen(host, port, moon.PTYPE_SOCKET_TCP)
-    assert(listenfd>0, "Http server listen failed.")
+    assert(listenfd > 0, "Http server listen failed.")
     timeout = timeout or 0
     moon.async(function()
         while true do
@@ -163,9 +186,32 @@ function M.listen(host, port, timeout)
 end
 
 ---@param path string
----@param cb fun(request: HttpRequest, response: HttpResponse)
+---@param cb fun(request: HttpRequest, response: HttpResponse, next: fun())
 function M.on(path, cb)
     routers[path] = cb
+end
+
+---@param path string
+function M.off(path)
+    routers[path] = nil
+end
+
+function M.clear()
+    routers = {}
+end
+
+---@param cb fun(request: HttpRequest, response: HttpResponse, next: fun())
+---@return fun()
+function M.fallback(cb)
+    local next = { prev = fallbacks.prev, next = fallbacks.prev.next, callback = cb }
+    fallbacks.prev.next = next
+    fallbacks.prev = next
+    return function()
+        next.prev.next = next.next
+        next.next.prev = next.prev
+        next.prev = next
+        next.next = next
+    end
 end
 
 local function read_asset(file, mime)

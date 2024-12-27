@@ -6,8 +6,10 @@ local http_server = require("moon.http.server")
 
 -- http_server.content_max_len = 8192
 
-http_server.error = function(fd, err)
-    print("http server fd", fd, " disconnected:", err)
+http_server.error = function(fd, err, network)
+    if not network then
+        print("http server fd", fd, " disconnected:", err)
+    end
 end
 
 http_server.on("/hello", function(request, response)
@@ -32,6 +34,27 @@ http_server.on("/login2", function(request, response)
     print_r(json.decode(request.body))
     response:write_header("Content-Type", "application/json")
     response:write(json.encode({ score = 112, level = 100, item = { id = 1, count = 2 } }))
+end)
+
+http_server.on("/fallback", function(request, response, next)
+    if request.method == "GET" then
+        response:write_header("Content-Type", "text/plain")
+        response:write("GET:fallback")
+    else
+        return next()
+    end
+end)
+
+http_server.fallback(function(request, response, next)
+    if request.path == "/end" then
+        return next()
+    end
+    response:write_header("Content-Type", "text/plain")
+    response:write("echo:" .. request.path)
+end)
+
+http_server.fallback(function(request, response, next)
+    error("end")
 end)
 
 http_server.listen("127.0.0.1", 9991)
@@ -60,9 +83,21 @@ moon.async(function()
 
     local form = { username = "wang", passwd = "456", age = 110 }
     local response = httpc.post_form("http://127.0.0.1:9991/login", form)
-    print_r(response:json())
+    print_r(response.body)
+    http_server.off("/login")
+    local response = httpc.post_form("http://127.0.0.1:9991/login", form)
+    print_r(response.body)
 
     local response = httpc.post_json("http://127.0.0.1:9991/login2", { username = "wang", passwd = "456", age = 110 })
+    print_r(response.body)
+
+    local response = httpc.get("http://127.0.0.1:9991/fallback")
+    print_r(response.body)
+    local response = httpc.post("http://127.0.0.1:9991/fallback", "")
+    print_r(response.body)
+    local response = httpc.get("http://127.0.0.1:9991/random")
+    print_r(response.body)
+    local response = httpc.get("http://127.0.0.1:9991/end")
     print_r(response.body)
 
     moon.exit(100)
