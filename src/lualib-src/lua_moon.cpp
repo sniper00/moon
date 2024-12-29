@@ -299,6 +299,15 @@ static int lmoon_scan_services(lua_State* L) {
     return 1;
 }
 
+static int lmoon_find_service(lua_State* L) {
+    lua_service* S = lua_service::get(L);
+    auto serviceid = (uint32_t)luaL_checkinteger(L, 1);
+    int64_t sessionid = S->next_sequence();
+    S->get_server()->find_service(S->id(), serviceid, sessionid);
+    lua_pushinteger(L, sessionid);
+    return 1;
+}
+
 static int lmoon_queryservice(lua_State* L) {
     const lua_service* S = lua_service::get(L);
     std::string_view name = lua_check<std::string_view>(L, 1);
@@ -462,6 +471,7 @@ int LUAMOD_API luaopen_moon_core(lua_State* L) {
                      { "new_service", lmoon_new_service },
                      { "kill", lmoon_kill },
                      { "scan_services", lmoon_scan_services },
+                     { "find_service", lmoon_find_service },
                      { "queryservice", lmoon_queryservice },
                      { "next_sequence", lmoon_next_sequence },
                      { "env", lmoon_env },

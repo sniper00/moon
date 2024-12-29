@@ -29,6 +29,7 @@ local _newservice = core.new_service
 local _queryservice = core.queryservice
 local _decode = core.decode
 local _scan_services = core.scan_services
+local _find_service = core.find_service
 
 ---@class moon : core
 local moon = core
@@ -329,6 +330,14 @@ end
 ---@return string
 function moon.scan_services(workerid)
     return moon.wait(_scan_services(workerid))
+end
+
+--- Get specified service name and ID, in JSON format
+---@async
+---@param serviceid integer @ The service service.
+---@return string
+function moon.find_service(serviceid)
+    return moon.wait(_find_service(serviceid))
 end
 
 --- Sends a message to the target service and waits for a response. The receiver must call `moon.response` to return the result.

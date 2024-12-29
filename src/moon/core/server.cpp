@@ -186,10 +186,20 @@ void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
 
 void server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const {
     auto* w = get_worker(workerid);
-    if (nullptr == w) {
-        return;
+    if (nullptr != w) {
+        w->scan(sender, sessionid);
+    } else {
+        response(sender, ""sv, sessionid);
     }
-    w->scan(sender, sessionid);
+}
+
+void server::find_service(uint32_t sender, uint32_t serviceid, int64_t sessionid) const {
+    auto* w = get_worker(0, serviceid);
+    if (nullptr != w) {
+        w->find(serviceid, sender, sessionid);
+    } else {
+        response(sender, ""sv, sessionid);
+    }
 }
 
 bool server::send_message(message&& m) const {

@@ -176,6 +176,20 @@ void worker::scan(uint32_t sender, int64_t sessionid) {
     });
 }
 
+void worker::find(uint32_t serviceid, uint32_t sender, int64_t sessionid) {
+    asio::post(io_ctx_, [this, serviceid, sender, sessionid] {
+        if (auto s = find_service(serviceid); nullptr != s) {
+            server_->response(
+                sender,
+                moon::format(R"({"name":"%s","serviceid":"%X"},)", s->name().data(), s->id()),
+                sessionid
+            );
+        } else {
+            server_->response(sender, ""sv, sessionid);
+        }
+    });
+}
+
 asio::io_context& worker::io_context() {
     return io_ctx_;
 }

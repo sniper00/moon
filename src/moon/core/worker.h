@@ -32,6 +32,8 @@ public:
 
     void scan(uint32_t sender, int64_t sessionid);
 
+    void find(uint32_t serviceid, uint32_t sender, int64_t sessionid);
+
     void send(message&& msg);
 
     void shared(bool v);

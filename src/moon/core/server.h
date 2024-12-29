@@ -71,6 +71,8 @@ public:
 
     void scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const;
 
+    void find_service(uint32_t sender, uint32_t serviceid, int64_t sessionid) const;
+
     bool send_message(message&& msg) const;
 
     bool send(uint32_t sender, uint32_t receiver, buffer_ptr_t buf, int64_t sessionid, uint8_t type)
