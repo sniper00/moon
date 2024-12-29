@@ -403,10 +403,10 @@ static int message_decode(lua_State* L) {
                 break;
             }
             case 'C': {
-                if(m->stub == 0){
+                if (m->is_bytes()) {
                     lua_pushlightuserdata(L, (void*)m->data());
-                }else{
-                    lua_pushinteger(L, m->stub);
+                } else {
+                    lua_pushinteger(L, m->as_ptr());;
                 }
                 lua_pushinteger(L, m->size());
                 break;

@@ -197,10 +197,10 @@ void lua_service::dispatch(message* m) {
         lua_pushinteger(L, m->type);
         lua_pushinteger(L, m->sender);
         lua_pushinteger(L, m->session);
-        if (m->stub == 0) {
+        if (m->is_bytes()) {
             lua_pushlightuserdata(L, (void*)m->data());
         } else {
-            lua_pushinteger(L, m->stub);;
+            lua_pushinteger(L, m->as_ptr());;
         }
         lua_pushinteger(L, m->size());
         lua_pushlightuserdata(L, m);
