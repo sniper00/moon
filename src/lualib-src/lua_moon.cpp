@@ -294,7 +294,10 @@ static int lmoon_scan_services(lua_State* L) {
     lua_service* S = lua_service::get(L);
     auto workerid = (uint32_t)luaL_checkinteger(L, 1);
     int64_t sessionid = S->next_sequence();
-    S->get_server()->scan_services(S->id(), workerid, sessionid);
+    if (!S->get_server()->scan_services(S->id(), workerid, sessionid)) {
+        lua_pushfstring(L, "worker '%u' not found", workerid);
+        return lua_error(L);
+    }
     lua_pushinteger(L, sessionid);
     return 1;
 }

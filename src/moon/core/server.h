@@ -69,7 +69,7 @@ public:
 
     void remove_service(uint32_t serviceid, uint32_t sender, int64_t sessionid) const;
 
-    void scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const;
+    bool scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const;
 
     bool send_message(message&& msg) const;
 
