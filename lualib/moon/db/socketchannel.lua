@@ -26,7 +26,6 @@ function socketchannel:connect(_)
     end
     self._fd = fd
     socket.setnodelay(fd)
-    socket.settimeout(fd, 10)
 
     local response = self._opts.response
     if response then
@@ -85,7 +84,9 @@ function socketchannel:request(req,resp)
         end
         return data
     end
+    socket.settimeout(self._fd, 10)
     local _, data = resp(self)
+    socket.settimeout(self._fd, 0)
     if not _ then
         return {code = "SOCKET", message = data}
     end
