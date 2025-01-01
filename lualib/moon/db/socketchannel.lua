@@ -31,7 +31,9 @@ function socketchannel:connect(_)
     if response then
         moon.async(function ()
             while self._fd do
+                socket.settimeout(self._fd, 10)
                 local ok , session, result_ok, result_data = pcall(response, self)
+                socket.settimeout(self._fd, 0)
                 -- print(ok , session, result_ok, result_data)
                 if ok and session then
                     local co = self._threads[session]
