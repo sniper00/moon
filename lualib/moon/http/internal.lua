@@ -29,6 +29,11 @@ local setmetatable = setmetatable
 local pairs = pairs
 local tointeger = math.tointeger
 
+---@type fun(params:string):string
+local urlencode = c.urlencode
+---@type fun(params:string):string
+local urldecode = c.urldecode
+
 local default_timeout <const> = 10000 -- 10s
 local max_pool_num <const> = 10
 local keep_alive_host = {}
@@ -307,7 +312,9 @@ end
 
 local M = {
     http_response = http_response,
-    parse_header = parse_header
+    parse_header = parse_header,
+    urlencode = urlencode,
+    urldecode = urldecode,
 }
 
 function M.read_request(fd, prefix_data, opt)
@@ -473,12 +480,12 @@ function M.parse_url(url)
         host_start = 1
     end
 
-    host_end = url:find("[:/]", host_start) or #url + 1
+    host_end = url:find("[:/%?]", host_start) or #url + 1
     host = url:sub(host_start, host_end - 1)
 
     if url:sub(host_end, host_end) == ":" then
         local port_start = host_end + 1
-        path_start = url:find("/", port_start) or #url + 1
+        path_start = url:find("[/%?]", port_start) or #url + 1
         port = url:sub(port_start, path_start - 1)
     else
         path_start = host_end
@@ -490,8 +497,8 @@ function M.parse_url(url)
     query_string = url:sub(query_start + 1, fragment_start - 1)
 
     local query = {}
-    for key, value in query_string:gmatch("([^&=?]-)=([^&=?]+)") do
-        query[key] = value
+    for key, value in query_string:gmatch("([^&=?]-)=([^&=?]*)") do
+        query[key] = urldecode(value)
     end
 
     return {
