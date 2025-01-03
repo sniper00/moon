@@ -116,6 +116,10 @@ int main(int argc, char* argv[]) {
 #ifdef LUA_CACHELIB
     luaL_initcodecache();
 #endif
+#if TARGET_PLATFORM == PLATFORM_WINDOWS
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     try {
         uint32_t thread_count = std::thread::hardware_concurrency();
         bool enable_stdout = true;
