@@ -70,6 +70,7 @@ static void register_signal(int argc, char* argv[]) {
         str.append(" ");
     }
     SetConsoleTitleA(str.data());
+    SetConsoleOutputCP(CP_UTF8);
 #else
     std::signal(SIGHUP, SIG_IGN);
     std::signal(SIGQUIT, SIG_IGN);
