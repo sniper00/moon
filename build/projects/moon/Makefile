@@ -32,16 +32,16 @@ endef
 
 ifeq ($(config),debug)
 TARGETDIR = ../../bin/Debug
-TARGET = $(TARGETDIR)/moon-d
+TARGET = $(TARGETDIR)/moon
 OBJDIR = ../../obj/moon/Debug
 DEFINES += -DDEBUG -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -std=c++17
-LDDEPS += ../../bin/Debug/liblua.so ../../bin/Debug/liblualib.a ../../bin/Debug/libcrypt.a ../../bin/Debug/libpb.a ../../bin/Debug/libsharetable.a ../../bin/Debug/libmongo.a ../../bin/Debug/libmimalloc.a ../../bin/Debug/liblfmt.a
-ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Debug -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -static-libstdc++ -static-libgcc -Wl,--as-needed,-rpath=./
+LDDEPS += ../../bin/Debug/liblua.a ../../bin/Debug/liblualib.a ../../bin/Debug/libcrypt.a ../../bin/Debug/libpb.a ../../bin/Debug/libsharetable.a ../../bin/Debug/libmongo.a ../../bin/Debug/libmimalloc.a ../../bin/Debug/liblfmt.a
+ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Debug -L/usr/lib64 -m64 -static-libstdc++ -static-libgcc -Wl,-E,--as-needed,-rpath=./
 define POSTBUILDCMDS
 	@echo Running postbuild commands
-	cp -rf ../../bin/Debug/moon-d ../../..
+	cp -rf ../../bin/Debug/moon ../../..
 endef
 
 else ifeq ($(config),release)
@@ -51,8 +51,8 @@ OBJDIR = ../../obj/moon/Release
 DEFINES += -DNDEBUG -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall -std=c++17
-LDDEPS += ../../bin/Release/liblua.so ../../bin/Release/liblualib.a ../../bin/Release/libcrypt.a ../../bin/Release/libpb.a ../../bin/Release/libsharetable.a ../../bin/Release/libmongo.a ../../bin/Release/libmimalloc.a ../../bin/Release/liblfmt.a
-ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Release -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -static-libstdc++ -static-libgcc -Wl,--as-needed,-rpath=./
+LDDEPS += ../../bin/Release/liblua.a ../../bin/Release/liblualib.a ../../bin/Release/libcrypt.a ../../bin/Release/libpb.a ../../bin/Release/libsharetable.a ../../bin/Release/libmongo.a ../../bin/Release/libmimalloc.a ../../bin/Release/liblfmt.a
+ALL_LDFLAGS += $(LDFLAGS) -L../../bin/Release -L/usr/lib64 -m64 -static-libstdc++ -static-libgcc -Wl,-E,--as-needed,-rpath=./
 define POSTBUILDCMDS
 	@echo Running postbuild commands
 	cp -rf ../../bin/Release/moon ../../..

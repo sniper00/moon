@@ -25,36 +25,30 @@ ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
 LIBS +=
 LDDEPS +=
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64 -shared -Wl,-soname=liblua.so
-LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
+ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64
+LINKCMD = $(AR) -rcs "$@" $(OBJECTS)
 define PREBUILDCMDS
 endef
 define PRELINKCMDS
 endef
+define POSTBUILDCMDS
+endef
 
 ifeq ($(config),debug)
 TARGETDIR = ../../bin/Debug
-TARGET = $(TARGETDIR)/liblua.so
+TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = ../../obj/lua/Debug
 DEFINES += -DDEBUG -DMAKE_LIB -DLUA_USE_LINUX
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -fPIC -g -Wall
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -fPIC -g -Wall -std=c++17
-define POSTBUILDCMDS
-	@echo Running postbuild commands
-	cp -rf ../../bin/Debug/liblua.so ../../..
-endef
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -std=c++17
 
 else ifeq ($(config),release)
 TARGETDIR = ../../bin/Release
-TARGET = $(TARGETDIR)/liblua.so
+TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = ../../obj/lua/Release
 DEFINES += -DNDEBUG -DMAKE_LIB -DLUA_USE_LINUX
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -fPIC -g -Wall
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -fPIC -g -Wall -std=c++17
-define POSTBUILDCMDS
-	@echo Running postbuild commands
-	cp -rf ../../bin/Release/liblua.so ../../..
-endef
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall -std=c++17
 
 endif
 
