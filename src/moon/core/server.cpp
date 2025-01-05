@@ -184,12 +184,13 @@ void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
     }
 }
 
-void server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const {
+bool server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid) const {
     auto* w = get_worker(workerid);
     if (nullptr == w) {
-        return;
+        return false;
     }
     w->scan(sender, sessionid);
+    return true;
 }
 
 bool server::send_message(message&& m) const {
