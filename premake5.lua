@@ -1,6 +1,7 @@
 ---@diagnostic disable: undefined-global, undefined-field
 
 if _ACTION ~= "build" and _ACTION ~= "clean" and _ACTION ~= "publish" then
+    os.execute("git checkout master")
     os.execute("git pull")
     os.execute("git submodule init")
     os.execute("git submodule update")
@@ -44,7 +45,12 @@ project "lua"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
-    kind "StaticLib"
+    if LUA_BUILD_AS_SHARED then
+        kind "SharedLib"
+        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
+    else
+        kind "StaticLib"
+    end
     language "C"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.c"}
@@ -115,11 +121,16 @@ project "moon"
         links{"dl","pthread","stdc++fs"}
         linkoptions {
             "-static-libstdc++ -static-libgcc",
-            "-Wl,-E,--as-needed,-rpath=./"
+            "-Wl,--as-needed,-rpath=./"
         }
     filter {"system:macosx"}
         links{"dl","pthread"}
-        linkoptions {"-Wl,-rpath,./"}
+        linkoptions {
+            "-Wl,-rpath,./",
+            "-undefined dynamic_lookup"
+        }
+    filter "configurations:Debug"
+        targetsuffix "-d"
     filter{"configurations:*"}
         postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
 
