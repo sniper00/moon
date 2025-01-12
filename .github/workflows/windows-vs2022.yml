@@ -18,7 +18,7 @@ jobs:
       - name: Build
         run: |
           mkdir tmp
-          wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-windows.zip -O tmp/premake5.zip
+          curl -L -o tmp/premake5.zip https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-windows.zip
           unzip tmp/premake5.zip -d tmp
           tmp/premake5 build
       - name: Test
