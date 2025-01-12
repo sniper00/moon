@@ -13,14 +13,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Installing premake5
+        uses: Jarod42/install-premake5@v3
       - name: setup msbuild
         uses: microsoft/setup-msbuild@v1.1
       - name: Build
         run: |
-          mkdir tmp
-          curl -L -o tmp/premake5.zip https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-windows.zip
-          unzip tmp/premake5.zip -d tmp
-          tmp/premake5 build
+          premake5 build
       - name: Test
         run: .\moon.exe example/test/main_test.lua
 
