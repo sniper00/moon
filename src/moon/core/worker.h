@@ -62,6 +62,8 @@ public:
 
     void wait();
 
+    void signal(int val);
+
 private:
     service* handle_one(service* s, message&& msg);
 
@@ -76,6 +78,7 @@ private:
     uint32_t version_ = 0;
     double cpu_ = 0.0;
     server* server_;
+    std::atomic<service*> current_ = nullptr;
     asio::io_context io_ctx_;
     asio_work_type work_;
     std::thread thread_;

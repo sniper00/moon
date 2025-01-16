@@ -123,6 +123,11 @@ function core.redirect(msg, receiver, mtype, sender, sessionid) end
 --- @return string
 function core.escape_print(str) end
 
+-- Send a signal to the specified thread. If val == 0, it is used to break an infinite loop.
+---@param wid integer @worker id [1, THREAD_NUM]
+---@param val integer
+function core.signal(wid, val) end
+
 ---@class asio
 local asio = {}
 

@@ -409,7 +409,7 @@ static int message_decode(lua_State* L) {
                 if (m->is_bytes()) {
                     lua_pushlightuserdata(L, (void*)m->data());
                 } else {
-                    lua_pushinteger(L, m->as_ptr());;
+                    lua_pushinteger(L, m->as_ptr());
                 }
                 lua_pushinteger(L, m->size());
                 break;
@@ -426,7 +426,7 @@ static int message_redirect(lua_State* L) {
     auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
-    if(m->receiver = (uint32_t)luaL_checkinteger(L, 2);m->receiver == 0)
+    if (m->receiver = (uint32_t)luaL_checkinteger(L, 2); m->receiver == 0)
         return luaL_argerror(L, 2, "receiver must > 0");
     m->type = (uint8_t)luaL_checkinteger(L, 3);
     if (top > 3) {
@@ -450,6 +450,16 @@ static int escape_print(lua_State* L) {
     auto res = moon::escape_print(s);
     lua_pushlstring(L, res.data(), res.size());
     return 1;
+}
+
+static int moon_signal(lua_State* L) {
+    auto S = lua_service::get(L);
+    auto wid = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+    auto val = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+    if (auto w = S->get_server()->get_worker(wid); w != nullptr) {
+        w->signal(val);
+    }
+    return 0;
 }
 
 extern "C" {
@@ -477,6 +487,7 @@ int LUAMOD_API luaopen_moon_core(lua_State* L) {
                      { "redirect", message_redirect },
                      { "collect", lmi_collect },
                      { "escape_print", escape_print },
+                     { "signal", moon_signal },
                      /* placeholders */
                      { "id", NULL },
                      { "name", NULL },

@@ -17,6 +17,8 @@ private:
 
     void dispatch(moon::message* msg) override;
 
+    void signal(int val) override;
+
     static void* lalloc(void* ud, void* ptr, size_t osize, size_t nsize);
 
 public:

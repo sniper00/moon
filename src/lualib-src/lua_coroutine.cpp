@@ -4,7 +4,7 @@
 
 // #define DEBUG_LOG
 
-static void signal_hook(lua_State* L, lua_Debug*) {
+void signal_hook(lua_State* L, lua_Debug*) {
     lua_service* S = lua_service::get(L);
     lua_sethook(L, nullptr, 0, 0);
     if (S->trap.load(std::memory_order_acquire)) {
