@@ -7,17 +7,12 @@ if _ACTION ~= "build" and _ACTION ~= "clean" and _ACTION ~= "publish" then
     os.execute("git submodule update")
 end
 
-local LUA_BUILD_AS_SHARED = true
-
 workspace "Server"
     configurations { "Debug", "Release" }
     flags{"NoPCH","RelativeLinks"}
     cppdialect "C++17"
     location "./"
     architecture "x64"
-    if not LUA_BUILD_AS_SHARED then
-        staticruntime "on"
-    end
 
     filter "configurations:Debug"
         defines { "DEBUG" }
@@ -45,21 +40,15 @@ project "lua"
     location "build/projects/%{prj.name}"
     objdir "build/obj/%{prj.name}/%{cfg.buildcfg}"
     targetdir "build/bin/%{cfg.buildcfg}"
-    if LUA_BUILD_AS_SHARED then
-        kind "SharedLib"
-        postbuildcommands{"{COPY} %{cfg.buildtarget.abspath} %{wks.location}"}
-    else
-        kind "StaticLib"
-    end
+    kind "StaticLib"
     language "C"
     includedirs {"./third/lua"}
     files {"./third/lua/onelua.c"}
     defines {"MAKE_LIB"}
     filter { "system:windows" }
         disablewarnings { "4244","4324","4702","4310", "4701"}
-        if LUA_BUILD_AS_SHARED then
-            defines {"LUA_BUILD_AS_DLL"}
-        end
+        -- Export Lua library symbols, allowing them to be linked by extension libraries
+        defines {"LUA_BUILD_AS_DLL"}
     filter { "system:linux" }
         defines {"LUA_USE_LINUX"}
     filter { "system:macosx" }
