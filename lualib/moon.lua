@@ -256,7 +256,7 @@ end
 --- moon.async(bar, 3, 4)
 --- ```
 ---
----@param fn fun(...) @The function to be executed asynchronously
+---@param fn async fun(...) @The function to be executed asynchronously
 ---@param ... any @Optional parameters, passed to the `fn` function
 ---@return thread @The newly created coroutine
 function moon.async(fn, ...)
