@@ -1,6 +1,5 @@
 ---@class HttpOptions
 ---@field public headers? table<string,string>
----@field public keepalive? integer @ seconds
 ---@field public timeout? integer @ The timeout is applied from when the request starts connecting until the response body has finished. milliseconds, default 10000
 ---@field public proxy? string @ host:port
 
@@ -410,9 +409,8 @@ local function do_request(baseaddress, options, req, method, protocol)
         return { error = "CLOSED" }
     end
 
-    socket.settimeout(fd, timeout // 1000)
+    socket.settimeout(fd, math.max(timeout // 1000, 1))
     local ok, response = pcall(read_response, fd, method)
-    socket.settimeout(fd, 0)
 
     if not ok then
         socket.close(fd)
@@ -434,7 +432,7 @@ local function do_request(baseaddress, options, req, method, protocol)
 
     if tostring(response.headers["connection"]):lower() == "upgrade" then
         response.socket_fd = fd
-    elseif not options.keepalive or response.headers["connection"] == "close" or #pool >= max_pool_num then
+    elseif response.headers["connection"] == "close" or #pool >= max_pool_num then
         socket.close(fd)
     else
         table.insert(pool, fd)
@@ -580,13 +578,9 @@ function M.request(method, str_url, options, body)
         end
     end
 
-    if options.keepalive then
-        cache[#cache + 1] = "Connection: keep-alive"
-        cache[#cache + 1] = "\r\n"
-        cache[#cache + 1] = "Keep-Alive: "
-        cache[#cache + 1] = tostring(options.keepalive)
-        cache[#cache + 1] = "\r\n"
-    end
+    cache[#cache + 1] = "Connection: keep-alive\r\n"
+    cache[#cache + 1] = "Keep-Alive: 300\r\n"
+
     cache[#cache + 1] = "\r\n"
     cache[#cache + 1] = body
 

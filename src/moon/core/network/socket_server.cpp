@@ -568,7 +568,7 @@ service* socket_server::find_service(uint32_t serviceid) {
 }
 
 void socket_server::timeout() {
-    timer_.expires_after(std::chrono::seconds(10));
+    timer_.expires_after(std::chrono::seconds(5));
     timer_.async_wait([this](const asio::error_code& e) {
         if (e) {
             return;
