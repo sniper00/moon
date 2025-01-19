@@ -421,7 +421,7 @@ private:
         if (fh.op == ws::opcode::close) {
             return error(
                 make_error_code(moon::error::ws_closed),
-                std::string { data_->data(), data_->size() }
+                moon::escape_print(std::string { data_->data(), data_->size() })
             );
         }
 
