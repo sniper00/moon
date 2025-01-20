@@ -35,7 +35,7 @@ public:
     template<typename... Args>
     size_t emplace_back(Args&&... args) {
         std::lock_guard<lock_type> lk(mutex_);
-        write_queue_.emplack_back(std::forward<Args>(args)...);
+        write_queue_.emplace_back(std::forward<Args>(args)...);
         return write_queue_.size();
     }
 
