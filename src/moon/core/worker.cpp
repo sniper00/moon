@@ -188,16 +188,18 @@ asio::io_context& worker::io_context() {
 }
 
 void worker::send(message&& msg) {
-    mqsize_.fetch_add(1, std::memory_order_relaxed);
     if (mq_.push_back(std::move(msg)) == 1) {
         asio::post(io_ctx_, [this]() {
             if (auto& read_queue = mq_.swap_on_read(); !read_queue.empty()) {
+                auto size = read_queue.size();
+                swapped_size_.store(size, std::memory_order_relaxed);
                 service* s = nullptr;
                 for (auto& m: read_queue) {
                     s = handle_one(s, std::move(m));
-                    mqsize_.fetch_sub(1, std::memory_order_acq_rel);
+                    swapped_size_.store(--size, std::memory_order_relaxed);
                 }
                 read_queue.clear();
+                current_.store(nullptr, std::memory_order_relaxed);
             }
         });
     }
@@ -255,9 +257,8 @@ service* worker::handle_one(service* s, message&& msg) {
         }
 
         double start_time = moon::time::clock();
-        current_.store(s, std::memory_order_relaxed);
+        current_.store(s, std::memory_order_release);
         handle_message(s, std::move(msg));
-        current_.store(nullptr, std::memory_order_relaxed);
         double diff_time = moon::time::clock() - start_time;
         s->add_cpu(diff_time);
         cpu_ += diff_time;
@@ -280,9 +281,8 @@ service* worker::handle_one(service* s, message&& msg) {
         }
 
         if (it.second->ok() && it.second->id() != sender) {
-            current_.store(it.second.get(), std::memory_order_relaxed);
+            current_.store(it.second.get(), std::memory_order_release);
             handle_message(it.second, msg);
-            current_ = nullptr;
         }
     }
     return nullptr;
