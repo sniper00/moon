@@ -52,7 +52,6 @@ else
                 	print("cost", moon.clock() - bt)
                 end
                 kcp.send(endpoint, "world")
-                moon.sleep(10)
                 counter = counter + 1
             end
         end)

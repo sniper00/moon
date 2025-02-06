@@ -84,6 +84,7 @@ local function update()
                             end
                         end
                     else
+                        update_read(obj)
                         if obj.nextupdate <= moon.clock() * 1000 then
                             obj.nextupdate = core.update(obj.kcp)
                             while true do
