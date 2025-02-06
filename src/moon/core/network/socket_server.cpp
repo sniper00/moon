@@ -302,9 +302,12 @@ bool socket_server::write(uint32_t fd, buffer_shr_ptr_t data, socket_send_mask m
         auto buf = asio::buffer(data->data(), data->size());
         iter->second->sock.async_send(
             buf,
-            [_ = std::move(data),
-             ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/) {
-                //do nothing
+            [this, _ = std::move(data),
+             ctx = iter->second](std::error_code ec/*ec*/, std::size_t /*bytes_sent*/) {
+                if(ec){
+                    CONSOLE_ERROR("udp write failed fd:%u %s", ctx->fd, ec.message().data());
+                    close(ctx->fd);
+                }
             }
         );
         return true;
@@ -441,9 +444,11 @@ bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_
         iter->second->sock.async_send_to(
             buf,
             ep,
-            [_ = std::move(data),
-             ctx = iter->second](std::error_code /*ec*/, std::size_t /*bytes_sent*/) {
-                //do nothing
+            [_ = std::move(data), ep,
+             ctx = iter->second](std::error_code ec/*ec*/, std::size_t /*bytes_sent*/) {
+                if(ec){
+                    CONSOLE_ERROR("udp send_to failed %s:%d %s", ep.address().to_string().data(), (int)ep.port(), ec.message().data());
+                }
             }
         );
         return true;
@@ -472,9 +477,9 @@ bool moon::socket_server::switch_type(uint32_t fd, uint8_t new_type) {
     return false;
 }
 
-std::array<char, socket_server::addr_v6_size>
+std::string_view
 socket_server::encode_endpoint(const address& addr, port_type port) {
-    std::array<char, socket_server::addr_v6_size> buf {};
+    static thread_local address_v6::bytes_type buf {};
     size_t size = 0;
     if (addr.is_v4()) {
         buf[0] = '4';
@@ -490,7 +495,7 @@ socket_server::encode_endpoint(const address& addr, port_type port) {
         size += bytes.size();
     }
     memcpy(buf.data() + size, &port, sizeof(port));
-    return buf;
+    return std::string_view{(const char*)buf.data(), size + sizeof(port)};
 }
 
 connection_ptr_t

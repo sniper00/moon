@@ -115,7 +115,7 @@ public:
 
     bool switch_type(uint32_t fd, uint8_t new_type);
 
-    static std::array<char, socket_server::addr_v6_size>
+    static std::string_view
     encode_endpoint(const address& addr, port_type port);
 
 private:
