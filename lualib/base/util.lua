@@ -28,6 +28,8 @@ end
 
 local MAX_NESTING <const> = 32
 
+---@param any any
+---@param isreturn? boolean
 _G["print_r"] = function(any, isreturn)
     local lookup = {}
     local result = {}

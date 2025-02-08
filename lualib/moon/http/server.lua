@@ -87,37 +87,21 @@ local function request_handler(fd, request)
         response:write_header("Content-Type", "text/plain")
         response:write(string.format("Cannot %s %s", request.method, request.path))
     end
-    local handler = routers[request.path]
-    if handler then
-        local ok, err = xpcall(handler, traceback, request, response, next)
-        if not ok then
-            if M.error then
-                M.error(fd, err, false)
-            else
-                moon.error(err)
-            end
 
-            request.headers["connection"] = "close"
-
-            response.status_code = 500
-            response:write_header("Content-Type", "text/plain")
-            response:write("Server Internal Error")
+    local handler = routers[request.path] or next
+    local ok, err = xpcall(handler, traceback, request, response, next)
+    if not ok then
+        if M.error then
+            M.error(fd, err, false)
+        else
+            moon.error(err)
         end
-    else
-        local ok, err = xpcall(next, traceback)
-        if not ok then
-            if M.error then
-                M.error(fd, err, false)
-            else
-                moon.error(err)
-            end
 
-            request.headers["connection"] = "close"
+        request.headers["connection"] = "close"
 
-            response.status_code = 500
-            response:write_header("Content-Type", "text/plain")
-            response:write("Server Internal Error")
-        end
+        response.status_code = 500
+        response:write_header("Content-Type", "text/plain")
+        response:write("Server Internal Error")
     end
 
     if not M.keepalive or request.headers["connection"] == "close" then

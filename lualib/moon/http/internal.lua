@@ -153,6 +153,10 @@ function http_response:write(body)
 end
 
 function http_response:tb()
+    if not self.body then
+        self.headers['Content-Length'] = 0
+    end
+
     local status_code = self.status_code
     local status_msg = http_status_msg[status_code]
     if not status_msg then
