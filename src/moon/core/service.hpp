@@ -65,7 +65,7 @@ public:
 
     virtual void dispatch(message* msg) = 0;
 
-    virtual void signal(int val) {}
+    virtual void signal(int) {}
 
 protected:
     void set_unique(bool v) {

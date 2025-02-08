@@ -479,7 +479,7 @@ bool moon::socket_server::switch_type(uint32_t fd, uint8_t new_type) {
 
 std::string_view
 socket_server::encode_endpoint(const address& addr, port_type port) {
-    static thread_local address_v6::bytes_type buf {};
+    static thread_local std::array<char, socket_server::addr_v6_size> buf {};
     size_t size = 0;
     if (addr.is_v4()) {
         buf[0] = '4';
