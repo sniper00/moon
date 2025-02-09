@@ -6,7 +6,7 @@ local sttime = 0
 local counter = 0
 
 
-local times = 100
+local times = 200
 
 local nreceiver = 8
 local ncount = 1000
@@ -14,7 +14,9 @@ local avg = 0
 
 if conf.sender then
     local command = {}
-
+    local total_counter = 0
+    local total_time = 0
+    sttime = moon.clock()
     command.TEST = function()
         counter = counter + 1
         if counter == ncount*nreceiver then
@@ -22,31 +24,37 @@ if conf.sender then
             avg = avg + math.floor(ncount*nreceiver/cost)
             print(string.format("cost %.03fs, %s op/s", cost, math.floor(ncount*nreceiver/cost)))
             counter = 0
+            sttime = moon.clock()
+            total_time = total_time + cost
         end
+        total_counter = total_counter + 1
     end
 
     command.RUN = function(receivers)
         local i = 0
-        while i < times do
-            sttime = moon.clock()
-    
+        while i < times do    
             for _, id in ipairs(receivers) do
                 for _=1,ncount do
                     moon.send('lua', id, "TEST", 1, 2, 3, 4 , {a=1, b=2 , c = {d=1, e=2, f=3}})
                 end
             end
-    
-            moon.sleep(0)
+
+            for _, id in ipairs(receivers) do
+                assert(moon.call('lua', id, "TEST2"))
+            end
+
             i= i+1
         end
 
-        moon.sleep(500)
+        while total_counter < ncount*nreceiver*times do
+            moon.sleep(500)
+        end
 
         for _, id in ipairs(receivers) do
             moon.kill(id)
         end
 
-        print("avg", avg/times)
+        print("avg", avg/times, "per sec")
         moon.quit()
         moon.exit(0)
     end
@@ -74,12 +82,16 @@ elseif conf.receiver then
     command.TEST = function(sender, ...)
         moon.send('lua', sender, 'TEST', ...)
     end
+
+    command.TEST2 = function(...)
+        return true
+    end
     
     moon.dispatch('lua',function(sender, session, cmd, ...)
         -- body
         local f = command[cmd]
         if f then
-            f(sender,...)
+            moon.response( 'lua', sender, session, f(sender,...))
         else
             error(string.format("Unknown command %s", tostring(cmd)))
         end
