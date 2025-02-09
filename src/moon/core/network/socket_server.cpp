@@ -495,7 +495,7 @@ socket_server::encode_endpoint(const address& addr, port_type port) {
         size += bytes.size();
     }
     memcpy(buf.data() + size, &port, sizeof(port));
-    return std::string_view{(const char*)buf.data(), size + sizeof(port)};
+    return std::string_view{buf.data(), size + sizeof(port)};
 }
 
 connection_ptr_t

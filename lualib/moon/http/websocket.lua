@@ -1,19 +1,19 @@
-local crypt = require("crypt")
-local moon  = require("moon")
-local socket = require("moon.socket")
-local internal = require("moon.http.internal")
+local crypt            = require("crypt")
+local moon             = require("moon")
+local socket           = require("moon.socket")
+local internal         = require("moon.http.internal")
 
-local WS_MAGICKEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+local WS_MAGICKEY      = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 --- config.hpp: socket_send_mask
-local flag_ws_text = 4
-local flag_ws_ping = 8
-local flag_ws_pong = 16
+local flag_ws_text     = 4
+local flag_ws_ping     = 8
+local flag_ws_pong     = 16
 
 --- PTYPE_SOCKET_WS wscallbacks
-local wscallbacks = {}
+local wscallbacks      = {}
 
-local _decode = moon.decode
+local _decode          = moon.decode
 
 local socket_data_type = {
     connect = 1,
@@ -32,7 +32,7 @@ local socket_data_type = {
 
 ---@class websocket
 ---@field write fun(fd:integer, data:string|buffer_ptr|buffer_shr_ptr):boolean send binary data
-local websocket = {
+local websocket        = {
     write = socket.write,
 }
 
@@ -49,7 +49,7 @@ function websocket.connect(url, headers, timeout)
     local host_addr, host_port = string.match(host, "^([^:]+):?(%d*)$")
     assert(host_addr and host_port)
 
-    local key = crypt.base64encode(crypt.randomkey()..crypt.randomkey())
+    local key = crypt.base64encode(crypt.randomkey() .. crypt.randomkey())
 
     local request_header = {
         ["Upgrade"] = "websocket",
@@ -59,13 +59,13 @@ function websocket.connect(url, headers, timeout)
     }
 
     if headers then
-        for k,v in pairs(headers) do
+        for k, v in pairs(headers) do
             assert(request_header[k] == nil, k)
             request_header[k] = v
         end
     end
 
-    local response = internal.request("GET", "http://".. host .. uri, {
+    local response = internal.request("GET", "http://" .. host .. uri, {
         timeout = timeout,
         headers = request_header
     })
@@ -75,7 +75,7 @@ function websocket.connect(url, headers, timeout)
     if response.status_code ~= 101 then
         error(string.format("websocket handshake error: code[%s] info:%s", response.status_code, response.body))
     end
-	--assert(response.body == "")	-- todo: M.read may need handle it
+    --assert(response.body == "")	-- todo: M.read may need handle it
 
     if not recvheader["upgrade"] or recvheader["upgrade"]:lower() ~= "websocket" then
         error("websocket handshake upgrade must websocket")
@@ -102,14 +102,14 @@ end
 
 function websocket.listen(host, port)
     local fd = socket.listen(host, port, moon.PTYPE_SOCKET_WS)
-    assert(fd>0)
+    assert(fd > 0)
     socket.start(fd)
     return fd
 end
 
----@param cb fun(fd:integer, HttpRequest)
+---@param cb fun(fd:integer, httpRequest: HttpRequest)
 function websocket.on_accept(cb)
-    wscallbacks[socket_data_type.accept] = function (fd, msg)
+    wscallbacks[socket_data_type.accept] = function(fd, msg)
         local headers = internal.parse_header(moon.decode(msg, "Z"))
         cb(fd, headers)
     end
