@@ -300,26 +300,30 @@ public:
     }
 
     template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-    bool write_chars(T value) {
+    void write_chars(T value) {
+        /*
+        ** Maximum length of the conversion of a number to a string. Must be
+        ** enough to accommodate both LUA_INTEGER_FMT and LUA_NUMBER_FMT.
+        ** (For a long long int, this is 19 digits plus a sign and a final '\0',
+        ** adding to 21. For a long double, it can go to a sign, 33 digits,
+        ** the dot, an exponent letter, an exponent sign, 5 exponent digits,
+        ** and a final '\0', adding to 43.)
+        */
         static constexpr size_t MAX_NUMBER_2_STR = 44;
         auto space = pair_.prepare(MAX_NUMBER_2_STR);
         auto* b = space.first;
 #ifndef _MSC_VER //std::to_chars in C++17: gcc and clang only integral types supported
         if constexpr (std::is_floating_point_v<T>) {
             int len = std::snprintf(b, MAX_NUMBER_2_STR, "%.16g", value);
-            if (len < 0)
-                return false;
+            assert(len >= 0);
             commit(len);
-            return true;
         } else
 #endif
         {
             auto* e = b + MAX_NUMBER_2_STR;
             auto res = std::to_chars(b, e, value);
-            if (res.ec != std::errc())
-                return false;
+            assert(res.ec == std::errc());
             commit(res.ptr - b);
-            return true;
         }
     }
 
