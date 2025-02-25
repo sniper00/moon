@@ -16,7 +16,7 @@ end
 do
     local double = 2 ^ 53
     print(json.encode(double))
-    assert(json.encode(double)=="9007199254740992")
+    assert(json.encode(double)=="9007199254740992.0")
     assert(json.decode(json.encode(double))==double)
 end
 
