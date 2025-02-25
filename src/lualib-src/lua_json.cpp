@@ -2,11 +2,11 @@
 #include "common/hash.hpp"
 #include "common/string.hpp"
 #include "lua.hpp"
-#include "yyjson/yyjson.h"
 #include <charconv>
 #include <codecvt>
 #include <cstdlib>
 #include <string_view>
+#include "yyjson/yyjson.c"
 
 using namespace moon;
 
@@ -167,6 +167,13 @@ static void format_space(buffer* writer, int n) {
     }
 }
 
+inline void write_number(buffer* writer, lua_Number num) {
+    auto[buf, n] = writer->prepare(32);
+    uint64_t raw = f64_to_raw(num);
+    auto e = write_f64_raw((uint8_t*)buf, raw, YYJSON_WRITE_ALLOW_INF_AND_NAN);
+    writer->commit(e - (uint8_t*)buf);
+}
+
 template<bool format>
 static void encode_table(lua_State* L, buffer* writer, int idx, int depth);
 
@@ -185,7 +192,7 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, json_co
             if (lua_isinteger(L, idx))
                 writer->write_chars(lua_tointeger(L, idx));
             else
-                writer->write_chars(lua_tonumber(L, idx));
+                write_number(writer, lua_tonumber(L, idx));
             return;
         }
         case LUA_TSTRING: {
@@ -560,7 +567,7 @@ static int concat(lua_State* L) {
                     if (lua_isinteger(L, -1))
                         buf->write_chars(lua_tointeger(L, -1));
                     else
-                        buf->write_chars(lua_tonumber(L, -1));
+                        write_number(buf, lua_tonumber(L, -1));
                     break;
                 }
                 case LUA_TBOOLEAN: {
