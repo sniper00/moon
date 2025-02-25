@@ -224,7 +224,6 @@ add_lua_module(
             }
 
             ---json
-            defines{ "YYJSON_DISABLE_WRITER" }
             files { "./third/yyjson/**.h", "./third/yyjson/**.c"}
 
             ---kcp
