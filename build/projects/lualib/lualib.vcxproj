@@ -56,7 +56,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\src;..\..\..\third;..\..\..\third\lua;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -74,7 +74,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>NDEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;YYJSON_DISABLE_WRITER;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;SOL_ALL_SAFETIES_ON;ASIO_STANDALONE;ASIO_NO_DEPRECATED;MOON_ENABLE_MIMALLOC;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\src;..\..\..\third;..\..\..\third\lua;..\..\..\src\moon;..\..\..\src\moon\core;..\..\..\third\mimalloc\include;..\..\..\third\recastnavigation\Detour\Include;..\..\..\third\recastnavigation\DetourCrowd\Include;..\..\..\third\recastnavigation\DetourTileCache\Include;..\..\..\third\recastnavigation\Recast\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -117,7 +117,6 @@
     <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\Recast.h" />
     <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\RecastAlloc.h" />
     <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\RecastAssert.h" />
-    <ClInclude Include="..\..\..\third\yyjson\yyjson.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\lualib-src\lua_aoi.cpp" />
@@ -163,7 +162,6 @@
     <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastMeshDetail.cpp" />
     <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastRasterization.cpp" />
     <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastRegion.cpp" />
-    <ClCompile Include="..\..\..\third\yyjson\yyjson.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

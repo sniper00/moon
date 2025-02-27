@@ -38,7 +38,7 @@ ifeq ($(config),debug)
 TARGETDIR = ../../bin/Debug
 TARGET = $(TARGETDIR)/liblualib.a
 OBJDIR = ../../obj/lualib/Debug
-DEFINES += -DDEBUG -DSOL_ALL_SAFETIES_ON -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC -DYYJSON_DISABLE_WRITER
+DEFINES += -DDEBUG -DSOL_ALL_SAFETIES_ON -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -std=c++17
 
@@ -46,7 +46,7 @@ else ifeq ($(config),release)
 TARGETDIR = ../../bin/Release
 TARGET = $(TARGETDIR)/liblualib.a
 OBJDIR = ../../obj/lualib/Release
-DEFINES += -DNDEBUG -DSOL_ALL_SAFETIES_ON -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC -DYYJSON_DISABLE_WRITER
+DEFINES += -DNDEBUG -DSOL_ALL_SAFETIES_ON -DASIO_STANDALONE -DASIO_NO_DEPRECATED -DMOON_ENABLE_MIMALLOC
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -g -Wall -std=c++17
 
@@ -105,7 +105,6 @@ GENERATED += $(OBJDIR)/lua_serialize.o
 GENERATED += $(OBJDIR)/lua_socket.o
 GENERATED += $(OBJDIR)/lua_uuid.o
 GENERATED += $(OBJDIR)/lua_zset.o
-GENERATED += $(OBJDIR)/yyjson.o
 OBJECTS += $(OBJDIR)/DetourAlloc.o
 OBJECTS += $(OBJDIR)/DetourAssert.o
 OBJECTS += $(OBJDIR)/DetourCommon.o
@@ -149,7 +148,6 @@ OBJECTS += $(OBJDIR)/lua_serialize.o
 OBJECTS += $(OBJDIR)/lua_socket.o
 OBJECTS += $(OBJDIR)/lua_uuid.o
 OBJECTS += $(OBJDIR)/lua_zset.o
-OBJECTS += $(OBJDIR)/yyjson.o
 
 # Rules
 # #############################################
@@ -342,9 +340,6 @@ $(OBJDIR)/RecastRasterization.o: ../../../third/recastnavigation/Recast/Source/R
 $(OBJDIR)/RecastRegion.o: ../../../third/recastnavigation/Recast/Source/RecastRegion.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/yyjson.o: ../../../third/yyjson/yyjson.c
-	@echo "$(notdir $<)"
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)
 ifneq (,$(PCH))

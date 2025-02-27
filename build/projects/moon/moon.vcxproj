@@ -44,7 +44,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\bin\Debug\</OutDir>
     <IntDir>..\..\obj\moon\Debug\</IntDir>
-    <TargetName>moon</TargetName>
+    <TargetName>moon-d</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -73,7 +73,7 @@
       <AdditionalOptions>/STACK:"8388608" %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>IF EXIST ..\..\bin\Debug\moon.exe\ (xcopy /Q /E /Y /I ..\..\bin\Debug\moon.exe $(SolutionDir) &gt; nul) ELSE (xcopy /Q /Y /I ..\..\bin\Debug\moon.exe $(SolutionDir) &gt; nul)</Command>
+      <Command>IF EXIST ..\..\bin\Debug\moon-d.exe\ (xcopy /Q /E /Y /I ..\..\bin\Debug\moon-d.exe $(SolutionDir) &gt; nul) ELSE (xcopy /Q /Y /I ..\..\bin\Debug\moon-d.exe $(SolutionDir) &gt; nul)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

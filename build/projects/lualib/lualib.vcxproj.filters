@@ -55,9 +55,6 @@
     <Filter Include="third\recastnavigation\Recast\Source">
       <UniqueIdentifier>{D2D56204-BEBC-24FC-670D-8B1953D39D62}</UniqueIdentifier>
     </Filter>
-    <Filter Include="third\yyjson">
-      <UniqueIdentifier>{5BC004CB-4723-946F-F0A8-CC25DCEA5FF2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\third\fastlz\fastlz.h">
@@ -125,9 +122,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\third\recastnavigation\Recast\Include\RecastAssert.h">
       <Filter>third\recastnavigation\Recast\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\third\yyjson\yyjson.h">
-      <Filter>third\yyjson</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -259,9 +253,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\third\recastnavigation\Recast\Source\RecastRegion.cpp">
       <Filter>third\recastnavigation\Recast\Source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\third\yyjson\yyjson.c">
-      <Filter>third\yyjson</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
