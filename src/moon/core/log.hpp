@@ -102,7 +102,7 @@ public:
                 return;
 
             buffer line = make_line(console, level, serviceid, s.size());
-            line.write_back(s.data(), s.size());
+            line.write_back(s);
             log_queue_.push_back(std::move(line));
             ++size_;
         } catch (const std::exception& e) {

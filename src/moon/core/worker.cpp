@@ -145,7 +145,7 @@ void worker::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
                 auto content =
                     moon::format("_service_exit,name:%s serviceid:%08X", name.data(), id);
                 auto buf = buffer { content.size() };
-                buf.write_back(content.data(), content.size());
+                buf.write_back(content);
                 server_->broadcast(serviceid, buf, PTYPE_SYSTEM);
             }
 

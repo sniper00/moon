@@ -32,80 +32,78 @@ using namespace moon;
 
 static inline void wb_nil(buffer* buf) {
     uint8_t n = TYPE_NIL;
-    buf->write_back(&n, 1);
+    buf->write_back(n);
 }
 
 static inline void wb_boolean(buffer* buf, int boolean) {
     uint8_t n = COMBINE_TYPE(TYPE_BOOLEAN, boolean ? 1 : 0);
-    buf->write_back(&n, 1);
+    buf->write_back(n);
 }
 
 static inline void wb_integer(buffer* buf, lua_Integer v) {
     int type = TYPE_NUMBER;
     if (v == 0) {
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_ZERO);
-        buf->write_back(n);
+        buf->prepare(1);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_ZERO));
     } else if (v != (int32_t)v) {
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_QWORD);
-        int64_t v64 = v;
-        buf->write_back(n);
-        buf->write_back(&v64, 1);
+        buf->prepare(9);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_QWORD));
+        buf->unsafe_write_back((int64_t)v);
     } else if (v < 0) {
-        int32_t v32 = (int32_t)v;
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD);
-        buf->write_back(n);
-        buf->write_back(&v32, 1);
+        buf->prepare(5);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD));
+        buf->unsafe_write_back((int32_t)v);
     } else if (v < 0x100) {
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_BYTE);
-        buf->write_back(n);
-        uint8_t byte = (uint8_t)v;
-        buf->write_back(&byte, 1);
+        buf->prepare(2);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_BYTE));
+        buf->unsafe_write_back((uint8_t)v);
     } else if (v < 0x10000) {
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_WORD);
-        buf->write_back(n);
-        uint16_t word = (uint16_t)v;
-        buf->write_back(&word, 1);
+        buf->prepare(3);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_WORD));
+        buf->unsafe_write_back((uint16_t)v);
     } else {
-        uint8_t n = (uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD);
-        buf->write_back(n);
-        uint32_t v32 = (uint32_t)v;
-        buf->write_back(&v32, 1);
+        buf->prepare(5);
+        buf->unsafe_write_back((uint8_t)COMBINE_TYPE(type, TYPE_NUMBER_DWORD));
+        buf->unsafe_write_back((uint32_t)v);
     }
 }
 
 static inline void wb_real(buffer* buf, double v) {
+    buf->prepare(sizeof(double) + 1);
     uint8_t n = COMBINE_TYPE(TYPE_NUMBER, TYPE_NUMBER_REAL);
-    buf->write_back(n);
-    buf->write_back(&v, 1);
+    buf->unsafe_write_back(n);
+    buf->unsafe_write_back(v);
 }
 
 static inline void wb_pointer(buffer* buf, void* v) {
+    buf->prepare(sizeof(void*) + 1);
     uint8_t n = TYPE_USERDATA;
-    buf->write_back(n);
-    buf->write_back(&v, 1);
+    buf->unsafe_write_back(n);
+    buf->unsafe_write_back(ssize_t(v));
 }
 
-static inline void wb_string(buffer* buf, const char* str, int len) {
+static inline void wb_string(buffer* buf, const char* str, size_t len) {
     if (len < MAX_COOKIE) {
         uint8_t n = (uint8_t)COMBINE_TYPE(TYPE_SHORT_STRING, len);
-        buf->write_back(n);
+        buf->prepare(len + 1);
+        buf->unsafe_write_back(n);
         if (len > 0) {
-            buf->write_back(str, len);
+            buf->unsafe_write_back({ str, len });
         }
     } else {
         uint8_t n;
         if (len < 0x10000) {
+            buf->prepare(len + 3);
             n = COMBINE_TYPE(TYPE_LONG_STRING, 2);
-            buf->write_back(n);
-            uint16_t x = (uint16_t)len;
-            buf->write_back(&x, 1);
+            buf->unsafe_write_back(n);
+            buf->unsafe_write_back((uint16_t)len);
         } else {
+            buf->prepare(len + 5);
             n = COMBINE_TYPE(TYPE_LONG_STRING, 4);
-            buf->write_back(n);
-            uint32_t x = (uint32_t)len;
-            buf->write_back(&x, 1);
+            buf->unsafe_write_back(n);
+            buf->unsafe_write_back((uint32_t)len);
         }
-        buf->write_back(str, len);
+        buf->unsafe_write_back({ str, len });
     }
 }
 
@@ -153,7 +151,7 @@ static void wb_table_hash(lua_State* L, buffer* buf, int index, int depth, int a
 
 static int wb_table_metapairs(lua_State* L, buffer* buf, int index, int depth) {
     uint8_t n = COMBINE_TYPE(TYPE_TABLE, 0);
-    buf->write_back(&n, 1);
+    buf->write_back(n);
     lua_pushvalue(L, index);
     if (lua_pcall(L, 1, 3, 0) != LUA_OK)
         return 1;
@@ -221,7 +219,7 @@ static void pack_one(lua_State* L, buffer* b, int index, int depth) {
         case LUA_TSTRING: {
             size_t sz = 0;
             const char* str = lua_tolstring(L, index, &sz);
-            wb_string(b, str, (int)sz);
+            wb_string(b, str, (uint32_t)sz);// max 4G
             break;
         }
         case LUA_TLIGHTUSERDATA:

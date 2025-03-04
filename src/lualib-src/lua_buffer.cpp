@@ -153,15 +153,14 @@ static void concat_one(lua_State* L, buffer* b, int index, int depth) {
             break;
         }
         case LUA_TBOOLEAN: {
-            int n = lua_toboolean(L, index);
-            std::string_view s = n ? "true" : "false";
-            b->write_back(s.data(), s.size());
+            constexpr std::string_view bool_string[2] = { "false", "true" };
+            b->write_back(bool_string[lua_toboolean(L, index)]);
             break;
         }
         case LUA_TSTRING: {
             size_t sz = 0;
             const char* str = lua_tolstring(L, index, &sz);
-            b->write_back(str, sz);
+            b->write_back({ str, sz });
             break;
         }
         case LUA_TTABLE: {
@@ -332,7 +331,7 @@ static int append(lua_State* L) {
     try {
         if (int n = lua_gettop(L); n == 2) {
             auto append = get_pointer(L, 2);
-            buf->write_back(append->data(), append->size());
+            buf->write_back({ append->data(), append->size() });
         } else {
             size_t size = 0;
             for (int i = 2; i <= n; i++) {

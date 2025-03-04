@@ -21,7 +21,7 @@ static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index) {
             std::size_t len;
             auto str = lua_tolstring(L, index, &len);
             auto buf = moon::buffer::make_unique(len);
-            buf->write_back(str, len);
+            buf->write_back({str, len});
             return buf;
         }
         case LUA_TLIGHTUSERDATA: {
@@ -42,7 +42,7 @@ static moon::buffer_shr_ptr_t moon_to_shr_buffer(lua_State* L, int index) {
             std::size_t len;
             auto str = lua_tolstring(L, index, &len);
             auto buf = buffer::make_shared(len);
-            buf->write_back(str, len);
+            buf->write_back({str, len});
             return buf;
         }
         case LUA_TLIGHTUSERDATA: {
@@ -108,10 +108,10 @@ static int lmoon_log(lua_State* L) {
     int n = lua_gettop(L); /* number of arguments */
     for (int i = 2; i <= n; i++) { /* for each argument */
         if (i > 2) /* not the first element? */
-            line.write_back("    ", 4); /* add a tab before it */
+            line.write_back({"    ", 4}); /* add a tab before it */
         switch (lua_type(L, i)) {
             case LUA_TNIL:
-                line.write_back("nil", 3);
+                line.write_back({"nil", 3});
                 break;
             case LUA_TNUMBER: {
                 if (lua_isinteger(L, i))
@@ -123,27 +123,27 @@ static int lmoon_log(lua_State* L) {
             case LUA_TBOOLEAN: {
                 int v = lua_toboolean(L, i);
                 constexpr std::string_view s[2] = { "false", "true" };
-                line.write_back(s[v].data(), s[v].size());
+                line.write_back(s[v]);
                 break;
             }
             case LUA_TSTRING: {
                 size_t sz = 0;
                 const char* str = lua_tolstring(L, i, &sz);
-                line.write_back(str, sz);
+                line.write_back({str, sz});
                 break;
             }
             default:
                 size_t l;
                 const char* s = luaL_tolstring(L, i, &l); /* convert it to string */
-                line.write_back(s, l); /* print it */
+                line.write_back({s, l}); /* print it */
                 lua_pop(L, 1); /* pop result */
         }
     }
 
     if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar)) {
-        line.write_back("    (", 5);
+        line.write_back({"    (", 5});
         if (ar.srclen > 1)
-            line.write_back(ar.source + 1, ar.srclen - 1);
+            line.write_back({ar.source + 1, ar.srclen - 1});
         line.write_back(':');
         line.write_chars(ar.currentline);
         line.write_back(')');

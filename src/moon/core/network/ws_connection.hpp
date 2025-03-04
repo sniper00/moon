@@ -241,7 +241,7 @@ private:
 
     void send_response(std::string_view s, bool will_close = false) {
         auto buf = std::make_shared<buffer>(s.size());
-        buf->write_back(s.data(), s.size());
+        buf->write_back(s);
         buf->add_bitmask(
             socket_send_mask::raw | (will_close ? socket_send_mask::close : socket_send_mask::none)
         );
@@ -383,7 +383,7 @@ private:
         // If the cache size is greater than or equal to the expected size, consume the expected size
         // Otherwise, consume the entire cache
         size_t consume_size = (diff >= 0 ? reallen : cache_.size());
-        data_->write_back(cache_.data(), consume_size);
+        data_->write_back({cache_.data(), consume_size});
         cache_.consume(consume_size);
 
         if (diff >= 0) {

@@ -248,36 +248,38 @@ public:
 
     base_buffer clone() const {
         base_buffer b { pair_.capacity };
-        b.write_back(data(), size());
+        b.write_back({ data(), size() });
         return b;
     }
 
-    template<typename T>
-    void write_back(const T* Indata, size_t count) {
-        static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable");
-        if (nullptr == Indata || 0 == count)
-            return;
-        size_t n = sizeof(T) * count;
-        auto space = pair_.prepare(n);
-        memcpy(space.first, Indata, space.second);
-        pair_.writepos += n;
+    constexpr void write_back(std::string_view data) {
+        pair_.prepare(data.size());
+        unsafe_write_back(data);
     }
 
-    void write_back(std::string_view data) {
-        if (data.empty())
-            return;
-        auto space = pair_.prepare(data.size());
-        memcpy(space.first, data.data(), data.size());
+    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    void write_back(T val) {
+        pair_.prepare(sizeof(T));
+        unsafe_write_back(val);
+    }
+
+    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    void unsafe_write_back(T val) {
+        constexpr size_t n = sizeof(T);
+        auto buf = pair_.data + pair_.writepos;
+        if constexpr (n == 1) {
+            *buf = val;
+            pair_.writepos += 1;
+        } else {
+            memcpy(buf, &val, n);
+            pair_.writepos += n;
+        }
+    }
+
+    void unsafe_write_back(std::string_view data) {
+        auto buf = pair_.data + pair_.writepos;
+        memcpy(buf, data.data(), data.size());
         pair_.writepos += data.size();
-    }
-
-    void write_back(char c) {
-        *(pair_.prepare(1).first) = c;
-        ++pair_.writepos;
-    }
-
-    void unsafe_write_back(char c) {
-        *(pair_.data + (pair_.writepos++)) = c;
     }
 
     template<typename T>

@@ -39,8 +39,7 @@ using namespace std::literals::string_view_literals;
 using namespace moon;
 
 static constexpr std::string_view json_null = "null"sv;
-static constexpr std::string_view json_true = "true"sv;
-static constexpr std::string_view json_false = "false"sv;
+static constexpr std::string_view bool_string[2] = { "false"sv, "true"sv };
 
 static constexpr int MAX_DEPTH = 64;
 
@@ -182,10 +181,7 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, json_co
     int t = lua_type(L, idx);
     switch (t) {
         case LUA_TBOOLEAN: {
-            if (lua_toboolean(L, idx))
-                writer->write_back(json_true.data(), json_true.size());
-            else
-                writer->write_back(json_false.data(), json_false.size());
+            writer->write_back(bool_string[lua_toboolean(L, idx)]);
             return;
         }
         case LUA_TNUMBER: {
@@ -224,12 +220,12 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, json_co
             return;
         }
         case LUA_TNIL: {
-            writer->write_back(json_null.data(), json_null.size());
+            writer->write_back(json_null);
             return;
         }
         case LUA_TLIGHTUSERDATA: {
             if (lua_touserdata(L, idx) == nullptr) {
-                writer->write_back(json_null.data(), json_null.size());
+                writer->write_back(json_null);
                 return;
             }
             break;
@@ -303,7 +299,7 @@ encode_table_object(lua_State* L, buffer* writer, int idx, int depth, json_confi
                 size_t len = 0;
                 const char* key = lua_tolstring(L, -2, &len);
                 writer->write_back('\"');
-                writer->write_back(key, len);
+                writer->write_back({key, len});
                 writer->write_back('\"');
                 writer->write_back(':');
                 if constexpr (format)
@@ -543,7 +539,7 @@ static int concat(lua_State* L) {
         const char* sz = lua_tolstring(L, -1, &size);
         auto buf = new buffer { BUFFER_OPTION_CHEAP_PREPEND + size };
         buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
-        buf->write_back(sz, size);
+        buf->write_back({sz, size});
         buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
         return 1;
@@ -571,16 +567,13 @@ static int concat(lua_State* L) {
                     break;
                 }
                 case LUA_TBOOLEAN: {
-                    if (lua_toboolean(L, -1))
-                        buf->write_back(json_true.data(), json_true.size());
-                    else
-                        buf->write_back(json_false.data(), json_false.size());
+                    buf->write_back(bool_string[lua_toboolean(L, -1)]);
                     break;
                 }
                 case LUA_TSTRING: {
                     size_t size;
                     const char* sz = lua_tolstring(L, -1, &size);
-                    buf->write_back(sz, size);
+                    buf->write_back({sz, size});
                     break;
                 }
                 case LUA_TTABLE: {
@@ -604,10 +597,10 @@ static int concat(lua_State* L) {
 }
 
 static void write_resp(buffer* buf, const char* cmd, size_t size) {
-    buf->write_back("\r\n$", 3);
+    buf->write_back({"\r\n$", 3});
     buf->write_chars(size);
-    buf->write_back("\r\n", 2);
-    buf->write_back(cmd, size);
+    buf->write_back({"\r\n", 2});
+    buf->write_back({cmd, size});
 }
 
 static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) {
@@ -615,7 +608,7 @@ static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) 
     switch (t) {
         case LUA_TNIL: {
             std::string_view sv = "\r\n$-1"sv;
-            buf->write_back(sv.data(), sv.size());
+            buf->write_back(sv);
             break;
         }
         case LUA_TNUMBER: {
@@ -629,10 +622,8 @@ static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) 
             break;
         }
         case LUA_TBOOLEAN: {
-            if (lua_toboolean(L, i))
-                write_resp(buf, json_true.data(), json_true.size());
-            else
-                write_resp(buf, json_false.data(), json_false.size());
+            auto str = bool_string[lua_toboolean(L, i)];
+            write_resp(buf, str.data(), str.size());
             break;
         }
         case LUA_TSTRING: {
@@ -703,7 +694,7 @@ static int concat_resp(lua_State* L) {
             concat_resp_one(buf, L, i, cfg);
         }
 
-        buf->write_back("\r\n", 2);
+        buf->write_back({"\r\n", 2});
         lua_pushlightuserdata(L, buf);
         lua_pushinteger(L, hash);
         return 2;

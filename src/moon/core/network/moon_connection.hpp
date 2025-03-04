@@ -140,7 +140,7 @@ private:
         // If the cache size is greater than or equal to the expected size, consume the expected size
         // Otherwise, consume the entire cache
         size_t consume_size = (diff >= 0 ? size : cache_.size());
-        data_->write_back(cache_.data(), consume_size);
+        data_->write_back({cache_.data(), consume_size});
         cache_.consume(consume_size);
 
         if (diff >= 0) {

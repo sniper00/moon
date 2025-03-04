@@ -48,7 +48,7 @@ public:
         receiver(r),
         session(sid),
         data_(new buffer { d.size() }) {
-        static_cast<buffer*>(data_)->write_back(d.data(), d.size());
+        static_cast<buffer*>(data_)->write_back(d);
     }
 
     message(const message&) = delete;
