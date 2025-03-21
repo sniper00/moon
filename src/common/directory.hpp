@@ -26,19 +26,29 @@ public:
         auto len = GetModuleFileName(NULL, temp, MAX_PATH);
         if (0 == len)
             throw std::runtime_error(moon::format("module_path error: %u", GetLastError()));
+        std::string res(temp, len);
+        fs::path p = fs::path(res);
 #elif TARGET_PLATFORM == PLATFORM_MAC
         char temp[1024];
-        uint32_t len = 1024;
-        if (_NSGetExecutablePath(temp, &len) != 0)
-            throw std::runtime_error("module_path error");
+        uint32_t bufferSize = sizeof(temp);
+        if (_NSGetExecutablePath(temp, &bufferSize) != 0)
+            throw std::runtime_error("module_path error: buffer too small");
+        size_t actual_len = strlen(temp);
+        std::string res(temp, actual_len);
+        fs::path p = fs::canonical(fs::path(res));
 #else
         char temp[1024];
-        auto len = readlink("/proc/self/exe", temp, 1024);
+        auto len = readlink("/proc/self/exe", temp, sizeof(temp) - 1);
         if (-1 == len)
             throw std::runtime_error(moon::format("module_path error %d", errno));
+        temp[len] = '\0';
+        fs::path p = fs::canonical(fs::path(temp));
 #endif
-        std::string res(temp, len);
-        return fs::path(res).parent_path();
+
+        if (!p.has_filename() || p.filename().empty()) {
+            p = p.parent_path();
+        }
+        return p.parent_path();
     }
 
     static bool exists(const std::string& path) {
