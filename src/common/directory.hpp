@@ -26,16 +26,13 @@ public:
         auto len = GetModuleFileName(NULL, temp, MAX_PATH);
         if (0 == len)
             throw std::runtime_error(moon::format("module_path error: %u", GetLastError()));
-        std::string res(temp, len);
-        fs::path p = fs::path(res);
+        fs::path p = fs::path(std::string_view(temp, len));
 #elif TARGET_PLATFORM == PLATFORM_MAC
         char temp[1024];
-        uint32_t bufferSize = sizeof(temp);
-        if (_NSGetExecutablePath(temp, &bufferSize) != 0)
+        uint32_t len = sizeof(temp);
+        if (_NSGetExecutablePath(temp, &len) != 0)
             throw std::runtime_error("module_path error: buffer too small");
-        size_t actual_len = strlen(temp);
-        std::string res(temp, actual_len);
-        fs::path p = fs::canonical(fs::path(res));
+        fs::path p = fs::canonical(fs::path(temp));
 #else
         char temp[1024];
         auto len = readlink("/proc/self/exe", temp, sizeof(temp) - 1);
