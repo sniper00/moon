@@ -36,7 +36,7 @@ public:
 #else
         char temp[1024];
         auto len = readlink("/proc/self/exe", temp, sizeof(temp) - 1);
-        if (-1 == len)
+        if (len<0 || (len >= sizeof(temp) - 1))
             throw std::runtime_error(moon::format("module_path error %d", errno));
         temp[len] = '\0';
         fs::path p = fs::canonical(fs::path(temp));
