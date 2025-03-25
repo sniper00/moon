@@ -29,6 +29,7 @@ workspace "Server"
         warnings "Extra"
         cdialect "C11"
         buildoptions{"/experimental:c11atomics"}
+        staticruntime "on"
 
     filter { "system:linux" }
         warnings "High"
@@ -110,7 +111,7 @@ project "moon"
         links{"dl","pthread","stdc++fs"}
         linkoptions {
             "-static-libstdc++ -static-libgcc",
-            "-Wl,--as-needed,-rpath=./"
+            "-Wl,-E,--as-needed,-rpath=./"
         }
     filter {"system:macosx"}
         links{"dl","pthread"}
