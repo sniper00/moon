@@ -48,7 +48,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 # Documents
   
-  https://github.com/sniper00/moon/wiki
+  [Doc](https://homrua.com/docs/intro)
 
 
 # Quick Start
