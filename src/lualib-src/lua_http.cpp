@@ -21,7 +21,8 @@ static int lhttp_parse_request(lua_State* L) {
 
     lua_createtable(L, 0, 8);
     luaL_rawsetfield(L, -3, "method", lua_pushlstring(L, method.data(), method.size()));
-    luaL_rawsetfield(L, -3, "path", lua_pushlstring(L, path.data(), path.size()));
+    auto urlpath = http::percent::decode(path);
+    luaL_rawsetfield(L, -3, "path", lua_pushlstring(L, urlpath.data(), urlpath.size()));
     luaL_rawsetfield(
         L,
         -3,
