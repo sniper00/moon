@@ -2,7 +2,7 @@
 // use_future.hpp
 // ~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2025 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -73,15 +73,6 @@ public:
   {
   }
 
-#if !defined(ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use rebind().) Specify an alternate allocator.
-  template <typename OtherAllocator>
-  use_future_t<OtherAllocator> operator[](const OtherAllocator& allocator) const
-  {
-    return use_future_t<OtherAllocator>(allocator);
-  }
-#endif // !defined(ASIO_NO_DEPRECATED)
-
   /// Specify an alternate allocator.
   template <typename OtherAllocator>
   use_future_t<OtherAllocator> rebind(const OtherAllocator& allocator) const
@@ -99,7 +90,7 @@ public:
   /**
    * The @c package function is used to adapt a function object as a packaged
    * task. When this adapter is passed as a completion token to an asynchronous
-   * operation, the result of the function object is retuned via a std::future.
+   * operation, the result of the function object is returned via a std::future.
    *
    * @par Example
    *
@@ -145,7 +136,7 @@ private:
 /**
  * See the documentation for asio::use_future_t for a usage example.
  */
-constexpr use_future_t<> use_future;
+ASIO_INLINE_VARIABLE constexpr use_future_t<> use_future;
 
 } // namespace asio
 
