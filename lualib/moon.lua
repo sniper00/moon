@@ -132,7 +132,8 @@ end
 --- @param receiver integer @ The service ID of the receiver.
 --- @param data? string|buffer_ptr @ The message content.
 --- @param session? integer @ The session ID.
-function moon.raw_send(PTYPE, receiver, data, session)
+--- @param sender? integer @ The dummy sender's service ID.
+function moon.raw_send(PTYPE, receiver, data, session, sender)
     local p = protocol[PTYPE]
     if not p then
         error(string.format("moon send unknown PTYPE[%s] message", PTYPE))
@@ -140,7 +141,7 @@ function moon.raw_send(PTYPE, receiver, data, session)
 
     session = session or 0
 
-    return _send(p.PTYPE, receiver, data, session)
+    return _send(p.PTYPE, receiver, data, session, sender)
 end
 
 ---@class service_params
