@@ -14,30 +14,30 @@
 ---@field parse_query fun(request:HttpRequest):table<string,string>
 ---@field parse_form fun(request:HttpRequest):table<string,string>
 
-local moon = require("moon")
-local json = require("json")
+local moon   = require("moon")
+local json   = require("json")
 local buffer = require("buffer")
 local socket = require("moon.socket")
-local c = require("http.core")
+local c      = require("http.core")
 
 
-local table = table
-local string = string
-local tostring = tostring
-local setmetatable = setmetatable
-local pairs = pairs
-local tointeger = math.tointeger
+local table                   = table
+local string                  = string
+local tostring                = tostring
+local setmetatable            = setmetatable
+local pairs                   = pairs
+local tointeger               = math.tointeger
 
 ---@type fun(params:string):string
-local urlencode = c.urlencode
+local urlencode               = c.urlencode
 ---@type fun(params:string):string
-local urldecode = c.urldecode
+local urldecode               = c.urldecode
 
 local default_timeout <const> = 10000 -- 10s
-local max_pool_num <const> = 10
-local keep_alive_host = {}
+local max_pool_num <const>    = 10
+local keep_alive_host         = {}
 
-local http_status_msg = {
+local http_status_msg         = {
 
     [100] = "Continue",
 
@@ -127,9 +127,9 @@ local http_status_msg = {
 ---@field public body string @ raw body string
 ---@field public json? fun(response:HttpResponse):table @ Returns the json-encoded content of a response, if decode failed return nil and error string. if status_code not 200, return nil
 ---@field public socket_fd? integer @ socket fd if response.headers["connection"]:lower() == "upgrade"
-local http_response = {}
+local http_response           = {}
 
-http_response.__index = http_response
+http_response.__index         = http_response
 
 function http_response.new()
     local o = {}

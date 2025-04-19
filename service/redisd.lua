@@ -1,13 +1,13 @@
-local moon = require("moon")
-local seri = require("seri")
-local json = require("json")
-local buffer = require("buffer")
-local socket = require("moon.socket")
-local redis = require("moon.db.redis")
+local moon     = require("moon")
+local seri     = require("seri")
+local json     = require("json")
+local buffer   = require("buffer")
+local socket   = require("moon.socket")
+local redis    = require("moon.db.redis")
 
 local tbinsert = table.insert
 
-local conf = ...
+local conf     = ...
 
 if conf.name then
     ---@param cmd buffer_shr_ptr

@@ -1,18 +1,18 @@
-local c = require("http.core")
-local json = require "json"
-local internal = require("moon.http.internal")
+local c                   = require("http.core")
+local json                = require "json"
+local internal            = require("moon.http.internal")
 
-local tostring = tostring
-local pairs = pairs
+local tostring            = tostring
+local pairs               = pairs
 
 ---@type fun(params:table):string
 local create_query_string = c.create_query_string
 
 -----------------------------------------------------------------
 
-local M = {}
+local M                   = {}
 
-M.create_query_string = create_query_string
+M.create_query_string     = create_query_string
 
 ---@param url string
 ---@param options? HttpOptions

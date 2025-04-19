@@ -1,86 +1,86 @@
-local moon = require "moon"
-local core = require "sharetable.core"
-local fs = require("fs")
+local moon           = require "moon"
+local core           = require "sharetable.core"
+local fs             = require("fs")
 
 local is_sharedtable = core.is_sharedtable
-local stackvalues = core.stackvalues
+local stackvalues    = core.stackvalues
 
-local conf = ...
+local conf           = ...
 
 local function sharetable_service()
-	local matrix = {}	-- all the matrix
-	local files = {}	-- filename : matrix
-	local clients = {}
+    local matrix = {} -- all the matrix
+    local files = {} -- filename : matrix
+    local clients = {}
 
-	local sharetable = {}
+    local sharetable = {}
 
-	local function close_matrix(m)
-		if m == nil then
-			return
-		end
-		local ptr = m:getptr()
-		local ref = matrix[ptr]
-		if ref == nil or ref.count == 0 then
-			matrix[ptr] = nil
-			m:close()
-		end
-	end
+    local function close_matrix(m)
+        if m == nil then
+            return
+        end
+        local ptr = m:getptr()
+        local ref = matrix[ptr]
+        if ref == nil or ref.count == 0 then
+            matrix[ptr] = nil
+            m:close()
+        end
+    end
 
     function sharetable.loadfile(source, sessionid, filename, ...)
         if conf.dir then
             filename = fs.join(conf.dir, filename)
         end
-		close_matrix(files[filename])
-		local m = core.matrix("@" .. filename, ...)
-		files[filename] = m
-		moon.response("lua", source, sessionid, true)
-	end
+        close_matrix(files[filename])
+        local m = core.matrix("@" .. filename, ...)
+        files[filename] = m
+        moon.response("lua", source, sessionid, true)
+    end
 
-	function sharetable.loadstring(source, sessionid, filename, datasource, ...)
-		close_matrix(files[filename])
-		local m = core.matrix(datasource, ...)
-		files[filename] = m
-		moon.response("lua", source, sessionid)
-	end
+    function sharetable.loadstring(source, sessionid, filename, datasource, ...)
+        close_matrix(files[filename])
+        local m = core.matrix(datasource, ...)
+        files[filename] = m
+        moon.response("lua", source, sessionid)
+    end
 
-	local function query_file(source, filename)
-		local m = files[filename]
-		local ptr = m:getptr()
-		local ref = matrix[ptr]
-		if ref == nil then
-			ref = {
-				filename = filename,
-				count = 0,
-				matrix = m,
-				refs = {},
-			}
-			matrix[ptr] = ref
-		end
-		if ref.refs[source] == nil then
-			ref.refs[source] = true
-			local list = clients[source]
-			if not list then
-				clients[source] = { ptr }
-			else
-				table.insert(list, ptr)
-			end
-			ref.count = ref.count + 1
-		end
-		return ptr
-	end
+    local function query_file(source, filename)
+        local m = files[filename]
+        local ptr = m:getptr()
+        local ref = matrix[ptr]
+        if ref == nil then
+            ref = {
+                filename = filename,
+                count = 0,
+                matrix = m,
+                refs = {},
+            }
+            matrix[ptr] = ref
+        end
+        if ref.refs[source] == nil then
+            ref.refs[source] = true
+            local list = clients[source]
+            if not list then
+                clients[source] = { ptr }
+            else
+                table.insert(list, ptr)
+            end
+            ref.count = ref.count + 1
+        end
+        return ptr
+    end
 
-	function sharetable.query(source, sessionid, filename)
+    function sharetable.query(source, sessionid, filename)
         if conf.dir then
             filename = fs.join(conf.dir, filename)
         end
-		local m = files[filename]
-		if m == nil then
-			moon.response("lua", source, sessionid)
-			return
-		end
-		local ptr = query_file(source, filename)
-		moon.response("lua", source, sessionid, ptr)
-	end
+        local m = files[filename]
+        if m == nil then
+            moon.response("lua", source, sessionid)
+            return
+        end
+        local ptr = query_file(source, filename)
+        moon.response("lua", source, sessionid, ptr)
+    end
 
     function sharetable.queryall(source, sessionid, filelist)
         local tmp = files
@@ -112,110 +112,110 @@ local function sharetable_service()
         moon.response("lua", source, sessionid, t)
     end
 
-	function sharetable.close(source)
-		local list = clients[source]
-		if list then
-			for _, ptr in ipairs(list) do
-				local ref = matrix[ptr]
-				if ref and ref.refs[source] then
-					ref.refs[source] = nil
-					ref.count = ref.count - 1
-					if ref.count == 0 then
-						if files[ref.filename] ~= ref.matrix then
-							-- It's a history version
-							moon.warn(string.format("Delete a version (%s) of %s", ptr, ref.filename))
-							ref.matrix:close()
-							matrix[ptr] = nil
-						end
-					end
-				end
-			end
-			clients[source] = nil
-		end
-		-- no return
-	end
+    function sharetable.close(source)
+        local list = clients[source]
+        if list then
+            for _, ptr in ipairs(list) do
+                local ref = matrix[ptr]
+                if ref and ref.refs[source] then
+                    ref.refs[source] = nil
+                    ref.count = ref.count - 1
+                    if ref.count == 0 then
+                        if files[ref.filename] ~= ref.matrix then
+                            -- It's a history version
+                            moon.warn(string.format("Delete a version (%s) of %s", ptr, ref.filename))
+                            ref.matrix:close()
+                            matrix[ptr] = nil
+                        end
+                    end
+                end
+            end
+            clients[source] = nil
+        end
+        -- no return
+    end
 
-    moon.dispatch("lua",function(sender, session, cmd, ...)
-		sharetable[cmd](sender, session, ...)
-	end)
+    moon.dispatch("lua", function(sender, session, cmd, ...)
+        sharetable[cmd](sender, session, ...)
+    end)
 
     ---sharetable service's 'files' use fs.join(conf.dir, filename)
-	if conf.dir then
-        local list = fs.listdir(conf.dir, 0,".lua")
-        for _,file in ipairs(list) do
+    if conf.dir then
+        local list = fs.listdir(conf.dir, 0, ".lua")
+        for _, file in ipairs(list) do
             local _, name = fs.split(file)
-            sharetable.loadfile(0,0, name)
+            sharetable.loadfile(0, 0, name)
         end
-	end
+    end
 end
 
 if conf and conf.name then
-	sharetable_service()
-	return
+    sharetable_service()
+    return
 end
 
 local function load_service(t, key)
-	if key == "address" then
-		t.address = moon.queryservice("sharetable")
-		return t.address
-	else
-		return nil
-	end
+    if key == "address" then
+        t.address = moon.queryservice("sharetable")
+        return t.address
+    else
+        return nil
+    end
 end
 
 local function report_close(t)
-	local addr = rawget(t, "address")
+    local addr = rawget(t, "address")
     if addr then
         moon.send("lua", addr, "close")
-	end
+    end
 end
 
-local sharetable =  setmetatable ( {} , {
+local sharetable = setmetatable({}, {
     __index = load_service,
-	__gc = report_close,
+    __gc = report_close,
 })
 
 function sharetable.loadfile(filename, ...)
-	return moon.call( "lua", sharetable.address, "loadfile", filename, ...)
+    return moon.call("lua", sharetable.address, "loadfile", filename, ...)
 end
 
 function sharetable.loadstring(filename, source, ...)
-	return moon.call( "lua", sharetable.address, "loadstring", filename, source, ...)
+    return moon.call("lua", sharetable.address, "loadstring", filename, source, ...)
 end
 
 function sharetable.clients()
-	return moon.call( "lua", sharetable.address, "clients")
+    return moon.call("lua", sharetable.address, "clients")
 end
 
 local RECORD = {}
 ---filename: xxx.lua
 function sharetable.query(filename)
-	local newptr, err = moon.call( "lua", sharetable.address, "query", filename)
-	if newptr then
-		local t = core.clone(newptr)
-		local map = RECORD[filename]
-		if not map then
-			map = {}
-			RECORD[filename] = map
-		end
-		map[t] = true
-		return t
+    local newptr, err = moon.call("lua", sharetable.address, "query", filename)
+    if newptr then
+        local t = core.clone(newptr)
+        local map = RECORD[filename]
+        if not map then
+            map = {}
+            RECORD[filename] = map
+        end
+        map[t] = true
+        return t
     end
     return newptr, err
 end
 
 ---@param filelist? string[] @ {xxx.lua,yyy.lua,zzz.lua}
 function sharetable.queryall(filelist)
-    local conf_ptr,err = moon.call( "lua", sharetable.address, "queryall", filelist)
-    assert(conf_ptr,err)
+    local conf_ptr, err = moon.call("lua", sharetable.address, "queryall", filelist)
+    assert(conf_ptr, err)
     local tbconf = {}
     for filename, newptr in pairs(conf_ptr) do
         local t = core.clone(newptr)
-		local map = RECORD[filename]
-		if not map then
-			map = {}
-			RECORD[filename] = map
-		end
+        local map = RECORD[filename]
+        if not map then
+            map = {}
+            RECORD[filename] = map
+        end
         map[t] = true
         tbconf[fs.stem(filename)] = t
     end
@@ -304,7 +304,7 @@ local function resolve_replace(replace_map)
             thread = coroutine.running(),
             func = getnv,
         }
-        for _,v in pairs(internal_types) do
+        for _, v in pairs(internal_types) do
             match_mt(v)
         end
         return match_mt(nil)
@@ -313,11 +313,11 @@ local function resolve_replace(replace_map)
 
     local function match_table(t)
         local keys = false
-        for k,v in next, t do
+        for k, v in next, t do
             local tk = type(k)
             if match[tk] then
                 keys = keys or {}
-                keys[#keys+1] = k
+                keys[#keys + 1] = k
             end
 
             local nv = replace_map[v]
@@ -360,7 +360,7 @@ local function resolve_replace(replace_map)
     local function match_funcinfo(info)
         local func = info.func
         local nups = info.nups
-        for i=1,nups do
+        for i = 1, nups do
             local name, upv = getupvalue(func, i)
             local nv = replace_map[upv]
             if nv then
@@ -401,7 +401,7 @@ local function resolve_replace(replace_map)
         -- match stackvalues
         local values = {}
         local n = stackvalues(co, values)
-        for i=1,n do
+        for i = 1, n do
             local v = values[i]
             match_value(v)
         end
@@ -448,20 +448,20 @@ end
 
 
 function sharetable.update(...)
-	local names = {...}
-	local replace_map = {}
-	for _, name in ipairs(names) do
-		local map = RECORD[name]
-		if map then
-			local new_t = sharetable.query(name)
-			for old_t,_ in pairs(map) do
-				if old_t ~= new_t then
-					insert_replace(old_t, new_t, replace_map)
+    local names = { ... }
+    local replace_map = {}
+    for _, name in ipairs(names) do
+        local map = RECORD[name]
+        if map then
+            local new_t = sharetable.query(name)
+            for old_t, _ in pairs(map) do
+                if old_t ~= new_t then
+                    insert_replace(old_t, new_t, replace_map)
                     map[old_t] = nil
-				end
-			end
-		end
-	end
+                end
+            end
+        end
+    end
 
     if next(replace_map) then
         resolve_replace(replace_map)
@@ -469,4 +469,3 @@ function sharetable.update(...)
 end
 
 return sharetable
-

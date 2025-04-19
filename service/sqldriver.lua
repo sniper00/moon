@@ -1,9 +1,9 @@
-local moon = require("moon")
-local buffer = require("buffer")
-local json = require("json")
+local moon     = require("moon")
+local buffer   = require("buffer")
+local json     = require("json")
 local tbinsert = table.insert
 
-local conf = ...
+local conf     = ...
 
 if conf.name then
     local socket = require("moon.socket")
@@ -29,7 +29,7 @@ if conf.name then
                 else
                     --- Query succeeded, but there may be SQL errors
                     if sessionid == 0 and code then
-                        moon.error(moon.escape_print(buffer.unpack(sql)) ..  "\n" ..table.tostring(res))
+                        moon.error(moon.escape_print(buffer.unpack(sql)) .. "\n" .. table.tostring(res))
                     else
                         moon.response("lua", sender, sessionid, res)
                     end
@@ -68,17 +68,17 @@ if conf.name then
 
     local pool = {}
 
-    for _=1,db_pool_size do
-        local one = {queue = list.new(), running = false, db = false}
-        tbinsert(pool,one)
+    for _ = 1, db_pool_size do
+        local one = { queue = list.new(), running = false, db = false }
+        tbinsert(pool, one)
     end
 
     local function execute(sender, sessionid, args)
         local hash = args[2]
-        hash = hash%db_pool_size + 1
+        hash = hash % db_pool_size + 1
         --print(moon.name, "db hash", hash, db_pool_size)
         local ctx = pool[hash]
-        list.push(ctx.queue, {clone(args[3]), sender, sessionid})
+        list.push(ctx.queue, { clone(args[3]), sender, sessionid })
         if ctx.running then
             return
         end
@@ -111,25 +111,24 @@ if conf.name then
 
     function command.len()
         local res = {}
-        for _,v in ipairs(pool) do
-            res[#res+1] = list.size(v.queue)
+        for _, v in ipairs(pool) do
+            res[#res + 1] = list.size(v.queue)
         end
         return res
     end
 
     function command.save_then_quit()
         moon.async(function()
-
             while true do
                 local all = true
-                for _,v in ipairs(pool) do
+                for _, v in ipairs(pool) do
                     if list.front(v.queue) then
                         all = false
                         print("wait_all_send", _, list.size(v.queue))
                         break
                     end
                 end
-    
+
                 if not all then
                     moon.sleep(1000)
                 else
@@ -171,7 +170,7 @@ if conf.name then
                 end)
             end
         else
-            moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
+            moon.error(moon.name, "recv unknown cmd " .. tostring(cmd))
         end
     end)
 else
@@ -195,4 +194,3 @@ end
 ---@class sqlclient
 ---@field public execute fun(db:integer, sql:string|string[], hash?:integer)
 ---@field public query fun(db:integer, sql:string|string[], hash?:integer):pg_result
-

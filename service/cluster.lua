@@ -1,15 +1,14 @@
-local moon = require("moon")
-local seri = require("seri")
+local moon   = require("moon")
+local seri   = require("seri")
 local buffer = require("buffer")
 
-local conf = ...
+local conf   = ...
 
-local pack = seri.pack
+local pack   = seri.pack
 
-local NODE = math.tointeger(moon.env("NODE"))
+local NODE   = math.tointeger(moon.env("NODE"))
 
 local function cluster_service()
-
     local json = require("json")
     local socket = require("moon.socket")
     local httpc = require("moon.http.client")
@@ -28,27 +27,27 @@ local function cluster_service()
     local close_watch = {}
     local send_watch = {}
 
-    local function add_send_watch( fd, sender, sessionid )
+    local function add_send_watch(fd, sender, sessionid)
         local senders = send_watch[fd]
         if not senders then
             senders = {}
             send_watch[fd] = senders
         end
-        senders[sessionid.."-"..sender] = moon.time()
+        senders[sessionid .. "-" .. sender] = moon.time()
     end
 
-    local function remove_send_watch( fd, sender, sessionid )
+    local function remove_send_watch(fd, sender, sessionid)
         local senders = send_watch[fd]
         if not senders then
             assert(false)
             return
         end
 
-        senders[sessionid.."-"..sender] = nil
+        senders[sessionid .. "-" .. sender] = nil
         return true
     end
 
-    local services_address = setmetatable ({} , {
+    local services_address = setmetatable({}, {
         __index = function(t, key)
             local addr = moon.queryservice(key)
             if addr == 0 then
@@ -59,14 +58,14 @@ local function cluster_service()
         end
     })
 
-    socket.on("connect",function(fd, msg)
+    socket.on("connect", function(fd, msg)
         print("connect", fd, moon.decode(msg, "Z"))
-        socket.set_enable_chunked(fd,"wr")
+        socket.set_enable_chunked(fd, "wr")
     end)
 
-    socket.on("accept",function(fd, msg)
+    socket.on("accept", function(fd, msg)
         socket.settimeout(fd, 180)
-        socket.set_enable_chunked(fd,"wr")
+        socket.set_enable_chunked(fd, "wr")
         print("accept", fd, moon.decode(msg, "Z"))
     end)
 
@@ -75,17 +74,18 @@ local function cluster_service()
         ---@type cluster_header
         local header = unpack_one(buf, true)
         if header.ping then
-            socket.write(fd, pack({pong = true}))
+            socket.write(fd, pack({ pong = true }))
             return
         elseif header.pong then
             return
         end
 
         if header.session < 0 then -- receive call message
-            moon.async(function ()
+            moon.async(function()
                 local address = services_address[header.to_sname]
                 if not address then
-                    local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname, header.to_node)
+                    local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname,
+                        header.to_node)
                     header.session = -header.session
                     socket.write(fd, pack(header, false, message)) -- response to sender node
                     moon.error("An error occurred while receiving the cluster.call message:", message)
@@ -100,11 +100,12 @@ local function cluster_service()
             if remove_send_watch(fd, header.from_addr, header.session) then
                 redirect(msg, header.from_addr, moon.PTYPE_LUA, moon.id, header.session)
             end
-        else-- receive send message
+        else -- receive send message
             local address = services_address[header.to_sname]
             if not address then
-                local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname, header.to_node)
-                moon.error("An error occurred while receiving the cluster.send message:",message)
+                local message = string.format("Service named '%s' not found for node '%s'.", header.to_sname,
+                    header.to_node)
+                moon.error("An error occurred while receiving the cluster.send message:", message)
                 return
             end
             redirect(msg, address, moon.PTYPE_LUA)
@@ -122,7 +123,7 @@ local function cluster_service()
         local senders = send_watch[fd]
         if senders then
             for key in pairs(senders) do
-                local arr = string.split(key,"-")
+                local arr = string.split(key, "-")
                 local sessionid = tonumber(arr[1])
                 local sender = tonumber(arr[2])
                 print("response to sender service", sender, sessionid)
@@ -132,7 +133,7 @@ local function cluster_service()
         end
         send_watch[fd] = nil
 
-        for _,v in pairs(clusters) do
+        for _, v in pairs(clusters) do
             if v.fd == fd then
                 v.fd = false
                 break
@@ -156,32 +157,32 @@ local function cluster_service()
     local lock = require("moon.queue")()
 
     function command.Listen()
-
-        local response = httpc.get(string.format(conf.url,NODE))
+        local response = httpc.get(string.format(conf.url, NODE))
         if response.status_code ~= 200 then
-            error("can not found cluster config for node="..NODE)
+            error("can not found cluster config for node=" .. NODE)
         end
 
         local c = json.decode(response.body)
         assert(c.host and c.port, "require host and port")
 
-        local listenfd = socket.listen(c.host, c.port,moon.PTYPE_SOCKET_MOON)
+        local listenfd = socket.listen(c.host, c.port, moon.PTYPE_SOCKET_MOON)
         socket.start(listenfd)
         print(strfmt("cluster listen %s:%d", c.host, c.port))
-        setmetatable(clusters, {__gc=function()
-            socket.close(listenfd)
-        end})
+        setmetatable(clusters, {
+            __gc = function()
+                socket.close(listenfd)
+            end
+        })
         return true
     end
 
     function command.Request(msg)
-
         local buf = moon.decode(msg, "L")
 
         ---@type cluster_header
         local header = unpack_one(buf)
 
-		local shr = buffer.to_shared(buf)
+        local shr = buffer.to_shared(buf)
         local c = clusters[header.to_node]
         if c and c.fd and socket.write(c.fd, shr) then
             if header.session < 0 then
@@ -197,7 +198,7 @@ local function cluster_service()
 
         local data = buffer.unpack(buf)
 
-        local scope<close> = lock()
+        local scope <close> = lock()
 
         c = clusters[header.to_node]
         if not c or not c.fd then
@@ -228,7 +229,7 @@ local function cluster_service()
             return
         else
             --CASE1:connect failed, mode-call, 返回错误信息
-            moon.response("lua", header.from_addr, header.session, false, "connect failed:"..tostring(header.to_node))
+            moon.response("lua", header.from_addr, header.session, false, "connect failed:" .. tostring(header.to_node))
             return
         end
     end
@@ -236,10 +237,10 @@ local function cluster_service()
     moon.async(function()
         while true do
             moon.sleep(5000)
-            for _,senders in pairs(send_watch) do
+            for _, senders in pairs(send_watch) do
                 for key, t in pairs(senders) do
                     if moon.time() - t > 10 then
-                        local arr = string.split(key,"-")
+                        local arr = string.split(key, "-")
                         local sessionid = tonumber(arr[1])
                         local sender = tonumber(arr[2])
                         ---@diagnostic disable-next-line: param-type-mismatch
@@ -251,7 +252,7 @@ local function cluster_service()
 
             for _, v in pairs(clusters) do
                 if v.fd then
-                    socket.write(v.fd, pack({ping = true}))
+                    socket.write(v.fd, pack({ ping = true }))
                 end
             end
         end
@@ -277,9 +278,9 @@ local function cluster_service()
                 end
             else
                 if session == 0 then
-                    moon.error(moon.name, "recv unknown cmd "..tostring(cmd))
+                    moon.error(moon.name, "recv unknown cmd " .. tostring(cmd))
                 else
-                    moon.response("lua", sender, session, false, moon.name.." recv unknown cmd "..tostring(cmd))
+                    moon.response("lua", sender, session, false, moon.name .. " recv unknown cmd " .. tostring(cmd))
                 end
             end
         end, m)
@@ -313,7 +314,7 @@ local cluster_address
 function cluster.send(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
-        assert(cluster_address>0)
+        assert(cluster_address > 0)
     end
 
     local header = {
@@ -333,7 +334,7 @@ end
 function cluster.call(receiver_node, receiver_sname, ...)
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
-        assert(cluster_address>0)
+        assert(cluster_address > 0)
     end
 
     local session = moon.next_sequence()

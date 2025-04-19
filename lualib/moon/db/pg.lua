@@ -1,34 +1,34 @@
-local moon = require("moon")
-local buffer = require("buffer")
-local socket = require("moon.socket")
+local moon         = require("moon")
+local buffer       = require("buffer")
+local socket       = require("moon.socket")
 
-local concat = buffer.concat
-local bsize = buffer.size
-local wfront = buffer.write_front
-local wback = buffer.write_back
+local concat       = buffer.concat
+local bsize        = buffer.size
+local wfront       = buffer.write_front
+local wback        = buffer.write_back
 
-local socket_error = setmetatable({}, {__tostring = function() return "[Error: socket]" end })	-- alias for error object
+local socket_error = setmetatable({}, { __tostring = function() return "[Error: socket]" end }) -- alias for error object
 
-local md5 = moon.md5
+local md5          = moon.md5
 
-local NULL = "\000"
+local NULL         = "\000"
 
-local insert = table.insert
+local insert       = table.insert
 
-local strpack = string.pack
-local strunpack = string.unpack
-local strsub = string.sub
+local strpack      = string.pack
+local strunpack    = string.unpack
+local strsub       = string.sub
 
-local type = type
-local assert = assert
+local type         = type
+local assert       = assert
 
-local tointeger = math.tointeger
-local tonumber = tonumber
+local tointeger    = math.tointeger
+local tonumber     = tonumber
 
 local convert_null = true
 
 local flipped
-flipped = function(t)
+flipped            = function(t)
     local keys
     do
         local _accum_0 = {}
@@ -46,41 +46,41 @@ flipped = function(t)
     return t
 end
 
-local MSG_TYPE =
+local MSG_TYPE     =
     flipped(
-    {
-        status = "S",
-        auth = "R",
-        backend_key = "K",
-        ready_for_query = "Z",
-        query = "Q",
-        notice = "N",
-        notification = "A",
-        password = "p",
-        row_description = "T",
-        data_row = "D",
-        command_complete = "C",
-        error = "E"
-    }
-)
+        {
+            status = "S",
+            auth = "R",
+            backend_key = "K",
+            ready_for_query = "Z",
+            query = "Q",
+            notice = "N",
+            notification = "A",
+            password = "p",
+            row_description = "T",
+            data_row = "D",
+            command_complete = "C",
+            error = "E"
+        }
+    )
 
-local ERROR_TYPES =
+local ERROR_TYPES  =
     flipped(
-    {
-        severity = "S",
-        code = "C",
-        message = "M",
-        position = "P",
-        detail = "D",
-        schema = "s",
-        table = "t",
-        constraint = "n"
-    }
-)
+        {
+            severity = "S",
+            code = "C",
+            message = "M",
+            position = "P",
+            detail = "D",
+            schema = "s",
+            table = "t",
+            constraint = "n"
+        }
+    )
 
-local PG_TYPES = {
+local PG_TYPES     = {
     ---"boolean"
-    [16] =  function(value)
+    [16] = function(value)
         return value == "t"
     end,
     -- [17] = "bytea",
@@ -129,7 +129,7 @@ end
 
 local function receive_message(self)
     if not self.sock then
-        return socket_error,"not connect"
+        return socket_error, "not connect"
     end
     socket.settimeout(self.sock, 10)
     local header, err, content
@@ -152,7 +152,7 @@ end
 
 local function send_message(self, t, data)
     local buf = concat(data)
-    wfront(buf, t, strpack(">I", bsize(buf)+4))
+    wfront(buf, t, strpack(">I", bsize(buf) + 4))
     socket.write(self.sock, buf)
 end
 
@@ -181,20 +181,20 @@ local function send_startup_message(self)
 end
 
 local function parse_error(err_msg)
-	local db_error = { }
-	local offset = 1
-	while offset <= #err_msg do
-		local t = err_msg:sub(offset, offset)
-		local str = err_msg:match("[^%z]+", offset + 1)
-		if not (str) then
-			break
-		end
-		offset = offset + (2 + #str)
-		local field = ERROR_TYPES[t]
-		if field then
-			db_error[field] = str
-		end
-	end
+    local db_error = {}
+    local offset = 1
+    while offset <= #err_msg do
+        local t = err_msg:sub(offset, offset)
+        local str = err_msg:match("[^%z]+", offset + 1)
+        if not (str) then
+            break
+        end
+        offset = offset + (2 + #str)
+        local field = ERROR_TYPES[t]
+        if field then
+            db_error[field] = str
+        end
+    end
     return db_error
 end
 
@@ -276,10 +276,10 @@ local function wait_until_ready(self)
             disconnect(self)
             return false, parse_error(msg)
         end
-		if MSG_TYPE.ready_for_query == t then
+        if MSG_TYPE.ready_for_query == t then
             break
         end
-	end
+    end
     return true
 end
 
@@ -312,7 +312,7 @@ end
 function pg.connect(opts)
     local sock, err = socket.connect(opts.host, opts.port, moon.PTYPE_SOCKET_TCP, opts.connect_timeout)
     if not sock then
-        return {code = "SOCKET", message = err}
+        return { code = "SOCKET", message = err }
     end
 
     local obj = table.deepcopy(opts)
@@ -324,26 +324,26 @@ function pg.connect(opts)
 
     success, err = auth(obj)
     if success == socket_error then
-        return {code = "SOCKET", message = err}
+        return { code = "SOCKET", message = err }
     end
 
     if not success then
         if type(err) == "table" then
             return err
         end
-        return {code = "AUTH", message = err}
+        return { code = "AUTH", message = err }
     end
 
     success, err = wait_until_ready(obj)
     if success == socket_error then
-        return {code = "SOCKET", message = err}
+        return { code = "SOCKET", message = err }
     end
 
     if not success then
         if type(err) == "table" then
             return err
         end
-        return {code = "AUTH", message = err}
+        return { code = "AUTH", message = err }
     end
 
     return setmetatable(obj, pg)
@@ -396,7 +396,7 @@ local function parse_row_desc(row_desc)
         local data_type = decode_int(row_desc:sub(offset + 6, offset + 9))
         --data_type = PG_TYPES[data_type] or "string"
         local format = decode_short(row_desc:sub(offset + 16, offset + 17))
-        if 0~=format then
+        if 0 ~= format then
             error("don't know how to handle format")
         end
         offset = offset + 18
@@ -411,7 +411,7 @@ end
 
 local function parse_row_data(data_row, fields)
     local tupnfields = decode_short(data_row:sub(1, 2))
-    if tupnfields~=#fields then
+    if tupnfields ~= #fields then
         error('unexpected field count in \"D\" message')
     end
 
@@ -484,7 +484,7 @@ local function format_query_result(row_desc, data_rows, command_complete)
 end
 
 function pg.pack_query_buffer(buf)
-    wfront(buf, MSG_TYPE.query, strpack(">I", bsize(buf)+4+#NULL))
+    wfront(buf, MSG_TYPE.query, strpack(">I", bsize(buf) + 4 + #NULL))
     wback(buf, NULL)
 end
 
@@ -492,7 +492,7 @@ end
 ---@return pg_result
 function pg.query(self, sql)
     if type(sql) == "string" then
-        send_message(self, MSG_TYPE.query, {sql, NULL})
+        send_message(self, MSG_TYPE.query, { sql, NULL })
     else
         socket.write(self.sock, sql)
     end
@@ -502,7 +502,7 @@ function pg.query(self, sql)
     while true do
         local t, msg = receive_message(self)
         if t == socket_error then
-            return {code = "SOCKET", message = msg}
+            return { code = "SOCKET", message = msg }
         end
         local _exp_0 = t
         if MSG_TYPE.data_row == _exp_0 then

@@ -1,10 +1,10 @@
-local moon = require("moon")
-local buffer = require("buffer")
-local fs = require("fs")
-local socket = require("moon.socket")
-local internal = require("moon.http.internal")
+local moon          = require("moon")
+local buffer        = require("buffer")
+local fs            = require("fs")
+local socket        = require("moon.socket")
+local internal      = require("moon.http.internal")
 
-local assert = assert
+local assert        = assert
 local http_response = internal.http_response
 
 
