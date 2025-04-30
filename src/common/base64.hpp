@@ -43,7 +43,7 @@
 #include <cctype>
 #include <string>
 #include <utility>
-
+#include <vector>
 namespace moon {
 
 namespace base64 {
@@ -201,16 +201,16 @@ inline std::string base64_encode(std::string const& s) {
 }
 
 template<class = void>
-std::string base64_decode(char const* data, std::size_t len) {
-    std::string dest;
+std::vector<uint8_t> base64_decode(char const* data, std::size_t len) {
+    std::vector<uint8_t> dest;
     dest.resize(base64::decoded_size(len));
-    auto const result = base64::decode(&dest[0], data, len);
+    auto const result = base64::decode(reinterpret_cast<char*>(dest.data()), data, len);
     dest.resize(result.first);
     return dest;
 }
 
 template<class = void>
-std::string base64_decode(std::string const& data) {
+std::vector<uint8_t> base64_decode(std::string const& data) {
     return base64_decode(data.data(), data.size());
 }
 } // namespace moon

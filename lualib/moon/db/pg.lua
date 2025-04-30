@@ -1,5 +1,6 @@
 local moon         = require("moon")
 local buffer       = require("buffer")
+local scram_sha256 = require("crypto.scram")
 local socket       = require("moon.socket")
 
 local concat       = buffer.concat
@@ -28,22 +29,13 @@ local tonumber     = tonumber
 local convert_null = true
 
 local flipped
-flipped            = function(t)
-    local keys
-    do
-        local _accum_0 = {}
-        local _len_0 = 1
-        for k in pairs(t) do
-            _accum_0[_len_0] = k
-            _len_0 = _len_0 + 1
-        end
-        keys = _accum_0
+flipped = function(t)
+    local flipped_t = {}
+    for k, v in pairs(t) do
+        flipped_t[v] = k
+        flipped_t[k] = v
     end
-    for _index_0 = 1, #keys do
-        local key = keys[_index_0]
-        t[t[key]] = key
-    end
-    return t
+    return flipped_t
 end
 
 local MSG_TYPE     =
@@ -139,9 +131,8 @@ local function receive_message(self)
         disconnect(self)
         return socket_error, "receive_message: failed to get header: " .. tostring(err)
     end
-    local t = strsub(header, 1, 1)
-    local len = strunpack(">i", header, 2) - 4
-    content, err = socket.read(self.sock, len)
+    local t, len = strunpack(">c1i", header)
+    content, err = socket.read(self.sock, len-4)
     if not content then
         disconnect(self)
         return socket_error, err
@@ -159,37 +150,33 @@ end
 local function send_startup_message(self)
     assert(self.user, "missing user for connect")
     assert(self.database, "missing database for connect")
-    local data = {
+    local startup_message = buffer.concat_string(
         encode_int(196608),
-        "user",
-        NULL,
-        self.user,
-        NULL,
-        "database",
-        NULL,
-        self.database,
-        NULL,
-        "application_name",
-        NULL,
-        "moon",
-        NULL,
+        "user", NULL, self.user, NULL,
+        "database", NULL, self.database, NULL,
+        "application_name", NULL, "moon", NULL,
         NULL
-    }
-
-    local startup_message = buffer.concat_string(data)
+    )
     socket.write(self.sock, buffer.concat_string(encode_int(#startup_message + 4), startup_message))
 end
 
 local function parse_error(err_msg)
     local db_error = {}
     local offset = 1
-    while offset <= #err_msg do
-        local t = err_msg:sub(offset, offset)
-        local str = err_msg:match("[^%z]+", offset + 1)
-        if not (str) then
+    local err_len = #err_msg
+    while offset < err_len do -- Stop before the final null terminator
+        local t = strsub(err_msg, offset, offset) -- Get the type code byte
+        offset = offset + 1 -- Move past the type code
+
+        local null_pos = string.find(err_msg, NULL, offset, true) -- Find the next null terminator
+        if not null_pos then
+            -- Malformed error message, stop parsing
             break
         end
-        offset = offset + (2 + #str)
+
+        local str = strsub(err_msg, offset, null_pos - 1) -- Extract the value string
+        offset = null_pos + 1 -- Move past the null terminator for the next iteration
+
         local field = ERROR_TYPES[t]
         if field then
             db_error[field] = str
@@ -203,13 +190,35 @@ local function check_auth(self)
     if t == socket_error then
         return socket_error, msg
     end
-    local _exp_0 = t
-    if MSG_TYPE.error == _exp_0 then
+
+    if MSG_TYPE.error == t then
         return false, parse_error(msg)
-    elseif MSG_TYPE.auth == _exp_0 then
-        return true
+    elseif MSG_TYPE.auth == t then
+        -- Authentication message 'R' received. Check the status code.
+        if #msg < 4 then
+             return false, "Received truncated Authentication message (R)"
+        end
+        local auth_status = decode_int(msg:sub(1, 4))
+        if auth_status == 0 then
+            -- AuthenticationOk
+            return true
+        else
+            -- Authentication failed (specific status code indicates reason, but we treat any non-zero as failure here)
+            -- Attempt to parse the rest of the message as an error, although format isn't guaranteed
+            local err_detail = "Authentication failed with status code: " .. auth_status
+            -- Try parsing remaining msg as error fields if possible, otherwise just return the code
+            if #msg > 4 then
+                 local potential_error = parse_error(msg:sub(5))
+                 if next(potential_error) then -- Check if parse_error found anything
+                      potential_error.message = potential_error.message or err_detail
+                      return false, potential_error
+                 end
+            end
+            return false, { code = "AUTH", message = err_detail }
+        end
     else
-        return error("unknown response from auth")
+        -- Unexpected message type during final auth check
+        return false, "Unknown or unexpected response during final authentication check: " .. t
     end
 end
 
@@ -241,6 +250,97 @@ local function md5_auth(self, msg)
     return check_auth(self)
 end
 
+local function scram_sha_256_auth(self, msg)
+    assert(self.password, "the database is requesting a password for authentication but you did not provide a password")
+
+    if msg:match("SCRAM%-SHA%-256%-PLUS") then
+        error("unsupported SCRAM mechanism name: " .. tostring(msg))
+    elseif msg:match("SCRAM%-SHA%-256") then
+    else
+        error("unsupported SCRAM mechanism name: " .. tostring(msg))
+    end
+
+    -- 1. Create SCRAM client instance
+    local scram_client = scram_sha256.new(self.user, self.password)
+
+    -- 2. Prepare and send client-first-message
+    local gs2_header = "n,,"
+    local client_first_message = gs2_header .. scram_client:prepare_first_message()
+    local mechanism_name = "SCRAM-SHA-256" .. NULL
+    send_message(
+        self,
+        MSG_TYPE.password, -- SASLInitial message uses 'p' type
+        {
+            mechanism_name,
+            encode_int(#client_first_message), -- Length of client_first_message
+            client_first_message
+        }
+    )
+
+    -- 3. Receive server-first-message (AuthenticationSASLContinue)
+    local t, server_msg = receive_message(self)
+    if t == socket_error then
+        return socket_error, server_msg
+    elseif t == MSG_TYPE.error then
+        return false, parse_error(server_msg)
+    elseif t ~= MSG_TYPE.auth then
+        return false, "Unexpected message type during SCRAM auth (expected Auth/R): " .. t
+    end
+
+    -- Check AuthenticationSASLContinue indicator (11)
+    local auth_indicator = strunpack(">i", server_msg)
+    if auth_indicator ~= 11 then
+        return false, "Unexpected SASL auth indicator (expected 11): " .. tostring(auth_indicator)
+    end
+    local server_first_message = server_msg:sub(5) -- Extract server-first data
+
+    -- 4. Process server-first-message
+    scram_client:process_server_first(server_first_message)
+
+    -- 5. Prepare and send client-final-message (SASLResponse)
+    local client_final_message = scram_client:prepare_final_message()
+    -- Log the exact message being sent
+    -- print(string.format("Sending ClientFinal Payload: [%s]", client_final_message))
+    -- Wrap client_final_message in a table for send_message
+    send_message(
+        self,
+        MSG_TYPE.password, -- SASLResponse message also uses 'p' type
+        {
+            client_final_message
+        }
+    )
+
+    -- 6. Receive server-final-message (AuthenticationSASLFinal)
+    t, server_msg = receive_message(self)
+    if t == socket_error then
+        return socket_error, server_msg
+    elseif t == MSG_TYPE.error then
+        return false, parse_error(server_msg)
+    elseif t ~= MSG_TYPE.auth then
+        return false, "Unexpected message type during SCRAM auth (expected Auth/R): " .. t
+    end
+
+    ---@cast server_msg string
+
+    -- Check AuthenticationSASLFinal indicator (12)
+    auth_indicator = strunpack(">i", server_msg)
+    if auth_indicator ~= 12 then
+        return false, "Unexpected SASL auth indicator (expected 12): " .. tostring(auth_indicator)
+    end
+    local server_final_message = server_msg:sub(5) -- Extract server-final data
+
+    -- 7. Process server-final-message (verifies server signature)
+    scram_client:process_server_final(server_final_message)
+
+    -- 8. Check authentication status
+    if not scram_client:is_authenticated() then
+        return false, "SCRAM-SHA-256 authentication failed (client check)"
+    end
+
+    -- 9. Wait for AuthenticationOk (R message with 0)
+    return check_auth(self) -- check_auth expects the final R(0) message
+end
+
 local function auth(self)
     local t, msg = receive_message(self)
     if t == socket_error then
@@ -261,6 +361,8 @@ local function auth(self)
         return cleartext_auth(self)
     elseif 5 == _exp_0 then
         return md5_auth(self, msg)
+    elseif 10 == _exp_0 then
+        return scram_sha_256_auth(self, msg)
     else
         return error(string.format("don't know how to auth, auth_type: %s.", auth_type))
     end
@@ -315,7 +417,11 @@ function pg.connect(opts)
         return { code = "SOCKET", message = err }
     end
 
-    local obj = table.deepcopy(opts)
+    -- Shallow copy opts and add sock
+    local obj = {}
+    for k, v in pairs(opts) do
+        obj[k] = v
+    end
     obj.sock = sock
 
     send_startup_message(obj)
@@ -325,25 +431,17 @@ function pg.connect(opts)
     success, err = auth(obj)
     if success == socket_error then
         return { code = "SOCKET", message = err }
-    end
-
-    if not success then
-        if type(err) == "table" then
-            return err
-        end
-        return { code = "AUTH", message = err }
+    elseif not success then
+        disconnect(obj) -- Ensure socket is closed on auth failure
+        return type(err) == "table" and err or { code = "AUTH", message = err }
     end
 
     success, err = wait_until_ready(obj)
     if success == socket_error then
         return { code = "SOCKET", message = err }
-    end
-
-    if not success then
-        if type(err) == "table" then
-            return err
-        end
-        return { code = "AUTH", message = err }
+    elseif not success then
+        -- disconnect() is called within wait_until_ready on its error path already
+        return type(err) == "table" and err or { code = "AUTH", message = err }
     end
 
     return setmetatable(obj, pg)
@@ -390,19 +488,37 @@ local function parse_row_desc(row_desc)
     local num_fields = decode_short(row_desc:sub(1, 2))
     local offset = 3
     local fields = {}
-    for _ = 1, num_fields do
-        local name = row_desc:match("[^%z]+", offset)
-        offset = offset + #name + 1
-        local data_type = decode_int(row_desc:sub(offset + 6, offset + 9))
-        --data_type = PG_TYPES[data_type] or "string"
-        local format = decode_short(row_desc:sub(offset + 16, offset + 17))
-        if 0 ~= format then
-            error("don't know how to handle format")
+    local row_desc_len = #row_desc
+    for i = 1, num_fields do
+        local null_pos = string.find(row_desc, NULL, offset, true) -- Find null terminator
+        if not null_pos then
+             error("Invalid row description format: missing null terminator for field name at offset " .. offset)
         end
-        offset = offset + 18
+        local name = strsub(row_desc, offset, null_pos - 1)
+        offset = null_pos + 1 -- Move past the null terminator
+
+        -- Ensure enough bytes remain for the rest of the field info (18 bytes)
+        if offset + 17 > row_desc_len then
+             error("Invalid row description format: not enough data for field info for field '" .. name .. "'")
+        end
+
+        -- table_id = decode_int(row_desc:sub(offset, offset + 3)) -- Not used
+        -- column_id = decode_short(row_desc:sub(offset + 4, offset + 5)) -- Not used
+        local data_type = decode_int(row_desc:sub(offset + 6, offset + 9))
+        -- data_type_size = decode_short(row_desc:sub(offset + 10, offset + 11)) -- Not used
+        -- type_modifier = decode_int(row_desc:sub(offset + 12, offset + 15)) -- Not used
+        local format = decode_short(row_desc:sub(offset + 16, offset + 17))
+
+        if 0 ~= format then
+            -- Only text format (0) is handled currently
+            error("don't know how to handle non-text format code: " .. format)
+        end
+        offset = offset + 18 -- Move past the 18-byte field info block
+        -- Store name, type OID, and the pre-looked-up converter function
         local info = {
-            name,
-            data_type
+            name = name,
+            type_oid = data_type,
+            converter = PG_TYPES[data_type]
         }
         table.insert(fields, info)
     end
@@ -418,20 +534,21 @@ local function parse_row_data(data_row, fields)
     local out = {}
     local offset = 3
     for i = 1, tupnfields do
-        local field = fields[i]
-        local field_name, field_type = field[1], field[2]
-        local len = decode_int(data_row:sub(offset, offset + 3))
-        offset = offset + 4
-        if len < 0 then
+        local field = fields[i] -- field contains {name=..., type_oid=..., converter=...}
+        local field_name = field.name
+        local len = decode_int(strsub(data_row, offset, offset + 3))
+        offset = offset + 4 -- Move past length
+        if len < 0 then -- Handle NULL value
             if convert_null then
                 out[field_name] = NULL
             end
+            -- No data follows for NULL, so loop continues
         else
-            local value = data_row:sub(offset, offset + len - 1)
-            offset = offset + len
-            local fn = PG_TYPES[field_type]
+            local value = strsub(data_row, offset, offset + len - 1)
+            offset = offset + len -- Move past value data
+            local fn = field.converter -- Use pre-looked-up converter
             if fn then
-                value = fn(value)
+                value = fn(value) -- Apply conversion if available
             end
             out[field_name] = value
         end

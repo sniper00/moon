@@ -341,5 +341,6 @@ void open_custom_libs(lua_State* L) {
     REGISTER_CUSTOM_LIBRARY("uuid", luaopen_uuid);
     REGISTER_CUSTOM_LIBRARY("schema", luaopen_schema);
     REGISTER_CUSTOM_LIBRARY("fmt", luaopen_fmt);
+    REGISTER_CUSTOM_LIBRARY("crypto.scram", luaopen_crypto_scram);
 }
 }

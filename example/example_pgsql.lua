@@ -8,7 +8,7 @@ local db_config = {
     port = 5432,
     database = "postgres",
     user = "postgres",
-    password = "654123", -- only support md5 auth
+    password = "654123",
     connect_timeout = 1000,
 }
 
@@ -514,4 +514,9 @@ moon.async(function()
 
 
     moon.exit(-1)
+end)
+
+moon.shutdown(function ()
+    moon.kill(moon.queryservice("db_game"))
+    moon.quit()
 end)
