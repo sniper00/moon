@@ -44,6 +44,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cstdint>
+
 namespace moon {
 
 namespace base64 {
