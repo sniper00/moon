@@ -19,7 +19,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
       - name: Build
         run: |
-          premake5 build
+          premake5 build --release
       - name: Test
-        run: .\moon.exe example/test/main_test.lua
+        run: premake5 run --release example/test/main_test.lua
 

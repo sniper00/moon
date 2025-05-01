@@ -95,6 +95,16 @@ Moon is a lightweight game server framework based on the actor model. One worker
       premake5 build --release
     ```
 
+4. Run
+    ```shell
+      premake5 run --release example/send_benchmark.lua
+    ```
+
+5. Publish
+   ```shell
+      premake5 publish
+   ```
+
 **If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**
 
 
