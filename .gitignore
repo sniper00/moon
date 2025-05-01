@@ -13,10 +13,11 @@
 *.log
 *.tlog
 *.idb
+*.sln
+Makefile
 .vs/
 .vscode/
-build/bin/
-build/obj/
+build/
 exmaple/log/
 test/twitter-out.json
 
