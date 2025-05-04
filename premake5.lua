@@ -455,6 +455,7 @@ newaction {
         local target_dir = path.join("build", "bin", cfg_name)
         if host == "windows" then
             executable_path = path.join(target_dir, "moon.exe")
+            executable_path = path.translate(executable_path)
         else
             executable_path = path.join(target_dir, "moon")
         end
