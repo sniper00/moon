@@ -26,7 +26,7 @@ namespace crypto {
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             std::random_device random_device;
             std::mt19937 generator(random_device());
-            std::uniform_int_distribution<> distribution(0, nonce_chars.length() - 1);
+            std::uniform_int_distribution<> distribution(0, static_cast<int32_t>(nonce_chars.length()) - 1);
 
             std::string nonce;
             nonce.reserve(length);

@@ -176,7 +176,7 @@ static int lmoon_send(lua_State* L) {
 
     int64_t session = luaL_opt(L, luaL_checkinteger, 4, S->next_sequence());
 
-    int64_t sender = luaL_opt(L, luaL_checkinteger, 5, S->id());
+    auto sender = (uint32_t)luaL_opt(L, luaL_checkinteger, 5, S->id());
 
     S->get_server()->send(sender, receiver, moon_to_buffer(L, 3), session, type);
 
