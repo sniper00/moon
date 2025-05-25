@@ -45,13 +45,13 @@ public:
     void commit(std::size_t n) {
         if (nullptr == buffer_)
             return;
-        buffer_->commit(n);
+        buffer_->commit_unchecked(n);
     }
 
     void consume(std::size_t n) {
         if (nullptr == buffer_)
             return;
-        buffer_->consume(n);
+        buffer_->consume_unchecked(n);
     }
 
 private:

@@ -114,7 +114,7 @@ private:
 
     void hanlde_header() {
         message_size_t header = 0;
-        cache_.read(&header, 1);
+        [[maybe_unused]] bool always_ok = cache_.read(&header, 1);
         net2host(header);
 
         bool fin = (header != MESSAGE_CONTINUED_FLAG);
@@ -131,7 +131,7 @@ private:
             data_ = buffer::make_unique(
                 (fin ? size : static_cast<size_t>(5) * size) + BUFFER_OPTION_CHEAP_PREPEND
             );
-            data_->commit(BUFFER_OPTION_CHEAP_PREPEND);
+            data_->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
         }
 
         // Calculate the difference between the cache size and the expected size
@@ -141,7 +141,7 @@ private:
         // Otherwise, consume the entire cache
         size_t consume_size = (diff >= 0 ? size : cache_.size());
         data_->write_back({cache_.data(), consume_size});
-        cache_.consume(consume_size);
+        cache_.consume_unchecked(consume_size);
 
         if (diff >= 0) {
             handle_body(fin);
@@ -166,7 +166,7 @@ private:
 
     void handle_body(bool fin) {
         if (fin) {
-            data_->seek(BUFFER_OPTION_CHEAP_PREPEND);
+            data_->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
             handle_message(message { type_,
                                      0,
                                      static_cast<uint8_t>(socket_data_type::socket_recv),

@@ -172,19 +172,21 @@ static int lfs_abspath(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_fs(lua_State* L) {
-    luaL_Reg l[] = { { "listdir", lfs_listdir },
-                     { "isdir", lfs_isdir },
-                     { "join", lfs_join },
-                     { "exists", lfs_exists },
-                     { "mkdir", lfs_mkdir },
-                     { "remove", lfs_remove },
-                     { "cwd", lfs_cwd },
-                     { "split", lfs_split },
-                     { "ext", lfs_ext },
-                     { "root", lfs_root },
-                     { "stem", lfs_stem },
-                     { "abspath", lfs_abspath },
-                     { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "listdir", lfs_listdir },
+        { "isdir", lfs_isdir },
+        { "join", lfs_join },
+        { "exists", lfs_exists },
+        { "mkdir", lfs_mkdir },
+        { "remove", lfs_remove },
+        { "cwd", lfs_cwd },
+        { "split", lfs_split },
+        { "ext", lfs_ext },
+        { "root", lfs_root },
+        { "stem", lfs_stem },
+        { "abspath", lfs_abspath },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

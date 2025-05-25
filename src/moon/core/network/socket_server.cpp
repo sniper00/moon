@@ -594,8 +594,8 @@ void socket_server::do_receive(const udp_context_ptr_t& ctx) {
     auto buf = ctx->msg.as_buffer();
     buf->clear();
     //reserve addr_v6_size bytes for address
-    buf->commit(addr_v6_size);
-    buf->seek(addr_v6_size, buffer::seek_origin::Begin);
+    buf->commit_unchecked(addr_v6_size);
+    buf->consume_unchecked(addr_v6_size);
 
     auto [k, v] = buf->writeable();
     ctx->sock.async_receive_from(
@@ -604,9 +604,9 @@ void socket_server::do_receive(const udp_context_ptr_t& ctx) {
         [this, ctx](std::error_code ec, std::size_t bytes_recvd) {
             if (!ec && bytes_recvd > 0) {
                 auto b = ctx->msg.as_buffer();
-                b->commit(bytes_recvd);
+                b->commit_unchecked(bytes_recvd);
                 auto bytes = encode_endpoint(ctx->from_ep.address(), ctx->from_ep.port());
-                b->write_front(bytes.data(), bytes.size());
+                [[maybe_unused]] bool always_ok = b->write_front(bytes.data(), bytes.size());
                 ctx->msg.sender = ctx->fd;
                 ctx->msg.receiver = 0;
                 ctx->msg.type = PTYPE_SOCKET_UDP;

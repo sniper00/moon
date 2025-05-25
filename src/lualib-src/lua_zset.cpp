@@ -185,7 +185,10 @@ static int lcreate(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_zset(lua_State* L) {
-    luaL_Reg l[] = { { "new", lcreate }, { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "new", lcreate },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

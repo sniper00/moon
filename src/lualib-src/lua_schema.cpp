@@ -312,7 +312,11 @@ static int load(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_schema(lua_State* L) {
-    luaL_Reg l[] = { { "load", load }, { "validate", validate }, { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "load", load },
+        { "validate", validate },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

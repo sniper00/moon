@@ -152,8 +152,10 @@ static int serverid(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_uuid(lua_State* L) {
-    luaL_Reg l[] = { { "init", linit },  { "next", lnext },        { "type", ltype },
-                     { "isuid", isuid }, { "serverid", serverid }, { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "init", linit },  { "next", lnext },        { "type", ltype },
+        { "isuid", isuid }, { "serverid", serverid }, { NULL, NULL },
+    };
     luaL_checkversion(L);
     luaL_newlib(L, l);
     return 1;

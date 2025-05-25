@@ -1,5 +1,5 @@
-#include "lua.hpp"
 #include "common/crypto/scram_sha256.hpp"
+#include "lua.hpp"
 
 #define METANAME "lscram"
 
@@ -24,7 +24,7 @@ static int lprepare_first(lua_State* L) {
 // Lua binding for process_server_first(server_first_message)
 static int lprocess_server_first(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
 
     size_t msg_len;
@@ -41,7 +41,7 @@ static int lprocess_server_first(lua_State* L) {
 // Lua binding for prepare_final_message() -> string
 static int lprepare_final(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
 
     try {
@@ -57,7 +57,7 @@ static int lprepare_final(lua_State* L) {
 // Lua binding for process_server_final(server_final_message)
 static int lprocess_server_final(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
 
     size_t msg_len;
@@ -74,7 +74,7 @@ static int lprocess_server_final(lua_State* L) {
 // Lua binding for is_authenticated() -> boolean
 static int lis_authenticated(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
     lua_pushboolean(L, client->is_authenticated());
     return 1;
@@ -83,7 +83,7 @@ static int lis_authenticated(lua_State* L) {
 // Lua binding for is_error() -> boolean
 static int lis_error(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
     lua_pushboolean(L, client->is_error());
     return 1;
@@ -92,7 +92,7 @@ static int lis_error(lua_State* L) {
 // Lua binding for get_state() -> integer
 static int lget_state(lua_State* L) {
     ScramSha256Client* client = (ScramSha256Client*)lua_touserdata(L, 1);
-     if (nullptr == client)
+    if (nullptr == client)
         return luaL_argerror(L, 1, "invalid scram client pointer");
     // Push the enum value as an integer
     lua_pushinteger(L, static_cast<lua_Integer>(client->get_state()));
@@ -117,7 +117,7 @@ static int lnew(lua_State* L) {
     // Allocate memory within Lua for the C++ object itself
     void* p = lua_newuserdatauv(L, sizeof(ScramSha256Client), 0);
     if (!p) {
-         return luaL_error(L, "Failed to allocate userdata for ScramSha256Client");
+        return luaL_error(L, "Failed to allocate userdata for ScramSha256Client");
     }
 
     try {
@@ -143,7 +143,7 @@ static int lnew(lua_State* L) {
             { "is_authenticated", lis_authenticated },
             { "is_error", lis_error },
             { "get_state", lget_state },
-            { NULL, NULL }
+            { NULL, NULL },
         };
         luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index"); //mt[__index] = {}
@@ -154,15 +154,14 @@ static int lnew(lua_State* L) {
     return 1; // Return the userdata object to Lua
 }
 
-
 // Module entry point function
 extern "C" {
-    int LUAMOD_API luaopen_crypto_scram(lua_State* L) {
-        luaL_Reg l[] = {
-            { "new", lnew },
-            { nullptr, nullptr }
-        };
-        luaL_newlib(L, l);
-        return 1; // Return the module table
-    }
+int LUAMOD_API luaopen_crypto_scram(lua_State* L) {
+    luaL_Reg l[] = {
+        { "new", lnew },
+        { nullptr, nullptr },
+    };
+    luaL_newlib(L, l);
+    return 1; // Return the module table
+}
 }

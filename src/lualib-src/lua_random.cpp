@@ -193,13 +193,15 @@ static int lrand_weight_some(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_random(lua_State* L) {
-    luaL_Reg l[] = { { "rand_range", lrand_range },
-                     { "rand_range_some", lrand_range_some },
-                     { "randf_range", lrandf_range },
-                     { "randf_percent", lrandf_percent },
-                     { "rand_weight", lrand_weight },
-                     { "rand_weight_some", lrand_weight_some },
-                     { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "rand_range", lrand_range },
+        { "rand_range_some", lrand_range_some },
+        { "randf_range", lrandf_range },
+        { "randf_percent", lrandf_percent },
+        { "rand_weight", lrand_weight },
+        { "rand_weight_some", lrand_weight_some },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

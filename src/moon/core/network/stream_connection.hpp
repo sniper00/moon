@@ -39,8 +39,8 @@ public:
         }
 
         buffer* buf = read_cache_.as_buffer();
-        buf->commit(std::exchange(more_bytes_, 0));
-        buf->consume(std::exchange(consume_, 0));
+        buf->commit_unchecked(std::exchange(more_bytes_, 0));
+        buf->consume_unchecked(std::exchange(consume_, 0));
 
         mask_ = mask_ | connection_mask::reading;
         read_cache_.session = session;
@@ -56,7 +56,7 @@ private:
             if (auto it = std::search(data.begin(), data.end(), searcher); it != data.end()) {
                 mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
                 auto count = std::distance(data.begin(), it);
-                read_cache_.as_buffer()->consume(count + delim_size);
+                read_cache_.as_buffer()->consume_unchecked(count + delim_size);
                 return direct_read_result { true, { data.data(), static_cast<size_t>(count) } };
             }
         }

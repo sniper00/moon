@@ -2,11 +2,11 @@
 #include "common/hash.hpp"
 #include "common/string.hpp"
 #include "lua.hpp"
+#include "yyjson/yyjson.c"
 #include <charconv>
 #include <codecvt>
 #include <cstdlib>
 #include <string_view>
-#include "yyjson/yyjson.c"
 
 using namespace moon;
 
@@ -137,9 +137,12 @@ static int json_options(lua_State* L) {
             break;
         }
         case "concat_buffer_size"_csh: {
-            auto concat_buffer_size = cfg->concat_buffer_size;
-            cfg->concat_buffer_size = static_cast<uint32_t>(luaL_checkinteger(L, 2));
-            lua_pushinteger(L, static_cast<lua_Integer>(concat_buffer_size));
+            auto new_size = static_cast<uint32_t>(luaL_checkinteger(L, 2));
+            luaL_argcheck(L, new_size >= BUFFER_OPTION_CHEAP_PREPEND, 2, "buffer size too small");
+            lua_pushinteger(
+                L,
+                static_cast<lua_Integer>(std::exchange(cfg->concat_buffer_size, new_size))
+            );
             break;
         }
         default:
@@ -167,10 +170,10 @@ static void format_space(buffer* writer, int n) {
 }
 
 inline void write_number(buffer* writer, lua_Number num) {
-    auto[buf, n] = writer->prepare(32);
+    auto [buf, n] = writer->prepare(32);
     uint64_t raw = f64_to_raw(num);
     auto e = write_f64_raw((uint8_t*)buf, raw, YYJSON_WRITE_ALLOW_INF_AND_NAN);
-    writer->commit(e - (uint8_t*)buf);
+    writer->commit_unchecked(e - (uint8_t*)buf);
 }
 
 template<bool format>
@@ -299,7 +302,7 @@ encode_table_object(lua_State* L, buffer* writer, int idx, int depth, json_confi
                 size_t len = 0;
                 const char* key = lua_tolstring(L, -2, &len);
                 writer->write_back('\"');
-                writer->write_back({key, len});
+                writer->write_back({ key, len });
                 writer->write_back('\"');
                 writer->write_back(':');
                 if constexpr (format)
@@ -538,9 +541,9 @@ static int concat(lua_State* L) {
         size_t size;
         const char* sz = lua_tolstring(L, -1, &size);
         auto buf = new buffer { BUFFER_OPTION_CHEAP_PREPEND + size };
-        buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
-        buf->write_back({sz, size});
-        buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
+        buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
+        buf->write_back({ sz, size });
+        buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
         return 1;
     }
@@ -552,7 +555,7 @@ static int concat(lua_State* L) {
     json_config* cfg = json_fetch_config(L);
 
     auto buf = new moon::buffer(cfg->concat_buffer_size);
-    buf->commit(BUFFER_OPTION_CHEAP_PREPEND);
+    buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
     try {
         int array_size = (int)lua_rawlen(L, 1);
         for (int i = 1; i <= array_size; i++) {
@@ -573,7 +576,7 @@ static int concat(lua_State* L) {
                 case LUA_TSTRING: {
                     size_t size;
                     const char* sz = lua_tolstring(L, -1, &size);
-                    buf->write_back({sz, size});
+                    buf->write_back({ sz, size });
                     break;
                 }
                 case LUA_TTABLE: {
@@ -586,7 +589,7 @@ static int concat(lua_State* L) {
             }
             lua_pop(L, 1);
         }
-        buf->seek(BUFFER_OPTION_CHEAP_PREPEND);
+        buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
         lua_pushlightuserdata(L, buf);
         return 1;
     } catch (const std::exception& ex) {
@@ -597,10 +600,10 @@ static int concat(lua_State* L) {
 }
 
 static void write_resp(buffer* buf, const char* cmd, size_t size) {
-    buf->write_back({"\r\n$", 3});
+    buf->write_back({ "\r\n$", 3 });
     buf->write_chars(size);
-    buf->write_back({"\r\n", 2});
-    buf->write_back({cmd, size});
+    buf->write_back({ "\r\n", 2 });
+    buf->write_back({ cmd, size });
 }
 
 static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) {
@@ -694,7 +697,7 @@ static int concat_resp(lua_State* L) {
             concat_resp_one(buf, L, i, cfg);
         }
 
-        buf->write_back({"\r\n", 2});
+        buf->write_back({ "\r\n", 2 });
         lua_pushlightuserdata(L, buf);
         lua_pushinteger(L, hash);
         return 2;
@@ -707,14 +710,16 @@ static int concat_resp(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_json(lua_State* L) {
-    luaL_Reg l[] = { { "encode", encode },
-                     { "pretty_encode", pretty_encode },
-                     { "decode", decode },
-                     { "concat", concat },
-                     { "concat_resp", concat_resp },
-                     { "options", json_options },
-                     { "null", nullptr },
-                     { nullptr, nullptr } };
+    luaL_Reg l[] = {
+        { "encode", encode },
+        { "pretty_encode", pretty_encode },
+        { "decode", decode },
+        { "concat", concat },
+        { "concat_resp", concat_resp },
+        { "options", json_options },
+        { "null", nullptr },
+        { nullptr, nullptr },
+    };
 
     luaL_checkversion(L);
     luaL_newlibtable(L, l);

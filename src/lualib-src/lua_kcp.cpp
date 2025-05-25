@@ -120,12 +120,12 @@ static int lua_ikcp_poll_read(lua_State* L) {
     auto space = ud->rbuf.prepare(2048);
     int len = ikcp_recv(kcp, space.first, static_cast<int>(space.second));
     if (len > 0)
-        ud->rbuf.commit(len);
+        ud->rbuf.commit_unchecked(len);
 
     if (ud->session != 0 && ud->readn <= ud->rbuf.size()) {
         lua_pushinteger(L, ud->session);
         lua_pushlstring(L, ud->rbuf.data(), ud->readn);
-        ud->rbuf.consume(ud->readn);
+        ud->rbuf.consume_unchecked(ud->readn);
         ud->session = 0;
         ud->readn = 0;
         return 2;
@@ -151,15 +151,17 @@ static int lua_ikcp_read(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_kcp_core(lua_State* L) {
-    luaL_Reg l[] = { { "create", lua_ikcp_create },
-                     { "release", lua_ikcp_release },
-                     { "update", lua_ikcp_update },
-                     { "input", lua_ikcp_input },
-                     { "output", lua_ikcp_output },
-                     { "send", lua_ikcp_send },
-                     { "read", lua_ikcp_read },
-                     { "poll_read", lua_ikcp_poll_read },
-                     { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "create", lua_ikcp_create },
+        { "release", lua_ikcp_release },
+        { "update", lua_ikcp_update },
+        { "input", lua_ikcp_input },
+        { "output", lua_ikcp_output },
+        { "send", lua_ikcp_send },
+        { "read", lua_ikcp_read },
+        { "poll_read", lua_ikcp_poll_read },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

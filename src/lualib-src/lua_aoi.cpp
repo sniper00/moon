@@ -206,16 +206,18 @@ static int laoi_create(lua_State* L) {
 
     if (luaL_newmetatable(L, METANAME)) //mt
     {
-        luaL_Reg l[] = { { "insert", laoi_insert },
-                         { "update", laoi_update },
-                         { "query", laoi_query },
-                         { "fire_event", laoi_fire_event },
-                         { "erase", laoi_erase },
-                         { "has", laoi_hasobject },
-                         { "update_event", laoi_update_event },
-                         { "enable_debug", laoi_enable_debug },
-                         { "enable_leave_event", laoi_enable_leave_event },
-                         { NULL, NULL } };
+        luaL_Reg l[] = {
+            { "insert", laoi_insert },
+            { "update", laoi_update },
+            { "query", laoi_query },
+            { "fire_event", laoi_fire_event },
+            { "erase", laoi_erase },
+            { "has", laoi_hasobject },
+            { "update_event", laoi_update_event },
+            { "enable_debug", laoi_enable_debug },
+            { "enable_leave_event", laoi_enable_leave_event },
+            { NULL, NULL },
+        };
         luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index"); //mt[__index] = {}
         lua_pushcfunction(L, lrelease);
@@ -227,7 +229,10 @@ static int laoi_create(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_aoi(lua_State* L) {
-    luaL_Reg l[] = { { "new", laoi_create }, { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "new", laoi_create },
+        { NULL, NULL },
+    };
     luaL_newlib(L, l);
     return 1;
 }

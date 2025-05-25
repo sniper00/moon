@@ -87,7 +87,7 @@ public:
         *(it++) = static_cast<char>(enable_stdout);
         *(it++) = static_cast<char>(level);
         size_t offset = format_header(std::addressof(*it), level, serviceid);
-        line.commit(2 + offset);
+        line.commit_unchecked(2 + offset);
         return line;
     }
 

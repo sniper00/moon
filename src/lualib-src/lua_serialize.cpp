@@ -219,7 +219,7 @@ static void pack_one(lua_State* L, buffer* b, int index, int depth) {
         case LUA_TSTRING: {
             size_t sz = 0;
             const char* str = lua_tolstring(L, index, &sz);
-            wb_string(b, str, (uint32_t)sz);// max 4G
+            wb_string(b, str, (uint32_t)sz); // max 4G
             break;
         }
         case LUA_TLIGHTUSERDATA:
@@ -487,7 +487,7 @@ static int peek_one(lua_State* L) {
     push_value(L, &br, type & 0x7, type >> 3);
 
     if (seek) {
-        buf->seek(buf->size() - br.size());
+        buf->consume_unchecked(buf->size() - br.size());
     }
     lua_pushlightuserdata(L, (void*)br.data());
     lua_pushinteger(L, static_cast<int64_t>(br.size()));
