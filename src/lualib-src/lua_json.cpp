@@ -263,7 +263,6 @@ static inline size_t array_size(lua_State* L, int index) {
             lua_pop(L, 2);
             return 0;
         }
-        return len;
     }
 
     auto len = (lua_Integer)lua_rawlen(L, index);
