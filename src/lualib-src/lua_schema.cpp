@@ -20,6 +20,11 @@ struct proto_field {
 
 static std::unordered_map<std::string, std::unordered_map<std::string, proto_field>> schema_define;
 
+class lua_schema_error: public std::runtime_error {
+public:
+    using runtime_error::runtime_error;
+};
+
 static inline size_t array_size(lua_State* L, int index) {
     auto len = (lua_Integer)lua_rawlen(L, index);
     lua_pushnil(L);
@@ -37,7 +42,7 @@ static inline size_t array_size(lua_State* L, int index) {
     return len;
 }
 
-static int type_check(lua_State* L, int index, const std::string& type) {
+static int type_check(lua_State* L, int index, const std::string_view& type) {
     switch (moon::chash_string(type)) {
         case "int32"_csh:
         case "uint32"_csh:
@@ -77,16 +82,20 @@ static std::string trace_to_string(const std::vector<std::string>& trace) {
     return res;
 }
 
-static void
-do_verify(lua_State* L, const std::string& proto_name, int index, std::vector<std::string>& trace);
+static void do_verify(
+    lua_State* L,
+    const std::string_view& proto_name,
+    int index,
+    std::vector<std::string>& trace
+);
 
 static void check_field_type(
     lua_State* L,
     int index,
-    const std::string& proto_name,
-    const std::string& field_name,
-    const std::string& name,
-    const std::string& type,
+    const std::string_view& proto_name,
+    const std::string_view& field_name,
+    const std::string_view& name,
+    const std::string_view& type,
     std::vector<std::string>& trace
 ) {
     index = lua_absindex(L, index);
@@ -97,7 +106,7 @@ static void check_field_type(
         std::string value = luaL_tolstring(L, index, nullptr);
         lua_pop(L, 1);
         if (name.empty()) {
-            throw std::logic_error { moon::format(
+            throw lua_schema_error { moon::format(
                 "'%s.%s' %s expected, got %s, value '%s'. trace: %s",
                 proto_name.data(),
                 field_name.data(),
@@ -107,7 +116,7 @@ static void check_field_type(
                 trace_to_string(trace).data()
             ) };
         } else {
-            throw std::logic_error { moon::format(
+            throw lua_schema_error { moon::format(
                 "'%s.%s.%s' %s expected, got %s. trace: %s",
                 proto_name.data(),
                 field_name.data(),
@@ -123,17 +132,17 @@ static void check_field_type(
 static void verify_field(
     lua_State* L,
     int index,
-    const std::string& proto_name,
+    const std::string_view& proto_name,
     const std::unordered_map<std::string, proto_field>& proto,
     const char* field_name,
     std::vector<std::string>& trace
 ) {
     index = lua_absindex(L, index);
 
-    trace.push_back(field_name);
+    trace.emplace_back(field_name);
 
     if (auto field_iter = proto.find(field_name); field_iter == proto.end()) {
-        throw std::logic_error { moon::format(
+        throw lua_schema_error { moon::format(
             "Attemp to index undefined field: '%s.%s'. trace: %s",
             proto_name.data(),
             field_name,
@@ -144,7 +153,7 @@ static void verify_field(
         switch (field.container_type) {
             case compose_type::T_ARRAY: {
                 if (lua_type(L, index) != LUA_TTABLE) {
-                    throw std::logic_error { moon::format(
+                    throw lua_schema_error { moon::format(
                         "'%s.%s' table expected, got %s. trace: %s",
                         proto_name.data(),
                         field_name,
@@ -155,7 +164,7 @@ static void verify_field(
 
                 auto size = array_size(L, index);
                 if (size == std::numeric_limits<size_t>::max()) {
-                    throw std::logic_error { moon::format(
+                    throw lua_schema_error { moon::format(
                         "'%s.%s' not meet lua array requirements. trace: %s",
                         proto_name.data(),
                         field_name,
@@ -182,7 +191,7 @@ static void verify_field(
             }
             case compose_type::T_OBJECT: {
                 if (lua_type(L, index) != LUA_TTABLE) {
-                    throw std::logic_error { moon::format(
+                    throw lua_schema_error { moon::format(
                         "'%s.%s' table expected, got %s. trace: %s",
                         proto_name.data(),
                         field_name,
@@ -193,6 +202,18 @@ static void verify_field(
                 lua_pushnil(L);
                 std::string key_value;
                 while (lua_next(L, index) != 0) {
+                    if (lua_isinteger(L, -2) && lua_tointeger(L, -2) == 1) {
+                        if (luaL_getmetafield(L, index, "__object") == LUA_TNIL)
+                        {
+                            throw lua_schema_error { moon::format(
+                                "'%s.%s': table of type 'object' uses integer key=1, but missing required metafield '__object'. Trace: %s",
+                                proto_name.data(),
+                                field_name,
+                                trace_to_string(trace).data()
+                            ) };
+                        }
+                        lua_pop(L, 1); // pop metafield
+                    }
                     key_value = luaL_tolstring(L, -2, nullptr);
                     lua_pop(L, 1);
                     trace.push_back(key_value);
@@ -220,14 +241,18 @@ static void verify_field(
     trace.pop_back();
 }
 
-static void
-do_verify(lua_State* L, const std::string& proto_name, int index, std::vector<std::string>& trace) {
+static void do_verify(
+    lua_State* L,
+    const std::string_view& proto_name,
+    int index,
+    std::vector<std::string>& trace
+) {
     luaL_checkstack(L, LUA_MINSTACK, nullptr);
 
     index = lua_absindex(L, index);
 
     if (!lua_istable(L, index)) {
-        throw std::logic_error { moon::format(
+        throw lua_schema_error { moon::format(
             "'%s' table expected, got %s. trace: %s",
             proto_name.data(),
             luaL_typename(L, index),
@@ -235,9 +260,9 @@ do_verify(lua_State* L, const std::string& proto_name, int index, std::vector<st
         ) };
     }
 
-    auto iter = schema_define.find(proto_name);
+    auto iter = schema_define.find(std::string { proto_name });
     if (iter == schema_define.end()) {
-        throw std::logic_error { moon::format(
+        throw lua_schema_error { moon::format(
             "Attemp using undefined proto: %s. trace: %s",
             proto_name.data(),
             trace_to_string(trace).data()
@@ -259,16 +284,15 @@ do_verify(lua_State* L, const std::string& proto_name, int index, std::vector<st
 }
 
 static int validate(lua_State* L) {
-    size_t len = 0;
-    const char* proto_name = luaL_checklstring(L, 1, &len);
+    auto proto_name = moon::lua_check<std::string_view>(L, 1);
     luaL_checktype(L, 2, LUA_TTABLE);
     lua_settop(L, 2);
     try {
         std::vector<std::string> trace;
-        trace.push_back(proto_name);
+        trace.emplace_back(proto_name);
         do_verify(L, proto_name, 2, trace);
         return 0;
-    } catch (const std::exception& ex) {
+    } catch (const lua_schema_error& ex) {
         lua_pushstring(L, ex.what());
     }
     return lua_error(L);
@@ -282,14 +306,19 @@ static int load(lua_State* L) {
     lua_settop(L, 1);
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
+        luaL_checktype(L, -1, LUA_TTABLE);
+
         std::string proto_name = luaL_checkstring(L, -2);
         std::unordered_map<std::string, proto_field> one;
+
         lua_pushnil(L); //+1
         while (lua_next(L, -2) != 0) {
             proto_field field;
             std::string field_name = luaL_checkstring(L, -2);
-            auto container = moon::lua_opt_field<std::string_view>(L, -1, "container", "");
-            if (container == "array") {
+            luaL_checktype(L, -1, LUA_TTABLE);
+            if (auto container = moon::lua_opt_field<std::string_view>(L, -1, "container", "");
+                container == "array")
+            {
                 field.container_type = compose_type::T_ARRAY;
             } else if (container == "object") {
                 field.container_type = compose_type::T_OBJECT;

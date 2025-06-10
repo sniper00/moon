@@ -30,14 +30,29 @@ function json.concat(array) end
 function json.concat_resp(...) end
 
 ---@alias json_options
----| 'encode_empty_as_array' @ Set option encode empty table as array. default true.
----| 'enable_number_key' @ Set option enable convert table's integer key as json object's key. default true.
----| 'enable_sparse_array' @ Set option enable sparse array. default false.
----| 'concat_buffer_size' @ Set option concat buffer_size(integer), buffer_head_size(integer). default 512 and 16.
+---| 'encode_empty_as_array' @ Controls whether empty tables are encoded as JSON arrays (`[]`) instead of objects (`{}`). Default: true
+---| 'enable_number_key' @ Controls whether tables with numeric keys are encoded as JSON objects with string keys. Default: true
+---| 'enable_sparse_array' @ Controls whether sparse arrays (with gaps in indices) are encoded as arrays with null values. Default: false
+---| 'concat_buffer_size' @ Sets the buffer size and buffer head size for json.concat operations. Requires two integer values. Default: 512, 16
+---| 'has_metafield' @ Controls whether to check `__object` and `__array` metafields during encoding/decoding. Default: true
 
----Set json options and return old values
----@param json_options json_options
----@return ...
-function json.options(json_options, ...) end
+---Sets JSON encoding/decoding options and returns their previous values
+---@param option_name json_options @ The name of the option to set
+---@param ... any @ The new value(s) for the specified option
+---@return any ... @ The previous value(s) of the specified option
+function json.options(option_name, ...) end
+
+
+---Creates or marks a table as a JSON object
+---@param v? integer|table @ Either initial capacity (integer) or table to be marked as object
+---@return table @ Table marked as JSON object with metatable containing __object=true
+function json.object(v) end
+
+---Creates or marks a table as a JSON array
+---@param v? integer|table @ Either initial capacity (integer) or table to be marked as array
+---@return table @ Table marked as JSON array with metatable containing __array=true
+function json.array(v) end
+    
+
 
 return json

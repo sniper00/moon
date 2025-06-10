@@ -159,8 +159,9 @@ do
     assert(t2[2]==2)
     assert(t2[3]==3)
 
-    str = json.encode(t2) -- [1,2,3]
-    assert(string.sub(str,1,1)=="[")
+    assert(getmetatable(t2).__object)
+    str = json.encode(t2) -- {"1":1,"2":2,"3":3}
+    assert(string.sub(str,1,1)=="{")
 end
 
 do
