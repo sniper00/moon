@@ -37,7 +37,7 @@ void worker::run() {
 
 void worker::stop() {
     asio::post(io_ctx_, [this] {
-        message m = message{PTYPE_SHUTDOWN, 0, 0, 0};
+        message m = message { PTYPE_SHUTDOWN, 0, 0, 0 };
         for (auto& it: services_) {
             it.second->dispatch(&m);
         }
@@ -52,8 +52,7 @@ void worker::wait() {
 }
 
 void worker::signal(int val) {
-    if(auto s = current_.load(std::memory_order_acquire);s != nullptr)
-    {
+    if (auto s = current_.load(std::memory_order_acquire); s != nullptr) {
         s->signal(val);
     }
 }
@@ -63,28 +62,41 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
     asio::post(io_ctx_, [this, conf = std::move(conf)]() {
         do {
             size_t counter = 0;
-            uint32_t serviceid = 0;
-            do {
-                if (counter >= WORKER_MAX_SERVICE) {
+            uint32_t serviceid = conf->opt_service_id;
+            if (serviceid == 0) {
+                do {
+                    if (counter >= WORKER_MAX_SERVICE) {
+                        serviceid = 0;
+                        CONSOLE_ERROR(
+                            "new service failed: can not get more service id. worker[%u] service num[%zu].",
+                            id(),
+                            services_.size()
+                        );
+                        break;
+                    }
+
+                    ++nextid_;
+                    if (nextid_ == WORKER_MAX_SERVICE) {
+                        nextid_ = 1;
+                    }
+                    serviceid = nextid_ | (id() << WORKER_ID_SHIFT);
+                    ++counter;
+                } while (services_.find(serviceid) != services_.end());
+
+                if (serviceid == 0) {
+                    break;
+                }
+            }else{
+                if (services_.find(serviceid) != services_.end()) {
                     serviceid = 0;
                     CONSOLE_ERROR(
-                        "new service failed: can not get more service id. worker[%u] service num[%zu].",
+                        "new service failed: serviceid[%08X] already exists, worker[%u] service num[%zu].",
+                        serviceid,
                         id(),
                         services_.size()
                     );
                     break;
                 }
-
-                ++nextid_;
-                if (nextid_ == WORKER_MAX_SERVICE) {
-                    nextid_ = 1;
-                }
-                serviceid = nextid_ | (id() << WORKER_ID_SHIFT);
-                ++counter;
-            } while (services_.find(serviceid) != services_.end());
-
-            if (serviceid == 0) {
-                break;
             }
 
             auto s = server_->make_service(conf->type);
@@ -110,9 +122,9 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
             services_.emplace(serviceid, std::move(s));
 
             if (0 != conf->session) {
-                server_->send_message(message{
-                    PTYPE_INTEGER, 0, conf->creator, conf->session, serviceid
-                });
+                server_->send_message(
+                    message { PTYPE_INTEGER, 0, conf->creator, conf->session, serviceid }
+                );
             }
             return;
         } while (false);
@@ -123,9 +135,7 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
         }
 
         if (0 != conf->session) {
-            server_->send_message(message{
-                PTYPE_INTEGER, 0, conf->creator, conf->session, 0
-            });
+            server_->send_message(message { PTYPE_INTEGER, 0, conf->creator, conf->session, 0 });
         }
     });
 }
@@ -170,11 +180,13 @@ void worker::scan(uint32_t sender, int64_t sessionid) {
             if (content.empty())
                 content.append("[");
 
-            content.append(moon::format(
-                R"({"name":"%s","serviceid":"%X"},)",
-                it.second->name().data(),
-                it.second->id()
-            ));
+            content.append(
+                moon::format(
+                    R"({"name":"%s","serviceid":"%X"},)",
+                    it.second->name().data(),
+                    it.second->id()
+                )
+            );
         }
 
         if (!content.empty())

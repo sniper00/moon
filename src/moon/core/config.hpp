@@ -67,6 +67,7 @@ struct service_conf {
     bool unique = false;
     uint32_t threadid = 0;
     uint32_t creator = 0;
+    uint32_t opt_service_id = 0; // Reuse the serviceid if it is not 0.
     int64_t session = 0;
     ssize_t memlimit = 0;
     std::string type;

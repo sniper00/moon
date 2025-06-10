@@ -3,9 +3,6 @@
 #include "worker.h"
 
 namespace moon {
-static inline uint32_t worker_id(uint32_t serviceid) {
-    return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
-}
 
 server::~server() {
     wait();

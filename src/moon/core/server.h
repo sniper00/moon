@@ -105,6 +105,10 @@ public:
 
     size_t socket_num() const;
 
+    static uint32_t worker_id(uint32_t serviceid) {
+        return ((serviceid >> WORKER_ID_SHIFT) & 0xFF);
+    }
+
 private:
     void on_timer(uint32_t serviceid, int64_t timerid) const;
 

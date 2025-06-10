@@ -186,9 +186,7 @@ static int lmoon_send(lua_State* L) {
 }
 
 static void table_tostring(std::string& res, lua_State* L, int index) {
-    if (index < 0) {
-        index = lua_gettop(L) + index + 1;
-    }
+    index = lua_absindex(L, index);
 
     luaL_checkstack(L, LUA_MINSTACK, nullptr);
     res.append("{");
@@ -263,6 +261,10 @@ static int lmoon_new_service(lua_State* L) {
     conf->memlimit = lua_opt_field<ssize_t>(L, 1, "memlimit", std::numeric_limits<ssize_t>::max());
     conf->unique = lua_opt_field<bool>(L, 1, "unique", false);
     conf->threadid = lua_opt_field<uint32_t>(L, 1, "threadid", 0);
+    conf->opt_service_id = lua_opt_field<uint32_t>(L, 1, "opt_service_id", 0);
+    if(conf->opt_service_id>0){
+        conf->threadid = server::worker_id(conf->opt_service_id);
+    }
 
     if (auto path = S->get_server()->get_env("PATH"); path) {
         conf->params.append(*path);
@@ -466,35 +468,37 @@ static int moon_signal(lua_State* L) {
 
 extern "C" {
 int LUAMOD_API luaopen_moon_core(lua_State* L) {
-    luaL_Reg l[] = { { "clock", lmoon_clock },
-                     { "md5", lmoon_md5 },
-                     { "tostring", lmoon_tostring },
-                     { "timeout", lmoon_timeout },
-                     { "log", lmoon_log },
-                     { "loglevel", lmoon_loglevel },
-                     { "cpu", lmoon_cpu },
-                     { "send", lmoon_send },
-                     { "new_service", lmoon_new_service },
-                     { "kill", lmoon_kill },
-                     { "scan_services", lmoon_scan_services },
-                     { "queryservice", lmoon_queryservice },
-                     { "next_sequence", lmoon_next_sequence },
-                     { "env", lmoon_env },
-                     { "server_stats", lmoon_server_stats },
-                     { "exit", lmoon_exit },
-                     { "now", lmoon_now },
-                     { "adjtime", lmoon_adjtime },
-                     { "callback", lua_service::set_callback },
-                     { "decode", message_decode },
-                     { "redirect", message_redirect },
-                     { "collect", lmi_collect },
-                     { "escape_print", escape_print },
-                     { "signal", moon_signal },
-                     /* placeholders */
-                     { "id", NULL },
-                     { "name", NULL },
-                     { "timezone", NULL },
-                     { NULL, NULL } };
+    luaL_Reg l[] = {
+        { "clock", lmoon_clock },
+        { "md5", lmoon_md5 },
+        { "tostring", lmoon_tostring },
+        { "timeout", lmoon_timeout },
+        { "log", lmoon_log },
+        { "loglevel", lmoon_loglevel },
+        { "cpu", lmoon_cpu },
+        { "send", lmoon_send },
+        { "new_service", lmoon_new_service },
+        { "kill", lmoon_kill },
+        { "scan_services", lmoon_scan_services },
+        { "queryservice", lmoon_queryservice },
+        { "next_sequence", lmoon_next_sequence },
+        { "env", lmoon_env },
+        { "server_stats", lmoon_server_stats },
+        { "exit", lmoon_exit },
+        { "now", lmoon_now },
+        { "adjtime", lmoon_adjtime },
+        { "callback", lua_service::set_callback },
+        { "decode", message_decode },
+        { "redirect", message_redirect },
+        { "collect", lmi_collect },
+        { "escape_print", escape_print },
+        { "signal", moon_signal },
+        /* placeholders */
+        { "id", NULL },
+        { "name", NULL },
+        { "timezone", NULL },
+        { NULL, NULL },
+    };
 
     luaL_newlib(L, l);
     const lua_service* S = lua_service::get(L);
