@@ -117,7 +117,7 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym);
 
 
 static void lsys_unloadlib (void *lib) {
-  (void)(lib);  /* Not unload */
+  dlclose(lib);
 }
 
 
@@ -193,7 +193,7 @@ static void pusherror (lua_State *L) {
 }
 
 static void lsys_unloadlib (void *lib) {
-  (void)(lib);  /* Not unload */
+  FreeLibrary((HMODULE)lib);
 }
 
 
