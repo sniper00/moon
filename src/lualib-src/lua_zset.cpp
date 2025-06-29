@@ -169,11 +169,18 @@ static int lcreate(lua_State* L) {
     new (p) zset_type(max_count, reverse);
     if (luaL_newmetatable(L, METANAME)) //mt
     {
-        luaL_Reg l[] = { { "update", lupdate }, { "has", lhas },
-                         { "rank", lrank },     { "key_by_rank", lkey_by_rank },
-                         { "score", lscore },   { "range", lrange },
-                         { "clear", lclear },   { "size", lsize },
-                         { "erase", lerase },   { NULL, NULL } };
+        luaL_Reg l[] = {
+            { "update", lupdate },
+            { "has", lhas },
+            { "rank", lrank },
+            { "key_by_rank", lkey_by_rank },
+            { "score", lscore },
+            { "range", lrange },
+            { "clear", lclear },
+            { "size", lsize },
+            { "erase", lerase },
+            { NULL, NULL },
+        };
         luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index"); //mt[__index] = {}
         lua_pushcfunction(L, lrelease);

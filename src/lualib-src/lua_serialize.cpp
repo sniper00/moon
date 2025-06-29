@@ -179,9 +179,7 @@ static int wb_table(lua_State* L, buffer* buf, int index, int depth) {
         lua_pushstring(L, "out of memory");
         return 1;
     }
-    if (index < 0) {
-        index = lua_gettop(L) + index + 1;
-    }
+    index = lua_absindex(L, index);
     if (luaL_getmetafield(L, index, "__pairs") != LUA_TNIL) {
         return wb_table_metapairs(L, buf, index, depth);
     } else {
@@ -226,9 +224,6 @@ static void pack_one(lua_State* L, buffer* b, int index, int depth) {
             wb_pointer(b, lua_touserdata(L, index));
             break;
         case LUA_TTABLE: {
-            if (index < 0) {
-                index = lua_gettop(L) + index + 1;
-            }
             if (wb_table(L, b, index, depth + 1)) {
                 throw std::logic_error { lua_tostring(L, -1) };
             }

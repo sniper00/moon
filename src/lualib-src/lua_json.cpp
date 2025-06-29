@@ -746,7 +746,7 @@ static int concat_resp(lua_State* L) {
 }
 
 static int json_object(lua_State* L) {
-    if(lua_isinteger(L, 1)){
+    if (lua_isinteger(L, 1)) {
         auto n = (int)luaL_optinteger(L, 1, 16);
         lua_createtable(L, 0, n);
     }
@@ -759,7 +759,7 @@ static int json_object(lua_State* L) {
 }
 
 static int json_array(lua_State* L) {
-    if(lua_isinteger(L, 1)){
+    if (lua_isinteger(L, 1)) {
         auto n = (int)luaL_optinteger(L, 1, 16);
         lua_createtable(L, n, 1);
     }

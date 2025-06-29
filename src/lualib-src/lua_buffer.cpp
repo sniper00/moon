@@ -139,9 +139,7 @@ static int concat_table_array(lua_State* L, buffer* buf, int index, int depth) {
 
 static void concat_table(lua_State* L, buffer* buf, int index, int depth) {
     luaL_checkstack(L, LUA_MINSTACK, NULL);
-    if (index < 0) {
-        index = lua_gettop(L) + index + 1;
-    }
+    index = lua_absindex(L, index);
     concat_table_array(L, buf, index, depth);
 }
 
@@ -173,9 +171,6 @@ static void concat_one(lua_State* L, buffer* b, int index, int depth) {
             break;
         }
         case LUA_TTABLE: {
-            if (index < 0) {
-                index = lua_gettop(L) + index + 1;
-            }
             concat_table(L, b, index, depth + 1);
             break;
         }

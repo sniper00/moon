@@ -291,11 +291,15 @@ static int lrelease(lua_State* L) {
 static int ltcp(lua_State* L) {
     master_box* box = (master_box*)lua_newuserdatauv(L, sizeof(master_box), 0);
     box->asio_ctx = new asio_context {};
-    if (luaL_newmetatable(L, METANAME)) //mt
-    {
-        luaL_Reg l[] = { { "settimeout", lsettimeout }, { "connect", lconnect },
-                         { "receive", lreceive },       { "send", lsend },
-                         { "close", lclose },           { NULL, NULL } };
+    if (luaL_newmetatable(L, METANAME)) { //mt
+        luaL_Reg l[] = {
+            { "settimeout", lsettimeout },
+            { "connect", lconnect },
+            { "receive", lreceive },
+            { "send", lsend },
+            { "close", lclose },
+            { NULL, NULL },
+        };
         luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index"); //mt[__index] = {}
         lua_pushcfunction(L, lrelease);
