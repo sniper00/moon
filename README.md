@@ -34,6 +34,8 @@ Moon is a lightweight game server framework based on the actor model. One worker
 - Recast Navigation
 - Lua zset library for ranklist
 
+> Want more extension libraries? See https://github.com/sniper00/moon-extensions
+
 # OverView
 
 ## Framework
