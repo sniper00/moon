@@ -39,13 +39,15 @@ static int size(lua_State* L) {
 
 template<typename T>
 static void pushinteger(lua_State* L, const char*& b, const char* e, bool little) {
-    if ((size_t)(e - b) < sizeof(T))
+    ptrdiff_t len = e - b;
+    if (len < (ptrdiff_t)sizeof(T)) {
         luaL_error(
             L,
-            "data string too short, need %zu bytes, got %zu bytes",
-            sizeof(T),
-            (size_t)(e - b)
+            "data string too short, need %lu bytes, got %ld bytes",
+            (unsigned long)sizeof(T),
+            (long)len
         );
+    }
     T v = 0;
     memcpy(&v, b, sizeof(T));
     b += sizeof(T);
