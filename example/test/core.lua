@@ -114,7 +114,9 @@ do
         buffer.commit(buf, 8) --reserve head space
 
         buffer.seek(buf, 8)
-		assert(not buffer.write_front(buf, "123456789"))
+		local ok, err = pcall(buffer.write_front, buf, "123456789")
+
+		assert(not ok)
 
 		buffer.write_front(buf, "12345678")
 
