@@ -40,8 +40,8 @@ local buffer = {}
 --- buffer.delete(large_buf) -- manual cleanup
 --- ```
 ---
----@param capacity? integer Initial capacity in bytes (default: 128)
----@return buffer_ptr buf Unmanaged buffer pointer - MUST be manually released
+---@param capacity? integer @ Initial capacity in bytes (default: 128)
+---@return buffer_ptr @ Unmanaged buffer pointer - MUST be manually released
 function buffer.unsafe_new(capacity) end
 
 --- Release buffer memory (unsafe operation)
@@ -62,7 +62,7 @@ function buffer.unsafe_new(capacity) end
 --- -- buf is now invalid
 --- ```
 ---
----@param buf buffer_ptr Buffer to release - becomes invalid after call
+---@param buf buffer_ptr @ Buffer to release - becomes invalid after call
 function buffer.delete(buf) end
 
 --- Clear all data from buffer
@@ -75,7 +75,7 @@ function buffer.delete(buf) end
 --- - Preserves allocated memory capacity
 --- - Resets read/write positions
 ---
----@param buf buffer_ptr Buffer to clear
+---@param buf buffer_ptr @ Buffer to clear
 function buffer.clear(buf) end
 
 --- Get buffer's readable data size
@@ -95,8 +95,8 @@ function buffer.clear(buf) end
 --- end
 --- ```
 ---
----@param buf buffer_ptr Buffer to query
----@return integer size Number of readable bytes
+---@param buf buffer_ptr @ Buffer to query
+---@return integer @ Number of readable bytes
 ---@nodiscard
 function buffer.size(buf) end
 
@@ -130,11 +130,11 @@ function buffer.size(buf) end
 --- local data_ptr, data_size = buffer.unpack(buf, "C", 0)
 --- ```
 ---
----@param buf buffer_ptr|buffer_shr_ptr Buffer to unpack from
----@param fmt? string Format string for binary unpacking
----@param pos? integer Starting position (default: 0)
----@param count? integer Bytes for string mode (default: all remaining)
----@return string|any ... Extracted string or unpacked values
+---@param buf buffer_ptr|buffer_shr_ptr @ Buffer to unpack from
+---@param fmt? string @ Format string for binary unpacking
+---@param pos? integer @ Starting position (default: 0)
+---@param count? integer @ Bytes for string mode (default: all remaining)
+---@return string|any ... @ Extracted string or unpacked values
 ---@overload fun(buf:buffer_ptr, pos:integer, count?:integer):string
 ---@nodiscard
 function buffer.unpack(buf, fmt, pos, count) end
@@ -156,9 +156,9 @@ function buffer.unpack(buf, fmt, pos, count) end
 --- print(buffer.size(buf)) -- 8 (reduced)
 --- ```
 ---
----@param buf buffer_ptr Buffer to read from
----@param n integer Number of bytes to read and consume
----@return string data The read data
+---@param buf buffer_ptr @ Buffer to read from
+---@param n integer @ Number of bytes to read and consume
+---@return string @ The read data
 ---@nodiscard
 function buffer.read(buf, n) end
 
@@ -179,8 +179,8 @@ function buffer.read(buf, n) end
 --- -- Result: "Hello, World!"
 --- ```
 ---
----@param buf buffer_ptr Buffer to prepend to
----@param ... string Strings to prepend (reverse order)
+---@param buf buffer_ptr @ Buffer to prepend to
+---@param ... string @ Strings to prepend (reverse order)
 ---@error Throws if total size > 16 bytes
 function buffer.write_front(buf, ...) end
 
@@ -205,8 +205,8 @@ function buffer.write_front(buf, ...) end
 --- buffer.write_back(buf, parts)
 --- ```
 ---
----@param buf buffer_ptr Buffer to append to
----@param ... string|number|boolean|table|nil Data to append
+---@param buf buffer_ptr @ Buffer to append to
+---@param ... string|number|boolean|table|nil @ Data to append
 function buffer.write_back(buf, ...) end
 
 --- Move buffer read position for sequential access
@@ -225,9 +225,9 @@ function buffer.write_back(buf, ...) end
 --- local data2 = buffer.unpack(buf, 0, 5) -- "World"
 --- ```
 ---
----@param buf buffer_ptr Buffer to seek in
----@param pos integer Position to seek to
----@param origin? integer Seek origin: 0=Begin, 1=Current (default: 1)
+---@param buf buffer_ptr @ Buffer to seek in
+---@param pos integer @ Position to seek to
+---@param origin? integer @ Seek origin: 0=Begin, 1=Current (default: 1)
 function buffer.seek(buf, pos, origin) end
 
 --- Commit written data to make it readable
@@ -247,8 +247,8 @@ function buffer.seek(buf, pos, origin) end
 --- buffer.commit(buf, 6) -- make 6 bytes readable
 --- ```
 ---
----@param buf buffer_ptr Buffer to commit data in
----@param n integer Number of bytes to commit (≤ prepared space)
+---@param buf buffer_ptr @ Buffer to commit data in
+---@param n integer @ Number of bytes to commit (≤ prepared space)
 function buffer.commit(buf, n) end
 
 --- Reserve buffer space for zero-copy writes
@@ -267,8 +267,8 @@ function buffer.commit(buf, n) end
 --- buffer.write_back(buf, large_data) -- no reallocation
 --- ```
 ---
----@param buf buffer_ptr Buffer to prepare
----@param n integer Bytes to ensure available (must be > 0)
+---@param buf buffer_ptr @ Buffer to prepare
+---@param n integer @ Bytes to ensure available (must be > 0)
 function buffer.prepare(buf, n) end
 
 --- Create buffer by concatenating multiple values
@@ -290,8 +290,8 @@ function buffer.prepare(buf, n) end
 ---
 --- **Memory:** Returns unmanaged buffer - auto-released by send functions
 ---
----@param ... string|number|boolean|table|nil Values to concatenate
----@return buffer_ptr buf Buffer with concatenated data (unmanaged)
+---@param ... string|number|boolean|table|nil @ Values to concatenate
+---@return buffer_ptr @ Buffer with concatenated data (unmanaged)
 ---@nodiscard
 function buffer.concat(...) end
 
@@ -310,8 +310,8 @@ function buffer.concat(...) end
 --- local sql = buffer.concat_string("SELECT * FROM users WHERE id = ", user_id)
 --- ```
 ---
----@param ... string|number|boolean|table|nil Values to concatenate
----@return string result Concatenated string
+---@param ... string|number|boolean|table|nil @ Values to concatenate
+---@return string @ Concatenated string
 ---@nodiscard
 function buffer.concat_string(...) end
 
@@ -333,8 +333,8 @@ function buffer.concat_string(...) end
 --- -- safe_buf is GC-managed, unsafe_buf is invalid
 --- ```
 ---
----@param buf buffer_ptr Unmanaged buffer to convert (becomes invalid)
----@return buffer_shr_ptr? shared_buf GC-managed reference, or nil if empty
+---@param buf buffer_ptr @ Unmanaged buffer to convert (becomes invalid)
+---@return buffer_shr_ptr? @ GC-managed reference, or nil if empty
 function buffer.to_shared(buf) end
 
 --- Check if buffer has specific bitmask
@@ -349,9 +349,9 @@ function buffer.to_shared(buf) end
 --- end
 --- ```
 ---
----@param buf buffer_ptr Buffer to check
----@param mask integer Bitmask value to test for
----@return boolean has_mask True if buffer has the bitmask
+---@param buf buffer_ptr @ Buffer to check
+---@param mask integer @ Bitmask value to test for
+---@return boolean @ True if buffer has the bitmask
 ---@nodiscard
 function buffer.has_bitmask(buf, mask) end
 
@@ -366,8 +366,8 @@ function buffer.has_bitmask(buf, mask) end
 --- buffer.add_bitmask(frame, 0x80) -- final frame
 --- ```
 ---
----@param buf buffer_ptr Buffer to modify
----@param mask integer Bitmask value to add
+---@param buf buffer_ptr @ Buffer to modify
+---@param mask integer @ Bitmask value to add
 function buffer.add_bitmask(buf, mask) end
 
 --- Append multiple buffers into first buffer
@@ -387,8 +387,8 @@ function buffer.add_bitmask(buf, mask) end
 --- -- header_buf contains complete response
 --- ```
 ---
----@param buf buffer_ptr Target buffer to append to (modified)
----@param ... buffer_ptr Source buffers to append from (read-only)
+---@param buf buffer_ptr @ Target buffer to append to (modified)
+---@param ... buffer_ptr @ Source buffers to append from (read-only)
 function buffer.append(buf, ...) end
 
 return buffer

@@ -2,30 +2,152 @@
 
 error("DO NOT REQUIRE THIS FILE")
 
+--- High-performance binary serialization library
+---
+--- Efficient serialization/deserialization of Lua values to/from binary format.
+--- Optimized for network transmission and persistent storage with minimal overhead.
+---
+--- **Supported Types:** nil, boolean, number, string, table, lightuserdata
+--- **Key Features:** Compact format, zero-copy operations, cycle detection
+---
 ---@class seri
 local seri = {}
 
---- Pack lua objects to binary bytes, and return buffer* (avoid memory copy)
----@return buffer_ptr
+--- Pack Lua objects to binary buffer (zero-copy)
+---
+--- Serializes multiple Lua values into compact binary format and returns
+--- an unmanaged buffer pointer. Most efficient for network transmission.
+---
+--- **Encoding:**
+--- - Numbers: Variable-length (1-9 bytes based on value)
+--- - Strings: Length-prefixed (1-5 byte header + data)
+--- - Tables: Array part + hash part encoding
+---
+--- **Usage:**
+--- ```lua
+--- local buf = seri.pack(42, "hello", true, {1, 2, 3})
+--- socket.write(fd, buf) -- auto-released
+---
+--- local packet = seri.pack("USER_DATA", user_data)
+--- moon.raw_send(target_service, packet)
+--- ```
+---
+--- **Memory:** Returns unmanaged buffer pointer, auto-released by network operations
+--- **Performance:** Zero memory copying, no string allocation
+--- **Errors:** Unsupported types, circular references, NaN values
+---
+---@param ... any @ Lua values to serialize
+---@return buffer_ptr @ Binary buffer containing serialized data
 ---@nodiscard
 function seri.pack(...) end
 
---- Pack lua objects to binary bytes, and return lua string
----@return string
+--- Pack Lua objects to binary string format (memory copy)
+---
+--- Serializes multiple Lua values into binary format and returns a Lua string.
+--- Suitable for storage, logging, or when buffer management is not desired.
+---
+--- **Usage:**
+--- ```lua
+---
+--- -- Configuration saving
+--- local config_data = seri.packs(config)
+--- file_system:write("config.dat", config_data)
+---
+--- -- Cache storage
+--- local user_data = seri.packs(profile, preferences)
+--- redis:set(cache_key, user_data, 3600)
+--- ```
+---
+--- **Memory:** Returns managed Lua string (GC-managed)
+--- **Performance:** Slower than pack() due to memory copying
+--- **Format:** Identical to pack() output, compatible with unpack()
+---
+---@param ... any @ Lua values to serialize
+---@return string @ Binary data as Lua string
 ---@nodiscard
 function seri.packs(...) end
 
---- Unpack binary bytes to lua objects
----@param data string|cstring_ptr
----@param len? integer
----@return ...
+--- Unpack binary data to Lua objects (complete deserialization)
+---
+--- Deserializes binary data back into original Lua values. Handles both
+--- string and buffer pointer inputs with automatic type detection.
+---
+--- **Input Types:**
+--- - String: Lua string containing binary data
+--- - Buffer pointer: Unmanaged buffer from pack() or network I/O
+--- - C string pointer: Raw memory pointer with optional length
+---
+--- **Usage:**
+--- ```lua
+--- -- Network message processing
+--- local msg_type, sender_id, data = seri.unpack(buffer)
+--- if msg_type == "CHAT" then
+---     process_chat_message(sender_id, data)
+--- end
+---
+---
+--- -- Configuration loading
+--- local config_data = file_system:read("config.dat")
+--- if config_data then
+---     local config = seri.unpack(config_data)
+---     apply_game_settings(config)
+--- end
+--- ```
+---
+--- **Memory:** Input data is read-only, returns newly allocated Lua objects
+--- **Performance:** Single-pass algorithm, minimal memory allocation
+--- **Errors:** Corrupted data, truncated data, invalid type codes
+---
+---@param data string|cstring_ptr @ Binary data to deserialize
+---@param len? integer @ Length of data when using C pointer
+---@return ... @ All Lua values that were originally serialized
 ---@nodiscard
 function seri.unpack(data, len) end
 
---- Unpack one lua object from binary bytes
----@param buf buffer_ptr
----@param isseek? boolean @ If true will seek buffer's read pos
----@return any, cstring_ptr, integer @return lua object, char*, charlen
+--- Unpack single Lua object from buffer (streaming deserialization)
+---
+--- Deserializes one Lua value from buffer and optionally advances read position.
+--- Designed for streaming protocols and incremental parsing.
+---
+--- **Buffer Management:**
+--- - Reads from current buffer position
+--- - Optionally advances read position (seek parameter)
+--- - Returns remaining buffer pointer and length
+---
+--- **Usage:**
+--- ```lua
+--- -- Protocol frame parsing
+--- local frame_type = seri.unpack_one(buffer, true)
+--- local frame_length = seri.unpack_one(buffer, true)
+--- local payload = seri.unpack_one(buffer, true)
+---
+--- -- Streaming data processor
+--- while buffer do
+---     local msg, remaining_ptr, remaining_len = seri.unpack_one(buffer, false)
+---     if remaining_len == 0 then break end
+---     table.insert(messages, msg)
+---     buffer = remaining_ptr
+--- end
+--- ```
+---
+--- **Parameters:**
+--- - buf: Buffer pointer containing serialized data
+--- - isseek: If true, advances buffer's read position (default: false)
+---
+--- **Returns:**
+--- - object: Deserialized Lua value (nil if buffer empty)
+--- - remaining_ptr: Pointer to remaining buffer data
+--- - remaining_len: Number of bytes remaining in buffer
+---
+--- **Memory:** Input buffer not modified unless isseek=true
+--- **Performance:** Minimal allocation per call, efficient for large buffers
+--- **Errors:** Empty buffer, corrupted data, invalid buffer pointer
+---
+---@param buf buffer_ptr @ Buffer containing serialized data
+---@param isseek? boolean @ Advance buffer position (default: false)
+---@return any @ Deserialized Lua object
+---@return cstring_ptr @ Pointer to remaining buffer data
+---@return integer @ Number of bytes remaining in buffer
 function seri.unpack_one(buf, isseek) end
 
 return seri

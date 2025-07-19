@@ -3,56 +3,63 @@
 error("DO NOT REQUIRE THIS FILE")
 
 ---@class json
----@field null lightuserdata @ Represents json "null" values
+---@field null lightuserdata @ JSON null value (lightuserdata pointing to nullptr)
 local json = {}
 
----@param t table|number|string|boolean
----@return string
+--- Encode Lua value to JSON string
+---@param t table|number|string|boolean|nil @ Value to encode
+---@return string @ JSON formatted string
+---@nodiscard
 function json.encode(t) end
 
----@param t table
----@return string
+--- Encode Lua value to pretty-formatted JSON string
+---@param t table|number|string|boolean|nil @ Value to encode
+---@return string @ Pretty-formatted JSON string
+---@nodiscard
 function json.pretty_encode(t) end
 
----@param str string|cstring_ptr
----@param n? integer
----@return table
+--- Decode JSON string to Lua value
+---@param str string|cstring_ptr @ JSON string or C string pointer
+---@param n? integer @ Length in bytes (required for cstring_ptr)
+---@return table|number|string|boolean|lightuserdata @ Decoded Lua value
+---@nodiscard
 function json.decode(str, n) end
 
---- Concat array item to string, table type will encode to json string
----@param array any[]
----@return buffer_ptr
+--- Concatenate array elements or string into buffer
+---@param array any[] @ Array of values to concatenate
+---@return buffer_ptr @ Buffer object
 ---@overload fun(str:string):buffer_ptr
+---@nodiscard
 function json.concat(array) end
 
---- concat params as redis protocol, table type will encode to json string
----@return buffer_ptr
+--- Concatenate parameters as Redis RESP protocol format
+---@param ... any @ Arguments to encode as Redis protocol
+---@return buffer_ptr @ Buffer containing RESP data
+---@return integer @ Hash value for cluster routing
+---@nodiscard
 function json.concat_resp(...) end
 
 ---@alias json_options
----| 'encode_empty_as_array' @ Controls whether empty tables are encoded as JSON arrays (`[]`) instead of objects (`{}`). Default: true
----| 'enable_number_key' @ Controls whether tables with numeric keys are encoded as JSON objects with string keys. Default: true
----| 'enable_sparse_array' @ Controls whether sparse arrays (with gaps in indices) are encoded as arrays with null values. Default: false
----| 'concat_buffer_size' @ Sets the buffer size and buffer head size for json.concat operations. Requires two integer values. Default: 512, 16
----| 'has_metafield' @ Controls whether to check `__object` and `__array` metafields during encoding/decoding. Default: true
+---| 'encode_empty_as_array' # Empty tables as arrays `[]` instead of objects `{}`. Default: true
+---| 'enable_number_key' # Numeric string keys become numeric keys on decode. Default: true  
+---| 'enable_sparse_array' # Sparse arrays encode as arrays with null values. Default: false
+---| 'has_metatfield' # Check `__object`/`__array` metafields for type hints. Default: true
+---| 'concat_buffer_size' # Initial buffer size for concat operations. Must be >= 64. Default: 512
 
----Sets JSON encoding/decoding options and returns their previous values
----@param option_name json_options @ The name of the option to set
----@param ... any @ The new value(s) for the specified option
----@return any ... @ The previous value(s) of the specified option
-function json.options(option_name, ...) end
+--- Configure JSON encoding/decoding options
+---@param option_name json_options @ Option name
+---@param new_value? any @ New value (omit to get current)
+---@return any @ Previous value
+function json.options(option_name, new_value) end
 
-
----Creates or marks a table as a JSON object
----@param v? integer|table @ Either initial capacity (integer) or table to be marked as object
----@return table @ Table marked as JSON object with metatable containing __object=true
+--- Create or mark table as JSON object
+---@param v? integer|table @ Capacity hint or table to mark
+---@return table @ Table marked as JSON object
 function json.object(v) end
 
----Creates or marks a table as a JSON array
----@param v? integer|table @ Either initial capacity (integer) or table to be marked as array
----@return table @ Table marked as JSON array with metatable containing __array=true
+--- Create or mark table as JSON array
+---@param v? integer|table @ Capacity hint or table to mark
+---@return table @ Table marked as JSON array
 function json.array(v) end
-    
-
 
 return json

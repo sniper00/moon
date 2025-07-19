@@ -5,7 +5,7 @@ error("DO NOT REQUIRE THIS FILE")
 --- lightuserdata, cpp type `buffer*`
 ---@class buffer_ptr
 
---- lightuserdata, cpp type `message*`
+---Represents a pointer to a C++ message object
 ---@class message_ptr
 
 --- userdata buffer_shr_ptr
@@ -15,156 +15,158 @@ error("DO NOT REQUIRE THIS FILE")
 ---@class cstring_ptr
 
 ---@class core
----@field public id integer @service's id
----@field public name string @service's name
----@field public timezone integer @server's local timezone
+---@field public id integer @ service's id
+---@field public name string @ service's name
+---@field public timezone integer @ server's local timezone
 local core = {}
 
----same as os.clock()
----@return number @in seconds
+--- Get high-precision time in seconds
+---@return number @ Current time in seconds (floating-point)
+---@nodiscard
 function core.clock() end
 
----string's md5.
----@param data string
----@return string
+--- Calculate MD5 hash of a string
+---@param data string @ Input string to hash
+---@return string @ MD5 hash as lowercase hexadecimal string
+---@nodiscard
 function core.md5(data) end
 
----convert c-string(char* and size) to lua-string
----@param sz cstring_ptr
----@param len integer
----@return string
+--- Convert C string pointer to Lua string
+---@param sz cstring_ptr @ C string pointer (char*)
+---@param len integer @ Length of the string in bytes
+---@return string @ Converted Lua string
+---@nodiscard
 function core.tostring(sz, len) end
 
 ---@alias server_stats_options
 ---|>'"service.count"'      # return total services count
 ---| '"log.error"'         # return log error count
 
----@param opt? server_stats_options @ nil return all server stats
----@return string @get server stats in json format
+--- Get server statistics information
+---@param opt? server_stats_options @ Specific statistic to retrieve, nil for all
+---@return string @ Server statistics in JSON format
+---@nodiscard
 function core.server_stats(opt) end
 
----if linked mimalloc, call mimalloc's collect
----@param force boolean @
+--- Trigger memory collection (if mimalloc is available)
+---@param force boolean @ If true, forces immediate collection; if false, suggests collection
 function core.collect(force) end
 
--- ---create a timer
--- ---@param interval integer @ms
--- ---@return integer @timer id
--- function core.timeout(interval)
---     ignore_param(interval)
--- end
-
---- print console log
+--- Print console log with specified level
+---@param loglv string @ Log level: "DEBUG", "INFO", "WARN", or "ERROR"
+---@param ... any @ Values to log (will be converted to strings)
 function core.log(loglv,...) end
 
---- set or get log level
----@param lv? string @DEBUG, INFO, WARN, ERROR
----@return integer @ log level
+--- Set or get current log level
+---@param lv? string @ Log level to set: "DEBUG", "INFO", "WARN", "ERROR"
+---@return integer @ Current log level as numeric value
 function core.loglevel(lv) end
 
---- get this service's cpu cost time
----@return integer
+--- Get this service's CPU usage time
+---@return integer @ CPU time consumed by this service
+---@nodiscard
 function core.cpu() end
 
---- remove a service
+--- Remove/kill a service
+---@param addr integer|string @ Service ID or name to terminate
 function core.kill(addr) end
 
---- query **unique** service's address by name
+--- Query unique service address by name
+---@param name string @ Unique service name to look up
+---@return integer|nil @ Service ID if found, nil otherwise
+---@nodiscard
 function core.queryservice(name) end
 
----@return integer
+--- Generate next sequence number
+---@return integer @ Unique sequence number
+---@nodiscard
 function core.next_sequence() end
 
---- set or get env
----@param key string
----@param value? string
----@return string
+--- Set or get environment variable
+---@param key string @ Environment variable name
+---@param value? string @ Value to set (if provided)
+---@return string @ Current value of the environment variable
 function core.env(key, value) end
 
---- let server exit: exitcode>=0 will wait all services quit.
----@param exitcode integer
+--- Shutdown the server with exit code
+---@param exitcode integer @ Exit code (>=0 for graceful, <0 for immediate)
 function core.exit(exitcode) end
 
---- adjusts server time(millsecond)
----@param milliseconds integer
+--- Adjust server time offset
+---@param milliseconds integer @ Time adjustment in milliseconds (can be negative)
 function core.adjtime(milliseconds) end
 
--- --- set lua callback
--- ---@param fn fun(msg:userdata,ptype:integer)
--- function core.callback(fn)
---     ignore_param(fn)
--- end
-
 --- Get server timestamp in milliseconds
---- @return integer
+---@return integer @ Current server time in milliseconds since Unix epoch
+---@nodiscard
 function core.now() end
 
---- get message's field
----
---- - 'S' message:sender()
---- - 'R' message:receiver()
---- - 'E' message:sessionid()
---- - 'Z' message:bytes()
---- - 'N' message:size()
---- - 'B' message:get_buffer()
---- - 'L' return buffer_ptr,leak buffer ownership from message
---- - 'C' message:buffer():data() and message:buffer():size()
----@param msg message_ptr
----@param pattern string
----@return ...
+--- Decode message fields based on format pattern
+---@param msg message_ptr @ Message object pointer from C++
+---@param pattern string @ Format string specifying which fields to extract
+---@return ... @ number of values based on pattern length
 ---@nodiscard
 function core.decode(msg, pattern) end
 
----redirect a message to other service
+--- Redirect a message to another service
+---@param msg message_ptr @ Message object to redirect
+---@param receiver integer @ Target service ID to receive the message
+---@param mtype? integer @ New message type (PTYPE), nil to keep original
+---@param sender? integer @ New sender service ID, nil to keep original
+---@param sessionid? integer @ New session ID for correlation, nil to keep original
 function core.redirect(msg, receiver, mtype, sender, sessionid) end
 
---- escape non printable to hex
---- @param str string
---- @return string
+--- Escape non-printable characters to hexadecimal
+---@param str string @ Input string with potential non-printable characters
+---@return string @ String with non-printable chars as hex codes
+---@nodiscard
 function core.escape_print(str) end
 
--- Send a signal to the specified thread. If val == 0, it is used to break an infinite loop.
----@param wid integer @worker id [1, THREAD_NUM]
----@param val integer
+--- Send signal to worker thread
+---@param wid integer @ Worker thread ID [1, THREAD_NUM]
+---@param val integer @ Signal value (0 = break loop, >0 = custom signal)
 function core.signal(wid, val) end
 
 ---@class asio
 local asio = {}
 
---- Check port bindable or connectable
----@param host string
----@param port integer
----@param is_connect? boolean @ bind or connect
----@return boolean
+--- Check if a port is bindable or connectable
+---@param host string @ IP address or hostname to test
+---@param port integer @ Port number to test (1-65535)
+---@param is_connect? boolean @ If true, test connection; if false/nil, test binding (default: false)
+---@return boolean @ True if port is bindable/connectable, false otherwise
+---@nodiscard
 function asio.try_open(host, port, is_connect) end
 
----param protocol moon.PTYPE_SOCKET_TCP, moon.PTYPE_SOCKET_MOON, moon.PTYPE_SOCKET_WS
----@param host string
----@param port integer
----@param protocol integer
----@return integer
+--- Create a network listener
+---@param host string @ IP address to bind to ("0.0.0.0" for all interfaces)
+---@param port integer @ Port number to listen on (1-65535)
+---@param protocol integer @ Protocol type (moon.PTYPE_SOCKET_*)
+---@return integer @ File descriptor of the listening socket
 function asio.listen(host, port, protocol) end
 
----send data to fd
----@param fd integer
----@param data string|buffer_ptr|buffer_shr_ptr
----@param mask? integer
----@return boolean
+--- Send data to a socket
+---@param fd integer @ Socket file descriptor
+---@param data string|buffer_ptr|buffer_shr_ptr @ Data to send
+---@param mask? integer @ Optional mask for send options (protocol-dependent)
+---@return boolean @ True if data was queued successfully, false otherwise
 function asio.write(fd, data, mask) end
 
----@param fd integer
----@param m message_ptr
----@return boolean
+--- Send a message object to a socket
+---@param fd integer @ Socket file descriptor
+---@param m message_ptr @ Message object to send
+---@return boolean @ True if message was queued successfully, false otherwise
 function asio.write_message(fd, m) end
 
---- 设置读操作超时, 默认是0, 永远不会超时。为了处理大量链接的检测,实际超时检测并不严格，误差范围为[t, t+10)
----@param fd integer
----@param t integer @ seconds
----@return boolean
+--- Set read timeout for a socket
+---@param fd integer @ Socket file descriptor
+---@param t integer @ Timeout in seconds (0 = no timeout)
+---@return boolean @ True if timeout was set successfully
 function asio.settimeout(fd, t) end
 
----@param fd integer
----@return boolean
+--- Disable Nagle's algorithm for a socket
+---@param fd integer @ Socket file descriptor
+---@return boolean @ True if TCP_NODELAY was set successfully
 function asio.setnodelay(fd) end
 
 ---@alias chunkmode
@@ -173,45 +175,55 @@ function asio.setnodelay(fd) end
 ---| 'rw'
 ---| 'wr'
 
---- 对于PTYPE_SOCKET_MOON类型的协议, 默认最大长度是65534字节。
---- 可以设置chunkmode, 允许收发大于这个长度消息, 底层的处理是对消息进行切片。
----@param fd integer
----@param mode chunkmode
----@return boolean
+--- Enable chunked mode for Moon protocol sockets
+---@param fd integer @ Socket file descriptor
+---@param mode chunkmode @ Chunk mode
+---@return boolean @ True if chunked mode was enabled
 function asio.set_enable_chunked(fd, mode) end
 
---- set send queue limit
----@param fd integer @ fd
----@param warnsize integer @ if send queue size > warnsize, print warnning log
----@param errorsize integer @ if send queue size > errorsize, print error log and close socket
+--- Set send queue warning/error limits
+---@param fd integer @ Socket file descriptor
+---@param warnsize integer @ Warning threshold (bytes)
+---@param errorsize integer @ Error threshold (bytes)
+---@return boolean @ True if limits were set successfully
 function asio.set_send_queue_limit(fd, warnsize, errorsize) end
 
----@param fd integer
-function asio.close(fd) end
-
----@param fd integer
----@return string @ format ip:port
+--- Get socket address as string
+---@param fd integer @ Socket file descriptor
+---@return string @ Address string
 function asio.getaddress(fd) end
 
----@param fd integer
----@param addr string @ addr bytes string. see udp callback function second param or user make_endpoint
----@param data string|userdata
----@return boolean
-function asio.sendto(fd, addr, data) end
+--- Open UDP socket
+---@param address string @ IP address to bind to
+---@param port integer @ Port number
+---@return integer @ UDP socket file descriptor
+function asio.udp(address, port) end
 
----@param fd integer
----@param host string
----@param port integer
----@return boolean
-function asio.udp_connect(fd, host, port) end
+--- Connect UDP socket to remote address
+---@param fd integer @ UDP socket file descriptor
+---@param address string @ Remote IP address
+---@param port integer @ Remote port number
+---@return boolean @ True if connection was successful
+function asio.udp_connect(fd, address, port) end
 
----@param host string
----@param port integer
----@return string @addr bytes string
-function asio.make_endpoint(host, port) end
+--- Send data to specific address via UDP socket
+---@param fd integer @ UDP socket file descriptor
+---@param address string @ Destination address
+---@param data string|buffer_ptr|buffer_shr_ptr @ Data to send
+---@return boolean @ True if data was sent successfully
+function asio.send_to(fd, address, data) end
 
----
---- 切换协议类型, 要求fd关联的socket的type为moon.PTYPE_SOCKET_TCP. 现在只用于webscoket.
-function asio.switch_type(fd, type) end
+--- Make endpoint from address and port
+---@param address string @ IP address
+---@param port integer @ Port number
+---@return string @ Encoded endpoint string
+function asio.make_endpoint(address, port) end
+
+--- Unpack UDP packet
+---@param data string|buffer_ptr @ UDP packet data
+---@param size? integer @ Data size (if using buffer_ptr)
+---@return string @ Address
+---@return string @ Payload data
+function asio.unpack_udp(data, size) end
 
 return core
