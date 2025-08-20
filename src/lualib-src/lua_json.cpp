@@ -224,8 +224,8 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, const j
                     if (esc == 'u') {
                         writer->unsafe_write_back('0');
                         writer->unsafe_write_back('0');
-                        writer->unsafe_write_back(hex_digits[(unsigned char)esc >> 4]);
-                        writer->unsafe_write_back(hex_digits[(unsigned char)esc & 0xF]);
+                        writer->unsafe_write_back(hex_digits[(unsigned char)ch >> 4]);
+                        writer->unsafe_write_back(hex_digits[(unsigned char)ch & 0xF]);
                     }
                 }
             }
