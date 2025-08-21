@@ -6,6 +6,7 @@
 #include "yyjson/yyjson.c"
 #include <charconv>
 #include <codecvt>
+#include <cstdarg>
 #include <cstdlib>
 #include <string_view>
 
@@ -82,6 +83,15 @@ static const std::array<char, 16> hex_digits = { '0', '1', '2', '3', '4', '5', '
 class lua_json_error: public std::runtime_error {
 public:
     using runtime_error::runtime_error;
+
+    static lua_json_error format(const char* fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        va_end(args);
+        return lua_json_error(buffer);
+    }
 };
 
 static buffer* get_thread_encode_buffer() {
@@ -224,8 +234,8 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, const j
                     if (esc == 'u') {
                         writer->unsafe_write_back('0');
                         writer->unsafe_write_back('0');
-                        writer->unsafe_write_back(hex_digits[(unsigned char)esc >> 4]);
-                        writer->unsafe_write_back(hex_digits[(unsigned char)esc & 0xF]);
+                        writer->unsafe_write_back(hex_digits[ch >> 4]);
+                        writer->unsafe_write_back(hex_digits[ch & 0xF]);
                     }
                 }
             }
@@ -248,8 +258,10 @@ static void encode_one(lua_State* L, buffer* writer, int idx, int depth, const j
             break;
         }
         default:
-            throw lua_json_error { std::string("json encode: unsupport value type :")
-                                   + lua_typename(L, t) };
+            throw lua_json_error::format(
+                "json encode: unsupported value type: %s",
+                lua_typename(L, t)
+            );
     }
 }
 
@@ -266,6 +278,9 @@ static inline std::pair<bool, size_t> is_array(lua_State* L, int index, const js
         }
     }
 
+    // 先获取表长度，避免多次调用
+    auto len = static_cast<lua_Integer>(lua_rawlen(L, index));
+    
     // test first key
     lua_pushnil(L);
     if (lua_next(L, index) == 0) // empty table
@@ -283,7 +298,6 @@ static inline std::pair<bool, size_t> is_array(lua_State* L, int index, const js
         * A border in a table t is any natural number that satisfies the following condition :
         * (border == 0 or t[border] ~= nil) and t[border + 1] == nil
         */
-        auto len = (lua_Integer)lua_rawlen(L, index);
         lua_pushinteger(L, len);
         if (lua_next(L, index)) // has more fields?
         {
@@ -292,7 +306,6 @@ static inline std::pair<bool, size_t> is_array(lua_State* L, int index, const js
         }
     }
 
-    auto len = (lua_Integer)lua_rawlen(L, index);
     if (firstkey > len)
         return { false, 0 };
 
@@ -348,13 +361,15 @@ encode_table_object(lua_State* L, buffer* writer, int idx, int depth, const json
                         writer->unsafe_write_back(' ');
                     encode_one<format>(L, writer, -1, depth, cfg);
                 } else {
-                    throw lua_json_error { "json encode: unsupport number key type." };
+                    throw lua_json_error::format("json encode: unsupported number key type");
                 }
                 break;
             }
             default:
-                throw lua_json_error { std::string("json encode: unsupport key type : ")
-                                       + lua_typename(L, key_type) };
+                throw lua_json_error::format(
+                    "json encode: unsupported key type: %s",
+                    lua_typename(L, key_type)
+                );
         }
         lua_pop(L, 1);
     }
@@ -406,7 +421,11 @@ static void encode_table_array(
 template<bool format>
 static void encode_table(lua_State* L, buffer* writer, int idx, int depth, const json_config* cfg) {
     if ((++depth) > MAX_DEPTH)
-        throw lua_json_error { "nested too depth" };
+        throw lua_json_error::format(
+            "nested too deep (depth=%d, max=%d)",
+            depth,
+            MAX_DEPTH
+        );
 
     if (idx < 0) {
         idx = lua_gettop(L) + idx + 1;
@@ -623,8 +642,11 @@ static int concat(lua_State* L) {
                     break;
                 }
                 default:
-                    throw lua_json_error { std::string("json encode: unsupport value type :")
-                                           + lua_typename(L, t) };
+                    throw lua_json_error::format(
+                        "json concat: unsupported value type: %s at index %d",
+                        lua_typename(L, t),
+                        i
+                    );
             }
             lua_pop(L, 1);
         }
@@ -690,8 +712,10 @@ static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) 
             break;
         }
         default:
-            throw lua_json_error { std::string("concat_resp_one: unsupport value type :")
-                                   + lua_typename(L, t) };
+            throw lua_json_error::format(
+                "concat_resp_one: unsupported value type: %s",
+                lua_typename(L, t)
+            );
     }
 }
 
