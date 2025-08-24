@@ -278,7 +278,6 @@ static inline std::pair<bool, size_t> is_array(lua_State* L, int index, const js
         }
     }
 
-    // 先获取表长度，避免多次调用
     auto len = static_cast<lua_Integer>(lua_rawlen(L, index));
     
     // test first key
