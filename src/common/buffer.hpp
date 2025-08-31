@@ -281,6 +281,35 @@ public:
         }
     }
 
+    /**
+     * @brief Shifts a block of data within the buffer from one position to another
+     * 
+     * This function safely shifts a specified number of bytes from the source index
+     * to the destination index within the buffer. It handles overlapping memory
+     * regions correctly using memmove.
+     * 
+     * @param idx The source index from which to start shifting data
+     * @param count The number of bytes to shift
+     * @param new_idx The destination index where the data should be shifted to
+     * 
+     * @note The source range [idx, idx+count) must be within the written data
+     * @note The destination range [new_idx, new_idx+count) must be within buffer capacity
+     * @note If source and destination indices are the same, no operation is performed
+     * 
+     * @example
+     * buffer buf;
+     * buf.write_back("Hello World!");
+     * buf.shift_data(6, 5, 0);  // Shift "World" to the beginning -> "World World!"
+     */
+    void shift_data(size_t idx, size_t count, size_t new_idx) {
+        assert(idx + count <= pair_.writepos);
+        assert(new_idx + count <= pair_.capacity);
+        if (idx == new_idx) {
+            return;
+        }
+        memmove(pair_.data + new_idx, pair_.data + idx, count);
+    }
+
     template<typename T>
     [[nodiscard("Return value indicates if write_front operation succeeded")]]
     bool write_front(const T* Indata, size_t count) noexcept {
