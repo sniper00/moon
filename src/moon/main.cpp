@@ -71,6 +71,7 @@ static void register_signal(int argc, char* argv[]) {
     }
     SetConsoleTitleA(str.data());
     SetConsoleOutputCP(CP_UTF8);
+    SetProcessPreferredUILanguages(MUI_LANGUAGE_NAME, L"en-US", NULL);
 #else
     std::signal(SIGHUP, SIG_IGN);
     std::signal(SIGQUIT, SIG_IGN);
@@ -302,7 +303,6 @@ send_integer_message(uint8_t type, uint32_t receiver, int64_t session, ssize_t v
         return;
     svr->send_message(moon::message { type, 0, receiver, session, val });
 }
-
 }
 
 #define REGISTER_CUSTOM_LIBRARY(name, lua_c_fn) \
