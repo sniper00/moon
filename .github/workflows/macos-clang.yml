@@ -18,9 +18,6 @@ jobs:
           brew install premake
           premake5 add --package=https://github.com/sniper00/lrust.git
           premake5 build --release
-          premake5 publish
-          zip_name=$(ls *.zip)
-          echo "zip_name=$zip_name" >> $GITHUB_ENV
       - name: Test
         run: |
           chmod +x target/release/moon
