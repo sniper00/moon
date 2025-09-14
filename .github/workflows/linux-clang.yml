@@ -13,7 +13,7 @@ jobs:
         with:
           submodules: true
       - name: Installing premake5
-        uses: Jarod42/install-premake5@v3
+        uses: Jarod42/install-premake5@v6
       - name: Build
         run: |
           premake5 add --package=https://github.com/sniper00/lrust.git

@@ -51,7 +51,7 @@ jobs:
           submodules: recursive
       - name: Installing premake5
         if: runner.os != 'macOS'
-        uses: Jarod42/install-premake5@v3
+        uses: Jarod42/install-premake5@v6
       - name: Installing premake5 on macOS
         if: runner.os == 'macOS'
         run: |
