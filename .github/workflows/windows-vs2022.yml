@@ -21,6 +21,8 @@ jobs:
         run: |
           premake5 add --package=https://github.com/sniper00/lrust.git
           premake5 build --release
+          premake5.exe publish
+          pwsh -command '$env:zip_name = (Get-ChildItem -Filter *.zip).Name; echo "zip_name=$env:zip_name" >> $env:GITHUB_ENV'
       - name: Test
         run: premake5 run --release example/test/main_test.lua
 
