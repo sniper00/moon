@@ -64,7 +64,7 @@ local function compile_project(host, cfg_name)
             end
             local msbuild_exe = string.format('"%s%s"', string_trim(install_path), [[\MSBuild\Current\Bin\MSBuild.exe]])
             -- Return the full MSBuild command
-            return string.format('%s -maxcpucount:4 target/Server.sln /t:target /p:Configuration=%s ', msbuild_exe, cfg_name)
+            return string.format('%s -maxcpucount:4 target/Server.sln /t:build /p:Configuration=%s ', msbuild_exe, cfg_name)
         end,
         linux   = string.format("make -C target -j4 config=%s", string.lower(cfg_name)),
         macosx  = string.format("make -C target -j4 config=%s", string.lower(cfg_name))
@@ -77,6 +77,19 @@ local function compile_project(host, cfg_name)
     local _, _, compile_code = os.execute(compile_cmd)
     if compile_code ~= 0 then error("Compilation failed! code: ".. compile_code) end
     print("Build check/compilation complete.")
+end
+
+function get_sharedlib_name(name)
+    if os.host() == "windows" and name:sub(1,3) == "lib" then
+        name = name:sub(4)
+    end
+    local host = os.host()
+    local ext_map = {
+        windows = "dll",
+        linux   = "so",
+        macosx  = "dylib"
+    }
+    return name .. "." .. (ext_map[host] or "so")
 end
 
 ---------------------- Custom Actions ------------------------
