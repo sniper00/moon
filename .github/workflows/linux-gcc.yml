@@ -16,6 +16,7 @@ jobs:
         uses: Jarod42/install-premake5@v3
       - name: Build
         run: |
+          premake5 add --package=https://github.com/sniper00/lrust.git
           premake5 build --release
       - name: Test
         run: |

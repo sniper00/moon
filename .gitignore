@@ -18,6 +18,11 @@ Makefile
 .vs/
 .vscode/
 build/
+target/
 exmaple/log/
 test/twitter-out.json
+ext/
+clib/
+lualib/ext/
+example/ext/
 

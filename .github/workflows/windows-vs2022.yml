@@ -19,6 +19,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
       - name: Build
         run: |
+          premake5 add --package=https://github.com/sniper00/lrust.git
           premake5 build --release
       - name: Test
         run: premake5 run --release example/test/main_test.lua
