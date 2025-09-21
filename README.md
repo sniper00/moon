@@ -119,4 +119,3 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 # Friend Open Source
 - [NoahGameFrame](https://github.com/ketoo/NoahGameFrame)
-- [hive](https://github.com/hero1s/hive)
