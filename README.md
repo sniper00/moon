@@ -34,13 +34,14 @@ Moon is a lightweight game server framework based on the actor model. One worker
 - Recast Navigation
 - Lua zset library for ranklist
 
-> Want more extension libraries? See https://github.com/sniper00/lrust
+> Want more extension libraries? See 
+> https://github.com/sniper00/lrust
 
 # OverView
 
 ## Framework
 
-![image](https://github.com/sniper00/MoonNetLua/raw/master/src/image/01.png)
+![image](https://github.com/sniper00/moon/raw/master/src/image/01.png)
 
 # Community
 
@@ -73,8 +74,6 @@ Moon is a lightweight game server framework based on the actor model. One worker
 # Demo
 - [MoonDemo](https://github.com/sniper00/MoonDemo.git)
 
-
-
 # Build
 
 1. Make sure your compiler(vs2022 17.5+, gcc 9.3+, clang 9.0+) support C++17 or [Install `C++17` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
@@ -84,37 +83,32 @@ Moon is a lightweight game server framework based on the actor model. One worker
       > Download link: https://premake.github.io/download  
       > On Mac, you can install it using `brew install premake`
 
-2. Clone source code 
+3. Clone source code 
 
     ```shell
       git clone https://github.com/sniper00/moon.git
+
+      # Add extension library: premake5 add --package=<git repository>
+      # premake5 add --package=https://github.com/sniper00/lrust.git
     ``` 
 
-3. Build
+4. Build
 
     ```shell
       cd moon
       premake5 build --release
     ```
 
-4. Run
+5. Run
     ```shell
       premake5 run --release example/send_benchmark.lua
     ```
 
-5. Publish
+6. Publish
    ```shell
       premake5 publish
    ```
-
-**If you want modify premake5 script, [See detail build steps](https://github.com/sniper00/moon/wiki/Build#%E7%BC%96%E8%AF%91)**
-
-# Add extension library
-
-```shell
-premake5 add --package=<git repository>
-```
-
+ 
 # Use case
 
 ### If your project uses moon, feel free to contact the author. The author is happy to showcase your work..
