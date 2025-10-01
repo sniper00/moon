@@ -1,4 +1,4 @@
----@diagnostic disable: undefined-global, undefined-field
+---@diagnostic disable: undefined-global, undefined-field, need-check-nil
 
 -- Global command-line option to specify release configuration
 newoption {
@@ -12,85 +12,9 @@ newoption {
   description = "Add an external package from a Git repository"
 }
 
--- Helper function to trim whitespace (or specified characters) from a string
-local function string_trim(input, chars)
-    chars = chars or " \t\n\r"
-    local pattern = "^[" .. chars .. "]+"
-    input = string.gsub(input, pattern, "")
-    pattern = "[" .. chars .. "]+$"
-    return string.gsub(input, pattern, "")
-end
-
----------------------- Helper Functions for Actions ------------------------
-
--- Determines the target configuration based on the --release flag.
-local function get_build_config()
-    local cfg_name = "debug"
-    if _OPTIONS.release then
-        cfg_name = "release"
-    end
-    print("Using configuration: " .. cfg_name)
-    return cfg_name
-end
-
--- Generates the target files (Makefiles, VS solutions, etc.) for the host OS.
-local function generate_build_files(host)
-    print("Ensuring target files are generated...")
-    local generate_commands = {
-        windows = "premake5.exe vs2022",
-        linux   = "premake5 gmake",
-        macosx  = "premake5 gmake --cc=clang"
-    }
-    local gen_cmd = generate_commands[host]
-    if not gen_cmd then error("Unsupported host OS for generation: " .. host) end
-    local _, _, gen_cmd_code = os.execute(gen_cmd)
-    if gen_cmd_code ~= 0 then error("Generation failed! code: ".. gen_cmd_code) end
-    print("Generation complete.")
-end
-
--- Compiles the project for the specified host OS and configuration.
-local function compile_project(host, cfg_name)
-    print("Ensuring project is built...")
-    local compile_commands = {
-        windows = function()
-            -- Find MSBuild path dynamically
-            local msbuild_path_cmd = os.getenv("ProgramFiles(x86)")..[[\Microsoft Visual Studio\Installer\vswhere.exe]]
-            msbuild_path_cmd = string.format('"%s" %s', string_trim(msbuild_path_cmd), " -latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
-            local handle = assert(io.popen(msbuild_path_cmd))
-            local install_path = handle:read("*a")
-            handle:close()
-            if not install_path or string.len(string_trim(install_path)) == 0 then
-                error("Could not find MSBuild installation path.")
-            end
-            local msbuild_exe = string.format('"%s%s"', string_trim(install_path), [[\MSBuild\Current\Bin\MSBuild.exe]])
-            -- Return the full MSBuild command
-            return string.format('%s -maxcpucount:4 target/Server.sln /t:build /p:Configuration=%s ', msbuild_exe, cfg_name)
-        end,
-        linux   = string.format("make -C target -j4 config=%s", string.lower(cfg_name)),
-        macosx  = string.format("make -C target -j4 config=%s", string.lower(cfg_name))
-    }
-    local compile_cmd = compile_commands[host]
-    if not compile_cmd then error("Unsupported host OS for compilation: " .. host) end
-    if type(compile_cmd) == "function" then
-        compile_cmd = compile_cmd() -- Execute function for Windows
-    end
-    local _, _, compile_code = os.execute(compile_cmd)
-    if compile_code ~= 0 then error("Compilation failed! code: ".. compile_code) end
-    print("Build check/compilation complete.")
-end
-
-function get_sharedlib_name(name)
-    if os.host() == "windows" and name:sub(1,3) == "lib" then
-        name = name:sub(4)
-    end
-    local host = os.host()
-    local ext_map = {
-        windows = "dll",
-        linux   = "so",
-        macosx  = "dylib"
-    }
-    return name .. "." .. (ext_map[host] or "so")
-end
+-- Forward declare helper functions (real implementations are at the end of this file)
+local string_trim, run_or_fail, shell_quote, get_msbuild_exe, package_dir_from_url
+local get_build_config, generate_build_files, compile_project, clean_project
 
 ---------------------- Custom Actions ------------------------
 
@@ -100,13 +24,10 @@ newaction {
     trigger = "clean",
     description = "Remove target artifacts",
     execute = function ()
-        os.rmdir("target")
-        local dirs = os.matchdirs("ext/**/target")
-        for _, dir in ipairs(dirs) do
-            print("Removing directory: " .. dir)
-            os.rmdir(dir)
-        end
-        print("Clean complete.")
+        local cfg_name = get_build_config()
+        local host = os.host()
+        os.rmdir("clib")
+        clean_project(host, cfg_name)
     end
 }
 
@@ -123,17 +44,18 @@ newaction {
             return
         end
 
-        if os.isdir("ext/" .. package:match("/([^/]+)%.git$")) then
+        local dest = package_dir_from_url(package)
+        if os.isdir(dest) then
             print("Package already exists: " .. package)
             return
         end
 
         print("Adding external package from git repository...", package)
-        os.execute("git clone " .. package .. " ext/" .. package:match("/([^/]+)%.git$"))
+        run_or_fail("git clone " .. package .. " " .. dest, "Git clone failed!")
     end
 }
 
--- Custom action: add
+-- Custom action: remove
 -- Clones a Git repository into the 'ext' directory.
 -- Requires the --url option to specify the repository URL.
 newaction {
@@ -146,13 +68,14 @@ newaction {
             return
         end
 
-        if not os.isdir("ext/" .. package:match("/([^/]+)%.git$")) then
+        local dest = package_dir_from_url(package)
+        if not os.isdir(dest) then
             print("Package does not exist: " .. package)
             return
         end
 
         print("Removing external package...", package)
-        os.execute("rm -rf ext/" .. package:match("/([^/]+)%.git$"))
+        run_or_fail("rm -rf " .. dest, "Remove failed!")
     end
 }
 
@@ -168,10 +91,18 @@ newaction {
 
         -- Optional: Update sources before building
         print("Updating git submodules...")
-        os.execute("git checkout master")
-        os.execute("git pull")
-        os.execute("git submodule init")
-        os.execute("git submodule update")
+        -- Soft attempts: do not fail the build if these commands fail
+        local function run_soft(cmd)
+            local _, _, code = os.execute(cmd)
+            if code ~= 0 then
+                print("Warning: command failed (ignored): " .. cmd .. ", code: " .. tostring(code))
+            end
+            return code
+        end
+        run_soft("git checkout master")
+        run_soft("git pull")
+        run_soft("git submodule init")
+        run_soft("git submodule update")
 
         generate_build_files(host)
         compile_project(host, cfg_name)
@@ -221,11 +152,9 @@ newaction {
         }
 
         -- Execute the packaging command for the host OS
-        if switch[host] then
-            switch[host]()
-        else
+        (switch[host] or function()
             error("Unsupported host OS for publishing: " .. host)
-        end
+        end)()
         print("Publishing process completed.")
     end
 }
@@ -257,25 +186,14 @@ newaction {
         -- 3. Collect arguments passed after 'run'
         local run_args_list = {}
         for _, arg in ipairs(_ARGS) do
-            -- Quote arguments containing spaces for robustness
-            if string.find(arg, " ", 1, true) then
-                 table.insert(run_args_list, '"' .. arg .. '"')
-            else
-                 table.insert(run_args_list, arg)
-            end
+            table.insert(run_args_list, shell_quote(arg))
         end
         local run_args_str = table.concat(run_args_list, " ")
 
         -- 4. Construct and execute the run command
-        local final_executable_path = executable_path
-        -- Quote executable path if it contains spaces
-        if string.find(executable_path, " ", 1, true) then
-             final_executable_path = '"' .. executable_path .. '"'
-        end
-
-        local run_command = final_executable_path .. " " .. run_args_str
+       local run_command = shell_quote(executable_path) .. " " .. run_args_str
         print("Running: " .. run_command)
-        local _, _, run_code = os.execute(run_command)
+       local _, _, run_code = os.execute(run_command)
         if run_code ~= 0 then
              print("Executable finished with non-zero exit code: " .. run_code)
         else
@@ -575,13 +493,142 @@ add_lua_module(
     }
 )
 
+-- ====================== Helper Implementations (moved to bottom) ======================
+
+-- Helper function to trim whitespace (or specified characters) from a string
+function string_trim(input, chars)
+    chars = chars or " \t\n\r"
+    local pattern = "^[" .. chars .. "]+"
+    input = string.gsub(input, pattern, "")
+    pattern = "[" .. chars .. "]+$"
+    return string.gsub(input, pattern, "")
+end
+
+-- Execute a shell command and fail with a clear message when non-zero
+function run_or_fail(cmd, fail_msg)
+    local _, _, code = os.execute(cmd)
+    if code ~= 0 then
+        error((fail_msg or "Command failed") .. " code: " .. tostring(code))
+    end
+    return code
+end
+
+-- Quote a string if it contains spaces (simple, portable)
+function shell_quote(s)
+    if not s or s == "" then return s end
+    if string.find(s, " ", 1, true) then
+        return '"' .. s .. '"'
+    end
+    return s
+end
+
+-- Resolve MSBuild.exe path via vswhere (Windows only)
+function get_msbuild_exe()
+    local vswhere = os.getenv("ProgramFiles(x86)")..[[\Microsoft Visual Studio\Installer\vswhere.exe]]
+    vswhere = string.format('%s %s', shell_quote(string_trim(vswhere)), "-latest -products * -requires Microsoft.Component.MSBuild -property installationPath")
+    local handle = io.popen(vswhere)
+    if not handle then
+        error("Failed to execute vswhere to locate MSBuild.")
+    end
+    local install_path = string_trim(handle:read("*a") or "")
+    handle:close()
+    if install_path == "" then
+        error("Could not find MSBuild installation path.")
+    end
+    return string.format('"%s%s"', install_path, [[\MSBuild\Current\Bin\MSBuild.exe]])
+end
+
+-- Extract repository directory name from a git URL or path
+function package_dir_from_url(url)
+    if not url or url == "" then return nil end
+    local no_trailing = url:gsub("/+$", "")
+    local name = no_trailing:match("/([^/]+)%.git$") or no_trailing:match("/([^/]+)$") or no_trailing
+    return "ext/" .. name
+end
+
+-- Determines the target configuration based on the --release flag.
+function get_build_config()
+    local cfg_name = "debug"
+    if _OPTIONS and _OPTIONS.release then
+        cfg_name = "release"
+    end
+    print("Using configuration: " .. cfg_name)
+    return cfg_name
+end
+
+-- Generates the target files (Makefiles, VS solutions, etc.) for the host OS.
+function generate_build_files(host)
+    print("Ensuring target files are generated...")
+    local generate_commands = {
+        windows = "premake5.exe vs2022",
+        linux   = "premake5 gmake",
+        macosx  = "premake5 gmake --cc=clang"
+    }
+    local gen_cmd = generate_commands[host]
+    if not gen_cmd then error("Unsupported host OS for generation: " .. host) end
+    run_or_fail(gen_cmd, "Generation failed!")
+    print("Generation complete.")
+end
+
+-- Compiles the project for the specified host OS and configuration.
+function compile_project(host, cfg_name)
+    print("Ensuring project is built...")
+    local compile_commands = {
+        windows = function()
+            local msbuild_exe = get_msbuild_exe()
+            return string.format('%s -maxcpucount:4 target/Server.sln /t:Build /p:Configuration=%s', msbuild_exe, cfg_name)
+        end,
+        linux   = string.format("make -C target -j4 config=%s", string.lower(cfg_name)),
+        macosx  = string.format("make -C target -j4 config=%s", string.lower(cfg_name))
+    }
+    local compile_cmd = compile_commands[host]
+    if not compile_cmd then error("Unsupported host OS for compilation: " .. host) end
+    if type(compile_cmd) == "function" then
+        compile_cmd = compile_cmd() -- Execute function for Windows
+    end
+    run_or_fail(compile_cmd, "Compilation failed!")
+    print("Build check/compilation complete.")
+end
+
+function clean_project(host, cfg_name)
+    print("Ensuring project is cleaned...")
+    local clean_commands = {
+        windows = function()
+            local msbuild_exe = get_msbuild_exe()
+            return string.format('%s -maxcpucount:4 target/Server.sln /t:Clean /p:Configuration=%s', msbuild_exe, cfg_name)
+        end,
+        linux   = string.format("make -C target clean config=%s",  string.lower(cfg_name)),
+        macosx  = string.format("make -C target clean config=%s", string.lower(cfg_name))
+    }
+    local clean_cmd = clean_commands[host]
+    if not clean_cmd then error("Unsupported host OS for cleaning: " .. host) end
+    if type(clean_cmd) == "function" then
+        clean_cmd = clean_cmd() -- Execute function for Windows
+    end
+    run_or_fail(clean_cmd, "Cleaning failed!")
+    print("Clean complete.")
+end
+
+function get_sharedlib_name(name)
+    if os.host() == "windows" and name:sub(1,3) == "lib" then
+        name = name:sub(4)
+    end
+    local host = os.host()
+    local ext_map = {
+        windows = "dll",
+        linux   = "so",
+        macosx  = "dylib"
+    }
+    return name .. "." .. (ext_map[host] or "so")
+end
+
+-- Include external premake files from 'ext' directory
 local files = os.matchfiles("ext/**/premake5.lua")
 if files ~= nil and #files > 0 then
     os.mkdir("clib")
     os.mkdir("lualib/ext")
 end
 for _, file in ipairs(files) do
-    
-    --print("Including external premake file: " .. file)
+    print("Including external premake file: " .. file)
     include(file)
 end
