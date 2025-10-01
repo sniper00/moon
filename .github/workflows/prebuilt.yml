@@ -41,7 +41,7 @@ jobs:
             name: windows-x86_64
           - os: ubuntu-22.04
             name: linux-x86_64
-          - os: macos-14
+          - os: macos-15
             name: macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
