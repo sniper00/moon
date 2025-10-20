@@ -87,6 +87,38 @@ local function __parse_addr(addr)
 	return host, tonumber(port)
 end
 
+local function werror(r)
+    local ok = (r.ok == 1 and not r.writeErrors and not r.writeConcernError and not r.errmsg)
+
+    local err
+    if not ok then
+        if r.writeErrors then
+            err = r.writeErrors[1].errmsg
+        elseif r.writeConcernError then
+            err = r.writeConcernError.errmsg
+        else
+            err = r.errmsg
+        end
+    end
+    return ok, err, r
+end
+
+local function wbulkerror(r)
+    local ok, err = werror(r)
+    local cursor
+    if (r.nErrors and r.nErrors ~= 0) and r.cursor then
+        cursor = {}
+        err = err and err .. ";" or ""
+        for i, v in ipairs(r.cursor.firstBatch) do
+            if v.ok ~= 1 then
+                cursor[#cursor+1] = i
+                err = err .. v.errmsg .. ";"
+            end
+        end
+    end
+    return ok, err, r, cursor
+end
+
 local auth_method = {}
 
 local function mongo_auth(mongoc)
@@ -158,10 +190,7 @@ function mongo.client( conf	)
 		overload = conf.overload,
 	}
 	setmetatable(obj, client_meta)
-	local err = obj.__sock:connect(true)	-- try connect only	once
-	if err then
-		return err
-	end
+	obj.__sock:connect(true)	-- try connect only	once
 	return obj
 end
 
@@ -197,6 +226,61 @@ function mongo_client:runCommand(...)
 		self.admin = self:getDB	"admin"
 	end
 	return self.admin:runCommand(...)
+end
+
+local function filter(tbl, key, value)
+    if value == nil then return end
+    tbl[#tbl+1] = key
+    tbl[#tbl+1] = type(value) == "table" and bson_encode(value) or value
+end
+
+local bulkWrite = {}
+bulkWrite.insert = function(nsindex, doc)
+    return bson_encode_order("insert", nsindex, "document", bson_encode(doc.insert))
+end
+
+bulkWrite.delete = function(nsindex, doc)
+    local args = {"delete", nsindex, "filter", bson_encode(doc.filter), "multi", doc.multi or false}
+    filter(args, "hit", doc.hit)
+    filter(args, "collation", doc.collation)
+    return bson_encode_order(table.unpack(args))
+end
+
+--update仅支持原子操作更新/聚合管道更新 详情阅读官方文档
+--arrayFilters 过滤方式需要遍历encode 暂时不支持
+bulkWrite.update = function(nsindex, doc)
+    local args = {"update", nsindex, "filter", bson_encode(doc.filter), "updateMods", bson_encode(doc.update),
+        "multi", doc.multi or false, "upsert", doc.upsert or false}
+    filter(args, "hit", doc.hit)
+    filter(args, "constants", doc.constants)
+    filter(args, "collation", doc.collation)
+    return bson_encode_order(table.unpack(args))
+end
+
+--bulkWrite 依赖 mongo8.0x
+--忽略let,cursor,writeConcern 参数
+---@param datas table 待写入数据
+---       - op string 写入数据方式 参见：bulkWrite
+---       - collection string 数据写入目标, 用于构建nsInfo； 注意：采用 空间.集合方式
+---       - ... 操作具体参数 insert采用：insert填充document, update采用 update 填充updateMods
+---       示例：{op = "insert", collection = "log.online", insert = {count=0}}
+---             {op = "update", collection = "log.online", update = {["$set"] = {count = 2}}, upsert = true}}
+function mongo_client:bulkWrite(datas, comment, ordered, verify, errorsOnly)
+    local ops, ns, map = {}, {}, {}
+    for i, v in ipairs(datas) do
+        if not map[v.collection] then
+            map[v.collection] = #ns  --ops 索引从0开始
+            ns[#ns+1] = bson_encode({ns = v.collection})
+        end
+        local f = assert(bulkWrite[v.op], v.op)
+        ops[i] = f(map[v.collection], v)
+    end
+    local args = {"bulkWrite", 1, "ops", ops, "nsInfo", ns}
+    filter(args, "ordered", ordered) --是否有序执行 默认有序
+    filter(args, "bypassDocumentValidation", verify) --是否验证 默认验证
+    filter(args, "comment", comment) --日志跟踪注释
+    filter(args, "errorsOnly",errorsOnly) -- 仅返回错误信息
+    return wbulkerror(self:runCommand(table.unpack(args)))
 end
 
 function auth_method:auth_mongodb_cr(user,password)
@@ -245,7 +329,7 @@ function auth_method:auth_scram_sha1(username,password)
 	local salt = parsed_t['s']
 	local rnonce = parsed_t['r']
 
-	if not string.sub(rnonce, 1, 12) == nonce then
+	if string.sub(rnonce, 1, 12) ~= nonce then
 		moon.error("Server returned an invalid nonce.")
 		return false
 	end
@@ -355,22 +439,6 @@ function mongo_collection:insert(doc)
 		doc._id	= bson.objectid()
 	end
 	self.database:send_command("insert", self.name, "documents", {bson_encode(doc)})
-end
-
-local function werror(r)
-	local ok = (r.ok == 1 and not r.writeErrors and not r.writeConcernError and not r.errmsg)
-
-	local err
-	if not ok then
-		if r.writeErrors then
-			err = r.writeErrors[1].errmsg
-		elseif r.writeConcernError then
-			err = r.writeConcernError.errmsg
-		else
-			err = r.errmsg
-		end
-	end
-	return ok, err, r
 end
 
 function mongo_collection:safe_insert(doc)
@@ -513,9 +581,7 @@ function mongo_collection:find(query, projection)
 		__data = nil,
 		__cursor = nil,
 		__document = {},
-		__skip = 0,
-		__limit = 0,
-		__sort = empty_bson,
+		__sort = empty_bson
 	} ,	cursor_meta)
 end
 
@@ -550,15 +616,52 @@ function mongo_cursor:limit(amount)
 	return self
 end
 
+function mongo_cursor:hint(indexName)
+	self.__hint = indexName
+	return self
+end
+
+function mongo_cursor:maxTimeMS(ms)
+	self.__maxTimeMS = ms
+	return self
+end
+
+local opt_func = {}
+
+local function opt_define(name)
+	local key = "__" .. name
+	opt_func[name] = function (self, ...)
+		local v = self[key]
+		if v ~= nil then
+			return name, v, ...
+		else
+			return ...
+		end
+	end
+end
+
+opt_define "skip"
+opt_define "limit"
+opt_define "hint"
+opt_define "maxTimeMS"
+
+local function add_opt(self, opt, ...)
+	if opt == nil then
+		return
+	end
+	return opt_func[opt](self, add_opt(self, ...))
+end
+
 function mongo_cursor:count(with_limit_and_skip)
 	local ret
 	if with_limit_and_skip then
 		ret = self.__collection.database:runCommand('count', self.__collection.name, 'query', self.__query,
-			'limit', self.__limit, 'skip', self.__skip)
+			add_opt(self, "skip", "limit", "hint", "maxTimeMS"))
 	else
-		ret = self.__collection.database:runCommand('count', self.__collection.name, 'query', self.__query)
+		ret = self.__collection.database:runCommand('count', self.__collection.name, 'query', self.__query,
+			add_opt(self, "hint", "maxTimeMS"))
 	end
-	assert(ret and ret.ok == 1)
+	assert(ret.ok == 1, ret.errmsg)
 	return ret.n
 end
 
@@ -703,7 +806,7 @@ function mongo_cursor:hasNext()
 		if self.__data == nil then
 			local name = self.__collection.name
 			response = database:runCommand("find", name, "filter", self.__query, "sort", self.__sort,
-				"skip", self.__skip, "limit", self.__limit, "projection", self.__projection)
+				"projection", self.__projection, add_opt(self, "skip", "limit", "hint", "maxTimeMS"))
 		else
 			if self.__cursor  and self.__cursor > 0 then
 				local name = self.__collection.name
@@ -730,7 +833,7 @@ function mongo_cursor:hasNext()
 		self.__cursor = cursor.id
 
 		local limit = self.__limit
-		if cursor.id > 0 and limit > 0 then
+		if limit and limit > 0 and cursor.id > 0 then
 			limit = limit - #self.__document
 			if limit <= 0 then
 				-- reach limit

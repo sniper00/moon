@@ -38,6 +38,7 @@ function socketchannel:connect(_)
                 if ok and session then
                     local co = self._threads[session]
                     if co then
+                        self._threads[session] = nil
                         moon.wakeup(co, result_ok, result_data)
                     end
                 else
