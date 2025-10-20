@@ -336,6 +336,7 @@ append_one(struct bson *bs, lua_State *L, const char *key, size_t sz, int depth)
 	case LUA_TNUMBER:
 		append_number(bs, L, key, sz);
 		break;
+	case LUA_TLIGHTUSERDATA:
 	case LUA_TUSERDATA: {
 		append_key(bs, L, BSON_DOCUMENT, key, sz);
 		int32_t * doc = (int32_t*)lua_touserdata(L,-1);
@@ -528,7 +529,10 @@ is_rawarray(lua_State *L) {
 	}
 	lua_Integer firstkey = lua_isinteger(L, -2) ? lua_tointeger(L, -2) : 0;
 	lua_pop(L, 2);
-	return firstkey > 0;
+	if (firstkey <= 1) {
+		return firstkey > 0;
+	}
+	return firstkey <= lua_rawlen(L, -1);
 }
 
 static void
@@ -985,6 +989,13 @@ lencode(lua_State *L) {
 }
 
 static int
+lto_lightuserdata(lua_State *L) {
+	void *p = lua_touserdata(L, 1);
+	lua_pushlightuserdata(L, p);
+	return 1;
+}
+
+static int
 encode_bson_byorder(lua_State *L) {
 	int n = lua_gettop(L);
 	struct bson *b = (struct bson*)lua_touserdata(L, n);
@@ -1346,6 +1357,7 @@ luaopen_bson(lua_State *L) {
 		{ "objectid", lobjectid },
 		{ "int64", lint64 },
 		{ "decode", ldecode },
+		{ "to_lightuserdata", lto_lightuserdata },
 		{ NULL,  NULL },
 	};
 
@@ -1366,4 +1378,3 @@ luaopen_bson(lua_State *L) {
 
 	return 1;
 }
-
