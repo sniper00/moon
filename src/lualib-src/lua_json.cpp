@@ -3,7 +3,7 @@
 #include "common/lua_utility.hpp"
 #include "common/string.hpp"
 #include "lua.hpp"
-#include "yyjson/yyjson.c"
+#include "yyjson/yyjson.h"
 #include <charconv>
 #include <codecvt>
 #include <cstdarg>
@@ -195,13 +195,14 @@ static void format_space(buffer* writer, int n) {
 
 inline void write_number(buffer* writer, lua_Number num) {
     auto [buf, n] = writer->prepare(32);
-    uint64_t raw = f64_to_raw(num);
-    auto e = write_f64_raw((uint8_t*)buf, raw, YYJSON_WRITE_ALLOW_INF_AND_NAN);
+    yyjson_val val{};
+    unsafe_yyjson_set_double(&val, num);
+    auto e = (uint8_t*)yyjson_write_number(&val, buf);
     writer->commit_unchecked(e - (uint8_t*)buf);
 }
 
 template<bool format>
-static void encode_table(lua_State* L, buffer* writer, int idx, int depth);
+static void encode_table(lua_State* L, buffer* writer, int idx, int depth, const json_config* cfg);
 
 template<bool format>
 static void encode_one(lua_State* L, buffer* writer, int idx, int depth, const json_config* cfg) {
