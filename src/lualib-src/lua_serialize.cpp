@@ -290,8 +290,8 @@ static void* get_pointer(lua_State* L, buffer_view* buf) {
     return userdata;
 }
 
-static void get_buffer(lua_State* L, buffer_view* buf, int len) {
-    if (int(buf->size()) < len) {
+static void get_buffer(lua_State* L, buffer_view* buf, size_t len) {
+    if (buf->size() < len) {
         invalid_stream(L, buf);
     }
     lua_pushlstring(L, buf->data(), len);
@@ -348,7 +348,7 @@ static void push_value(lua_State* L, buffer_view* buf, int type, int cookie) {
             lua_pushlightuserdata(L, get_pointer(L, buf));
             break;
         case TYPE_SHORT_STRING:
-            get_buffer(L, buf, cookie);
+            get_buffer(L, buf, (size_t)cookie);
             break;
         case TYPE_LONG_STRING: {
             if (cookie == 2) {
