@@ -460,7 +460,7 @@ add_lua_module(
             }
 
             ---json
-            ---files { "./third/yyjson/**.h", "./third/yyjson/**.c"}
+            files { "./third/yyjson/**.h", "./third/yyjson/**.c"}
 
             ---kcp
             files { "./third/kcp/**.h", "./third/kcp/**.c"}
