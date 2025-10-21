@@ -56,8 +56,6 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install premake
-      - name: Install rust
-        uses: dtolnay/rust-toolchain@1.86
       - name: Build
         if: runner.os != 'Windows'
         run: |
