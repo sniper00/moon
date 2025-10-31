@@ -22,17 +22,19 @@ public:
         if (stop_) {
             return;
         }
-
-        do {
+        expired_.clear();
+        {
             std::unique_lock lock { lock_ };
-            if (auto iter = timers_.begin(); iter == timers_.end() || iter->first > now) {
-                break;
-            } else {
-                auto nh = timers_.extract(iter);
-                lock.unlock();
-                nh.mapped()();
+            auto it = timers_.begin();
+            while (it != timers_.end() && it->first <= now) {
+                expired_.push_back(std::move(it->second));
+                it = timers_.erase(it);
             }
-        } while (true);
+        }
+
+        for (auto& handler : expired_) {
+            handler();
+        }
         return;
     }
 
@@ -58,6 +60,7 @@ private:
     bool stop_ = false;
     std::mutex lock_;
     std::multimap<int64_t, expire_policy_type> timers_;
+    std::vector<expire_policy_type> expired_;
 };
 
 class default_expire_policy {
