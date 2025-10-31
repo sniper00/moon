@@ -44,8 +44,8 @@ static int find_straight_path(lua_State* L) {
     auto ex = moon::lua_check<float>(L, 5);
     auto ey = moon::lua_check<float>(L, 6);
     auto ez = moon::lua_check<float>(L, 7);
-    std::vector<float> paths;
-    if (p->find_straight_path(sx, sy, sz, ex, ey, ez, paths)) {
+
+    if (std::vector<float> paths; p->find_straight_path(sx, sy, sz, ex, ey, ez, paths)) {
         lua_createtable(L, (int)paths.size(), 0);
         for (size_t i = 0; i < paths.size(); ++i) {
             lua_pushnumber(L, paths[i]);

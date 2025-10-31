@@ -66,8 +66,7 @@ static int unpack(lua_State* L) {
 
     int top = lua_gettop(L);
 
-    int tp = lua_type(L, 2);
-    if (tp == LUA_TSTRING) {
+    if (int tp = lua_type(L, 2); tp == LUA_TSTRING) {
         size_t opt_len = 0;
         const char* opt = luaL_optlstring(L, 2, "", &opt_len);
         auto pos = static_cast<size_t>(luaL_optinteger(L, 3, 0));
@@ -270,8 +269,8 @@ static int unsafe_new(lua_State* L) {
         return luaL_argerror(L, 1, format("buffer.unsafe_new: capacity too large (max %I), got %I", MAX_CAPACITY, capacity_arg).c_str());
     }
     
-    size_t capacity = static_cast<size_t>(capacity_arg);
-    buffer* buf = new buffer { capacity };
+    auto capacity = static_cast<size_t>(capacity_arg);
+    auto* buf = new buffer { capacity };
     lua_pushlightuserdata(L, buf);
     return 1;
 }
@@ -281,17 +280,16 @@ static int concat(lua_State* L) {
     if (0 == n) {
         return 0;
     }
-    auto buf = new buffer { 256 };
-    buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
     try {
+        auto buf = std::make_unique<moon::buffer>(256);
+        buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
         for (int i = 1; i <= n; i++) {
-            concat_one(L, buf, i, 0);
+            concat_one(L, buf.get(), i, 0);
         }
         buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-        lua_pushlightuserdata(L, buf);
+        lua_pushlightuserdata(L, buf.release());
         return 1;
     } catch (const std::exception& e) {
-        delete buf;
         lua_pushstring(L, e.what());
     }
     return lua_error(L);
@@ -322,7 +320,7 @@ static int to_shared(lua_State* L) {
         return luaL_argerror(L, 1, format("buffer.to_shared: expected buffer lightuserdata, got %s", lua_typename(L, lua_type(L, 1))).c_str());
     }
     
-    buffer* b = (buffer*)lua_touserdata(L, 1);
+    auto* b = (buffer*)lua_touserdata(L, 1);
     if (nullptr == b)
         return luaL_argerror(L, 1, "buffer.to_shared: expected buffer lightuserdata, got null pointer");
 
@@ -335,7 +333,7 @@ static int to_shared(lua_State* L) {
     if (luaL_newmetatable(L, "lbuffer_shr_ptr")) //mt
     {
         auto gc = [](lua_State* L) {
-            buffer_shr_ptr_t* shr = (buffer_shr_ptr_t*)lua_touserdata(L, 1);
+            auto* shr = (buffer_shr_ptr_t*)lua_touserdata(L, 1);
             if (nullptr == shr)
                 return luaL_argerror(L, 1, "buffer.__gc: invalid buffer_shr_ptr_t pointer");
             std::destroy_at(shr);

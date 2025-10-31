@@ -119,7 +119,7 @@ using namespace std::literals::string_view_literals;
 
 #define VA_ARGS_NUM(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
 
-#define thread_sleep(x) std::this_thread::sleep_for(std::chrono::milliseconds(x));
+#define thread_sleep(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
 
 namespace moon {
 inline size_t _thread_id() {

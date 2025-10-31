@@ -430,7 +430,8 @@ static int message_redirect(lua_State* L) {
     auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
         return luaL_argerror(L, 1, "lightuserdata(message*) expected");
-    if (m->receiver = (uint32_t)luaL_checkinteger(L, 2); m->receiver == 0)
+    m->receiver = (uint32_t)luaL_checkinteger(L, 2);
+    if (m->receiver == 0)
         return luaL_argerror(L, 2, "receiver must > 0");
     m->type = (uint8_t)luaL_checkinteger(L, 3);
     if (top > 3) {

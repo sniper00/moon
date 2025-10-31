@@ -56,7 +56,7 @@ static void signal_handler(int signal) {
 }
 #endif
 
-static void register_signal(int argc, char* argv[]) {
+static void register_signal([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
     SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
     std::string str;
@@ -81,7 +81,7 @@ static void register_signal(int argc, char* argv[]) {
 #endif
 }
 
-#ifdef MOON_ENABLE_MIMALLOC
+#if MOON_ENABLE_MIMALLOC && DEBUG
     #include "mimalloc.h"
 void print_mem_stats() {
     std::string stats;

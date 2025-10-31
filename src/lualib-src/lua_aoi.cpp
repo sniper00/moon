@@ -41,7 +41,7 @@ struct aoi_object {
         return rc.contains(x, y);
     }
 
-    bool check() {
+    bool check() const {
         return true;
     }
 };
@@ -201,7 +201,7 @@ static int laoi_create(lua_State* L) {
         return luaL_error(L, "Need length_of_area %% length_of_node == 0.");
     }
 
-    aoi_type* p = (aoi_type*)lua_newuserdatauv(L, sizeof(aoi_type), 0);
+    auto* p = (aoi_type*)lua_newuserdatauv(L, sizeof(aoi_type), 0);
     new (p) aoi_type(x, y, len_of_area, len_of_node);
 
     if (luaL_newmetatable(L, METANAME)) //mt
@@ -216,7 +216,7 @@ static int laoi_create(lua_State* L) {
             { "update_event", laoi_update_event },
             { "enable_debug", laoi_enable_debug },
             { "enable_leave_event", laoi_enable_leave_event },
-            { NULL, NULL },
+            { nullptr, nullptr },
         };
         luaL_newlib(L, l); //{}
         lua_setfield(L, -2, "__index"); //mt[__index] = {}

@@ -391,15 +391,14 @@ static int pack(lua_State* L) {
         return 0;
     }
 
-    auto buf = new buffer {};
     try {
+        auto buf = std::make_unique<moon::buffer>();
         for (int i = 1; i <= n; i++) {
-            pack_one(L, buf, i, 0);
+            pack_one(L, buf.get(), i, 0);
         }
-        lua_pushlightuserdata(L, buf);
+        lua_pushlightuserdata(L, buf.release());
         return 1;
     } catch (const std::exception& e) {
-        delete buf;
         lua_pushstring(L, e.what());
     }
     return lua_error(L);
@@ -471,7 +470,7 @@ static int peek_one(lua_State* L) {
         seek = lua_toboolean(L, 2);
     }
 
-    buffer* buf = (buffer*)lua_touserdata(L, 1);
+    auto* buf = (buffer*)lua_touserdata(L, 1);
     buffer_view br(buf->data(), buf->size());
 
     uint8_t type = 0;

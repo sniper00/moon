@@ -27,7 +27,7 @@ public:
         return name_;
     }
 
-    void set_name(const std::string& name) {
+    void set_name(std::string_view name) {
         name_ = name;
     }
 
@@ -91,13 +91,13 @@ protected:
 };
 
 template<typename Service, typename Message>
-inline void handle_message(Service&& s, Message&& m) {
+inline void handle_message(Service& s, Message&& m) {
     uint32_t receiver = m.receiver;
     s->dispatch(&m);
     //redirect message
     if (m.receiver != receiver) {
         if constexpr (std::is_rvalue_reference_v<decltype(m)>) {
-            s->get_server()->send_message(std::forward<message>(m));
+            s->get_server()->send_message(std::forward<Message>(m));
         }
     }
 }

@@ -240,8 +240,10 @@ void lua_service::dispatch(message* m) {
     }
 }
 
+void signal_hook(lua_State * L, lua_Debug*);
+
 void lua_service::signal(int val) {
-    void signal_hook(lua_State * L, lua_Debug*);
+
     log::instance()
         .logstring(true, moon::LogLevel::Info, moon::format("recv a signal %d", val), id());
 
