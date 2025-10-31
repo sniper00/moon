@@ -380,7 +380,11 @@ function add_lua_module(dir, name, options, is_shared)
         filter { "system:windows" }
             if is_shared then
                 defines{"LUA_BUILD_AS_DLL"}
+                libdirs{MOON_DIR.."/target/%{cfg.buildcfg}"}
                 links{"moon"}
+                linkoptions {
+                    "/DEFAULTLIB:moon"
+                }
             end
             if type(options.windows)=="function" then
                 options.windows()
