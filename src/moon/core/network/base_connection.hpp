@@ -49,7 +49,7 @@ public:
         if (!server) {
             mask_ = enum_unset_bitmask(mask_, connection_mask::server);
         }
-        recvtime_ = now();
+        recvtime_ = parent_->time();
     }
 
     virtual direct_read_result read(size_t, std::string_view, int64_t) {
@@ -128,7 +128,6 @@ public:
             });
             return;
         }
-        return;
     }
 
     bool set_no_delay() {
@@ -140,16 +139,13 @@ public:
 
     void settimeout(uint32_t v) {
         timeout_ = v;
-        recvtime_ = now();
+        if(parent_ != nullptr)
+            recvtime_ = parent_->time();
     }
 
     void set_send_queue_limit(uint16_t warnsize, uint16_t errorsize) {
         wq_warn_size_ = warnsize;
         wq_error_size_ = errorsize;
-    }
-
-    static time_t now() {
-        return std::time(nullptr);
     }
 
     std::string address() {
@@ -224,8 +220,8 @@ protected:
 
     template<typename Message>
     void handle_message(Message&& m) {
-        recvtime_ = now();
         if (nullptr != parent_) {
+            recvtime_ = parent_->time();
             m.sender = fd_;
             parent_->handle_message(serviceid_, std::forward<Message>(m));
         }

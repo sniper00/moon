@@ -103,7 +103,7 @@ class ws_connection: public base_connection {
 public:
     using base_connection_t = base_connection;
 
-    static constexpr size_t HANDSHAKE_STREAMBUF_SIZE = 2048;
+    static constexpr size_t DEFAULT_READ_CACHE_SIZE = 2048;
 
     static constexpr size_t SEC_WEBSOCKET_KEY_LEN = 24;
 
@@ -121,9 +121,7 @@ public:
         std::enable_if_t<
             !std::disjunction_v<std::is_same<std::decay_t<Args>, ws_connection>...>,
             int> = 0>
-    explicit ws_connection(Args&&... args):
-        base_connection_t(std::forward<Args>(args)...),
-        cache_(HANDSHAKE_STREAMBUF_SIZE) {}
+    explicit ws_connection(Args&&... args): base_connection_t(std::forward<Args>(args)...) {}
 
     void start(bool server) override {
         base_connection_t::start(server);
@@ -196,7 +194,7 @@ private:
         if (!moon::try_get_value(header, "sec-websocket-key"sv, sec_ws_key))
             return make_error_code(moon::error::ws_no_sec_key);
 
-        if (base64_decode(std::string { sec_ws_key.data(), sec_ws_key.size() }).size() != 16)
+        if (base64_decode(sec_ws_key.data(), sec_ws_key.size()).size() != 16)
             return make_error_code(moon::error::ws_bad_sec_key);
 
         std::string_view sec_ws_version;
@@ -212,9 +210,13 @@ private:
 
         auto answer = upgrade_response(sec_ws_key, protocol);
         send_response(answer);
-        handle_message(message {
-            type_, 0, static_cast<uint8_t>(socket_data_type::socket_accept), 0, std::string_view { cache_.data(), n }
-        });
+        handle_message(
+            message { type_,
+                      0,
+                      static_cast<uint8_t>(socket_data_type::socket_accept),
+                      0,
+                      std::string_view { cache_.data(), n } }
+        );
 
         cache_.consume_unchecked(n);
 
@@ -258,7 +260,7 @@ private:
     }
 
     void handle_frame() {
-        size_t size = cache_.size();
+        const size_t size = cache_.size();
 
         // Check if the size of the data is less than 2
         // According to the WebSocket protocol, a frame must have at least 2 bytes
@@ -268,7 +270,7 @@ private:
             return read_payload(2);
         }
 
-        auto frame_data = (const uint8_t*)(cache_.data());
+        const auto* frame_data = reinterpret_cast<const uint8_t*>(cache_.data());
 
         size_t header_size = 2;
         ws::frame_header fh {};
@@ -363,7 +365,7 @@ private:
         }
 
         if (fh.mask) {
-            memcpy(
+            std::memcpy(
                 fh.mask_key.data(),
                 frame_data + (header_size - fh.mask_key.size()),
                 fh.mask_key.size()
@@ -383,7 +385,7 @@ private:
         // If the cache size is greater than or equal to the expected size, consume the expected size
         // Otherwise, consume the entire cache
         size_t consume_size = (diff >= 0 ? reallen : cache_.size());
-        data_->write_back({cache_.data(), consume_size});
+        data_->write_back({ cache_.data(), consume_size });
         cache_.consume_unchecked(consume_size);
 
         if (diff >= 0) {
@@ -411,10 +413,10 @@ private:
 
         if (fh.mask) {
             // unmask data:
-            auto d = (uint8_t*)data_->data();
-            size_t size = data_->size();
+            auto* d = reinterpret_cast<uint8_t*>(data_->data());
+            const size_t size = data_->size();
             for (size_t i = 0; i < size; ++i) {
-                d[i] = d[i] ^ fh.mask_key[i % 4];
+                d[i] ^= fh.mask_key[i & 3]; // Use bitwise AND for modulo 4
             }
         }
 
@@ -424,9 +426,6 @@ private:
                 moon::escape_print(std::string { data_->data(), data_->size() })
             );
         }
-
-        // auto msg = message { std::move(data_) };
-        // msg.set_type(type_);
 
         uint8_t sub_type = 0;
         switch (fh.op) {
@@ -443,23 +442,21 @@ private:
                 break;
         }
 
-        handle_message(message {
-            type_, 0, sub_type, 0, std::move(data_)
-        });
+        handle_message(message { type_, 0, sub_type, 0, std::move(data_) });
 
         handle_frame();
     }
 
     static ws::mask_key_type randkey() {
         ws::mask_key_type tmp {};
-        char x = 0;
+        uint8_t x = 0;
         for (auto& c: tmp) {
             c = static_cast<uint8_t>(std::rand() & 0xFF);
             x ^= c;
         }
 
         if (x == 0) {
-            tmp[0] |= 1; // avoid 0
+            tmp[0] |= 1; // Ensure non-zero mask
         }
 
         return tmp;
@@ -492,13 +489,13 @@ private:
 
         [[maybe_unused]] bool always_ok = false;
 
-        uint64_t size = data->size();
+        const uint64_t size = data->size();
 
         if (!is_server()) {
-            auto d = reinterpret_cast<uint8_t*>(data->data());
-            auto mask = randkey();
+            auto* d = reinterpret_cast<uint8_t*>(data->data());
+            const auto mask = randkey();
             for (uint64_t i = 0; i < size; i++) {
-                d[i] = d[i] ^ mask[i % mask.size()];
+                d[i] ^= mask[i & 3]; // Use bitwise AND for modulo 4
             }
             always_ok = payload.write_front(mask.data(), mask.size());
         }
@@ -507,14 +504,15 @@ private:
         if (size <= PAYLOAD_MIN_LEN) {
             payload_len = static_cast<uint8_t>(size);
         } else if (size <= UINT16_MAX) {
-            payload_len = static_cast<uint8_t>(PAYLOAD_MID_LEN);
-            uint16_t n = (uint16_t)size;
+            payload_len = PAYLOAD_MID_LEN;
+            uint16_t n = static_cast<uint16_t>(size);
             moon::host2net(n);
             always_ok = payload.write_front(&n, 1);
         } else {
-            payload_len = static_cast<uint8_t>(PAYLOAD_MAX_LEN);
-            moon::host2net(size);
-            always_ok = payload.write_front(&size, 1);
+            payload_len = PAYLOAD_MAX_LEN;
+            uint64_t size_net = size;
+            moon::host2net(size_net);
+            always_ok = payload.write_front(&size_net, 1);
         }
 
         //messages from the client must be masked
@@ -553,6 +551,7 @@ private:
 
     static std::string upgrade_response(std::string_view seckey, std::string_view wsprotocol) {
         std::string response;
+        response.reserve(256); // Pre-allocate reasonable size
         response.append("HTTP/1.1 101 Switching Protocols\r\n");
         response.append("Upgrade: WebSocket\r\n");
         response.append("Connection: Upgrade\r\n");
@@ -569,7 +568,7 @@ private:
     }
 
 private:
-    buffer cache_;
+    buffer cache_ { DEFAULT_READ_CACHE_SIZE };
     buffer_ptr_t data_;
 };
 } // namespace moon

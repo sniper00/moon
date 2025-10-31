@@ -16,16 +16,15 @@ public:
     }
 
     // Get the number of writable buffers
-    size_t writeable() const {
+    size_t writeable() const noexcept {
         return send_queue_.size();
     }
 
     // Commit the written data
     void commit_written() {
-        for (size_t i = 0; i < consume_size_; ++i) {
+        while (consume_size_-- > 0) {
             send_queue_.pop_front();
         }
-
         consume_size_ = 0;
         buffer_sequences_.clear();
         padding_.clear();
@@ -34,24 +33,20 @@ public:
     // Prepare each buffer and call the handler
     template<typename Handler>
     void prepare_buffers(const Handler& handler, size_t max_bytes = 0) {
-        size_t queue_size = send_queue_.size();
         size_t bytes = 0;
-        for (size_t i = 0; i < queue_size; ++i) {
+        for (size_t i = 0, n = send_queue_.size(); i < n; ++i) {
             const auto& elm = send_queue_[i];
             handler(elm);
-            if (bytes += elm->size(); bytes >= max_bytes) {
+            if (max_bytes && (bytes += elm->size()) >= max_bytes) {
                 break;
             }
         }
     }
 
-    void consume(const char* data, size_t len) {
-        buffer_sequences_.emplace_back(data, len);
-        ++consume_size_;
-    }
-
-    // Increment the consume size counter
-    void consume() {
+    void consume(const char* data = nullptr, size_t len = 0) {
+        if (data && len > 0) {
+            buffer_sequences_.emplace_back(data, len);
+        }
         ++consume_size_;
     }
 
@@ -66,11 +61,12 @@ public:
         size_t n = std::min(space.size(), padding_size);
         memcpy(space.data(), padding_data, n);
         buffer_sequences_.emplace_back(space.data(), n);
-        if (len > 0)
+        if (len > 0) {
             buffer_sequences_.emplace_back(data, len);
+        }
     }
 
-    const auto& buffer_sequence() const {
+    const std::vector<asio::const_buffer>& buffer_sequence() const noexcept {
         return buffer_sequences_;
     }
 

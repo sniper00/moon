@@ -57,6 +57,10 @@ public:
 
     std::time_t now(bool sync = false);
 
+    std::time_t now_without_offset() const {
+        return now_without_offset_;
+    }
+
     uint32_t service_count() const;
 
     worker* next_worker();
@@ -119,6 +123,7 @@ private:
     std::atomic<state> state_ = state::unknown;
     std::atomic<uint32_t> fd_seq_ = 1;
     std::time_t now_ = 0;
+    std::time_t now_without_offset_ = 0;
     mutable std::mutex fd_lock_;
     std::unordered_map<std::string, register_func> regservices_;
     concurrent_map<std::string, std::shared_ptr<const std::string>, rwlock> env_;

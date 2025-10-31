@@ -34,30 +34,30 @@ int server::run() {
     state_.store(state::ready, std::memory_order_release);
     while (true) {
         now_ = time::now();
+        now_without_offset_ = now_ - time::offset();
 
-        if (exitcode_.load(std::memory_order_acquire) < 0) {
+        int current_exitcode = exitcode_.load(std::memory_order_acquire);
+        if (current_exitcode < 0) {
             break;
         }
 
-        if (exitcode_.load(std::memory_order_acquire) != std::numeric_limits<int>::max()
-            && !stop_once)
-        {
+        if (current_exitcode != std::numeric_limits<int>::max() && !stop_once) {
             stop_once = true;
-            CONSOLE_WARN("Received signal code %d", exitcode_.load(std::memory_order_acquire));
+            CONSOLE_WARN("Received signal code %d", current_exitcode);
             for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter) {
                 (*iter)->stop();
             }
         }
 
         if (state_.load(std::memory_order_acquire) == state::stopping) {
-            size_t alive = workers_.size();
+            size_t alive = 0;
             for (const auto& w: workers_) {
-                if (w->count() == 0) {
-                    --alive;
+                if (w->count() != 0) {
+                    ++alive;
                 }
             }
 
-            if (0 == alive) {
+            if (alive == 0) {
                 break;
             }
         }
@@ -71,7 +71,7 @@ int server::run() {
     wait();
     if (exitcode_.load(std::memory_order_acquire) == std::numeric_limits<int>::max())
         exitcode_.store(0, std::memory_order_release);
-    return exitcode_.load();
+    return exitcode_.load(std::memory_order_relaxed);
 }
 
 void server::stop(int exitcode) {
@@ -114,27 +114,31 @@ uint32_t server::service_count() const {
 
 worker* server::next_worker() {
     assert(workers_.size() > 0);
-    uint32_t min_count = std::numeric_limits<uint32_t>::max();
-    uint32_t min_count_workerid = 0;
+    uint32_t min_shared_count = std::numeric_limits<uint32_t>::max();
+    uint32_t min_shared_workerid = 0;
+    uint32_t min_all_count = std::numeric_limits<uint32_t>::max();
+    uint32_t min_all_workerid = 0;
+    
+    // Single pass optimization: find both shared and overall minimum
     for (const auto& w: workers_) {
         auto n = w->count();
-        if (w->shared() && n < min_count) {
-            min_count = n;
-            min_count_workerid = w->id();
+        
+        // Track minimum among shared workers
+        if (w->shared() && n < min_shared_count) {
+            min_shared_count = n;
+            min_shared_workerid = w->id();
+        }
+        
+        // Track overall minimum as fallback
+        if (n < min_all_count) {
+            min_all_count = n;
+            min_all_workerid = w->id();
         }
     }
-
-    if (min_count_workerid == 0) {
-        min_count = std::numeric_limits<uint32_t>::max();
-        for (const auto& w: workers_) {
-            auto n = w->count();
-            if (n < min_count) {
-                min_count = n;
-                min_count_workerid = w->id();
-            }
-        }
-    }
-    return workers_[min_count_workerid - 1].get();
+    
+    // Prefer shared worker, fallback to any worker with minimum count
+    uint32_t selected_id = min_shared_workerid != 0 ? min_shared_workerid : min_all_workerid;
+    return workers_[selected_id - 1].get();
 }
 
 worker* server::get_worker(uint32_t workerid, uint32_t serviceid) const {
@@ -282,6 +286,7 @@ std::string server::info() const {
     }
 
     std::string req;
+    req.reserve(256 + workers_.size() * 128);
     req.append("[\n");
     req.append(moon::format(
         R"({"id":0, "socket":%zu, "timer":%zu, "log":%zu, "service":%u, "error":%zu})",
@@ -293,7 +298,7 @@ std::string server::info() const {
     ));
     for (const auto& w: workers_) {
         req.append(",\n");
-        auto v = moon::format(
+        req.append(moon::format(
             R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u, "timer":%zu, "alive":%u})",
             w->id(),
             w->cpu(),
@@ -301,8 +306,7 @@ std::string server::info() const {
             w->count(),
             timer_[w->id() - 1]->size(),
             w->alive()
-        );
-        req.append(v);
+        ));
     }
     req.append("]");
     return req;
@@ -311,7 +315,7 @@ std::string server::info() const {
 uint32_t server::nextfd() {
     uint32_t fd = 0;
     do {
-        fd = fd_seq_.fetch_add(1);
+        fd = fd_seq_.fetch_add(1, std::memory_order_relaxed);
     } while (fd == 0 || !try_lock_fd(fd));
     return fd;
 }

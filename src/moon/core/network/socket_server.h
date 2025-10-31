@@ -118,6 +118,8 @@ public:
     static std::string_view
     encode_endpoint(const address& addr, port_type port);
 
+    std::time_t time() const;
+
 private:
     connection_ptr_t make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock);
 

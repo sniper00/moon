@@ -302,10 +302,9 @@ bool socket_server::write(uint32_t fd, buffer_shr_ptr_t data, socket_send_mask m
         auto buf = asio::buffer(data->data(), data->size());
         iter->second->sock.async_send(
             buf,
-            [this, _ = std::move(data),
-             ctx = iter->second](std::error_code ec/*ec*/, std::size_t /*bytes_sent*/) {
-                if(ec){
-                    CONSOLE_ERROR("udp write failed fd:%u %s", ctx->fd, ec.message().data());
+            [this, _ = std::move(data), ctx = iter->second](std::error_code ec, std::size_t) {
+                if (ec) {
+                    CONSOLE_ERROR("udp write failed fd:%u %s(%d)", ctx->fd, ec.message().data(), ec.value());
                     close(ctx->fd);
                 }
             }
@@ -383,16 +382,15 @@ bool socket_server::set_enable_chunked(uint32_t fd, std::string_view flag) {
                 break;
             default:
                 CONSOLE_WARN(
-                    "tcp::set_enable_chunked Unsupported enable chunked flag %s.Support: 'r' 'w'.",
-                    flag.data()
+                    "tcp::set_enable_chunked: Unsupported chunked flag '%c'. Supported flags: 'r'/'R' (recv), 'w'/'W' (send).",
+                    c
                 );
                 return false;
         }
     }
 
     if (auto iter = connections_.find(fd); iter != connections_.end()) {
-        auto c = std::dynamic_pointer_cast<moon_connection>(iter->second);
-        if (c) {
+        if (auto c = std::dynamic_pointer_cast<moon_connection>(iter->second)) {
             c->set_enable_chunked(v);
             return true;
         }
@@ -409,7 +407,7 @@ bool socket_server::set_send_queue_limit(uint32_t fd, uint16_t warnsize, uint16_
 }
 
 static bool decode_endpoint(std::string_view address, udp::endpoint& ep) {
-    if (address[0] != '4' && address[0] != '6')
+    if (address.empty() || (address[0] != '4' && address[0] != '6'))
         return false;
     port_type port = 0;
     if (address[0] == '4') {
@@ -444,10 +442,13 @@ bool socket_server::send_to(uint32_t host, std::string_view address, buffer_shr_
         iter->second->sock.async_send_to(
             buf,
             ep,
-            [_ = std::move(data), ep,
-             ctx = iter->second](std::error_code ec/*ec*/, std::size_t /*bytes_sent*/) {
-                if(ec){
-                    CONSOLE_ERROR("udp send_to failed %s:%d %s", ep.address().to_string().data(), (int)ep.port(), ec.message().data());
+            [_ = std::move(data), ep, ctx = iter->second](std::error_code ec, std::size_t) {
+                if (ec) {
+                    CONSOLE_ERROR("udp send_to failed %s:%d %s(%d)", 
+                        ep.address().to_string().data(), 
+                        static_cast<int>(ep.port()), 
+                        ec.message().data(),
+                        ec.value());
                 }
             }
         );
@@ -496,6 +497,10 @@ socket_server::encode_endpoint(const address& addr, port_type port) {
     }
     memcpy(buf.data() + size, &port, sizeof(port));
     return std::string_view{buf.data(), size + sizeof(port)};
+}
+
+std::time_t moon::socket_server::time() const {
+    return server_->now_without_offset()/1000;
 }
 
 connection_ptr_t
@@ -579,7 +584,7 @@ void socket_server::timeout() {
             return;
         }
 
-        auto now = base_connection::now();
+        auto now = time();
         for (const auto& [_, v]: connections_) {
             v->timeout(now);
         }
