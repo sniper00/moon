@@ -62,12 +62,14 @@ public:
 
     void wait();
 
-    void signal(int val);
+    void signal(int val) const;
 
 private:
     service* handle_one(service* s, message&& msg);
 
     service* find_service(uint32_t serviceid) const;
+
+    uint32_t allocate_service_id(uint32_t opt_service_id);
 
 private:
     std::atomic_bool shared_ = true;

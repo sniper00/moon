@@ -29,6 +29,10 @@ public:
         return true;
     }
 
+    static std::time_t offset() {
+        return offset_;
+    }
+
     static std::time_t now() {
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start_time_point_
