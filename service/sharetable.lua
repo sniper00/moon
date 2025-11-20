@@ -170,6 +170,7 @@ local function report_close(t)
     end
 end
 
+---@class sharetable
 local sharetable = setmetatable({}, {
     __index = load_service,
     __gc = report_close,
@@ -204,6 +205,7 @@ function sharetable.query(filename)
     return newptr, err
 end
 
+---@async
 ---@param filelist? string[] @ {xxx.lua,yyy.lua,zzz.lua}
 function sharetable.queryall(filelist)
     local conf_ptr, err = moon.call("lua", sharetable.address, "queryall", filelist)

@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 ---@class crypt
 local crypt = {}
 

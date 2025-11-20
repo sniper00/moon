@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 ---@class json
 ---@field null lightuserdata @ JSON null value (lightuserdata pointing to nullptr)
 local json = {}

@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 --- High-performance binary serialization library
 ---
 --- Efficient serialization/deserialization of Lua values to/from binary format.

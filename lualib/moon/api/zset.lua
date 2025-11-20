@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 --- High-performance ordered set with ranking capabilities
 ---
 --- Efficient sorted set implementation optimized for leaderboards, time-series data,

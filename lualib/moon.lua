@@ -1,4 +1,3 @@
----@meta
 --- Moon Framework Core Library
 --- This module provides the core functionality for the Moon framework, including:
 --- - Service management and communication
@@ -49,19 +48,19 @@ local _scan_services   = core.scan_services
 ---@alias message_ptr lightuserdata
 
 ---@alias PTYPE
----| '"lua"' # Lua object messages (serialized)
----| '"text"' # Plain text messages
----| '"system"' # System control messages
----| '"error"' # Error messages
----| '"debug"' # Debug messages
----| '"shutdown"' # Shutdown signals
----| '"timer"' # Timer events
----| '"tcp"' # TCP socket messages
----| '"udp"' # UDP socket messages
----| '"websocket"' # WebSocket messages
----| '"moonsocket"' # MoonSocket messages
----| '"integer"' # Integer messages
----| '"log"' # Log messages
+---| 'lua' # Lua object messages (serialized)
+---| 'text' # Plain text messages
+---| 'system' # System control messages
+---| 'error' # Error messages
+---| 'debug' # Debug messages
+---| 'shutdown' # Shutdown signals
+---| 'timer' # Timer events
+---| 'tcp' # TCP socket messages
+---| 'udp' # UDP socket messages
+---| 'websocket' # WebSocket messages
+---| 'moonsocket' # MoonSocket messages
+---| 'integer' # Integer messages
+---| 'log' # Log messages
 
 ---@alias LogLevel
 ---| 1 # LOG_ERROR

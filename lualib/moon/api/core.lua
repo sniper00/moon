@@ -1,5 +1,3 @@
-error("DO NOT REQUIRE THIS FILE")
-
 ---@meta
 
 --- lightuserdata, cpp type `buffer*`
@@ -39,8 +37,8 @@ function core.md5(data) end
 function core.tostring(sz, len) end
 
 ---@alias server_stats_options
----|>'"service.count"'      # return total services count
----| '"log.error"'         # return log error count
+---|>'service.count'      # return total services count
+---| 'log.error'         # return log error count
 
 --- Get server statistics information
 ---@param opt? server_stats_options @ Specific statistic to retrieve, nil for all

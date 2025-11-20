@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 ---@class random
 ---Random number generator class providing various random number generation functions
 ---Including integer range random, float range random, weighted random, etc.

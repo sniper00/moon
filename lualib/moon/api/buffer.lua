@@ -1,5 +1,4 @@
----@meta
-error("DO NOT REQUIRE THIS FILE")
+---@meta buffer
 
 --- High-performance buffer for binary data operations
 ---

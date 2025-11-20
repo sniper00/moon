@@ -1,7 +1,5 @@
 ---@meta
 
-error("DO NOT REQUIRE THIS FILE")
-
 ---UUID generator module
 ---Supports two types of UUIDs:
 ---1. Player UID (type=0): 49-bit format with channel, serverid, boottimes, and sequence
