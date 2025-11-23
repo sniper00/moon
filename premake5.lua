@@ -212,8 +212,6 @@ workspace "Server"
     cppdialect "C++17"
     -- Output location for generated project files (e.g., .sln, Makefile)
     location "./target"
-    -- Target architecture
-    architecture "x64"
 
     -- Configuration-specific settings
     filter "configurations:debug"
@@ -234,7 +232,8 @@ workspace "Server"
         cdialect "C11"
         buildoptions{"/experimental:c11atomics"}
         staticruntime "on"
-
+        -- Target architecture
+        architecture "x64"
 
     -- Platform-specific settings
     filter { "system:linux" }
