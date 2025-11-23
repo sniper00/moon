@@ -754,7 +754,7 @@ reg_protocol {
         if type(v) == "thread" then
             coresume(v, timerid)
         else
-            v()
+            v(timerid)
         end
         local elapsed = moon.clock() - st
         if trace and elapsed > 0.1 then
