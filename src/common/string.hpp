@@ -172,38 +172,29 @@ inline std::string format(const char* fmt, ...) {
     if (!fmt)
         return std::string("");
 
-    size_t fmt_buffer_size = 1024;
-
     std::string res;
-    res.resize(fmt_buffer_size);
+    res.resize(1024);
 
     va_list ap;
     va_start(ap, fmt);
     int len = moon_vsnprintf(res.data(), res.size(), fmt, ap);
     va_end(ap);
-    if (len >= 0 && len <= static_cast<int>(res.size())) {
-        res.resize(len);
-        return res;
-    } else {
-        for (;;) {
-            fmt_buffer_size *= 2;
-            res.resize(fmt_buffer_size);
-            va_start(ap, fmt);
-            len = moon_vsnprintf(res.data(), res.size(), fmt, ap);
-            va_end(ap);
-            if (len < 0) {
-                continue;
-            } else {
-                res.resize(len);
-                break;
-            }
-        }
-    }
 
     if (len < 0) {
-        std::cerr << "vsnprintf error :" << std::endl;
         return std::string("");
     }
+
+    if (len < static_cast<int>(res.size())) {
+        res.resize(len);
+        return res;
+    }
+
+    // Buffer was too small, resize to exact size needed
+    res.resize(len + 1);
+    va_start(ap, fmt);
+    moon_vsnprintf(res.data(), res.size(), fmt, ap);
+    va_end(ap);
+    res.resize(len);
     return res;
 }
 
