@@ -141,7 +141,7 @@ static int lmoon_log(lua_State* L) {
     }
 
     if (lua_Debug ar; lua_getstack(L, 2, &ar) && lua_getinfo(L, "Sl", &ar)) {
-        line.write_back({ "    (", 5 });
+        line.write_back("    (");
         if (ar.srclen > 1)
             line.write_back({ ar.source + 1, ar.srclen - 1 });
         line.write_back(':');
@@ -228,8 +228,7 @@ static void table_tostring(std::string& res, lua_State* L, int index) {
 
 static std::optional<std::string>
 search_file(std::string_view lua_search_path, std::string_view source) {
-    size_t first_quote_pos = lua_search_path.find_first_of("'");
-    if (first_quote_pos != std::string_view::npos) {
+    if (size_t first_quote_pos = lua_search_path.find_first_of("'"); first_quote_pos != std::string_view::npos) {
         size_t second_quote_pos = lua_search_path.find_first_of("'", first_quote_pos + 1);
         if (second_quote_pos != std::string_view::npos) {
             auto extracted_path =

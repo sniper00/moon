@@ -109,7 +109,9 @@ local function format_response(resp)
         resp.sqlstate = "SOCKET"
     end
     resp.code = resp.sqlstate
-    resp.message = resp.err
+    if resp.err then
+        resp.message = resp.err
+    end
     resp.sqlstate = nil
     resp.err = nil
     return resp
@@ -1152,6 +1154,28 @@ end
 
 function _M.pack_query_buffer()
     -- compat with sqldriver
+end
+
+function _M.query_params(self, sql, ...)
+    if not self.stmt_cache then
+        self.stmt_cache = {}
+    end
+
+    if type(sql) == "table" then
+        local stmt = self.stmt_cache[sql[1]] or self:prepare(sql[1])
+        if stmt.errno then
+            return format_response(stmt)
+        end
+        self.stmt_cache[sql[1]] = stmt
+        return format_response(self:execute(stmt, table.unpack(sql, 2)))
+    else
+        local stmt = self.stmt_cache[sql] or self:prepare(sql)
+        if stmt.errno then
+            return format_response(stmt)
+        end
+        self.stmt_cache[sql] = stmt
+        return format_response(self:execute(stmt, ...))
+    end
 end
 
 return _M

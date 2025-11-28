@@ -8,7 +8,7 @@ namespace moon {
 class time {
     using time_point = std::chrono::time_point<std::chrono::steady_clock>;
     inline static const time_point start_time_point_ = std::chrono::steady_clock::now();
-    inline static std::time_t start_millsecond =
+    inline static std::time_t start_milliseconds =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()
         )
@@ -37,7 +37,7 @@ public:
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start_time_point_
         );
-        return start_millsecond + diff.count() + offset_;
+        return start_milliseconds + diff.count() + offset_;
     }
 
     //e. 2017-11-11 16:03:11.635
@@ -85,12 +85,24 @@ public:
         return mktime(&_tm);
     }
 
-    static std::tm* localtime(std::time_t* t, std::tm* result) {
+    static std::tm* localtime(const std::time_t* t, std::tm* result) {
+        static thread_local std::tm m_{};
+        static thread_local std::time_t t_ = std::numeric_limits<std::time_t>::min();
+        if(t_ != *t){
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
-        localtime_s(result, t);
+            localtime_s(&m_, t);
 #else
-        localtime_r(t, result);
+            localtime_r(t, &m_);
 #endif
+            t_ = *t;
+        }
+        result->tm_year = m_.tm_year;
+        result->tm_mon = m_.tm_mon;
+        result->tm_mday = m_.tm_mday;
+        result->tm_hour = m_.tm_hour;
+        result->tm_min = m_.tm_min;
+        result->tm_sec = m_.tm_sec;
+        result->tm_isdst = m_.tm_isdst;
         return result;
     }
 

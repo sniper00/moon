@@ -5,6 +5,9 @@ local tbinsert = table.insert
 
 local conf     = ...
 
+---@class SqlClient
+local client = {}
+
 if conf.name then
     local socket = require("moon.socket")
     local provider = require(conf.provider)
@@ -13,12 +16,12 @@ if conf.name then
     local clone = buffer.to_shared
 
     ---@param sql buffer_shr_ptr
-    local function exec_one(db, sql, sender, sessionid)
+    local function exec_one(db, sql, sender, sessionid, cmd)
         local faild_times = 0
         local err
         while true do
             if db then
-                local res = db:query(sql)
+                local res = provider[cmd](db, sql)
                 local code = rawget(res, "code")
                 if code == "SOCKET" then -- socket error
                     err = res.message
@@ -78,7 +81,7 @@ if conf.name then
         hash = hash % db_pool_size + 1
         --print(moon.name, "db hash", hash, db_pool_size)
         local ctx = pool[hash]
-        list.push(ctx.queue, { clone(args[3]), sender, sessionid })
+        list.push(ctx.queue, { clone(args[3]), sender, sessionid, args[1] })
         if ctx.running then
             return
         end
@@ -92,7 +95,7 @@ if conf.name then
                 if not req then
                     break
                 end
-                local ok, db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3])
+                local ok, db = xpcall(exec_one, traceback, ctx.db, req[1], req[2], req[3], req[4])
                 if not ok then
                     ---lua error
                     moon.error(db)
@@ -153,8 +156,10 @@ if conf.name then
         local args = { moon.unpack(sz, len) }
 
         local cmd = args[1]
-        if cmd == "Q" then
-            provider.pack_query_buffer(args[3])
+        if provider[cmd] then
+            if cmd == "query" then
+                provider.pack_query_buffer(args[3])
+            end
             execute(sender, sessionid, args)
             return
         end
@@ -174,23 +179,37 @@ if conf.name then
         end
     end)
 else
-    local client = {}
 
     local json = require("json")
 
     local concat = json.concat
 
     function client.execute(db, sql, hash)
-        moon.send("lua", db, "Q", hash or 1, concat(sql))
+        moon.send("lua", db, "query", hash or 1, concat(sql))
     end
 
     function client.query(db, sql, hash)
-        return moon.call("lua", db, "Q", hash or 1, concat(sql))
+        return moon.call("lua", db, "query", hash or 1, concat(sql))
     end
 
-    return client
+    -- SQL with parameters binding support
+    ---@param db integer @ service ID
+    ---@param sql string @ SQL statement with placeholders : `select * from table where id = $1`
+    ---@param ... any @ parameters to bind to the SQL statement
+    function client.query_params(db, sql, ...)
+        if string.find(sql, "$") ~= nil then -- PostgreSQL style parameter binding
+            return moon.call("lua", db, "query_params", 1, json.pq_query({sql, ...}))
+        else -- MySQL style parameter binding
+            return moon.call("lua", db, "query_params", 1, {sql, ...})
+        end
+    end
+
+    -- PostgreSQL pipe support, with transaction
+    ---@param db integer @ service ID
+    ---@param req table @ {{sql, param1, param2, ...}, {sql, param1, param2, ...}, ...}
+    function client.pipe(db, req)
+        return moon.call("lua", db, "pipe", 1, json.pq_pipe(req))
+    end
 end
 
----@class sqlclient
----@field public execute fun(db:integer, sql:string|string[], hash?:integer)
----@field public query fun(db:integer, sql:string|string[], hash?:integer):pg_result
+return client

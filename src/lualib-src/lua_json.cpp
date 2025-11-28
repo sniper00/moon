@@ -195,7 +195,7 @@ static void format_space(buffer* writer, int n) {
 
 inline void write_number(buffer* writer, lua_Number num) {
     auto [buf, n] = writer->prepare(32);
-    yyjson_val val{};
+    yyjson_val val {};
     unsafe_yyjson_set_double(&val, num);
     auto e = (uint8_t*)yyjson_write_number(&val, buf);
     writer->commit_unchecked(e - (uint8_t*)buf);
@@ -280,7 +280,7 @@ static inline std::pair<bool, size_t> is_array(lua_State* L, int index, const js
     }
 
     auto len = static_cast<lua_Integer>(lua_rawlen(L, index));
-    
+
     // test first key
     lua_pushnil(L);
     if (lua_next(L, index) == 0) // empty table
@@ -421,11 +421,7 @@ static void encode_table_array(
 template<bool format>
 static void encode_table(lua_State* L, buffer* writer, int idx, int depth, const json_config* cfg) {
     if ((++depth) > MAX_DEPTH)
-        throw lua_json_error::format(
-            "nested too deep (depth=%d, max=%d)",
-            depth,
-            MAX_DEPTH
-        );
+        throw lua_json_error::format("nested too deep (depth=%d, max=%d)", depth, MAX_DEPTH);
 
     if (idx < 0) {
         idx = lua_gettop(L) + idx + 1;
@@ -595,180 +591,6 @@ static int decode(lua_State* L) {
     return 1;
 }
 
-static int concat(lua_State* L) {
-    if (lua_type(L, 1) == LUA_TSTRING) {
-        size_t size;
-        const char* sz = lua_tolstring(L, -1, &size);
-        auto buf = std::make_unique<moon::buffer>(BUFFER_OPTION_CHEAP_PREPEND + size);
-        buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-        buf->write_back({ sz, size });
-        buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-        lua_pushlightuserdata(L, buf.release());
-        return 1;
-    }
-
-    luaL_checktype(L, 1, LUA_TTABLE);
-
-    lua_settop(L, 1);
-
-    json_config* cfg = json_fetch_config(L);
-
-    auto buf = std::make_unique<moon::buffer>(cfg->concat_buffer_size);
-    buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-    try {
-        auto array_size = (int)lua_rawlen(L, 1);
-        for (int i = 1; i <= array_size; i++) {
-            lua_rawgeti(L, 1, i);
-            switch (int t = lua_type(L, -1)) {
-                case LUA_TNUMBER: {
-                    if (lua_isinteger(L, -1))
-                        buf->write_chars(lua_tointeger(L, -1));
-                    else
-                        write_number(buf.get(), lua_tonumber(L, -1));
-                    break;
-                }
-                case LUA_TBOOLEAN: {
-                    buf->write_back(bool_string[lua_toboolean(L, -1)]);
-                    break;
-                }
-                case LUA_TSTRING: {
-                    size_t size;
-                    const char* sz = lua_tolstring(L, -1, &size);
-                    buf->write_back({ sz, size });
-                    break;
-                }
-                case LUA_TTABLE: {
-                    encode_one<false>(L, buf.get(), -1, 0, cfg);
-                    break;
-                }
-                default:
-                    throw lua_json_error::format(
-                        "json concat: unsupported value type: %s at index %d",
-                        lua_typename(L, t),
-                        i
-                    );
-            }
-            lua_pop(L, 1);
-        }
-        buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-        lua_pushlightuserdata(L, buf.release());
-        return 1;
-    } catch (const lua_json_error& ex) {
-        lua_pushstring(L, ex.what());
-    }
-    return lua_error(L);
-}
-
-static void write_resp(buffer* buf, const char* cmd, size_t size) {
-    buf->write_back({ "\r\n$", 3 });
-    buf->write_chars(size);
-    buf->write_back({ "\r\n", 2 });
-    buf->write_back({ cmd, size });
-}
-
-static void concat_resp_one(buffer* buf, lua_State* L, int i, json_config* cfg) {
-    int t = lua_type(L, i);
-    switch (t) {
-        case LUA_TNIL: {
-            std::string_view sv = "\r\n$-1"sv;
-            buf->write_back(sv);
-            break;
-        }
-        case LUA_TNUMBER: {
-            if (lua_isinteger(L, i)) {
-                std::string s = std::to_string(lua_tointeger(L, i));
-                write_resp(buf, s.data(), s.size());
-            } else {
-                std::string s = std::to_string(lua_tonumber(L, i));
-                write_resp(buf, s.data(), s.size());
-            }
-            break;
-        }
-        case LUA_TBOOLEAN: {
-            auto str = bool_string[lua_toboolean(L, i)];
-            write_resp(buf, str.data(), str.size());
-            break;
-        }
-        case LUA_TSTRING: {
-            size_t msize;
-            const char* sz = lua_tolstring(L, i, &msize);
-            write_resp(buf, sz, msize);
-            break;
-        }
-        case LUA_TTABLE: {
-            if (luaL_getmetafield(L, i, "__redis") != LUA_TNIL) {
-                lua_pop(L, 1);
-                auto size = lua_rawlen(L, i);
-                for (unsigned n = 1; n <= size; n++) {
-                    lua_rawgeti(L, i, n);
-                    concat_resp_one(buf, L, -1, cfg);
-                    lua_pop(L, 1);
-                }
-            } else {
-                buffer* writer = get_thread_encode_buffer();
-                encode_one<false>(L, writer, i, 0, cfg);
-                write_resp(buf, writer->data(), writer->size());
-            }
-            break;
-        }
-        default:
-            throw lua_json_error::format(
-                "concat_resp_one: unsupported value type: %s",
-                lua_typename(L, t)
-            );
-    }
-}
-
-static int concat_resp(lua_State* L) {
-    int n = lua_gettop(L);
-    if (0 == n)
-        return 0;
-
-    json_config* cfg = json_fetch_config(L);
-
-    auto buf = std::make_unique<moon::buffer>(cfg->concat_buffer_size);
-    try {
-        int64_t hash = 1;
-        if (lua_type(L, 2) == LUA_TTABLE) {
-            size_t len = 0;
-            const char* key = lua_tolstring(L, 1, &len);
-            if (len > 0) {
-                std::string_view hash_part;
-                if (n > 1) {
-                    const char* field = lua_tolstring(L, 2, &len);
-                    if (len > 0)
-                        hash_part = std::string_view { field, len };
-                }
-
-                if (n > 2 && (key[0] == 'h' || key[0] == 'H')) {
-                    const char* field = lua_tolstring(L, 3, &len);
-                    if (len > 0)
-                        hash_part = std::string_view { field, len };
-                }
-
-                if (!hash_part.empty())
-                    hash =
-                        static_cast<uint32_t>(moon::hash_range(hash_part.begin(), hash_part.end()));
-            }
-        }
-
-        buf->write_back('*');
-        buf->write_chars(n);
-
-        for (int i = 1; i <= n; i++) {
-            concat_resp_one(buf.get(), L, i, cfg);
-        }
-
-        buf->write_back({ "\r\n", 2 });
-        lua_pushlightuserdata(L, buf.release());
-        lua_pushinteger(L, hash);
-        return 2;
-    } catch (const lua_json_error& ex) {
-        lua_pushstring(L, ex.what());
-    }
-    return lua_error(L);
-}
-
 static int json_object(lua_State* L) {
     if (lua_isinteger(L, 1)) {
         auto n = (int)luaL_optinteger(L, 1, 16);
@@ -795,17 +617,21 @@ static int json_array(lua_State* L) {
     return 1;
 }
 
+#include "lua_db_protocol.hpp"
+
 extern "C" {
 int LUAMOD_API luaopen_json(lua_State* L) {
     luaL_Reg l[] = {
         { "encode", encode },
         { "pretty_encode", pretty_encode },
         { "decode", decode },
-        { "concat", concat },
-        { "concat_resp", concat_resp },
-        { "options", json_options },
         { "object", json_object },
         { "array", json_array },
+        { "options", json_options },
+        { "concat", lua_db_protocol::concat },
+        { "concat_resp", lua_db_protocol::concat_resp },
+        { "pq_query", lua_db_protocol::pq_query },
+        { "pq_pipe", lua_db_protocol::pq_pipe },
         { "null", nullptr },
         { nullptr, nullptr },
     };

@@ -7,8 +7,8 @@ local db_config = {
     host = "127.0.0.1",
     port = 5432,
     database = "postgres",
-    user = "postgres",
-    password = "654123",
+    user = "bruce",
+    password = "123456",
     connect_timeout = 1000,
 }
 
@@ -118,9 +118,10 @@ local function test_jsonb()
 
     local sql0 = [[
         insert into game_user(uid, data) VALUES(1, '%s') on conflict(uid) do update set data = EXCLUDED.data;
+        insert into game_user(uid, data) VALUES(2, '%s') on conflict(uid) do update set data = EXCLUDED.data;
     ]]
 
-    sql0 = string.format(sql0, io.readfile("test/twitter.json"))
+    sql0 = string.format(sql0, io.readfile("test/twitter.json"), io.readfile("test/twitter.json"))
 
     print_r(db:query(sql0))
 
@@ -423,12 +424,15 @@ $$ LANGUAGE plpgsql;
 
     print("test_key_value_table_function insert cost", (moon.clock() - bt)/100)
 
-    sql = string.format([[
-        --select userdata
-        select key, value from userdata where uid = %d;
-    ]], 233)
-    local res = sqldriver.query(db, sql)
-    local data = res.data
+    -- sql = string.format([[
+    --     --select userdata
+    --     ;
+    -- ]], 233)
+    local res = sqldriver.query_params(db, "select key, value from userdata where uid = $1", 233)
+    print_r(res)
+
+    local res = sqldriver.pipe(db, {{"select key, value from userdata where uid = $1", 233}})
+    print_r(res)
 
     moon.send("lua", db, "save_then_quit")
 end
@@ -499,10 +503,91 @@ local function test_hstore()
     print("test_hstore insert cost", (moon.clock() - bt)/100)
 end
 
+local function benchmark()
+
+     local info = {
+        cc      = 300,
+        gpsname = "gps1",
+        track   = {
+            segments = {
+                [1] = {
+                    HR        = 73,
+                    location  = {
+                        [1] = 47.763,
+                        [2] = 13.4034,
+                    },
+                    starttime = "2018-10-14 10:05:14",
+                },
+                [2] = {
+                    HR        = 130,
+                    location  = {
+                        [1] = 47.706,
+                        [2] = 13.2635,
+                    },
+                    starttime = "2018-10-14 10:39:21",
+                },
+            },
+        },
+    }
+
+     local sql = string.format([[
+        drop table if exists userdata;
+    ]])
+
+    local sql2 = [[
+        --create userdata table
+        create table userdata (
+            uid	bigint,
+            key		text,
+            value   text,
+            CONSTRAINT pk_userdata PRIMARY KEY (uid, key)
+           );
+    ]]
+
+    print("connecting to db...")
+    local db = pg.connect(db_config)
+
+    if db.code then
+        moon.error(print_r(db, true))
+        return
+    end
+    print("start benchmark...")
+    db:query(sql)
+    print("create table...")
+    db:query(sql2)
+
+    local sql111 = string.format("INSERT INTO userdata (uid, key, value) values(%s, '%s', '%s') on conflict (uid, key) do update set value = excluded.value;", 235, "info2", json.encode(info))
+
+    local ttt = {}
+    for i=1, 10000 do
+        ttt[i] = sql111
+    end
+
+    local bt = moon.clock()
+    local res = db:query(table.concat(ttt))
+    assert(not res.code, res.message)
+    print("benchmark1 cost", (moon.clock() - bt))
+
+    local sqlss = [[INSERT INTO userdata (uid, key, value) values($1, $2, $3) on conflict (uid, key) do update set value = excluded.value;]]
+
+    local q = {}
+    for i=1,10000 do
+        q[i] = {sqlss, 235, "info2", info}
+    end
+
+    local bt = moon.clock()
+
+    local res = db:pipe(q)
+    -- print_r(res)
+    print("jsonb pipe cost", (moon.clock() - bt))
+
+    -- print_r(res)
+end
+
 moon.async(function()
     test_json_query()
     test_big_json_value()
-    test_jsonb()
+    benchmark()
 
     test_key_value_table_raw()
 

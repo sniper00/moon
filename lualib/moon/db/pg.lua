@@ -2,6 +2,7 @@ local moon         = require("moon")
 local buffer       = require("buffer")
 local scram_sha256 = require("crypto.scram")
 local socket       = require("moon.socket")
+local json         = require "json"
 
 local concat       = buffer.concat
 local bsize        = buffer.size
@@ -132,7 +133,7 @@ local function receive_message(self)
         return socket_error, "receive_message: failed to get header: " .. tostring(err)
     end
     local t, len = strunpack(">c1i", header)
-    content, err = socket.read(self.sock, len-4)
+    content, err = socket.read(self.sock, len - 4)
     if not content then
         disconnect(self)
         return socket_error, err
@@ -164,9 +165,9 @@ local function parse_error(err_msg)
     local db_error = {}
     local offset = 1
     local err_len = #err_msg
-    while offset < err_len do -- Stop before the final null terminator
-        local t = strsub(err_msg, offset, offset) -- Get the type code byte
-        offset = offset + 1 -- Move past the type code
+    while offset < err_len do                                     -- Stop before the final null terminator
+        local t = strsub(err_msg, offset, offset)                 -- Get the type code byte
+        offset = offset + 1                                       -- Move past the type code
 
         local null_pos = string.find(err_msg, NULL, offset, true) -- Find the next null terminator
         if not null_pos then
@@ -175,7 +176,7 @@ local function parse_error(err_msg)
         end
 
         local str = strsub(err_msg, offset, null_pos - 1) -- Extract the value string
-        offset = null_pos + 1 -- Move past the null terminator for the next iteration
+        offset = null_pos + 1                             -- Move past the null terminator for the next iteration
 
         local field = ERROR_TYPES[t]
         if field then
@@ -196,7 +197,7 @@ local function check_auth(self)
     elseif MSG_TYPE.auth == t then
         -- Authentication message 'R' received. Check the status code.
         if #msg < 4 then
-             return false, "Received truncated Authentication message (R)"
+            return false, "Received truncated Authentication message (R)"
         end
         local auth_status = decode_int(msg:sub(1, 4))
         if auth_status == 0 then
@@ -208,11 +209,11 @@ local function check_auth(self)
             local err_detail = "Authentication failed with status code: " .. auth_status
             -- Try parsing remaining msg as error fields if possible, otherwise just return the code
             if #msg > 4 then
-                 local potential_error = parse_error(msg:sub(5))
-                 if next(potential_error) then -- Check if parse_error found anything
-                      potential_error.message = potential_error.message or err_detail
-                      return false, potential_error
-                 end
+                local potential_error = parse_error(msg:sub(5))
+                if next(potential_error) then  -- Check if parse_error found anything
+                    potential_error.message = potential_error.message or err_detail
+                    return false, potential_error
+                end
             end
             return false, { code = "AUTH", message = err_detail }
         end
@@ -492,14 +493,14 @@ local function parse_row_desc(row_desc)
     for i = 1, num_fields do
         local null_pos = string.find(row_desc, NULL, offset, true) -- Find null terminator
         if not null_pos then
-             error("Invalid row description format: missing null terminator for field name at offset " .. offset)
+            error("Invalid row description format: missing null terminator for field name at offset " .. offset)
         end
         local name = strsub(row_desc, offset, null_pos - 1)
         offset = null_pos + 1 -- Move past the null terminator
 
         -- Ensure enough bytes remain for the rest of the field info (18 bytes)
         if offset + 17 > row_desc_len then
-             error("Invalid row description format: not enough data for field info for field '" .. name .. "'")
+            error("Invalid row description format: not enough data for field info for field '" .. name .. "'")
         end
 
         -- table_id = decode_int(row_desc:sub(offset, offset + 3)) -- Not used
@@ -538,17 +539,17 @@ local function parse_row_data(data_row, fields)
         local field_name = field.name
         local len = decode_int(strsub(data_row, offset, offset + 3))
         offset = offset + 4 -- Move past length
-        if len < 0 then -- Handle NULL value
+        if len < 0 then     -- Handle NULL value
             if convert_null then
                 out[field_name] = NULL
             end
             -- No data follows for NULL, so loop continues
         else
             local value = strsub(data_row, offset, offset + len - 1)
-            offset = offset + len -- Move past value data
+            offset = offset + len      -- Move past value data
             local fn = field.converter -- Use pre-looked-up converter
             if fn then
-                value = fn(value) -- Apply conversion if available
+                value = fn(value)      -- Apply conversion if available
             end
             out[field_name] = value
         end
@@ -605,14 +606,7 @@ function pg.pack_query_buffer(buf)
     wback(buf, NULL)
 end
 
----@param sql buffer_shr_ptr|string
----@return pg_result
-function pg.query(self, sql)
-    if type(sql) == "string" then
-        send_message(self, MSG_TYPE.query, { sql, NULL })
-    else
-        socket.write(self.sock, sql)
-    end
+local function read_result(self)
     local row_desc, data_rows, err_msg
     local result, notifications
     local num_queries = 0
@@ -666,6 +660,36 @@ function pg.query(self, sql)
         num_queries = num_queries,
         notifications = notifications
     }
+end
+
+function pg.pipe(self, req)
+    if type(req) == "userdata" then
+        -- assume it's a buffer_shr_ptr
+        socket.write(self.sock, req)
+    else
+        socket.write(self.sock, json.pq_pipe(req))
+    end
+    return read_result(self)
+end
+
+function pg.query_params(self, sql, ...)
+    if type(sql) == "userdata" then
+        socket.write(self.sock, sql)
+    else
+        socket.write(self.sock, json.pq_query({ sql, ... }))
+    end
+    return read_result(self)
+end
+
+---@param sql buffer_shr_ptr|string
+---@return pg_result
+function pg.query(self, sql)
+    if type(sql) == "string" then
+        send_message(self, MSG_TYPE.query, { sql, NULL })
+    else
+        socket.write(self.sock, sql)
+    end
+    return read_result(self)
 end
 
 return pg
