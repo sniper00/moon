@@ -136,8 +136,6 @@ private:
             return;
         }
 
-        mask_ = enum_unset_bitmask(mask_, connection_mask::reading);
-
         auto b = read_cache_.as_buffer();
         b->clear();
 
