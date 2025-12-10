@@ -85,13 +85,13 @@ struct lua_db_protocol {
         int type = lua_type(L, -1);
         
         size_t stub = pqbuf.size();
-        if (type != LUA_TNIL) {
+        if (type != LUA_TNIL && type != LUA_TLIGHTUSERDATA) {
             pqbuf.write_integer(static_cast<uint32_t>(0)); // length placeholder
         }
         
         switch (type) {
             case LUA_TNIL:
-                pqbuf.write_integer(-1);
+                pqbuf.write_integer(static_cast<uint32_t>(-1));
                 break;
             case LUA_TNUMBER:
                 if (lua_isinteger(L, -1)) {
@@ -112,6 +112,11 @@ struct lua_db_protocol {
             case LUA_TTABLE:
                 encode_one<false>(L, pqbuf.get_buffer(), -1, 0, cfg);
                 break;
+            case LUA_TLIGHTUSERDATA:
+                if (lua_touserdata(L, -1) == nullptr) {
+                    pqbuf.write_integer(static_cast<uint32_t>(-1));
+                    break;
+                }
             default:
                 throw lua_pq_error::format(
                     "lua_pq_query: unsupported parameter type: %s",
@@ -119,7 +124,7 @@ struct lua_db_protocol {
                 );
         }
         
-        if (type != LUA_TNIL) {
+        if (type != LUA_TNIL && type != LUA_TLIGHTUSERDATA) {
             auto buf_ptr = pqbuf.get_buffer();
             auto size = static_cast<uint32_t>(buf_ptr->size() - stub - 4);
             moon::host2net(size);
@@ -251,6 +256,11 @@ struct lua_db_protocol {
             case LUA_TTABLE:
                 encode_one<false>(L, buf, index, 0, cfg);
                 break;
+            case LUA_TLIGHTUSERDATA:
+                if (lua_touserdata(L, index) == nullptr) {
+                    buf->write_back("null"sv);
+                    break;
+                }
             default:
                 throw lua_json_error::format(
                     "json concat: unsupported value type: %s",
