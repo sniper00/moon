@@ -145,9 +145,9 @@ end
 
 local function _get_int3(data, i, is_signed)
     if not is_signed then
-        return strunpack("<I3", data, i)
+        return strunpack("<I4", data, i)
     end
-    return strunpack("<i3", data, i)
+    return strunpack("<i4", data, i)
 end
 
 local function _get_byte4(data, i)
@@ -781,6 +781,9 @@ function _M.connect(opts)
 end
 
 function _M.disconnect(self)
+    if not self.sockchannel then
+        return
+    end
     self.sockchannel:close()
     setmetatable(self, nil)
 end
