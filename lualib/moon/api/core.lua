@@ -83,7 +83,7 @@ function core.next_sequence() end
 --- Set or get environment variable
 ---@param key string @ Environment variable name
 ---@param value? string @ Value to set (if provided)
----@return string @ Current value of the environment variable
+---@return string? @ Current value of the environment variable
 function core.env(key, value) end
 
 --- Shutdown the server with exit code

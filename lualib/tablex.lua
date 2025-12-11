@@ -56,11 +56,11 @@ function M.contains(t, value, fieldname)
 end
 
 function M.contains_if(t, fn)
-    for k, v in pairs(t) do
-        if fn(v) then
-            return true
+        for k, v in pairs(t) do
+            if fn(v) then
+                return true
+            end
         end
-    end
     return false
 end
 
@@ -73,6 +73,23 @@ function M.find_if(array, fn)
             return v
         end
     end
+end
+
+--- Creates a new table containing only the elements that pass the
+--- given truth test.
+--- 
+---@generic T
+---@param t table<integer, T>
+---@param fn fun(item: T): boolean
+---@return table<integer,T>
+function M.filter(t, fn)
+    local result = {}
+    for k, v in pairs(t) do
+        if fn(v) then
+            table.insert(result, v)
+        end
+    end
+    return result
 end
 
 return M

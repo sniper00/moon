@@ -117,3 +117,11 @@ _G["print_r"] = function(any, isreturn)
         print(tbconcat(result))
     end
 end
+
+_G["cast_int"] = function(x)
+    x = math.tointeger(x)
+    if not x then
+        error("cast_int failed:" .. tostring(x))
+    end
+    return x
+end
