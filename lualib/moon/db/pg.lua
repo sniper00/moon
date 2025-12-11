@@ -673,8 +673,11 @@ function pg.pipe(self, req)
 end
 
 function pg.query_params(self, sql, ...)
-    if type(sql) == "userdata" then
+    local tt = type(sql)
+    if tt == "userdata" then
         socket.write(self.sock, sql)
+    elseif tt == "table" then
+        socket.write(self.sock, json.pq_query(sql))
     else
         socket.write(self.sock, json.pq_query({ sql, ... }))
     end
