@@ -7,21 +7,53 @@ This module implements a runtime hot-update system for Lua modules, allowing
 you to update function implementations without restarting the program.
 
 Key Features:
-  1. Update existing function implementations
+  1. Update existing function implementations in-place
   2. Add new functions to running modules
   3. Maintain upvalue consistency across updates
   4. Support multiple rounds of hotfixes
   5. Atomic updates with rollback on failure
 
+How It Works:
+  Instead of replacing function references (impossible - they're everywhere),
+  we update the ORIGINAL function objects by manipulating their upvalues to
+  point to new implementations. Since Lua functions are closures, changing
+  upvalues effectively changes behavior.
+
 Architecture:
   - Three-phase update process: Parse → Check → Apply
+  - Parse: Compare old/new versions, identify changes (no side effects)
+  - Check: Validate upvalue compatibility (no side effects)
+  - Apply: Update functions atomically (only phase with side effects)
   - Weak table tracking for memory efficiency
   - Upvalue environment preservation across updates
 
+Core Concepts:
+  1. Function Prototypes: Internal bytecode pointers used to identify changes
+  2. Upvalue Linking: Making new functions share state with old module
+  3. Origin Tracking: Remembering original functions across multiple hotfixes
+  4. Transaction Pattern: Collect all updates, then apply atomically
+
 Limitations:
   - Cannot modify module-level local variables directly
+    (But can modify their VALUES through upvalue linking)
   - New functions can only reference upvalues that exist in old module
+    (Cannot introduce new dependencies at runtime)
   - Function signature changes must maintain upvalue compatibility
+    (New function can have fewer upvalues, but not new ones)
+  - Cannot remove functions (only add or update)
+    (Removing would break existing references)
+
+Example Usage:
+  -- Initial load
+  local mymodule = hotfix.require("game.logic.player")
+
+  -- Later, after modifying game/logic/player.lua
+  local ok, result = hotfix.update("game.logic.player")
+  if ok then
+    print("Hotfix successful")
+  else
+    print("Hotfix failed:", result)
+  end
 
 ================================================================================
 ]] --
@@ -31,6 +63,7 @@ local getupvalue = debug.getupvalue
 local upvalueid = debug.upvalueid
 local upvaluejoin = debug.upvaluejoin
 local setupvalue = debug.setupvalue
+local getinfo = debug.getinfo
 local proto = clonefunc.proto
 local clone = clonefunc.clone
 
@@ -54,11 +87,28 @@ local origin = {}
 -- Weak keys allow intermediate versions to be garbage collected
 -- Strong values preserve the original function across multiple hotfixes
 --
--- Example:
---   v1 → v2 → v3 → v4
---   origin_functions[v4] = v1 (always points to original)
---   origin_functions[v2] can be GC'd when v2 is no longer referenced
---   But v1 is preserved as the value in origin_functions[v4]
+-- Why This Exists - Supporting Multiple Hotfix Rounds:
+--   When we hotfix v1 → v2, the module table now has v2 references.
+--   But old code may still have v1 references (callbacks, upvalues, etc).
+--   When we hotfix v2 → v3, we must update v1 (not v2) to affect those old refs.
+--
+-- Example Across Multiple Hotfixes:
+--   Round 1: v1 → v2
+--     - origin_functions[v2] = v1
+--     - Module table: module.foo = v2
+--     - Old references still point to v1
+--     - We update v1's upvalues
+--
+--   Round 2: v2 → v3
+--     - origin_functions[v2] = v1 (lookup to find original)
+--     - origin_functions[v3] = v1 (new entry, still points to original)
+--     - Module table: module.foo = v3
+--     - Old references still point to v1
+--     - We update v1's upvalues again (not v2!)
+--
+-- Garbage Collection:
+--   Weak keys allow v2 to be GC'd when no longer referenced
+--   Strong values ensure v1 is NEVER GC'd (it's the canonical version)
 local origin_functions = setmetatable({}, { __mode = "k" })
 
 -- Custom module searchers
@@ -74,19 +124,26 @@ Utility Functions
 Check if two functions have compatible upvalue signatures.
 
 Compatibility Rules:
-  - f2 can have fewer upvalues than f1
-  - f2 cannot add new upvalues not in f1
-  - _ENV is always ignored in comparison
+  - f2 can have fewer upvalues than f1 (removing upvalues is safe)
+  - f2 cannot add new upvalues not in f1 (new dependencies are unsafe)
+  - _ENV is always ignored in comparison (global environment is special)
+
+Why This Matters:
+  When replacing f1 with f2, all upvalues of f2 must already exist in f1's
+  environment. Otherwise, f2 would reference non-existent state, leading to
+  runtime errors or undefined behavior.
 
 @param f1 function - Old version function
 @param f2 function - New version function
+@param upvalues table - Map of allowed new upvalues for adding functions
 @return boolean - true if compatible, false otherwise
 ]] --
-local function same_proto(f1, f2)
+local function same_proto(f1, f2, upvalues)
 	local uv = {}
 	local i = 1
 
-	-- Step 1: Collect all upvalues from f1
+	-- Step 1: Collect all upvalues from f1 (old function)
+	-- Build a set of all upvalue names that f1 currently uses
 	while true do
 		local name = getupvalue(f1, i)
 		if name == nil then break end
@@ -97,13 +154,19 @@ local function same_proto(f1, f2)
 	end
 
 	-- Step 2: Check f2's upvalues against f1
+	-- Verify that f2 (new function) doesn't reference upvalues that don't exist
 	i = 1
 	while true do
 		local name = getupvalue(f2, i)
 		if name == nil then
-			return true -- f2 can have fewer upvalues
+			return true -- f2 can have fewer upvalues - this is safe
 		end
-		if name ~= "_ENV" and uv[name] == nil then
+		-- If f2 references an upvalue that:
+		--   1. Doesn't exist in f1 (uv[name] == nil)
+		--   2. AND not allowed as new upvalue (upvalues[name] == nil)
+		--   3. AND not _ENV (special case)
+		-- Then it's incompatible
+		if name ~= "_ENV" and uv[name] == nil and upvalues[name] == nil then
 			return false -- f2 adds a new upvalue, incompatible
 		end
 		uv[name] = nil
@@ -118,7 +181,7 @@ Generate function location info for debugging.
 @return string - Format: "filepath(line_number)"
 ]] --
 local function funcinfo(f)
-	local info = debug.getinfo(f, "S")
+	local info = getinfo(f, "S")
 	return string.format("%s(%d)", info.short_src, info.linedefined)
 end
 
@@ -130,31 +193,43 @@ Core Algorithm: Diff Generation
 Compare two module loader functions and generate a mapping from old function
 prototypes to new function implementations.
 
-Algorithm:
-  1. Compare function prototypes (proto pointers)
-  2. Check child function count (can only increase)
-  3. Verify upvalue compatibility
-  4. Recursively process child functions
-  5. Collect newly added functions
+What is a Function Prototype?
+  In Lua's internal implementation, each function has a "prototype" - a unique
+  pointer to its bytecode structure. Functions with identical code share the
+  same prototype. We use this to identify which functions have changed:
+  - Same prototype = unchanged function (reuse old version)
+  - Different prototype = changed function (needs update)
 
-@param m1 function - Old module loader
-@param m2 function - New module loader
-@return diff table - Map of old_proto -> new_func
-@return err table|nil - Array of error messages
-@return newfuncs table - Array of new functions
+Algorithm Flow:
+  1. Compare function prototypes (proto pointers) using clonefunc.proto()
+  2. Check child function count (new code can ADD functions, but not REMOVE)
+  3. Verify upvalue compatibility (new function can't depend on non-existent state)
+  4. Recursively process child functions (handle nested functions)
+  5. Collect newly added functions (functions that don't exist in old version)
+
+The diff map is the core data structure that drives the hotfix process:
+  diff[old_proto] = new_function
+This allows us to later find all instances of old functions and replace them.
 ]] --
-function hotfix.diff(m1, m2)
+
+--- @param m1 function @ Old module loader
+--- @param m2 function @ New module loader
+--- @param upvalues table @ Allowed upvalues for new functions
+--- @return table, table|nil, table @ Map of old_proto -> new_func, Array of error messages (nil if no errors), Array of new functions
+function hotfix.diff(m1, m2, upvalues)
 	local diff = {}
 	local err = nil
 	local newfuncs = {}
 
 	local function diff_(a, b)
 		-- Get function prototype and child count
-		-- proto: Internal pointer to function prototype
-		-- n: Number of child functions (nested functions)
+		-- proto: Internal pointer to function prototype (lightuserdata)
+		--        Two functions with identical bytecode share the same proto
+		-- n: Number of child functions (nested functions defined inside this function)
 		local p1, n1 = proto(a)
 		local p2, n2 = proto(b)
 
+		-- proto() returns nil for C functions or if clonefunc doesn't support this function
 		if p1 == nil or p2 == nil then
 			err = err or {}
 			table.insert(err, funcinfo(a) .. "/" .. funcinfo(b))
@@ -162,8 +237,12 @@ function hotfix.diff(m1, m2)
 		end
 
 		-- Check child function count
-		-- New version can have MORE children (add functions)
-		-- New version CANNOT have FEWER children (remove functions)
+		-- RULE: New version can have MORE children (adding functions is OK)
+		--       New version CANNOT have FEWER children (removing functions breaks references)
+		--
+		-- Why? If old code has: local f1, f2, f3 = ...
+		--      And new code has: local f1, f2 = ...
+		--      Then f3 is removed, but existing code may still call f3
 		if n1 > n2 then
 			err = err or {}
 			table.insert(err, funcinfo(a) .. "/" .. funcinfo(b))
@@ -172,23 +251,27 @@ function hotfix.diff(m1, m2)
 
 		-- Check upvalue compatibility
 		-- Ensures new function can be safely substituted for old function
-		if not same_proto(a, b) then
+		-- by verifying that all upvalues referenced by 'b' exist in 'a'
+		if not same_proto(a, b, upvalues) then
 			err = err or {}
 			table.insert(err, string.format("incompatible upvalue in %s -> %s", funcinfo(a), funcinfo(b)))
 		end
 
 		-- Store mapping: old prototype -> new function
-		-- This is used later to locate which functions need updating
+		-- This is the core of the diff - it tells us which functions changed
+		-- Later, we'll use this to find all instances of old functions
 		diff[p1] = b
 
 		-- Recursively process existing child functions (1 to n1)
 		-- These are functions that exist in both old and new versions
+		-- We need to check if their implementations changed
 		for i = 1, n1 do
 			diff_(clone(a, i), clone(b, i))
 		end
 
 		-- Collect newly added child functions (n1+1 to n2)
 		-- These are functions that only exist in the new version
+		-- They need special handling - we'll add them to the module table
 		for i = n1 + 1, n2 do
 			newfuncs[#newfuncs + 1] = clone(b, i)
 		end
@@ -235,20 +318,35 @@ local function findloader(name)
 end
 
 --[[
-Parse module source file to extract function definitions.
+Parse module source file to extract function definitions and their locations.
 
-This function parses the source file to build a mapping from function
-locations to function names. This is necessary because clonefunc.clone()
-returns functions by index, but we need to know their names.
+Purpose:
+  When we add new functions during a hotfix, we need to know their names to
+  add them to the module table. However, clonefunc.clone() returns functions
+  by index without names. This function bridges that gap by parsing the source
+  file to build a mapping from function locations to function names.
+
+How It Works:
+  1. Loads source file content (preferably from cache)
+  2. Scans each line looking for function declarations
+  3. Pattern matches: "function ModuleName.FunctionName("
+  4. Builds map: "filepath(line_number)" -> "function_name"
 
 Caching Strategy:
-  - First try to load from moon.env_unpacked cache
-  - If cache miss, parse source file and extract function names
-  - Pattern matches: "function ModuleName.FunctionName("
+  - First tries moon.env() which caches file content
+  - Falls back to reading file directly if cache unavailable
+  - Cache reduces disk I/O during multiple hotfixes
+
+Example:
+  Given source line at mymodule.lua:42:
+    function mymodule.calculate(x, y)
+
+  Returns:
+    { ["mymodule.lua(42)"] = "calculate" }
 
 @param filepath string - Source file path
 @param modname string - Module name (used in pattern matching)
-@return table - Map of "filepath(line)" -> "function_name"
+@return table|nil - Map of "filepath(line)" -> "function_name"
 @return string|nil - Error message if parsing failed
 ]] --
 function hotfix.parse_module_functions(filepath, modname)
@@ -301,7 +399,7 @@ This is similar to require() but registers the module with the hotfix system.
 ]] --
 function hotfix.require(name)
 	assert(type(name) == "string")
-	local _LOADED = debug.getregistry()._LOADED
+	local _LOADED = assert(debug.getregistry()._LOADED, "_LOADED not found")
 	if _LOADED[name] then
 		return _LOADED[name]
 	end
@@ -325,7 +423,7 @@ Used for modules that are already loaded but need hotfix support.
 ]] --
 function hotfix.register(name, loader, ret)
 	assert(type(name) == "string")
-	local _LOADED = debug.getregistry()._LOADED
+	local _LOADED = assert(debug.getregistry()._LOADED, "_LOADED not found")
 	if _LOADED[name] then
 		return _LOADED[name]
 	end
@@ -344,68 +442,94 @@ Upvalue Collection & Management
 --[[
 Recursively collect upvalues from a function and its nested functions.
 
-This builds a complete map of all upvalues in the module, which is needed
-to properly link new functions to the existing upvalue environment.
+Purpose:
+  This builds a complete map of all upvalues in the module, which is needed
+  to properly link new functions to the existing upvalue environment. When
+  we hotfix a module, new function implementations must share the same upvalue
+  state as the old functions to maintain consistency.
 
 Upvalue Structure:
+  Each entry in the 'uv' table has this structure:
   {
-    func: function that owns this upvalue
-    index: upvalue index in the function
-    id: unique upvalue ID
-    value: upvalue value
+    func: function - The function that owns this upvalue
+    index: number - Upvalue index in the function (1-based)
+    id: lightuserdata - Unique upvalue ID from debug.upvalueid()
+    value: any - Current value of the upvalue
   }
 
+Collection Strategy:
+  1. Direct upvalues: Collect from function f
+  2. Function-type upvalues: Recursively collect (if from same source file)
+  3. Table-type upvalues: Collect if table contains functions from same source
+  4. _ENV: Always collected but treated specially (global environment)
+
 Special Cases:
-  1. Function-type upvalues: Recursively collect if in proto_map
-  2. Table-type upvalues: Collect if all values are functions from same source
-  3. _ENV: Always ignored to avoid conflicts
+  - _ENV: Always ignored in validation to avoid conflicts with global environment
+  - Functions from other files: Skipped to avoid collecting framework code
+  - Method tables: Only collect if ALL values are functions from same source
+
+Why Check Source Files?
+  We only want to hotfix functions from the module being updated, not framework
+  functions or functions from other modules. Checking source file ensures we
+  don't accidentally modify unrelated code.
 
 @param f function - Function to collect upvalues from
-@param uv table - Accumulator for upvalue information
-@param source string - Source file path for filtering
-@param proto_map table - Diff mapping to check if function should be processed
+@param uv table - Accumulator for upvalue information (modified in-place)
+@param source string - Source file path for filtering (only collect from this file)
 ]] --
-local function collect_uv(f, uv, source, proto_map)
+local function collect_uv(f, uv, source)
 	local i = 1
 	while true do
 		local name, value = getupvalue(f, i)
 		if name == nil then break end
-
 		local id = upvalueid(f, i)
 
+		-- Special handling for _ENV
+		-- _ENV is the global environment table, always available
+		-- We collect it but don't validate it strictly
+		if name == "_ENV" then
+			uv[name] = { func = f, index = i, id = id, value = value }
+			goto continue
+		end
+
 		if uv[name] then
-			-- Upvalue already collected, verify consistency
-			-- Same upvalue name must have same ID (_ENV is exception)
-			if name ~= "_ENV" then
-				assert(uv[name].id == id, string.format("ambiguity local value %s", name))
-			end
+			-- Upvalue already collected from another function
+			-- Verify consistency: same upvalue name MUST have same ID
+			-- If they differ, it means we have ambiguous local variables
+			-- This should never happen in well-formed Lua code
+			assert(uv[name].id == id, string.format("ambiguity local value %s", name))
 		else
 			-- New upvalue, store it
 			uv[name] = { func = f, index = i, id = id, value = value }
 
 			-- Recursively collect from function-type upvalues
-			-- Only process if function is in the diff map
-			if type(value) == "function" and proto_map[proto(value)] then
-				collect_uv(value, uv, source, proto_map)
-
-				-- Collect from table-type upvalues (method tables)
-				-- Only if all values are functions from the same source file
-			elseif type(value) == "table" and name ~= "_ENV" then
+			if type(value) == "function" then
+				-- IMPORTANT: Only process if function is from the same source file
+				-- This prevents us from collecting and modifying framework functions
+				if getinfo(value, "S").short_src == source then
+					collect_uv(value, uv, source)
+				end
+			-- Collect from table-type upvalues (method tables)
+			-- Only if ALL values are functions from the same source file
+			-- This handles cases like: local methods = { foo = function() ... end }
+			elseif type(value) == "table" then
 				for k, v in next, value do
 					if type(v) == "function" then
-						-- Skip functions from other source files
-						-- This prevents collecting framework functions
-						if debug.getinfo(v, "S").short_src ~= source then
+						-- Skip this table if it contains functions from other source files
+						-- This prevents collecting framework method tables
+						if getinfo(v, "S").short_src ~= source then
 							break
 						end
-						collect_uv(v, uv, source, proto_map)
+						collect_uv(v, uv, source)
 					elseif k ~= "__index" then
-						-- Table must contain only functions (except __index)
+						-- Table must contain only functions (except __index metamethod)
+						-- If we find other types, stop processing this table
 						break
 					end
 				end
 			end
 		end
+		::continue::
 		i = i + 1
 	end
 end
@@ -418,11 +542,11 @@ Collect all upvalues from module's root functions.
 @param proto_map table - Diff mapping
 @return table - Complete upvalue map
 ]] --
-local function collect_all_uv(root, source, proto_map)
+local function collect_all_uv(root, source)
 	local upvalue_funcs = {}
 	for _, v in pairs(root) do
 		if type(v) == "function" then
-			collect_uv(v, upvalue_funcs, source, proto_map)
+			collect_uv(v, upvalue_funcs, source)
 		end
 	end
 
@@ -442,17 +566,33 @@ Function Linking
 --[[
 Link new function's upvalues to old module's upvalues.
 
-This ensures that new functions share state with old functions by pointing
-their upvalues to the same memory locations.
+Purpose:
+  When we add a new function during a hotfix, it must share state with the
+  existing module. This is achieved by making the new function's upvalues
+  point to the SAME memory locations as the old module's upvalues.
+
+How Upvalue Linking Works:
+  In Lua, upvalues are shared references. Multiple functions can reference
+  the same upvalue, meaning they share the same variable. When we do:
+    debug.upvaluejoin(new_func, i, old_func, j)
+  We make new_func's i-th upvalue point to the exact same memory location
+  as old_func's j-th upvalue. Changes by either function affect both.
 
 Process:
   1. Iterate through all upvalues of the new function
-  2. If upvalue is a function, recursively link it
+  2. If upvalue is a function, recursively link it (nested functions)
   3. If upvalue exists in old module, join them (shared state)
-  4. Ensure _ENV is properly set
+  4. Ensure _ENV is properly set (global environment access)
+
+Why This Matters:
+  Without linking, new functions would have their own separate copies of
+  upvalues, breaking state consistency. For example, if the old module has:
+    local counter = 0
+  And a new function references counter, it must see the SAME counter,
+  not a new one initialized to 0.
 
 @param f function - New function to link
-@param upvalues table - Old module's upvalue map
+@param upvalues table - Old module's upvalue map (from collect_uv)
 ]] --
 local function link_func_upvalue(f, upvalues)
 	if type(f) ~= "function" then return end
@@ -464,11 +604,15 @@ local function link_func_upvalue(f, upvalues)
 
 		if type(value) == "function" then
 			-- Recursively link nested functions
+			-- Nested functions may also have upvalues that need linking
 			link_func_upvalue(value, upvalues)
 		elseif upvalues[uvname] and uvname ~= "_ENV" then
 			-- Link to old module's upvalue (shared state)
-			-- debug.upvaluejoin(f2, n2, f1, n1) makes f2's nth upvalue
-			-- point to the same location as f1's nth upvalue
+			-- debug.upvaluejoin(f2, n2, f1, n1) makes f2's n2-th upvalue
+			-- point to the same location as f1's n1-th upvalue
+			--
+			-- Example: If old module has "local data = {}" and this new function
+			-- references "data", this makes them point to the SAME table
 			local old_uv = upvalues[uvname]
 			upvaluejoin(f, i, old_uv.func, old_uv.index)
 		end
@@ -477,11 +621,13 @@ local function link_func_upvalue(f, upvalues)
 
 	-- Ensure _ENV is properly set
 	-- _ENV is the environment table that provides access to globals
+	-- Every function needs a valid _ENV to access global functions and tables
 	i = 1
 	while true do
 		local uvname, value = getupvalue(f, i)
 		if uvname == nil then break end
 		if uvname == "_ENV" then
+			-- If _ENV is nil, set it from the old module or global _ENV
 			if value == nil and upvalues["_ENV"] then
 				setupvalue(f, i, upvalues["_ENV"].value or _ENV)
 			end
@@ -539,18 +685,40 @@ end
 
 --[[
 ================================================================================
-Core Hotfix Logic
+Core Hotfix Logic: In-Place Function Update
 ================================================================================
 
 This is the heart of the hotfix system. It updates existing functions by
 redirecting their upvalues to point to new implementations while preserving
 the upvalue environment.
 
-Key Insight:
+The Fundamental Challenge:
+  When a module is loaded, its functions are referenced everywhere:
+  - Module tables (module.foo)
+  - Upvalues in other functions (local f = module.foo)
+  - Event callbacks, timers, coroutines, etc.
+
+  We can't replace all these references. Instead, we update the ORIGINAL
+  function objects in-place by manipulating their upvalues.
+
+Key Insight - How It Works:
   Instead of replacing function references everywhere, we update the
   ORIGINAL function's upvalues to point to the new implementation.
-  This works because Lua functions are closures - updating the upvalue
-  effectively changes the function's behavior.
+  This works because Lua functions are closures - the function's behavior
+  is determined by its upvalues. By changing what the upvalues point to,
+  we effectively change the function's behavior.
+
+Example:
+  Old code:
+    local helper = function(x) return x * 2 end
+    function module.calculate(n)
+      return helper(n)  -- helper is an upvalue
+    end
+
+  After hotfix:
+    - module.calculate still references the SAME function object
+    - But its upvalue 'helper' now points to the new implementation
+    - So calling module.calculate() executes new code
 
 Algorithm:
   1. Find the original version of each function (via origin_functions)
@@ -558,15 +726,40 @@ Algorithm:
   3. For function-type upvalues, recursively update them
   4. Collect all updates in a transaction table
   5. Apply all updates atomically
+
+Why Transaction Pattern?
+  We collect all updates first, then apply atomically. This ensures
+  all-or-nothing semantics - if anything fails, no partial updates occur.
+
+@param root table - Module table containing functions
+@param proto_map table - Diff mapping (old_proto -> new_func) from hotfix.diff()
+@param upvalues table - Complete upvalue map from collect_all_uv()
 ]] --
 local function hotfix_(root, proto_map, upvalues)
 	local exclude = {}
 
 	--[[
-	Update a single function's upvalues.
+	Update a single function's upvalues to point to new implementation.
 
-	@param global table - Upvalue environment
-	@param f function - Function to update
+	Critical Implementation Detail:
+	  We ALWAYS work with the ORIGINAL function, not intermediate versions.
+	  This is essential for supporting multiple rounds of hotfixes.
+
+	Example - Why origin_functions Matters:
+	  Round 1: v1 → v2
+	    - Update v1's upvalues
+	    - origin_functions[v2] = v1
+
+	  Round 2: v2 → v3
+	    - Module now has v2, but we need to update v1 (the original)
+	    - origin_functions[v2] = v1, so we find and update v1
+	    - origin_functions[v3] = v1 (still points to original)
+
+	  Without this, Round 2 would update v2 instead of v1, and all
+	  references to v1 (which still exist everywhere) would stay old.
+
+	@param global table - Upvalue environment (new function's upvalues)
+	@param f function - Function to update (will be resolved to original)
 	]] --
 	local function update_func(global, f)
 		if exclude[f] then return end
@@ -579,6 +772,7 @@ local function hotfix_(root, proto_map, upvalues)
 		--   After 2nd hotfix, module.foo points to v2
 		--   origin_functions[v2] = v1
 		--   We need to update v1's upvalues, not v2's
+		--   Because all old references still point to v1
 		f = origin_functions[f] or f
 
 		local oldf = nil
@@ -592,10 +786,12 @@ local function hotfix_(root, proto_map, upvalues)
 
 			if type(value) == "function" then
 				-- Recursively update function-type upvalues
+				-- These are nested functions that also need updating
 				update_func(global, value)
 			else
 				-- Link to new upvalue environment
-				local old_uv = assert(global[name], string.format("upvalue %s not found", name))
+				-- Make this upvalue point to the new function's upvalue
+				local old_uv = global[name]
 				upvaluejoin(f, i, old_uv.func, old_uv.index)
 			end
 			i = i + 1
@@ -603,9 +799,11 @@ local function hotfix_(root, proto_map, upvalues)
 
 		-- Store mapping: new version -> original version
 		-- Don't overwrite if already exists (preserve original across multiple hotfixes)
+		-- This ensures that after v1→v2→v3, we still know v1 is the original
 		origin_functions[f] = origin_functions[f] or oldf
 
 		-- Set _ENV if needed
+		-- Every function needs _ENV to access global functions and tables
 		i = 1
 		while true do
 			local name, value = getupvalue(f, i)
@@ -624,34 +822,51 @@ local function hotfix_(root, proto_map, upvalues)
 	Update all functions in a table structure.
 
 	This handles both:
-	1. Direct function values in tables
-	2. Function-type upvalues in the upvalue map
+	1. Direct function values in tables (e.g., module.foo = function() end)
+	2. Function-type upvalues in the upvalue map (local f = function() end)
+
+	For each function found:
+	  - Look up its prototype in the diff map
+	  - If changed, call update_func to update its upvalues
+	  - Record the update in transaction table (for atomic application)
+
+	Transaction Structure:
+	  Key: { uptable = table, key = name } for table entries
+	       OR upvalue structure for upvalue entries
+	  Value: New function implementation
 
 	@param oldfuncs table - Table containing functions to update
 	@param newproto table - Diff mapping (old_proto -> new_func)
-	@param res table - Transaction accumulator
+	@param res table - Transaction accumulator (modified in-place)
 	]] --
 	local function update_funcs(oldfuncs, newproto, res)
 		for name, v in next, oldfuncs do
 			if type(v) == "function" then
 				-- Direct function in table (e.g., module.foo)
+				-- Check if this function's prototype appears in the diff
 				local newf = newproto[proto(v)]
 				if newf then
+					-- Function has changed, update it
 					update_func(upvalues, newf)
+					-- Schedule update: module[name] = newf
 					res[{ uptable = oldfuncs, key = name }] = newf
 				end
 			elseif type(v) == "table" and v.value and v.func then
 				-- Upvalue structure from collect_uv
+				-- Format: { func = f, index = i, id = id, value = value }
 				local tp = type(v.value)
 				if tp == "function" then
-					-- Function-type upvalue
+					-- Function-type upvalue (local f = function() end)
 					local newf = newproto[proto(v.value)]
 					if newf then
+						-- Function has changed, update it
 						update_func(upvalues, newf)
+						-- Schedule update: setupvalue(v.func, v.index, newf)
 						res[v] = newf
 					end
 				elseif tp == "table" and name ~= "_ENV" then
-					-- Table-type upvalue (method table)
+					-- Table-type upvalue (local methods = { ... })
+					-- Recursively process functions within this table
 					update_funcs(v.value, newproto, res)
 				end
 			end
@@ -659,18 +874,22 @@ local function hotfix_(root, proto_map, upvalues)
 	end
 
 	-- Transaction pattern: collect all updates first, then apply atomically
-	-- This ensures all-or-nothing semantics
+	-- This ensures all-or-nothing semantics - either all updates succeed or none do
+	-- Phase 1: Collect all updates (above)
+	-- Phase 2: Apply all updates (below)
 	local transactions = {}
 	update_funcs(upvalues, proto_map, transactions)
 	update_funcs(root, proto_map, transactions)
 
 	-- Apply all updates atomically
+	-- At this point, all function upvalues have been updated via update_func
+	-- Now we update the table references to point to the new functions
 	for k, v in pairs(transactions) do
 		if k.uptable then
-			-- Update function in table
+			-- Update function in table: module[key] = new_function
 			k.uptable[k.key] = v
 		else
-			-- Update function-type upvalue
+			-- Update function-type upvalue: setupvalue(func, index, new_function)
 			setupvalue(k.func, k.index, v)
 		end
 	end
@@ -743,16 +962,35 @@ function hotfix.update(name, updatename)
 	local loader = findloader(updatename)
 
 	--[[
-		Phase 1:	Parse and validate without executing
+	================================================================================
+	Phase 1: Parse and Validate (No State Changes)
+	================================================================================
+
+	In this phase we:
+	  1. Collect all upvalues from the currently running module
+	  2. Generate diff between old and new module versions
+	  3. Check for compatibility issues
+	  4. Parse source file to identify new function names
+
+	Critical: NO side effects, NO module state changes
+	If any check fails, we return early with error - module remains unchanged
 	]] --
+
+	local upvalues = collect_all_uv(root, name)
 
 	-- Generate diff between old and new versions
 	-- This compares function structures without executing any code
-	local diff, err, newfuncs = hotfix.diff(loaders[name], loader)
-	if err then
+	-- Returns:
+	--   diff: Map of old_proto -> new_func (which functions changed)
+	--   err: Array of error messages (compatibility issues)
+	--   newfuncs: Array of new functions (functions added in new version)
+	local diff, err, newfuncs = hotfix.diff(loaders[name], loader, upvalues)
+	if err and #err > 0 then
 		return false, table.concat(err, "\n")
 	end
 
+	-- If new functions were added, parse source file to get their names
+	-- We need names to add them to the module table (module.new_func = ...)
 	if #newfuncs > 0 then
 		local module_name = name:match("([^/]+)%.lua$") or name
 		local parsed_funcs, parse_err = hotfix.parse_module_functions(name, module_name)
@@ -760,14 +998,15 @@ function hotfix.update(name, updatename)
 			return false, "Cannot parse source file: " .. (parse_err or "unknown error")
 		end
 
+		-- Build map: function_name -> function_object
+		-- This converts newfuncs from array of functions to named map
 		local newfuns_err = {}
 		local newfuns_map = {}
 		for _, newf in ipairs(newfuncs) do
 			local info = funcinfo(newf)
 			local function_name = parsed_funcs and parsed_funcs[info]
 			if not function_name then
-				err = err or {}
-				table.insert(err, "Cannot find new function name for " .. info)
+				table.insert(newfuns_err, "Cannot find new function name for " .. info)
 			else
 				newfuns_map[function_name] = newf
 			end
@@ -781,9 +1020,23 @@ function hotfix.update(name, updatename)
 	end
 
 	--[[
-	Phase 2: Check new functions' upvalue compatibility
+	================================================================================
+	Phase 2: Check New Functions (Still No State Changes)
+	================================================================================
+
+	Validate that new functions only reference upvalues that exist in the
+	running module. This prevents runtime errors from missing dependencies.
+
+	Example:
+	  Old module: local counter = 0
+	  New function: function new_func() counter = counter + 1 end
+	  ✓ Valid - 'counter' exists
+
+	  New function: function bad_func() missing_var = 1 end
+	  ✗ Invalid - 'missing_var' doesn't exist
+
+	Critical: Still NO state changes
 	]] --
-	local upvalues = collect_all_uv(root, name, diff)
 	local check_errors = {}
 
 	-- Validate that new functions only reference existing upvalues
@@ -800,11 +1053,23 @@ function hotfix.update(name, updatename)
 	end
 
 	--[[
-	Phase 3: Apply updates (only if all checks passed)
+	================================================================================
+	Phase 3: Apply Updates (NOW we modify state)
+	================================================================================
+
+	All validation passed. Now we actually modify the running module:
+	  1. Update existing functions by redirecting their upvalues (hotfix_)
+	  2. Update the loader reference (for next hotfix round)
+	  3. Add new functions to module table
+	  4. Link new functions' upvalues to existing module state
+
+	This is the ONLY phase that modifies state. If we reach here, we're
+	committed to applying all changes.
 	]] --
 
 	-- Update existing functions
 	-- This modifies the original functions' upvalues to point to new implementations
+	-- After this, calling any old function reference will execute new code
 	hotfix_(root, diff, upvalues)
 	loaders[name] = loader
 
@@ -819,9 +1084,9 @@ function hotfix.update(name, updatename)
 	-- Link their upvalues to the existing module environment
 	local added = {}
 	for k, v in pairs(newfuncs) do
-		link_func_upvalue(v, upvalues)
-		root[k] = v
-		table.insert(added, k)
+		link_func_upvalue(v, upvalues)  -- Make v share state with old module
+		root[k] = v                      -- Add to module table
+		table.insert(added, k)           -- Track for logging
 	end
 
 	if #added > 0 then
