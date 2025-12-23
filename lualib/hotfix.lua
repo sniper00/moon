@@ -14,10 +14,43 @@ Key Features:
   5. Atomic updates with rollback on failure
 
 How It Works:
-  Instead of replacing function references (impossible - they're everywhere),
-  we update the ORIGINAL function objects by manipulating their upvalues to
-  point to new implementations. Since Lua functions are closures, changing
-  upvalues effectively changes behavior.
+  The hotfix system operates in four key phases:
+
+  Phase 1: Collect Old Module Upvalue Environment
+    - collect_all_uv(old_module) collects all upvalue info from old module
+    - Returns {upvalue_name -> {func, index, id, value}}
+    - Purpose: Build upvalue index for later connection
+
+  Phase 2: Validation (hotfix.diff)
+    - Compare old and new versions, generate diff mapping
+    - Rules:
+       Allow: Modify existing function implementations
+       Allow: Add new functions
+       Allow: Functions can add/remove upvalues
+       Forbid: Delete existing functions (breaks external references)
+       Forbid: New functions reference upvalues not in old module
+
+  Phase 3: New Function Handling
+    - Parse source code to get function names (avoid executing initialization)
+    - Check that new functions' upvalues exist in old module
+
+  Phase 4: Execute Replacement (using upvaluejoin)
+    For each function to update:
+      1. Lookup Phase: Search for same-named upvalue info in old module by name
+         - upvalues[uvname] returns {func, index, id, value}
+         - func: the function that owns this upvalue
+         - index: the position of this upvalue in that function
+      2. Join Phase: Use upvaluejoin to make new function's upvalue reference
+         the memory location of old function's upvalue at that position
+         - upvaluejoin(new_func, i, old_uv.func, old_uv.index)
+         - IMPORTANT: Indices i and old_uv.index may be DIFFERENT
+         - Connection is based on NAME, not position
+      3. Assignment Phase: Assign new function to module position
+         - Module table: Module.table[key] = new_function
+         - Upvalue: setupvalue(parent_func, index, new_function)
+
+  Key: upvaluejoin matches upvalues by NAME. We look up the upvalue info
+  (func and index) by name, then join to that specific location.
 
 Architecture:
   - Three-phase update process: Parse → Check → Apply
@@ -29,7 +62,9 @@ Architecture:
 
 Core Concepts:
   1. Function Prototypes: Internal bytecode pointers used to identify changes
-  2. Upvalue Linking: Making new functions share state with old module
+  2. Upvalue Linking: Finding upvalue info (func, index) by NAME in old module,
+     then using upvaluejoin to make new function's upvalue reference the
+     memory location of that upvalue in the old function
   3. Origin Tracking: Remembering original functions across multiple hotfixes
   4. Transaction Pattern: Collect all updates, then apply atomically
 
@@ -569,30 +604,58 @@ Link new function's upvalues to old module's upvalues.
 Purpose:
   When we add a new function during a hotfix, it must share state with the
   existing module. This is achieved by making the new function's upvalues
-  point to the SAME memory locations as the old module's upvalues.
+  point to the SAME memory locations as the old module's upvalues through
+  NAME MATCHING.
 
 How Upvalue Linking Works:
-  In Lua, upvalues are shared references. Multiple functions can reference
-  the same upvalue, meaning they share the same variable. When we do:
+  In Lua, upvalues are shared references. upvaluejoin matches upvalues by NAME:
     debug.upvaluejoin(new_func, i, old_func, j)
-  We make new_func's i-th upvalue point to the exact same memory location
-  as old_func's j-th upvalue. Changes by either function affect both.
+  This makes new_func's upvalue at index i point to the same memory location
+  as old_func's upvalue at index j, IF they have the SAME NAME.
 
 Process:
-  1. Iterate through all upvalues of the new function
-  2. If upvalue is a function, recursively link it (nested functions)
-  3. If upvalue exists in old module, join them (shared state)
-  4. Ensure _ENV is properly set (global environment access)
+  1. Iterate through all upvalues of the new function, getting name (uvname)
+  2. Look up same-named upvalue info in old module: upvalues[uvname]
+     - Returns {func, index, id, value} - the function that owns this upvalue
+  3. If found and name != "_ENV", use upvaluejoin to connect them
+     - upvaluejoin(new_func, i, old_uv.func, old_uv.index)
+     - Makes new function's i-th upvalue reference old function's upvalue
+  4. If upvalue is a function, recursively link it (nested functions)
+  5. Ensure _ENV is properly set (global environment access)
 
-Why This Matters:
-  Without linking, new functions would have their own separate copies of
-  upvalues, breaking state consistency. For example, if the old module has:
-    local counter = 0
-  And a new function references counter, it must see the SAME counter,
-  not a new one initialized to 0.
+Key Point - Name Matching and Info Lookup:
+  upvalues[uvname] looks up by NAME and returns the INFO about which function
+  owns this upvalue and at what index position. Then upvaluejoin uses this info
+  to connect new function's upvalue to the exact memory location in old function.
+  Only upvalues with matching names can be found and joined.
+
+  IMPORTANT: The index positions may be DIFFERENT in new and old functions!
+  - Lookup is based on NAME: upvalues[uvname] searches by name
+  - Connection uses the INDICES from lookup: upvaluejoin(new_f, i, old_f, j)
+  - Same name "counter" could be at index 2 in new_func and index 1 in old_func
+
+Example:
+  Old module: local counter = 0
+              function old_func()
+                  -- "counter" is old_func's 1st upvalue (index=1)
+                  counter = counter + 1
+              end
+
+  New function: local config = {}  -- new_func's 1st upvalue (index=1)
+                local counter = 0  -- new_func's 2nd upvalue (index=2)
+                function new_func()
+                    -- "counter" is new_func's 2nd upvalue (index=2)
+                    counter = counter + 1
+                end
+
+  Lookup and Join Process:
+  → upvalues["counter"] returns {func: old_func, index: 1, ...}
+  → upvaluejoin(new_func, 2, old_func, 1)  -- Note: indices 2 and 1 differ!
+  → Both functions' "counter" upvalues now point to SAME memory
+  → They share the same counter variable despite different index positions
 
 @param f function - New function to link
-@param upvalues table - Old module's upvalue map (from collect_uv)
+@param upvalues table - Old module's upvalue map {name -> {func, index, id, value}}
 ]] --
 local function link_func_upvalue(f, upvalues)
 	if type(f) ~= "function" then return end
@@ -607,14 +670,20 @@ local function link_func_upvalue(f, upvalues)
 			-- Nested functions may also have upvalues that need linking
 			link_func_upvalue(value, upvalues)
 		elseif upvalues[uvname] and uvname ~= "_ENV" then
-			-- Link to old module's upvalue (shared state)
-			-- debug.upvaluejoin(f2, n2, f1, n1) makes f2's n2-th upvalue
-			-- point to the same location as f1's n1-th upvalue
-			--
-			-- Example: If old module has "local data = {}" and this new function
-			-- references "data", this makes them point to the SAME table
+			-- Look up same-named upvalue INFO in old module by name
+			-- upvalues[uvname] returns {func, index, id, value}
+			-- This tells us which function owns this upvalue and at what position
 			local old_uv = upvalues[uvname]
+
+			-- Use upvaluejoin to connect new function's upvalue to old function's upvalue
+			-- upvaluejoin(new_func, i, old_uv.func, old_uv.index)
+			-- Makes new_func's i-th upvalue reference the same memory location
+			-- as old_uv.func's old_uv.index-th upvalue
 			upvaluejoin(f, i, old_uv.func, old_uv.index)
+
+			-- Now both functions' same-named upvalues point to SAME memory
+			-- Example: If old_uv = {func: old_func, index: 1, ...}
+			-- Then new_func's "data" upvalue now points to old_func's 1st upvalue's memory
 		end
 		i = i + 1
 	end
@@ -638,14 +707,21 @@ local function link_func_upvalue(f, upvalues)
 end
 
 --[[
-Check if new function only references upvalues that exist in old module.
+Check if new function only references upvalues that exist in old module BY NAME.
 
 This validation ensures that new functions don't introduce dependencies
-on upvalues that don't exist in the running module.
+on upvalues that don't exist in the running module. Since upvaluejoin matches
+by NAME, we check if each upvalue name in the new function exists in old module.
+
+Process:
+  1. Iterate through new function's upvalues, get name (uvname)
+  2. Check if upvalues[uvname] exists (name lookup in old module)
+  3. If not found and name != "_ENV", it's a missing upvalue
+  4. Recursively check nested functions
 
 @param f function - New function to check
 @param funcname string - Function name for error messages
-@param upvalues table - Old module's upvalue map
+@param upvalues table - Old module's upvalue map {name -> {func, index, id, value}}
 @return boolean - true if valid
 @return string|nil - Error message if invalid
 ]] --
@@ -685,45 +761,47 @@ end
 
 --[[
 ================================================================================
-Core Hotfix Logic: In-Place Function Update
+Core Hotfix Logic: Upvalue Reference Redirection
 ================================================================================
 
-This is the heart of the hotfix system. It updates existing functions by
-redirecting their upvalues to point to new implementations while preserving
-the upvalue environment.
+This is the heart of the hotfix system. We make new functions' upvalues reference
+the same memory locations as old module's upvalues through NAME MATCHING, then
+assign new functions to module positions.
 
-The Fundamental Challenge:
-  When a module is loaded, its functions are referenced everywhere:
-  - Module tables (module.foo)
-  - Upvalues in other functions (local f = module.foo)
-  - Event callbacks, timers, coroutines, etc.
+The Two-Step Process:
+  Step 1: Upvalue Linking (via upvaluejoin)
+    - For each upvalue in new function, get its name (uvname)
+    - Look up same-named upvalue in old module: upvalues[uvname]
+    - Use upvaluejoin to make them point to SAME memory location
+    - This creates SHARED STATE between new and old functions
 
-  We can't replace all these references. Instead, we update the ORIGINAL
-  function objects in-place by manipulating their upvalues.
+  Step 2: Function Assignment
+    - Module table: Module.table[key] = new_function
+    - Upvalue: setupvalue(parent_func, index, new_function)
 
-Key Insight - How It Works:
-  Instead of replacing function references everywhere, we update the
-  ORIGINAL function's upvalues to point to the new implementation.
-  This works because Lua functions are closures - the function's behavior
-  is determined by its upvalues. By changing what the upvalues point to,
-  we effectively change the function's behavior.
+Key Insight - Name Matching:
+  upvaluejoin works by NAME, not position. If new function has upvalue "counter"
+  and old module has upvalue "counter", they can be joined. If names don't match,
+  they can't be joined (validation will fail).
 
 Example:
-  Old code:
-    local helper = function(x) return x * 2 end
-    function module.calculate(n)
-      return helper(n)  -- helper is an upvalue
-    end
+  Old module:
+    local counter = 0  -- This upvalue is named "counter"
+    function M.get() return counter end
+
+  New function:
+    function M.increment() counter = counter + 1 end  -- References "counter" by name
 
   After hotfix:
-    - module.calculate still references the SAME function object
-    - But its upvalue 'helper' now points to the new implementation
-    - So calling module.calculate() executes new code
+    - upvalues["counter"] finds old module's counter upvalue
+    - upvaluejoin makes new function's "counter" point to SAME memory
+    - Both functions share the same counter variable
+    - Module.increment = new_function (assigned to module table)
 
 Algorithm:
   1. Find the original version of each function (via origin_functions)
-  2. Update its upvalues to point to new function's upvalue environment
-  3. For function-type upvalues, recursively update them
+  2. Make new function's same-named upvalues reference old module's upvalues
+  3. For function-type upvalues, recursively process them
   4. Collect all updates in a transaction table
   5. Apply all updates atomically
 
@@ -733,32 +811,40 @@ Why Transaction Pattern?
 
 @param root table - Module table containing functions
 @param proto_map table - Diff mapping (old_proto -> new_func) from hotfix.diff()
-@param upvalues table - Complete upvalue map from collect_all_uv()
+@param upvalues table - Complete upvalue map {name -> {func, index, id, value}}
 ]] --
 local function hotfix_(root, proto_map, upvalues)
 	local exclude = {}
 
 	--[[
-	Update a single function's upvalues to point to new implementation.
+	Make function's same-named upvalues reference old module's upvalues.
 
 	Critical Implementation Detail:
 	  We ALWAYS work with the ORIGINAL function, not intermediate versions.
 	  This is essential for supporting multiple rounds of hotfixes.
 
-	Example - Why origin_functions Matters:
+	Process:
+	  1. Resolve to original function via origin_functions
+	  2. For each upvalue in the function, get its name
+	  3. Look up same-named upvalue in old module: global[name]
+	  4. Use upvaluejoin to make them point to SAME memory location
+	  5. Recursively process function-type upvalues
+
+	Example - Multiple Hotfixes:
 	  Round 1: v1 → v2
-	    - Update v1's upvalues
+	    - Make v2's same-named upvalues reference old module
 	    - origin_functions[v2] = v1
 
 	  Round 2: v2 → v3
-	    - Module now has v2, but we need to update v1 (the original)
+	    - Module now has v2, but we process original v1
 	    - origin_functions[v2] = v1, so we find and update v1
+	    - Make v1's same-named upvalues reference old module (keep in sync)
 	    - origin_functions[v3] = v1 (still points to original)
 
-	  Without this, Round 2 would update v2 instead of v1, and all
-	  references to v1 (which still exist everywhere) would stay old.
+	  Without this, Round 2 would only update v2, and old references to v1
+	  would stay stale.
 
-	@param global table - Upvalue environment (new function's upvalues)
+	@param global table - Old module's upvalue map {name -> {func, index, id, value}}
 	@param f function - Function to update (will be resolved to original)
 	]] --
 	local function update_func(global, f)
@@ -789,10 +875,13 @@ local function hotfix_(root, proto_map, upvalues)
 				-- These are nested functions that also need updating
 				update_func(global, value)
 			else
-				-- Link to new upvalue environment
-				-- Make this upvalue point to the new function's upvalue
+				-- Make this upvalue reference old module's SAME-NAMED upvalue
+				-- global[name] looks up by NAME to find matching upvalue in old module
+				-- upvaluejoin makes them point to the SAME memory location
 				local old_uv = global[name]
-				upvaluejoin(f, i, old_uv.func, old_uv.index)
+				if old_uv then
+					upvaluejoin(f, i, old_uv.func, old_uv.index)
+				end
 			end
 			i = i + 1
 		end
