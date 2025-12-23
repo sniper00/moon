@@ -117,8 +117,7 @@ static int lhttp_urldecode(lua_State* L) {
     return 1;
 }
 
-extern "C" {
-int LUAMOD_API luaopen_http_core(lua_State* L) {
+LUAMOD_API int luaopen_http_core(lua_State* L) {
     luaL_Reg l[] = {
         { "parse_request", lhttp_parse_request },
         { "parse_response", lhttp_parse_response },
@@ -131,4 +130,4 @@ int LUAMOD_API luaopen_http_core(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

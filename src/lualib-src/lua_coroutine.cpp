@@ -235,8 +235,7 @@ static int lstop(lua_State* L) {
     return 1;
 }
 
-extern "C" {
-int luaopen_coroutine_profile(lua_State* L) {
+LUAMOD_API int luaopen_coroutine_profile(lua_State* L) {
     luaL_Reg l[] = {
         { "start", lstart },     { "stop", lstop }, { "resume", luaB_coresume },
         { "wrap", luaB_cowrap }, { NULL, NULL },
@@ -264,5 +263,4 @@ int luaopen_coroutine_profile(lua_State* L) {
     lua_setfield(L, -2, "wrap");
     lua_pop(L, 1);
     return 1;
-}
 }

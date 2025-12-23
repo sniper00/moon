@@ -17,6 +17,20 @@ constexpr ssize_t mb_memory = 1024 * 1024;
 
 extern "C" void open_custom_libs(lua_State* L);
 
+static unsigned
+global_seed() {
+	static std::atomic<uint32_t> seed = 0;
+	uint32_t ret = seed.load(std::memory_order_acquire);
+	while (ret == 0) {
+		uint32_t t = luaL_makeseed(NULL);
+		if (t == 0)
+			t = 1;
+        seed.compare_exchange_strong(ret, t, std::memory_order_acq_rel);
+		ret = seed.load(std::memory_order_acquire);
+	}
+	return ret;
+}
+
 void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize) {
     auto* l = static_cast<lua_service*>(ud);
 
@@ -71,7 +85,7 @@ lua_service* lua_service::get(lua_State* L) {
     return reinterpret_cast<lua_service*>(v);
 }
 
-lua_service::lua_service(): lua_(lua_newstate(lalloc, this)) {
+lua_service::lua_service(): lua_(lua_newstate(lalloc, this, global_seed())) {
     static_assert((LUA_EXTRASPACE == sizeof(this)) && (LUA_EXTRASPACE == sizeof(intptr_t)));
     intptr_t p = (intptr_t)this;
     memcpy(lua_getextraspace(lua_.get()), &p, LUA_EXTRASPACE);

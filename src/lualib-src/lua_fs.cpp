@@ -170,8 +170,7 @@ static int lfs_abspath(lua_State* L) {
     return lua_error(L);
 }
 
-extern "C" {
-int LUAMOD_API luaopen_fs(lua_State* L) {
+LUAMOD_API int luaopen_fs(lua_State* L) {
     luaL_Reg l[] = {
         { "listdir", lfs_listdir },
         { "isdir", lfs_isdir },
@@ -190,4 +189,4 @@ int LUAMOD_API luaopen_fs(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

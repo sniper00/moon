@@ -488,8 +488,7 @@ static int peek_one(lua_State* L) {
     return 3;
 }
 
-extern "C" {
-int LUAMOD_API luaopen_serialize(lua_State* L) {
+LUAMOD_API int luaopen_serialize(lua_State* L) {
     luaL_Reg l[] = {
         { "pack", pack },           { "packs", packsafe }, { "unpack", unpack },
         { "unpack_one", peek_one }, { NULL, NULL },
@@ -497,4 +496,4 @@ int LUAMOD_API luaopen_serialize(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

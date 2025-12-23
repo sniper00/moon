@@ -619,8 +619,7 @@ static int json_array(lua_State* L) {
 
 #include "lua_db_protocol.hpp"
 
-extern "C" {
-int LUAMOD_API luaopen_json(lua_State* L) {
+LUAMOD_API int luaopen_json(lua_State* L) {
     luaL_Reg l[] = {
         { "encode", encode },
         { "pretty_encode", pretty_encode },
@@ -645,4 +644,4 @@ int LUAMOD_API luaopen_json(lua_State* L) {
     lua_setfield(L, -2, "null");
     return 1;
 }
-}
+

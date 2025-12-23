@@ -149,8 +149,7 @@ static int lua_ikcp_read(lua_State* L) {
     return 0;
 }
 
-extern "C" {
-int LUAMOD_API luaopen_kcp_core(lua_State* L) {
+LUAMOD_API int luaopen_kcp_core(lua_State* L) {
     luaL_Reg l[] = {
         { "create", lua_ikcp_create },
         { "release", lua_ikcp_release },
@@ -165,4 +164,4 @@ int LUAMOD_API luaopen_kcp_core(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

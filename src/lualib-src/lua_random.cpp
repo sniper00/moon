@@ -191,8 +191,7 @@ static int lrand_weight_some(lua_State* L) {
     return 1;
 }
 
-extern "C" {
-int LUAMOD_API luaopen_random(lua_State* L) {
+LUAMOD_API int luaopen_random(lua_State* L) {
     luaL_Reg l[] = {
         { "rand_range", lrand_range },
         { "rand_range_some", lrand_range_some },
@@ -205,4 +204,4 @@ int LUAMOD_API luaopen_random(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

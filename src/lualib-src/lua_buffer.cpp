@@ -388,8 +388,7 @@ static int append(lua_State* L) {
     return lua_error(L);
 }
 
-extern "C" {
-int LUAMOD_API luaopen_buffer(lua_State* L) {
+LUAMOD_API int luaopen_buffer(lua_State* L) {
     luaL_Reg l[] = {
         { "unsafe_new", unsafe_new },
         { "delete", unsafe_delete },
@@ -413,4 +412,4 @@ int LUAMOD_API luaopen_buffer(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

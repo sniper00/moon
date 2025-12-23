@@ -339,8 +339,7 @@ static int load(lua_State* L) {
     return 0;
 }
 
-extern "C" {
-int LUAMOD_API luaopen_schema(lua_State* L) {
+LUAMOD_API int luaopen_schema(lua_State* L) {
     luaL_Reg l[] = {
         { "load", load },
         { "validate", validate },
@@ -349,4 +348,4 @@ int LUAMOD_API luaopen_schema(lua_State* L) {
     luaL_newlib(L, l);
     return 1;
 }
-}
+

@@ -155,8 +155,7 @@ static int lnew(lua_State* L) {
 }
 
 // Module entry point function
-extern "C" {
-int LUAMOD_API luaopen_crypto_scram(lua_State* L) {
+LUAMOD_API int luaopen_crypto_scram(lua_State* L) {
     luaL_Reg l[] = {
         { "new", lnew },
         { nullptr, nullptr },
@@ -164,4 +163,4 @@ int LUAMOD_API luaopen_crypto_scram(lua_State* L) {
     luaL_newlib(L, l);
     return 1; // Return the module table
 }
-}
+
