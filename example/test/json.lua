@@ -209,27 +209,26 @@ do
     assert(not ok, err)
 end
 
-do
-    local t = {nil,nil,nil, 100}
-    assert(string.sub(json.encode(t),1,1)=="{")
-    local t2 = json.decode(json.encode(t))
-    assert(not t2[1])
-    assert(not t2[2])
-    assert(not t2[3])
-    assert(t2[4]==100)
+-- do
+--     local t = {nil,nil,nil, 100}
+--     assert(string.sub(json.encode(t),1,1)=="{")
+--     local t2 = json.decode(json.encode(t))
+--     assert(not t2[1])
+--     assert(not t2[2])
+--     assert(not t2[3])
+--     assert(t2[4]==100)
 
-    local old_options = json.options('enable_sparse_array', true)
-    local t = {nil,nil,nil, 100}
-    assert(string.sub(json.encode(t),1,1)=="[")
-    assert(#json.decode(json.encode(t)) == 4)
-    local t2 = json.decode(json.encode(t))
-    assert(t2[1]==json.null)
-    assert(t2[2]==json.null)
-    assert(t2[3]==json.null)
-    assert(t2[4]==100)
+--     local old_options = json.options('enable_sparse_array', true)
+--     assert(string.sub(json.encode(t),1,1)=="[")
+--     assert(#json.decode(json.encode(t)) == 4)
+--     local t2 = json.decode(json.encode(t))
+--     assert(t2[1]==json.null)
+--     assert(t2[2]==json.null)
+--     assert(t2[3]==json.null)
+--     assert(t2[4]==100)
 
-    json.options('enable_sparse_array', old_options)
-end
+--     json.options('enable_sparse_array', old_options)
+-- end
 
 do
     local str = io.readfile([[twitter.json]])

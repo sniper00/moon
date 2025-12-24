@@ -66,7 +66,12 @@ local next_case = function ()
     local cfg = table.remove(test_case,1)
     if cfg then
         moon.async(function ()
-            moon.new_service(cfg)
+            local id = moon.new_service(cfg)
+            if id == 0 then
+                moon.error(string.format("run test '%s' failed", cfg.name))
+                moon.exit(1)
+                return
+            end
         end)
     else
         moon.exit(0)
