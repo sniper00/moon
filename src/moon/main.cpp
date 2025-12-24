@@ -158,7 +158,9 @@ int main(int argc, char* argv[]) {
         wk_server = server_;
 
         std::string lua_search_path = "";
-        if (file::read_all(bootstrap, std::ios::in).find("_G[\"__init__\"]") != std::string::npos) {
+        if (auto content = file::read_all(bootstrap, std::ios::in);
+            content.find("_G[\"__init__\"]") != std::string::npos)
+        {
             std::unique_ptr<lua_State, moon::state_deleter> lua_ { luaL_newstate() };
             lua_State* L = lua_.get();
             luaL_openlibs(L);
@@ -168,7 +170,7 @@ int main(int argc, char* argv[]) {
             lua_pushcfunction(L, traceback);
             assert(lua_gettop(L) == 1);
 
-            int r = luaL_loadfile(L, bootstrap.data());
+            int r = luaL_loadstring(L, content.data());
             MOON_CHECK(r == LUA_OK, moon::format("loadfile %s", lua_tostring(L, -1)));
 
             r = luaL_dostring(L, arg.data());
