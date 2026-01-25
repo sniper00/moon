@@ -258,6 +258,7 @@ else
     end
 
     --- Call a query and wait for the result (synchronous RPC).
+    ---@async
     ---@param db integer service ID of the sqldriver
     ---@param sql string|table SQL text or buffer
     ---@param hash? integer optional routing hash (default 1)
@@ -271,6 +272,7 @@ else
     --- a prebuilt table form `{sql, param1, param2, ...}`.
     --- If the SQL contains `$` placeholders it will be converted with
     --- `json.pq_query`; otherwise params are forwarded as-is.
+    ---@async
     ---@param db integer service ID
     ---@param sql string|table SQL string or table {sql, ...}
     ---@param ... any parameters to bind
@@ -294,6 +296,7 @@ else
     --- `req` should be a list of statements in the form
     --- `{{sql, param1, ...}, {sql, param1, ...}, ...}`. Returns provider
     --- result table on success or error on failure.
+    ---@async
     function client.pipe(db, req)
         return moon.call("lua", db, "pipe", 1, json.pq_pipe(req))
     end

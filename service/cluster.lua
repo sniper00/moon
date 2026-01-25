@@ -25,7 +25,7 @@ local function cluster_service()
 
     ---@type table<integer, integer>
     local clusters = {}
-    local call_watch = {}
+    local call_watcher = {}
     local connect_mutex = setmetatable({}, { __mode = "v" })
 
     local function find_or_create_connection(node)
@@ -63,20 +63,20 @@ local function cluster_service()
 
     local function add_call_watch(fd, sender, sessionid)
         local token = sessionid .. "-" .. sender
-        if call_watch[token] then
-            error(strfmt("add_call_watch: duplicate call_watch fd=%s sender=%s sessionid=%s", fd, sender, sessionid))
+        if call_watcher[token] then
+            error(strfmt("add_call_watch: duplicate call_watcher fd=%s sender=%s sessionid=%s", fd, sender, sessionid))
         end
-        call_watch[token] = { time = moon.time(), fd = fd }
+        call_watcher[token] = { time = moon.time(), fd = fd }
     end
 
     local function remove_call_watch(sender, sessionid)
         local token = sessionid .. "-" .. sender
-        local t = call_watch[token]
+        local t = call_watcher[token]
         if not t then
-            moon.error(strfmt("remove_call_watch: call_watch not found sender=%s sessionid=%s", sender, sessionid))
+            moon.error(strfmt("remove_call_watch: call_watcher not found sender=%s sessionid=%s", sender, sessionid))
             return false
         end
-        call_watch[token] = nil
+        call_watcher[token] = nil
         return true
     end
 
@@ -130,8 +130,8 @@ local function cluster_service()
                 local fd2, err = find_or_create_connection(header.from_node)
                 if not fd2 then
                     local message = strfmt("cluster.call: failed to connect back to from_node=%s from_addr=%s to_sname=%s err=%s", header.from_node, header.from_addr, header.to_sname, err)
-                    socket.write(fd, pack(header, false, message)) -- response to sender node
-                    moon.error(message)
+                    socket.write(fd, res) -- response to sender node
+                    moon.warn(message)
                     return
                 end
                 socket.write(fd2, res) -- response to sender node
@@ -153,7 +153,7 @@ local function cluster_service()
     socket.on("close", function(fd, msg)
         print("socket close", moon.decode(msg, "Z"))
 
-        for key, value in pairs(call_watch) do
+        for key, value in pairs(call_watcher) do
             if value.fd == fd then
                 local arr = string.split(key, "-")
                 local sessionid = tonumber(arr[1])
@@ -161,7 +161,7 @@ local function cluster_service()
                 moon.warn(strfmt("cluster connection closed, return error to caller sender=%s sessionid=%s", sender, sessionid))
                 ---@diagnostic disable-next-line: param-type-mismatch
                 moon.response("lua", sender, -sessionid, false, "Cluster call connect closed")
-                call_watch[key] = nil
+                call_watcher[key] = nil
             end
         end
 
@@ -251,20 +251,27 @@ local function cluster_service()
     moon.async(function()
         while true do
             moon.sleep(5000)
-            for k, v in pairs(call_watch) do
+            local count = 0
+            for k, v in pairs(call_watcher) do
+                count = count + 1
                 if moon.time() - v.time > 10 then
                     local arr = string.split(k, "-")
                     local sessionid = tonumber(arr[1])
                     local sender = tonumber(arr[2])
                     ---@diagnostic disable-next-line: param-type-mismatch
                     moon.response("lua", sender, -sessionid, false, "Cluster call request timeout")
-                    call_watch[k] = nil
+                    call_watcher[k] = nil
                 end
             end
 
+            local cluster_count = 0
             for _, fd in pairs(clusters) do
+                cluster_count = cluster_count + 1
                 socket.write(fd, pack({ ping = true }))
             end
+
+            print(strfmt("Cluster stats: connections=%d, pending_calls=%d", 
+            cluster_count, count))
         end
     end)
 
