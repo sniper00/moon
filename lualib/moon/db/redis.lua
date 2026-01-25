@@ -293,10 +293,11 @@ local watchmeta = {
 	end,
 }
 
-local function watch_login(obj, auth)
+local function watch_login(db_conf, obj)
+	local login_auth = redis_login(db_conf)
 	return function(fd)
-		if auth then
-			request(fd, compose_message("AUTH", auth), read_response)
+		if login_auth then
+			login_auth(fd)
 		end
 		for k in pairs(obj.__psubscribe) do
 			request(fd, compose_message("PSUBSCRIBE", k))
@@ -319,7 +320,7 @@ function redis.watch(db_conf)
 	end
 	socket.setnodelay(fd)
 
-	local f = watch_login(db_conf.auth, db_conf.db)
+	local f = watch_login(db_conf, obj)
 	if f then
 		f(fd)
 	end
