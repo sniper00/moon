@@ -6,7 +6,13 @@ local conf   = ...
 
 local pack   = seri.pack
 
-local NODE   = math.tointeger(moon.env("NODE"))
+-- Constants
+local CONNECT_TIMEOUT<const>  = 1000   -- ms
+local SOCKET_TIMEOUT<const>   = 180    -- seconds
+local PING_INTERVAL<const>    = 5000   -- ms
+local CALL_TIMEOUT<const>     = 10     -- seconds
+
+local NODE = math.tointeger(moon.env("NODE"))
 
 local function cluster_service()
     local json = require("json")
@@ -39,10 +45,10 @@ local function cluster_service()
 
         local fd = clusters[node]
         if not fd then
-            local response = httpc.get(string.format(conf.url, node))
+            local response = httpc.get(strfmt(conf.url, node))
             if response.status_code ~= 200 then
                 local errstr = response.body
-                -- moon.error(string.format("find_or_create_connection: failed to fetch cluster config for node=%s url=%s status=%s body=%s", tostring(node), tostring(string.format(conf.url, node)), tostring(response.status_code), tostring(errstr)))
+                -- moon.error(strfmt("find_or_create_connection: failed to fetch cluster config for node=%s url=%s status=%s body=%s", node, strfmt(conf.url, node), response.status_code, errstr))
                 return nil, errstr
             end
             ---@diagnostic disable-next-line: assign-type-mismatch
@@ -50,7 +56,7 @@ local function cluster_service()
             local addr = json.decode(response.body)
             local err
             ---@diagnostic disable-next-line: await-in-sync
-            fd, err = socket.connect(addr.host, addr.port, moon.PTYPE_SOCKET_MOON, 1000)
+            fd, err = socket.connect(addr.host, addr.port, moon.PTYPE_SOCKET_MOON, CONNECT_TIMEOUT)
             if not fd then
                 -- moon.error(strfmt("find_or_create_connection: connect to addr failed for node=%s addr=%s:%s err=%s", node, addr.host, addr.port, err))
                 return nil, err
@@ -62,26 +68,31 @@ local function cluster_service()
     end
 
     local function add_call_watch(fd, sender, sessionid)
-        local token = sessionid .. "-" .. sender
-        if call_watcher[token] then
+        call_watcher[sender] = call_watcher[sender] or {}
+        if call_watcher[sender][sessionid] then
             error(strfmt("add_call_watch: duplicate call_watcher fd=%s sender=%s sessionid=%s", fd, sender, sessionid))
         end
-        call_watcher[token] = { time = moon.time(), fd = fd }
+        call_watcher[sender][sessionid] = { time = moon.time(), fd = fd }
     end
 
     local function remove_call_watch(sender, sessionid)
-        local token = sessionid .. "-" .. sender
-        local t = call_watcher[token]
-        if not t then
+        local sender_watches = call_watcher[sender]
+        if not sender_watches or not sender_watches[sessionid] then
             moon.error(strfmt("remove_call_watch: call_watcher not found sender=%s sessionid=%s", sender, sessionid))
             return false
         end
-        call_watcher[token] = nil
+        sender_watches[sessionid] = nil
+        if next(sender_watches) == nil then
+            call_watcher[sender] = nil
+        end
         return true
     end
 
     local services_address = setmetatable({}, {
         __index = function(t, key)
+            if type(key) == "number" then
+                return key
+            end
             local addr = moon.queryservice(key)
             if addr == 0 then
                 return nil
@@ -97,7 +108,7 @@ local function cluster_service()
     end)
 
     socket.on("accept", function(fd, msg)
-        socket.settimeout(fd, 180)
+        socket.settimeout(fd, SOCKET_TIMEOUT)
         socket.set_enable_chunked(fd, "wr")
         print("accept", fd, moon.decode(msg, "Z"))
     end)
@@ -117,7 +128,8 @@ local function cluster_service()
             moon.async(function()
                 local address = services_address[header.to_sname]
                 if not address then
-                    local message = strfmt("cluster.call: service not found to_sname=%s to_node=%s", header.to_sname, header.to_node)
+                    local message = strfmt("cluster.call: service not found to_sname=%s to_node=%s", header.to_sname,
+                        header.to_node)
                     header.session = -header.session
                     socket.write(fd, pack(header, false, message)) -- response to sender node
                     moon.error(message)
@@ -126,24 +138,27 @@ local function cluster_service()
                 local session = moon.next_sequence()
                 redirect(msg, address, moon.PTYPE_LUA, moon.id, -session)
                 header.session = -header.session
-                local res = buffer.to_shared(pack(header, moon.wait(session)))
-                local fd2, err = find_or_create_connection(header.from_node)
-                if not fd2 then
-                    local message = strfmt("cluster.call: failed to connect back to from_node=%s from_addr=%s to_sname=%s err=%s", header.from_node, header.from_addr, header.to_sname, err)
+                local res = buffer.pack("SC", header, moon.wait(session, nil, true))
+                local wfd, err = find_or_create_connection(header.from_node)
+                if not wfd then
+                    local message = strfmt(
+                        "cluster.call: failed to connect back to from_node=%s from_addr=%s to_sname=%s err=%s",
+                        header.from_node, header.from_addr, header.to_sname, err)
                     socket.write(fd, res) -- response to sender node
                     moon.warn(message)
                     return
                 end
-                socket.write(fd2, res) -- response to sender node
+                socket.write(wfd, res)
             end)
-        elseif header.session > 0 then  --receive response message
+        elseif header.session > 0 then --receive response message
             if remove_call_watch(header.from_addr, header.session) then
                 redirect(msg, header.from_addr, moon.PTYPE_LUA, moon.id, header.session)
             end
         else -- receive send message
             local address = services_address[header.to_sname]
             if not address then
-                moon.error(strfmt("cluster.send: service not found to_sname=%s to_node=%s", header.to_sname, header.to_node))
+                moon.error(strfmt("cluster.send: service not found to_sname=%s to_node=%s", header.to_sname,
+                    header.to_node))
                 return
             end
             redirect(msg, address, moon.PTYPE_LUA)
@@ -153,15 +168,18 @@ local function cluster_service()
     socket.on("close", function(fd, msg)
         print("socket close", moon.decode(msg, "Z"))
 
-        for key, value in pairs(call_watcher) do
-            if value.fd == fd then
-                local arr = string.split(key, "-")
-                local sessionid = tonumber(arr[1])
-                local sender = tonumber(arr[2])
-                moon.warn(strfmt("cluster connection closed, return error to caller sender=%s sessionid=%s", sender, sessionid))
-                ---@diagnostic disable-next-line: param-type-mismatch
-                moon.response("lua", sender, -sessionid, false, "Cluster call connect closed")
-                call_watcher[key] = nil
+        for sender, sessions in pairs(call_watcher) do
+            for sessionid, info in pairs(sessions) do
+                if info.fd == fd then
+                    moon.warn(strfmt("cluster connection closed, return error to caller sender=%s sessionid=%s", sender,
+                        sessionid))
+                    ---@diagnostic disable-next-line: param-type-mismatch
+                    moon.response("lua", sender, -sessionid, false, "Cluster call connect closed")
+                    sessions[sessionid] = nil
+                end
+            end
+            if next(sessions) == nil then
+                call_watcher[sender] = nil
             end
         end
 
@@ -243,24 +261,27 @@ local function cluster_service()
             return
         else
             --CASE1:connect failed, mode-call, 返回错误信息
-            moon.response("lua", header.from_addr, header.session, false, strfmt("socket write failed: to_node=%s", header.to_node))
+            moon.response("lua", header.from_addr, header.session, false,
+                strfmt("socket write failed: to_node=%s", header.to_node))
             return
         end
     end
 
     moon.async(function()
         while true do
-            moon.sleep(5000)
+            moon.sleep(PING_INTERVAL)
             local count = 0
-            for k, v in pairs(call_watcher) do
-                count = count + 1
-                if moon.time() - v.time > 10 then
-                    local arr = string.split(k, "-")
-                    local sessionid = tonumber(arr[1])
-                    local sender = tonumber(arr[2])
-                    ---@diagnostic disable-next-line: param-type-mismatch
-                    moon.response("lua", sender, -sessionid, false, "Cluster call request timeout")
-                    call_watcher[k] = nil
+            for sender, sessions in pairs(call_watcher) do
+                for sessionid, info in pairs(sessions) do
+                    count = count + 1
+                    if moon.time() - info.time > CALL_TIMEOUT then
+                        ---@diagnostic disable-next-line: param-type-mismatch
+                        moon.response("lua", sender, -sessionid, false, "Cluster call request timeout")
+                        sessions[sessionid] = nil
+                    end
+                end
+                if next(sessions) == nil then
+                    call_watcher[sender] = nil
                 end
             end
 
@@ -270,8 +291,8 @@ local function cluster_service()
                 socket.write(fd, pack({ ping = true }))
             end
 
-            print(strfmt("Cluster stats: connections=%d, pending_calls=%d", 
-            cluster_count, count))
+            print(strfmt("Cluster stats: connections=%d, pending_calls=%d",
+                cluster_count, count))
         end
     end)
 
@@ -316,6 +337,39 @@ local cluster = {}
 
 local cluster_address
 
+local function resolve_local_address(receiver_sname)
+    if type(receiver_sname) == "number" then
+        return receiver_sname
+    end
+
+    local address = moon.queryservice(receiver_sname)
+    if address == 0 then
+        return nil
+    end
+    return address
+end
+
+--- Validate params and resolve address, returns local_address (or nil if remote)
+---@return integer? local_address nil if remote call
+local function validate_and_resolve(receiver_node, receiver_sname)
+    if not receiver_node or receiver_node == 0 then
+        error("param receiver_node error")
+    end
+
+    if not receiver_sname then
+        error("param receiver_sname error")
+    end
+
+    if receiver_node == NODE then
+        local address = resolve_local_address(receiver_sname)
+        if not address then
+            error(string.format("local service not found receiver_sname=%s", tostring(receiver_sname)))
+        end
+        return address
+    end
+    return nil
+end
+
 ---@class cluster_header
 ---@field to_node integer @ 接收者服务器ID
 ---@field to_sname string @ 接收者服务name
@@ -324,12 +378,17 @@ local cluster_address
 ---@field session integer @ 协程session
 ---@field ping boolean
 ---@field pong boolean
----@field caller_fd integer
 
 ---@param receiver_node integer @ node ID
----@param receiver_sname string @ 目标node的 唯一服务 name
+---@param receiver_sname string|integer @ 目标node的 唯一服务 name 或 service address
 ---@param ... any @ 参数
 function cluster.send(receiver_node, receiver_sname, ...)
+    local address = validate_and_resolve(receiver_node, receiver_sname)
+    if address then
+        moon.send("lua", address, ...)
+        return
+    end
+
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
         assert(cluster_address > 0)
@@ -342,14 +401,18 @@ function cluster.send(receiver_node, receiver_sname, ...)
         from_addr = moon.id,
         session = 0
     }
-
     moon.send("lua", cluster_address, "Request", header, ...)
 end
 
+---@async
 ---@param receiver_node integer @ node ID
----@param receiver_sname string @ 目标node的 唯一服务 name
+---@param receiver_sname string|integer @ 目标node的 唯一服务 name 或 service address
 ---@param ... any @ 参数
 function cluster.call(receiver_node, receiver_sname, ...)
+    local address = validate_and_resolve(receiver_node, receiver_sname)
+    if address then
+        return moon.call("lua", address, ...)
+    end
     if not cluster_address then
         cluster_address = moon.queryservice("cluster")
         assert(cluster_address > 0)
