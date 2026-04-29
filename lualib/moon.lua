@@ -363,8 +363,9 @@ end
 --- @async
 --- @param session? integer @ An optional session ID used to map the coroutine for wakeup
 --- @param receiver? integer @ An optional receiver's service ID
+--- @param is_raw? boolean @ Whether to return raw message data instead of unpacked data
 --- @return any ... @ Returns the unpacked message if the coroutine is resumed by a message. If the coroutine is resumed by `moon.wakeup`, it returns the additional parameters passed by `moon.wakeup`. If the coroutine is broken, it returns `false` and "BREAK".
-function moon.wait(session, receiver)
+function moon.wait(session, receiver, is_raw)
     if session then
         session_id_coroutine[session] = co_running()
         if receiver then
@@ -378,6 +379,9 @@ function moon.wait(session, receiver)
 
     local a, b, c = co_yield()
     if a then
+        if is_raw then
+            return a, b
+        end
         -- sz,len,PTYPE - Message received
         return protocol[c].unpack(a, b)
     else
@@ -501,7 +505,6 @@ local function _dispatch(PTYPE, sender, session, sz, len, m)
         end
 
         if co ~= false then
-            moon.error(">>>>>", moon.unpack(sz, len))
             error(string.format("%s: response [%u] can not find co.", moon.name, session))
         end
     else

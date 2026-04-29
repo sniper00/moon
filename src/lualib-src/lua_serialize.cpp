@@ -107,7 +107,7 @@ static inline void wb_string(buffer* buf, const char* str, size_t len) {
     }
 }
 
-static void pack_one(lua_State* L, buffer* b, int index, int depth);
+void serialize_pack_one(lua_State* L, buffer* b, int index, int depth);
 
 static int wb_table_array(lua_State* L, buffer* buf, int index, int depth) {
     int array_size = (int)lua_rawlen(L, index);
@@ -123,7 +123,7 @@ static int wb_table_array(lua_State* L, buffer* buf, int index, int depth) {
     int i;
     for (i = 1; i <= array_size; i++) {
         lua_rawgeti(L, index, i);
-        pack_one(L, buf, -1, depth);
+        serialize_pack_one(L, buf, -1, depth);
         lua_pop(L, 1);
     }
 
@@ -142,8 +142,8 @@ static void wb_table_hash(lua_State* L, buffer* buf, int index, int depth, int a
                 }
             }
         }
-        pack_one(L, buf, -2, depth);
-        pack_one(L, buf, -1, depth);
+        serialize_pack_one(L, buf, -2, depth);
+        serialize_pack_one(L, buf, -1, depth);
         lua_pop(L, 1);
     }
     wb_nil(buf);
@@ -166,8 +166,8 @@ static int wb_table_metapairs(lua_State* L, buffer* buf, int index, int depth) {
             lua_pop(L, 4);
             break;
         }
-        pack_one(L, buf, -2, depth);
-        pack_one(L, buf, -1, depth);
+        serialize_pack_one(L, buf, -2, depth);
+        serialize_pack_one(L, buf, -1, depth);
         lua_pop(L, 1);
     }
     wb_nil(buf);
@@ -189,7 +189,7 @@ static int wb_table(lua_State* L, buffer* buf, int index, int depth) {
     }
 }
 
-static void pack_one(lua_State* L, buffer* b, int index, int depth) {
+void serialize_pack_one(lua_State* L, buffer* b, int index, int depth) {
     if (depth > MAX_DEPTH) {
         throw std::logic_error { "serialize can't pack too depth table" };
     }
@@ -284,7 +284,7 @@ static double get_real(lua_State* L, buffer_view* buf) {
 }
 
 static void* get_pointer(lua_State* L, buffer_view* buf) {
-    void* userdata = 0;
+    void* userdata = nullptr;
     if (!buf->read(&userdata))
         invalid_stream(L, buf);
     return userdata;
@@ -394,7 +394,7 @@ static int pack(lua_State* L) {
     try {
         auto buf = std::make_unique<moon::buffer>();
         for (int i = 1; i <= n; i++) {
-            pack_one(L, buf.get(), i, 0);
+            serialize_pack_one(L, buf.get(), i, 0);
         }
         lua_pushlightuserdata(L, buf.release());
         return 1;
@@ -412,7 +412,7 @@ static int packsafe(lua_State* L) {
     try {
         buffer buf;
         for (int i = 1; i <= n; i++) {
-            pack_one(L, &buf, i, 0);
+            serialize_pack_one(L, &buf, i, 0);
         }
         lua_pushlstring(L, buf.data(), buf.size());
         return 1;

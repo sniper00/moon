@@ -130,13 +130,51 @@ function buffer.size(buf) end
 --- ```
 ---
 ---@param buf buffer_ptr|buffer_shr_ptr @ Buffer to unpack from
----@param fmt? string @ Format string for binary unpacking
----@param pos? integer @ Starting position (default: 0)
----@param count? integer @ Bytes for string mode (default: all remaining)
+---@param fmt_or_pos? string|integer @ Format string for binary mode, or start position for string mode
+---@param pos_or_count? integer @ Start position for binary mode, or byte count for string mode
+---@param count? integer @ Byte count for string mode
 ---@return string|any ... @ Extracted string or unpacked values
----@overload fun(buf:buffer_ptr, pos:integer, count?:integer):string
+---@overload fun(buf:buffer_ptr|buffer_shr_ptr):string
+---@overload fun(buf:buffer_ptr|buffer_shr_ptr, pos:integer, count?:integer):string
+---@overload fun(buf:buffer_ptr|buffer_shr_ptr, fmt:string, pos?:integer):any ...
 ---@nodiscard
-function buffer.unpack(buf, fmt, pos, count) end
+function buffer.unpack(buf, fmt_or_pos, pos_or_count, count) end
+
+--- Pack values into a binary buffer using a format string
+---
+--- Encodes arguments according to compact format directives and returns a new unmanaged buffer.
+---
+--- **Format Characters:**
+--- - `'>'` - Switch to big-endian encoding for following integers
+--- - `'<'` - Switch to little-endian encoding for following integers (default)
+--- - `'h'` - Pack signed 16-bit integer
+--- - `'H'` - Pack unsigned 16-bit integer
+--- - `'i'` - Pack signed 32-bit integer
+--- - `'I'` - Pack unsigned 32-bit integer
+--- - `'S'` - Serialize one Lua value with Moon's internal serializer
+--- - `'C'` - Pack raw memory from `(lightuserdata, length)`
+---
+--- **Argument Rules:**
+--- - Integer directives each consume one integer argument
+--- - `'S'` consumes one Lua value
+--- - `'C'` consumes two arguments: `lightuserdata`, `integer`
+--- - Endianness directives do not consume arguments
+---
+--- **Examples:**
+--- ```lua
+--- local buf = buffer.pack(">HI", 0x1234, 0x12345678)
+--- local payload = "hello"
+--- local raw = buffer.pack("C", lightuserdata_ptr, #payload)
+--- local mixed = buffer.pack("<hSI", -7, { ok = true }, 99)
+--- ```
+---
+--- **Memory:** Returns unmanaged buffer. Release it manually or pass it to an API that takes ownership.
+---
+---@param fmt string @ Format string containing packing directives
+---@param ... any @ Values consumed by the format directives
+---@return buffer_ptr @ Packed unmanaged buffer
+---@nodiscard
+function buffer.pack(fmt, ...) end
 
 --- Read and consume data from buffer
 ---
