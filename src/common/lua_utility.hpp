@@ -262,4 +262,10 @@ inline std::string lua_tostring_unchecked(lua_State* L, int index) {
             return std::string { "string type expected" };
     }
 }
+
+template<typename... Args>
+inline int lua_argferror(lua_State* L, int arg, const char* fmt, Args... args) {
+    return luaL_argerror(L, arg, lua_pushfstring(L, fmt, args...));
+}
+
 } // namespace moon

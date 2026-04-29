@@ -114,10 +114,7 @@ static int lmoon_log(lua_State* L) {
                 line.write_back({ "nil", 3 });
                 break;
             case LUA_TNUMBER: {
-                if (lua_isinteger(L, i))
-                    line.write_chars(lua_tointeger(L, i));
-                else
-                    line.write_chars(lua_tonumber(L, i));
+                lua_isinteger(L, i)!=0 ? line.write_chars(lua_tointeger(L, i)) : line.write_chars(lua_tonumber(L, i));
                 break;
             }
             case LUA_TBOOLEAN: {

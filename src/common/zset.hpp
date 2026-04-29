@@ -68,17 +68,11 @@ private:
         level_type level[1];
     };
 
-    unsigned int random(unsigned int Min, unsigned int Max) {
-        std::uniform_int_distribution<unsigned int> dis(Min, Max);
-        return dis(gen_);
-    }
-
     int rand_level() {
-        static const int threshold = (int)(PERCENT * std::numeric_limits<int16_t>::max());
         int level = 1;
-        while (random(1, std::numeric_limits<int16_t>::max()) < threshold)
-            level += 1;
-        return (level < MAXLEVEL) ? level : MAXLEVEL;
+        while (level < MAXLEVEL && (gen_() & 3) == 0)
+            ++level;
+        return level;
     }
 
     node_type* make_node(int level, score_type score) {
@@ -89,8 +83,9 @@ private:
     }
 
     void free_node(node_type* node) {
+        size_t sz = node->size;
         std::destroy_at(node);
-        alloc_.deallocate((char*)node, node->size);
+        alloc_.deallocate((char*)node, sz);
     }
 
     void remove_node(node_type* x, node_type** update) {
