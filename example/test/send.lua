@@ -22,12 +22,16 @@ if conf and conf.receiver then
 
 else
     local send_content = "123456789"
+    local world_count = 0
 
     local command = {}
 
     command.WORLD = function(s)
         test_assert.equal(s, send_content)
-        test_assert.success()
+        world_count = world_count + 1
+        if world_count == 2 then
+            test_assert.success()
+        end
     end
 
     moon.dispatch("lua",function(sender, session, cmd, ...)
@@ -42,6 +46,18 @@ else
     local receiver
 
     moon.async(function ()
+        local ok = pcall(moon.send, "unknown", 1, "HELLO")
+        test_assert.assert(not ok, "moon.send should reject unknown PTYPE")
+
+        ok = pcall(moon.send, "lua", 0, "HELLO")
+        test_assert.assert(not ok, "moon.send should reject receiver 0")
+
+        ok = pcall(moon.raw_send, "unknown", 1, "HELLO")
+        test_assert.assert(not ok, "moon.raw_send should reject unknown PTYPE")
+
+        ok = pcall(moon.raw_send, "lua", 0, "HELLO")
+        test_assert.assert(not ok, "moon.raw_send should reject receiver 0")
+
         receiver = moon.new_service(
             {
                 name = "test_send",
@@ -49,7 +65,12 @@ else
                 receiver = true
             }
         )
+
         moon.send("lua", receiver, "HELLO", "123456789")
+
+        local session, receiverid = moon.raw_send("lua", receiver, moon.pack("HELLO", send_content), 12345)
+        test_assert.equal(session, 12345)
+        test_assert.equal(receiverid, receiver)
     end)
 
     moon.shutdown(function()

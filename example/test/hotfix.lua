@@ -102,6 +102,12 @@ end)
 local reload_module = require("old")
 
 moon.async(function ()
+    test_assert.equal(reload.require("old"), reload_module)
+
+    local ok, err = reload.update("math")
+    test_assert.assert(not ok, "hotfix.update should reject unregistered loaded modules")
+    test_assert.assert(type(err) == "string" and err:find("Can't find last version : math", 1, true) ~= nil, "hotfix.update should report missing last version")
+
     local rmd = reload_module.new()
     for k,v in pairs(reload_module) do
         print(k,v)

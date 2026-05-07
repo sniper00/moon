@@ -44,6 +44,15 @@ if conf and conf.receiver then
 else
     moon.async(
         function()
+            local ok = pcall(moon.call, "unknown", 1)
+            test_assert.assert(not ok, "moon.call should reject unknown PTYPE")
+
+            ok = pcall(moon.call, "lua", 0, "SUB", 1, 1)
+            test_assert.assert(not ok, "moon.call should reject receiver == 0")
+
+            ok = pcall(moon.response, "lua", 0, 1, true)
+            test_assert.assert(not ok, "moon.response should reject receiver == 0")
+
             local receiverid =
             moon.new_service(
                 {
@@ -62,8 +71,14 @@ else
             test_assert.equal(res, 136)
 
             --This call will got error message:
-            res = moon.call("lua", receiverid, "ADD", 100, 99)
+            local err
+            res, err = moon.call("lua", receiverid, "ADD", 100, 99)
             test_assert.equal(res, false)
+            test_assert.assert(type(err) == "string" and #err > 0, "failed call should return error string")
+
+            res, err = moon.call("lua", receiverid, "UNKNOWN", 100, 99)
+            test_assert.equal(res, false)
+            test_assert.assert(type(err) == "string" and err:find("Unknown command") ~= nil, "unknown command should surface error")
 
             res = moon.call("lua", receiverid, "SUB", 100, 99)
             test_assert.equal(res, 1)
@@ -71,8 +86,9 @@ else
             moon.send("lua", receiverid,  "EXIT")
             moon.send("lua", receiverid,  "EXIT") -- trigger error
 
-            res = moon.call("lua", receiverid, "SUB", 100, 99)
+            res, err = moon.call("lua", receiverid, "SUB", 100, 99)
             test_assert.equal(res, false)
+            test_assert.assert(type(err) == "string" and #err > 0, "call to dead receiver should return error string")
             test_assert.success()
         end
     )

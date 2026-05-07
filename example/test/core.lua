@@ -5,7 +5,12 @@ local test_assert = require("test_assert")
 
 do
 	moon.raw_dispatch("text", function(msg)
-		assert(moon.decode(msg, "Z") == "123")
+		local text, size = moon.decode(msg, "ZN")
+		assert(text == "123")
+		assert(size == 3)
+
+		local ok = pcall(moon.decode, msg, "X")
+		assert(not ok)
 	end)
 	moon.raw_send("text", moon.id, "123")
 
@@ -13,11 +18,29 @@ do
 	assert(moon.env("1") == "2")
 	moon.env("1", "3")
 	assert(moon.env("1") == "3")
+	assert(moon.env("__core_test_missing_env__") == nil)
 
 	print(moon.server_stats())
+	assert(type(moon.server_stats("service.count")) == "number")
+	assert(type(moon.server_stats("log.error")) == "number")
 
 	moon.loglevel("DEBUG")
 	assert(moon.loglevel() == 4)
+
+	assert(moon.md5("abc") == "900150983cd24fb0d6963f7d28e17f72")
+
+	local seq1 = moon.next_sequence()
+	local seq2 = moon.next_sequence()
+	assert(seq2 > seq1)
+
+	local now1 = moon.now()
+	local now2 = moon.now(1000)
+	assert(type(now1) == "number")
+	assert(type(now2) == "number")
+	assert(now1 >= now2)
+
+	local ok = pcall(moon.now, 0)
+	assert(not ok)
 end
 
 do

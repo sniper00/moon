@@ -4,6 +4,11 @@ local moon = require("moon")
 local test_case =
 {
     {
+        name = "buffer",
+        file = "test_buffer.lua"
+    }
+    ,
+    {
         name = "core",
         file = "core.lua"
     }
@@ -28,6 +33,11 @@ local test_case =
     {
         name = "redis",
         file = "redis.lua"
+    }
+    ,
+    {
+        name = "random",
+        file = "test_random.lua"
     }
     ,
     {

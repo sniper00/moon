@@ -1,12 +1,40 @@
 local moon = require("moon")
 local socket = require("moon.socket")
+local core = require("asio.core")
 local test_assert = require("test_assert")
 
 local HOST = "127.0.0.1"
 local PORT = 30003
 --------------------------SERVER-------------------------
 
-local listenfd = socket.listen(HOST,PORT,moon.PTYPE_SOCKET_MOON)
+local listenfd = 0
+while listenfd == 0 do
+    listenfd = socket.listen(HOST, PORT, moon.PTYPE_SOCKET_MOON)
+    if listenfd == 0 then
+        PORT = PORT + 1
+    end
+end
+
+test_assert.assert(listenfd > 0, "listen should return valid fd")
+test_assert.equal(core.try_open(HOST, PORT, false), false)
+
+local can_connect = core.try_open(HOST, PORT, true)
+test_assert.assert(type(can_connect) == "boolean", "try_open(connect) should return boolean")
+
+local address = core.getaddress(listenfd)
+test_assert.assert(type(address) == "string", "getaddress should return string")
+
+local endpoint, err = core.make_endpoint(HOST, PORT)
+test_assert.assert(type(endpoint) == "string" and #endpoint > 0, "make_endpoint should encode valid address")
+
+local ok, invalid_err = core.make_endpoint("not-an-ip", PORT)
+test_assert.assert(not ok and type(invalid_err) == "string", "make_endpoint should reject invalid ip")
+
+ok = pcall(socket.connect, HOST, PORT, "invalid-protocol")
+test_assert.assert(not ok, "socket.connect should reject unsupported protocol")
+
+ok = pcall(core.write, listenfd, "x", 64)
+test_assert.assert(not ok, "asio.write should reject invalid mask")
 
 socket.start(listenfd)
 

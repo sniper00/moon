@@ -209,26 +209,72 @@ do
     assert(not ok, err)
 end
 
--- do
---     local t = {nil,nil,nil, 100}
---     assert(string.sub(json.encode(t),1,1)=="{")
---     local t2 = json.decode(json.encode(t))
---     assert(not t2[1])
---     assert(not t2[2])
---     assert(not t2[3])
---     assert(t2[4]==100)
+do
+    local old_options = json.options('enable_sparse_array', true)
+    assert(type(old_options) == "boolean")
+    local t2 = json.decode("[null,null,null,100]")
+    assert(#t2 == 4)
+    assert(t2[1] == json.null)
+    assert(t2[2] == json.null)
+    assert(t2[3] == json.null)
+    assert(t2[4] == 100)
+    json.options('enable_sparse_array', old_options)
+end
 
---     local old_options = json.options('enable_sparse_array', true)
---     assert(string.sub(json.encode(t),1,1)=="[")
---     assert(#json.decode(json.encode(t)) == 4)
---     local t2 = json.decode(json.encode(t))
---     assert(t2[1]==json.null)
---     assert(t2[2]==json.null)
---     assert(t2[3]==json.null)
---     assert(t2[4]==100)
+do
+    assert(json.encode(json.null) == "null")
+    assert(json.decode("null") == json.null)
+    assert(json.decode("") == nil)
 
---     json.options('enable_sparse_array', old_options)
--- end
+    local ok = pcall(json.decode, "{")
+    assert(not ok)
+end
+
+do
+    local arr = json.decode("[1,2,3]")
+    assert(getmetatable(arr).__array)
+
+    local obj = json.decode('{"a":1}')
+    assert(getmetatable(obj).__object)
+
+    local old_options = json.options('has_metatfield', false)
+    arr = json.decode("[1,2,3]")
+    obj = json.decode('{"a":1}')
+    assert(getmetatable(arr) == nil)
+    assert(getmetatable(obj) == nil)
+    json.options('has_metatfield', old_options)
+end
+
+do
+    local forced_object = json.object({1, 2, 3})
+    local encoded = json.encode(forced_object)
+    assert(string.sub(encoded, 1, 1) == "{")
+
+    local forced_array = json.array({ foo = "bar" })
+    encoded = json.encode(forced_array)
+    assert(encoded == "[]")
+end
+
+do
+    local old_options = json.options('enable_number_key', false)
+    local t = json.decode('{"1":1,"2":2}')
+    assert(t[1] == nil)
+    assert(t["1"] == 1)
+    assert(t["2"] == 2)
+    json.options('enable_number_key', old_options)
+end
+
+do
+    local old_size = json.options('concat_buffer_size', 128)
+    assert(old_size ~= nil)
+    local ok = pcall(json.options, 'concat_buffer_size', 15)
+    assert(not ok)
+
+    ok = pcall(json.options, 'not_exists', true)
+    assert(not ok)
+
+    json.options('concat_buffer_size', old_size)
+end
 
 do
     local str = io.readfile([[twitter.json]])
