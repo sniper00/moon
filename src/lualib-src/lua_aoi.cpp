@@ -48,18 +48,33 @@ struct aoi_object {
 
 using aoi_type = aoi<aoi_object>;
 
+static aoi_type* get_aoi(lua_State* L, int index) {
+    int tp = lua_type(L, index);
+    if (tp != LUA_TUSERDATA) {
+        luaL_error(
+            L,
+            "bad argument #%d to 'aoi' (aoi: expected aoi userdata, got %s)",
+            index,
+            lua_typename(L, tp)
+        );
+        return nullptr;
+    }
+    auto* p = static_cast<aoi_type*>(lua_touserdata(L, index));
+    if (p == nullptr) {
+        luaL_argerror(L, index, "aoi: expected aoi userdata, got null pointer");
+        return nullptr;
+    }
+    return p;
+}
+
 static int lrelease(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     std::destroy_at(p);
     return 0;
 }
 
 static int laoi_insert(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     auto id = (aoi_object::handle_type)luaL_checkinteger(L, 2);
     int32_t x = (int32_t)luaL_checknumber(L, 3);
     int32_t y = (int32_t)luaL_checknumber(L, 4);
@@ -74,9 +89,7 @@ static int laoi_insert(lua_State* L) {
 }
 
 static int laoi_update(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     auto id = (aoi_object::handle_type)luaL_checkinteger(L, 2);
     int32_t x = (int32_t)luaL_checknumber(L, 3);
     int32_t y = (int32_t)luaL_checknumber(L, 4);
@@ -90,9 +103,7 @@ static int laoi_update(lua_State* L) {
 }
 
 static int laoi_query(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     int32_t x = (int32_t)luaL_checknumber(L, 2);
     int32_t y = (int32_t)luaL_checknumber(L, 3);
     int32_t view_w = (int32_t)luaL_checkinteger(L, 4);
@@ -117,9 +128,7 @@ static int laoi_query(lua_State* L) {
 }
 
 static int laoi_erase(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     auto id = (aoi_object::handle_type)luaL_checkinteger(L, 2);
     p->clear_event();
     p->erase(id);
@@ -127,9 +136,7 @@ static int laoi_erase(lua_State* L) {
 }
 
 static int laoi_hasobject(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     auto id = (aoi_object::handle_type)luaL_checkinteger(L, 2);
     int res = p->has_object(id) ? 1 : 0;
     lua_pushboolean(L, res);
@@ -137,9 +144,7 @@ static int laoi_hasobject(lua_State* L) {
 }
 
 static int laoi_fire_event(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     auto id = (aoi_object::handle_type)luaL_checkinteger(L, 2);
     int32_t nevent = (int32_t)luaL_checkinteger(L, 3);
     p->clear_event();
@@ -148,9 +153,7 @@ static int laoi_fire_event(lua_State* L) {
 }
 
 static int laoi_update_event(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
 
     luaL_checktype(L, 2, LUA_TTABLE);
 
@@ -175,18 +178,14 @@ static int laoi_update_event(lua_State* L) {
 }
 
 static int laoi_enable_debug(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     bool v = (bool)lua_toboolean(L, 2);
     p->enable_debug(v);
     return 0;
 }
 
 static int laoi_enable_leave_event(lua_State* L) {
-    aoi_type* p = (aoi_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_argerror(L, 1, "invalid lua-aoi pointer");
+    auto* p = get_aoi(L, 1);
     bool v = (bool)lua_toboolean(L, 2);
     p->enbale_leave_event(v);
     return 0;
@@ -198,7 +197,12 @@ static int laoi_create(lua_State* L) {
     int len_of_area = (int)luaL_checkinteger(L, 3);
     int len_of_node = (int)luaL_checkinteger(L, 4);
     if (len_of_area % len_of_node != 0) {
-        return luaL_error(L, "Need length_of_area %% length_of_node == 0.");
+        return luaL_error(
+            L,
+            "aoi.new: 'length_of_area' (%d) must be divisible by 'length_of_node' (%d)",
+            len_of_area,
+            len_of_node
+        );
     }
 
     auto* p = (aoi_type*)lua_newuserdatauv(L, sizeof(aoi_type), 0);

@@ -22,10 +22,10 @@ static buffer* get_pointer(lua_State* L, int index) {
         }
         b = shr->get();
     } else {
-        moon::lua_argferror(
+        luaL_error(
             L,
+            "bad argument #%d to 'buffer' (expected buffer lightuserdata or buffer_shr_ptr_t userdata, got %s)",
             index,
-            "buffer: expected buffer lightuserdata or buffer_shr_ptr_t userdata, got %s",
             lua_typename(L, tp)
         );
         return nullptr;
@@ -72,10 +72,10 @@ static void push_integer(lua_State* L, const char*& b, const char* e, bool littl
 
 static void check_unpack_position(lua_State* L, int arg, size_t pos, size_t buf_size) {
     if (pos > buf_size) {
-        moon::lua_argferror(
+        luaL_error(
             L,
+            "bad argument #%d to 'unpack' (buffer.unpack: position out of range (pos=%I, buffer_size=%I))",
             arg,
-            "buffer.unpack: position out of range (pos=%I, buffer_size=%I)",
             (lua_Integer)pos,
             (lua_Integer)buf_size
         );
@@ -123,10 +123,9 @@ static int unpack(lua_State* L) {
                     start = end;
                     break;
                 default:
-                    return moon::lua_argferror(
+                    return luaL_error(
                         L,
-                        2,
-                        "buffer.unpack: invalid format character '%c', valid options are: '>' (big-endian), '<' (little-endian), 'h' (int16), 'H' (uint16), 'i' (int32), 'I' (uint32), 'C' (raw data)",
+                        "bad argument #2 to 'unpack' (buffer.unpack: invalid format character '%c', valid options are: '>' (big-endian), '<' (little-endian), 'h' (int16), 'H' (uint16), 'i' (int32), 'I' (uint32), 'C' (raw data))",
                         (int)opt[i]
                     );
             }
@@ -168,84 +167,99 @@ static int pack(lua_State* L) {
     size_t opt_len = 0;
     const char* opt = luaL_checklstring(L, 1, &opt_len);
 
-    auto buf = std::make_unique<moon::buffer>(256);
-    buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
+    try {
+        auto buf = std::make_unique<moon::buffer>(256);
+        buf->commit_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
 
-    bool little = true;
-    int arg = 2;
-    for (size_t i = 0; i < opt_len; ++i) {
-        switch (opt[i]) {
-            case '>':
-                little = false;
-                continue;
-            case '<':
-                little = true;
-                continue;
-            default:
-                break;
-        }
+        bool little = true;
+        int arg = 2;
+        for (size_t i = 0; i < opt_len; ++i) {
+            switch (opt[i]) {
+                case '>':
+                    little = false;
+                    continue;
+                case '<':
+                    little = true;
+                    continue;
+                default:
+                    break;
+            }
 
-        if (arg > n) {
-            return luaL_error(
-                L,
-                "buffer.pack: missing argument for format '%c' at position %d",
-                opt[i],
-                (int)i + 1
-            );
-        }
-
-        switch (opt[i]) {
-            case 'h': {
-                pack_integer<int16_t>(buf.get(), L, arg++, little);
-                break;
-            }
-            case 'H': {
-                pack_integer<uint16_t>(buf.get(), L, arg++, little);
-                break;
-            }
-            case 'i': {
-                pack_integer<int32_t>(buf.get(), L, arg++, little);
-                break;
-            }
-            case 'I': {
-                pack_integer<uint32_t>(buf.get(), L, arg++, little);
-                break;
-            }
-            case 'S': {
-                serialize_pack_one(L, buf.get(), arg++, 0);
-                break;
-            }
-            case 'C': {
-                if (arg + 1 > n) {
-                    return luaL_error(
-                        L,
-                        "buffer.pack: missing argument for format 'C' at position %d",
-                        (int)i + 1
-                    );
-                }
-                luaL_checktype(L, arg, LUA_TLIGHTUSERDATA);
-                const char* str = reinterpret_cast<const char*>(lua_touserdata(L, arg++));
-                size_t len = luaL_checkinteger(L, arg++);
-                buf->write_back({ str, len });
-                break;
-            }
-            default:
-                return moon::lua_argferror(
+            if (arg > n) {
+                return luaL_error(
                     L,
-                    1,
-                    "buffer.pack: invalid format character '%c', valid options are: '>' (big-endian), '<' (little-endian), 'h' (int16), 'H' (uint16), 'i' (int32), 'I' (uint32), 'C' (raw string)",
-                    (int)opt[i]
+                    "buffer.pack: missing argument for format '%c' at position %d",
+                    opt[i],
+                    (int)i + 1
                 );
+            }
+
+            switch (opt[i]) {
+                case 'h': {
+                    pack_integer<int16_t>(buf.get(), L, arg++, little);
+                    break;
+                }
+                case 'H': {
+                    pack_integer<uint16_t>(buf.get(), L, arg++, little);
+                    break;
+                }
+                case 'i': {
+                    pack_integer<int32_t>(buf.get(), L, arg++, little);
+                    break;
+                }
+                case 'I': {
+                    pack_integer<uint32_t>(buf.get(), L, arg++, little);
+                    break;
+                }
+                case 'S': {
+                    serialize_pack_one(L, buf.get(), arg++, 0);
+                    break;
+                }
+                case 'C': {
+                    if (arg + 1 > n) {
+                        return luaL_error(
+                            L,
+                            "buffer.pack: missing argument for format 'C' at position %d",
+                            (int)i + 1
+                        );
+                    }
+                    luaL_checktype(L, arg, LUA_TLIGHTUSERDATA);
+                    const char* str = reinterpret_cast<const char*>(lua_touserdata(L, arg++));
+                    lua_Integer len_arg = luaL_checkinteger(L, arg++);
+                    if (len_arg < 0) {
+                        throw std::invalid_argument(
+                            "buffer.pack: raw data length must be non-negative, got "
+                            + std::to_string(len_arg)
+                        );
+                    }
+                    size_t len = static_cast<size_t>(len_arg);
+                    buf->write_back({ str, len });
+                    break;
+                }
+                default:
+                    throw std::invalid_argument(
+                        "buffer.pack: invalid format character '"
+                        + std::string(1, opt[i])
+                        + "', valid options are: '>' (big-endian), '<' (little-endian), 'h' (int16), 'H' (uint16), 'i' (int32), 'I' (uint32), 'C' (raw string)"
+                    );
+            }
         }
+        buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
+        lua_pushlightuserdata(L, buf.release());
+        return 1;
+    } catch (const std::exception& e) {
+        lua_pushstring(L, e.what());
     }
-    buf->consume_unchecked(BUFFER_OPTION_CHEAP_PREPEND);
-    lua_pushlightuserdata(L, buf.release());
-    return 1;
+    return lua_error(L);
 }
 
 static int read(lua_State* L) {
     auto* buf = get_pointer(L, 1);
-    auto count = static_cast<size_t>(luaL_checkinteger(L, 2));
+    lua_Integer count_arg = luaL_checkinteger(L, 2);
+    if (count_arg < 0) {
+        return luaL_error(L, "buffer.read: count must be non-negative, got %I", count_arg);
+    }
+    auto count = static_cast<size_t>(count_arg);
     if (count > buf->size()) {
         return moon::lua_argferror(
             L,
@@ -308,7 +322,14 @@ static int write_one(lua_State* L, buffer* b, int index, int depth) {
         }
         case LUA_TLIGHTUSERDATA: {
             const char* str = reinterpret_cast<const char*>(lua_touserdata(L, index));
-            size_t len = luaL_checkinteger(L, index + 1);
+            lua_Integer len_arg = luaL_checkinteger(L, index + 1);
+            if (len_arg < 0) {
+                throw std::invalid_argument(
+                    "buffer.concat: raw data length must be non-negative, got "
+                    + std::to_string(len_arg)
+                );
+            }
+            size_t len = static_cast<size_t>(len_arg);
             b->write_back({ str, len });
             return 2;
         }
@@ -349,15 +370,18 @@ static int write_back(lua_State* L) {
 
 static int seek(lua_State* L) {
     auto* buf = get_pointer(L, 1);
-    auto pos = static_cast<size_t>(luaL_checkinteger(L, 2));
+    lua_Integer pos_arg = luaL_checkinteger(L, 2);
+    if (pos_arg < 0) {
+        return luaL_error(L, "buffer.seek: position must be non-negative, got %I", pos_arg);
+    }
+    auto pos = static_cast<size_t>(pos_arg);
     auto origin =
         ((luaL_optinteger(L, 3, 1) == 1) ? buffer::seek_origin::Current
                                          : buffer::seek_origin::Begin);
     if (!buf->seek(pos, origin)) {
-        return moon::lua_argferror(
+        return luaL_error(
             L,
-            2,
-            "buffer.seek: position out of range (pos=%I, buffer_size=%I)",
+            "bad argument #2 to 'seek' (buffer.seek: position out of range (pos=%I, buffer_size=%I))",
             (lua_Integer)pos,
             (lua_Integer)buf->size()
         );
@@ -367,12 +391,15 @@ static int seek(lua_State* L) {
 
 static int commit(lua_State* L) {
     auto* buf = get_pointer(L, 1);
-    auto n = static_cast<size_t>(luaL_checkinteger(L, 2));
+    lua_Integer n_arg = luaL_checkinteger(L, 2);
+    if (n_arg < 0) {
+        return luaL_error(L, "buffer.commit: size must be non-negative, got %I", n_arg);
+    }
+    auto n = static_cast<size_t>(n_arg);
     if (!buf->commit(n)) {
-        return moon::lua_argferror(
+        return luaL_error(
             L,
-            2,
-            "buffer.commit: commit size %I exceeds prepared capacity",
+            "bad argument #2 to 'commit' (buffer.commit: commit size %I exceeds prepared capacity)",
             (lua_Integer)n
         );
     }
@@ -381,15 +408,11 @@ static int commit(lua_State* L) {
 
 static int prepare(lua_State* L) {
     auto* buf = get_pointer(L, 1);
-    auto n = static_cast<size_t>(luaL_checkinteger(L, 2));
-    if (0 == n) {
-        return moon::lua_argferror(
-            L,
-            2,
-            "buffer.prepare: size must be greater than 0, got %I",
-            (lua_Integer)n
-        );
+    lua_Integer n_arg = luaL_checkinteger(L, 2);
+    if (n_arg <= 0) {
+        return luaL_error(L, "buffer.prepare: size must be greater than 0, got %I", n_arg);
     }
+    auto n = static_cast<size_t>(n_arg);
     buf->prepare(n);
     return 0;
 }
@@ -407,10 +430,9 @@ static int unsafe_new(lua_State* L) {
 
     // Check for valid capacity
     if (capacity_arg <= 0) {
-        return moon::lua_argferror(
+        return luaL_error(
             L,
-            1,
-            "buffer.unsafe_new: capacity must be positive, got %I",
+            "bad argument #1 to 'unsafe_new' (buffer.unsafe_new: capacity must be positive, got %I)",
             capacity_arg
         );
     }
@@ -418,10 +440,9 @@ static int unsafe_new(lua_State* L) {
     // Check for reasonable upper limit to prevent excessive memory allocation
     constexpr lua_Integer MAX_CAPACITY = 1024 * 1024 * 1024; // 1GB
     if (capacity_arg > MAX_CAPACITY) {
-        return moon::lua_argferror(
+        return luaL_error(
             L,
-            1,
-            "buffer.unsafe_new: capacity too large (max %I), got %I",
+            "bad argument #1 to 'unsafe_new' (buffer.unsafe_new: capacity too large (max %I), got %I)",
             MAX_CAPACITY,
             capacity_arg
         );
@@ -475,10 +496,9 @@ static int concat_string(lua_State* L) {
 
 static int to_shared(lua_State* L) {
     if (lua_type(L, 1) != LUA_TLIGHTUSERDATA) {
-        return moon::lua_argferror(
+        return luaL_error(
             L,
-            1,
-            "buffer.to_shared: expected buffer lightuserdata, got %s",
+            "bad argument #1 to 'to_shared' (buffer.to_shared: expected buffer lightuserdata, got %s)",
             lua_typename(L, lua_type(L, 1))
         );
     }
@@ -539,12 +559,11 @@ static int append(lua_State* L) {
             std::array<const buffer*, 64> bufs;
             int count = n - 1;
             if(bufs.size() < static_cast<size_t>(count)) {
-                return moon::lua_argferror(
-                    L,
-                    1,
-                    "buffer.append: too many buffers to append, max supported is %I, got %I",
-                    (lua_Integer)bufs.size(),
-                    (lua_Integer)count
+                throw std::invalid_argument(
+                    "buffer.append: too many buffers to append, max supported is "
+                    + std::to_string(bufs.size())
+                    + ", got "
+                    + std::to_string(count)
                 );
             }
 

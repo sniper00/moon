@@ -9,7 +9,7 @@ void signal_hook(lua_State* L, lua_Debug*) {
     lua_sethook(L, nullptr, 0, 0);
     if (S->trap.load(std::memory_order_acquire)) {
         S->trap.store(0, std::memory_order_release);
-        luaL_error(L, "signal 0");
+        luaL_error(L, "coroutine.resume: interrupted by worker signal");
     }
 }
 
@@ -184,7 +184,11 @@ static int lstart(lua_State* L) {
     }
     lua_Number start_time = 0;
     if (timing_enable(L, 1, &start_time)) {
-        return luaL_error(L, "Thread %p start profile more than once", lua_topointer(L, 1));
+        return luaL_error(
+            L,
+            "coroutine.profile.start: thread %p is already being profiled",
+            lua_topointer(L, 1)
+        );
     }
 
     // reset total time
@@ -213,7 +217,10 @@ static int lstop(lua_State* L) {
     }
     lua_Number start_time = 0;
     if (!timing_enable(L, 1, &start_time)) {
-        return luaL_error(L, "Call profile.start() before profile.stop()");
+        return luaL_error(
+            L,
+            "coroutine.profile.stop: call profile.start() before profile.stop()"
+        );
     }
     double ti = diff_time(start_time);
     double total_time = timing_total(L, 1);

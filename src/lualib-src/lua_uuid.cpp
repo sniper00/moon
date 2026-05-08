@@ -54,9 +54,24 @@ static int linit(lua_State* L) {
     int64_t serverid = (int64_t)luaL_checkinteger(L, 2);
     int64_t boottimes = (int64_t)luaL_checkinteger(L, 3);
 
-    luaL_argcheck(L, (channel > 0 && channel <= UID_CHANNEL_MAX), 1, "channel out off limit");
-    luaL_argcheck(L, (serverid > 0 && serverid <= SERVERID_MAX), 2, "serverid out off limit");
-    luaL_argcheck(L, (boottimes > 0 && boottimes <= BOOTTIMES_MAX), 3, "boottimes out off limit");
+    luaL_argcheck(
+        L,
+        (channel > 0 && channel <= UID_CHANNEL_MAX),
+        1,
+        "uuid.init: channel must be in range [1, 255]"
+    );
+    luaL_argcheck(
+        L,
+        (serverid > 0 && serverid <= SERVERID_MAX),
+        2,
+        "uuid.init: serverid must be in range [1, 4095]"
+    );
+    luaL_argcheck(
+        L,
+        (boottimes > 0 && boottimes <= BOOTTIMES_MAX),
+        3,
+        "uuid.init: boottimes must be in range [1, 1023]"
+    );
 
     g_uuid.serverid = serverid;
     g_uuid.boottimes = boottimes;
@@ -71,17 +86,22 @@ static int linit(lua_State* L) {
 static int lnext(lua_State* L) {
     auto& u = g_uuid;
     if (u.serverid == 0 || u.boottimes == 0)
-        return luaL_error(L, "not init");
+        return luaL_error(L, "uuid.next: uuid.init must be called before generating ids");
 
     int64_t type = luaL_optinteger(L, 1, 0);
-    luaL_argcheck(L, (type >= 0 && type <= TYPE_MAX), 1, "type out off limit");
+    luaL_argcheck(L, (type >= 0 && type <= TYPE_MAX), 1, "uuid.next: type must be in range [0, 511]");
 
     if (type == 0) {
         auto sequence = u.sequence[type].fetch_add(1);
         ;
         assert(u.serverid != 0 && u.boottimes != 0 && u.channel != 0);
         if (sequence > UID_SEQUENCE_MAX) {
-            return luaL_error(L, "sequence out off limit");
+            return luaL_error(
+                L,
+                "uuid.next: uid sequence out of range (max=%I, got=%I)",
+                UID_SEQUENCE_MAX,
+                sequence
+            );
         }
 
         //flag channel serverid bootimes sequence
@@ -97,7 +117,12 @@ static int lnext(lua_State* L) {
         }
 
         if (sequence > SEQUENCE_MAX) {
-            return luaL_error(L, "luuid sequence out off limit");
+            return luaL_error(
+                L,
+                "uuid.next: sequence out of range (max=%I, got=%I)",
+                SEQUENCE_MAX,
+                sequence
+            );
         }
 
         //flag serverid boottimes  type    sequence
@@ -112,7 +137,7 @@ static int lnext(lua_State* L) {
 static int ltype(lua_State* L) {
     int64_t uuid = (int64_t)luaL_checkinteger(L, 1);
     if ((uuid >> FLAG_LEFT_SHIFT) != 1) {
-        return luaL_error(L, "attemp get type from a not uuid value");
+        return luaL_error(L, "uuid.type: expected a generated uuid value");
     }
     lua_pushinteger(L, (uuid >> TYPE_LEFT_SHIFT) & TYPE_MAX);
     return 1;

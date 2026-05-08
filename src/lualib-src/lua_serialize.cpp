@@ -230,14 +230,21 @@ void serialize_pack_one(lua_State* L, buffer* b, int index, int depth) {
             break;
         }
         default:
-            throw std::logic_error { std::string("serialize can't pack unsupport type :")
-                                     + lua_typename(L, type) };
+            throw std::logic_error {
+                std::string("serialize.pack: unsupported value type '")
+                + lua_typename(L, type) + "'"
+            };
     }
 }
 
 static void invalid_stream_line(lua_State* L, buffer_view* buf, int line) {
     int len = (int)buf->size();
-    luaL_error(L, "Invalid serialize stream %d (line:%d)", len, line);
+    luaL_error(
+        L,
+        "serialize.unpack: invalid serialized stream (remaining=%d, line=%d)",
+        len,
+        line
+    );
 }
 
 #define invalid_stream(L, rb) invalid_stream_line(L, rb, __LINE__)
@@ -440,7 +447,11 @@ static int unpack(lua_State* L) {
     }
 
     if (data == NULL) {
-        return luaL_error(L, "deserialize null pointer");
+        return luaL_argerror(
+            L,
+            1,
+            "serialize.unpack: expected string or data lightuserdata, got null pointer"
+        );
     }
 
     lua_settop(L, 1);
@@ -461,7 +472,11 @@ static int unpack(lua_State* L) {
 
 static int peek_one(lua_State* L) {
     if (lua_type(L, 1) != LUA_TLIGHTUSERDATA) {
-        return luaL_error(L, "need userdata");
+        return luaL_error(
+            L,
+            "bad argument #1 to 'unpack_one' (serialize.unpack_one: expected buffer lightuserdata, got %s)",
+            lua_typename(L, lua_type(L, 1))
+        );
     }
 
     int seek = 0;
@@ -471,6 +486,9 @@ static int peek_one(lua_State* L) {
     }
 
     auto* buf = (buffer*)lua_touserdata(L, 1);
+    if (buf == nullptr) {
+        return luaL_argerror(L, 1, "serialize.unpack_one: expected buffer lightuserdata, got null pointer");
+    }
     buffer_view br(buf->data(), buf->size());
 
     uint8_t type = 0;

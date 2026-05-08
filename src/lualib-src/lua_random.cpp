@@ -73,7 +73,12 @@ static int lrand_range(lua_State* L) {
     int64_t v_min = (int64_t)luaL_checkinteger(L, 1);
     int64_t v_max = (int64_t)luaL_checkinteger(L, 2);
     if (v_min > v_max) {
-        return luaL_error(L, "argument error: #1 > #2");
+        return luaL_error(
+            L,
+            "random.rand_range: min value must be less than or equal to max value, got min=%I and max=%I",
+            v_min,
+            v_max
+        );
     }
     auto res = rand_range(v_min, v_max);
     lua_pushinteger(L, res);
@@ -86,8 +91,22 @@ static int lrand_range_some(lua_State* L) {
     int64_t v_max = (int64_t)luaL_checkinteger(L, 2);
     int64_t v_count = (int64_t)luaL_checkinteger(L, 3);
 
+    if (v_min > v_max) {
+        return luaL_error(
+            L,
+            "random.rand_range_some: min value must be less than or equal to max value, got min=%I and max=%I",
+            v_min,
+            v_max
+        );
+    }
+
     if (v_count <= 0 || (v_max - v_min + 1) < v_count) {
-        return luaL_error(L, "rand_range_some range count < num");
+        return luaL_error(
+            L,
+            "random.rand_range_some: count must be in range [1, %I], got %I",
+            v_max - v_min + 1,
+            v_count
+        );
     }
 
     thread_rng.get_v().resize(v_max - v_min + 1, 0);
@@ -132,7 +151,10 @@ static int lrand_weight(lua_State* L) {
     auto wlen = lua_rawlen(L, 2);
 
     if (vlen != wlen || vlen == 0) {
-        return luaL_error(L, "lrand_weight table empty or values size != weights size");
+        return luaL_error(
+            L,
+            "random.rand_weight: 'values' and 'weights' must be non-empty tables of equal length"
+        );
     }
 
     moon::lua_array_view<int64_t> values { L, 1 };
@@ -165,7 +187,12 @@ static int lrand_weight_some(lua_State* L) {
     moon::table_to_vector<int64_t>(L, 1, v);
     moon::table_to_vector<int64_t>(L, 2, w);
     if (v.size() != w.size() || v.empty() || count < 0 || (int64_t)v.size() < count) {
-        return luaL_error(L, "lrand_weight_some table empty or values size != weights size");
+        return luaL_error(
+            L,
+            "random.rand_weight_some: 'values' and 'weights' must be non-empty tables of equal length, and 'count' must be in range [0, %I], got %I",
+            (lua_Integer)v.size(),
+            count
+        );
     }
 
     lua_createtable(L, (int)count, 0);

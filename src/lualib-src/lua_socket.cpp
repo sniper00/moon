@@ -51,10 +51,28 @@ struct master_box {
     asio_context* asio_ctx;
 };
 
+static master_box* get_master_box(lua_State* L, int index) {
+    int tp = lua_type(L, index);
+    if (tp != LUA_TUSERDATA) {
+        luaL_error(
+            L,
+            "bad argument #%d to 'socket' (socket: expected socket userdata, got %s)",
+            index,
+            lua_typename(L, tp)
+        );
+        return nullptr;
+    }
+
+    auto* box = static_cast<master_box*>(lua_touserdata(L, index));
+    if (box == nullptr || box->asio_ctx == nullptr) {
+        luaL_argerror(L, index, "socket: expected socket userdata, got null pointer");
+        return nullptr;
+    }
+    return box;
+}
+
 static int lsettimeout(lua_State* L) {
-    master_box* box = (master_box*)lua_touserdata(L, 1);
-    if (box == NULL || box->asio_ctx == NULL)
-        return luaL_error(L, "Invalid master pointer");
+    master_box* box = get_master_box(L, 1);
     double v = lua_tonumber(L, 2); //sec
 
     box->asio_ctx->timeout = static_cast<size_t>(v * 1000); //millsec
@@ -65,14 +83,12 @@ static int lsettimeout(lua_State* L) {
 }
 
 static int lconnect(lua_State* L) {
-    master_box* box = (master_box*)lua_touserdata(L, 1);
-    if (box == NULL || box->asio_ctx == NULL)
-        return luaL_error(L, "Invalid master pointer");
+    master_box* box = get_master_box(L, 1);
 
     auto asio_ctx = box->asio_ctx;
 
     if (asio_ctx->client) {
-        return luaL_error(L, "already connected");
+        return luaL_error(L, "socket.connect: socket is already connected");
     }
 
     size_t len = 0;
@@ -135,12 +151,10 @@ static int lconnect(lua_State* L) {
 }
 
 static int lreceive(lua_State* L) {
-    master_box* box = (master_box*)lua_touserdata(L, 1);
-    if (box == nullptr || box->asio_ctx == nullptr)
-        return luaL_error(L, "Invalid tcp_box pointer");
+    master_box* box = get_master_box(L, 1);
 
     if (!box->asio_ctx->client) {
-        return luaL_error(L, "socket not opened");
+        return luaL_error(L, "socket.receive: socket is not connected");
     }
 
     int top = lua_gettop(L);
@@ -156,7 +170,7 @@ static int lreceive(lua_State* L) {
         }
     } else {
         readn = luaL_checkinteger(L, 2);
-        luaL_argcheck(L, readn > 0, 2, "invalid receive pattern");
+        luaL_argcheck(L, readn > 0, 2, "socket.receive: byte count must be greater than 0");
     }
 
     if (!client->isreading) {
@@ -221,12 +235,10 @@ static int lreceive(lua_State* L) {
 }
 
 static int lsend(lua_State* L) {
-    master_box* box = (master_box*)lua_touserdata(L, 1);
-    if (box == nullptr || box->asio_ctx == nullptr)
-        return luaL_error(L, "Invalid tcp_box pointer");
+    master_box* box = get_master_box(L, 1);
 
     if (!box->asio_ctx->client) {
-        return luaL_error(L, "socket not opened");
+        return luaL_error(L, "socket.send: socket is not connected");
     }
 
     int top = lua_gettop(L);
@@ -265,9 +277,7 @@ static int lsend(lua_State* L) {
 }
 
 static int lclose(lua_State* L) {
-    master_box* box = (master_box*)lua_touserdata(L, 1);
-    if (box == nullptr || box->asio_ctx == nullptr)
-        return luaL_error(L, "Invalid tcp_box pointer");
+    master_box* box = get_master_box(L, 1);
     if (box->asio_ctx->client) {
         box->asio_ctx->client.reset();
     }

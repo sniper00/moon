@@ -300,7 +300,7 @@ static int validate(lua_State* L) {
 
 static int load(lua_State* L) {
     if (!schema_define.empty())
-        return luaL_error(L, "Schema can only be loaded once");
+        return luaL_error(L, "schema.load: schema definitions can only be loaded once");
 
     luaL_checktype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);

@@ -6,6 +6,25 @@
 
 using navmesh_type = moon::navmesh;
 
+static navmesh_type* get_navmesh(lua_State* L, int index) {
+    int tp = lua_type(L, index);
+    if (tp != LUA_TUSERDATA) {
+        luaL_error(
+            L,
+            "bad argument #%d to 'navmesh' (navmesh: expected navmesh userdata, got %s)",
+            index,
+            lua_typename(L, tp)
+        );
+        return nullptr;
+    }
+    auto* mesh = static_cast<navmesh_type*>(lua_touserdata(L, index));
+    if (mesh == nullptr) {
+        luaL_argerror(L, index, "navmesh: expected navmesh userdata, got null pointer");
+        return nullptr;
+    }
+    return mesh;
+}
+
 static int load_static(lua_State* L) {
     auto meshfile = moon::lua_check<std::string>(L, 1);
     std::string err;
@@ -19,9 +38,7 @@ static int load_static(lua_State* L) {
 }
 
 static int load_dynamic(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
 
     auto meshfile = moon::lua_check<std::string>(L, 2);
     std::string err;
@@ -35,9 +52,7 @@ static int load_dynamic(lua_State* L) {
 }
 
 static int find_straight_path(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     auto sx = moon::lua_check<float>(L, 2);
     auto sy = moon::lua_check<float>(L, 3);
     auto sz = moon::lua_check<float>(L, 4);
@@ -59,9 +74,7 @@ static int find_straight_path(lua_State* L) {
 }
 
 static int valid(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     auto x = moon::lua_check<float>(L, 2);
     auto y = moon::lua_check<float>(L, 3);
     auto z = moon::lua_check<float>(L, 4);
@@ -71,9 +84,7 @@ static int valid(lua_State* L) {
 }
 
 static int random_position(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     float pos[3];
     if (p->random_position(pos)) {
         lua_pushnumber(L, pos[0]);
@@ -86,9 +97,7 @@ static int random_position(lua_State* L) {
 }
 
 static int random_position_around_circle(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
 
     auto x = moon::lua_check<float>(L, 2);
     auto y = moon::lua_check<float>(L, 3);
@@ -107,9 +116,7 @@ static int random_position_around_circle(lua_State* L) {
 }
 
 static int recast(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
 
     auto sx = moon::lua_check<float>(L, 2);
     auto sy = moon::lua_check<float>(L, 3);
@@ -128,9 +135,7 @@ static int recast(lua_State* L) {
 }
 
 static int add_capsule_obstacle(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
 
     auto x = moon::lua_check<float>(L, 2);
     auto y = moon::lua_check<float>(L, 3);
@@ -146,9 +151,7 @@ static int add_capsule_obstacle(lua_State* L) {
 }
 
 static int remove_obstacle(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
 
     auto obstacleId = moon::lua_check<dtObstacleRef>(L, 2);
     auto res = p->remove_obstacle(obstacleId);
@@ -157,26 +160,20 @@ static int remove_obstacle(lua_State* L) {
 }
 
 static int clear_all_obstacle(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     p->clear_all_obstacle();
     return 0;
 }
 
 static int update(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     auto dt = moon::lua_check<float>(L, 2);
     p->update(dt);
     return 0;
 }
 
 static int lrelease(lua_State* L) {
-    navmesh_type* p = (navmesh_type*)lua_touserdata(L, 1);
-    if (nullptr == p)
-        return luaL_error(L, "Invalid navmesh pointer");
+    auto* p = get_navmesh(L, 1);
     std::destroy_at(p);
     return 0;
 }

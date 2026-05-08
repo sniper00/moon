@@ -11,7 +11,7 @@
 
 using namespace moon;
 
-static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index) {
+static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index, const char* api_name) {
     switch (lua_type(L, index)) {
         case LUA_TNIL:
         case LUA_TNONE: {
@@ -25,15 +25,31 @@ static moon::buffer_ptr_t moon_to_buffer(lua_State* L, int index) {
             return buf;
         }
         case LUA_TLIGHTUSERDATA: {
-            return moon::buffer_ptr_t { static_cast<moon::buffer*>(lua_touserdata(L, index)) };
+            auto* buf = static_cast<moon::buffer*>(lua_touserdata(L, index));
+            if (buf == nullptr) {
+                luaL_argerror(
+                    L,
+                    index,
+                    (std::string(api_name) + ": expected valid buffer lightuserdata, got null pointer").c_str()
+                );
+                return nullptr;
+            }
+            return moon::buffer_ptr_t { buf };
         }
         default:
-            luaL_argerror(L, index, "nil, lightuserdata(buffer*) or string expected");
+            luaL_error(
+                L,
+                "bad argument #%d to '%s' (%s: expected nil, buffer lightuserdata, or string, got %s)",
+                index,
+                api_name,
+                api_name,
+                lua_typename(L, lua_type(L, index))
+            );
     }
     return nullptr;
 }
 
-static moon::buffer_shr_ptr_t moon_to_shr_buffer(lua_State* L, int index) {
+static moon::buffer_shr_ptr_t moon_to_shr_buffer(lua_State* L, int index, const char* api_name) {
     switch (lua_type(L, index)) {
         case LUA_TNIL: {
             return nullptr;
@@ -46,10 +62,26 @@ static moon::buffer_shr_ptr_t moon_to_shr_buffer(lua_State* L, int index) {
             return buf;
         }
         case LUA_TLIGHTUSERDATA: {
-            return moon::buffer_shr_ptr_t { static_cast<moon::buffer*>(lua_touserdata(L, index)) };
+            auto* buf = static_cast<moon::buffer*>(lua_touserdata(L, index));
+            if (buf == nullptr) {
+                luaL_argerror(
+                    L,
+                    index,
+                    (std::string(api_name) + ": expected valid buffer lightuserdata, got null pointer").c_str()
+                );
+                return nullptr;
+            }
+            return moon::buffer_shr_ptr_t { buf };
         }
         default:
-            luaL_argerror(L, index, "nil, lightuserdata(buffer*) or string expected");
+            luaL_error(
+                L,
+                "bad argument #%d to '%s' (%s: expected nil, buffer lightuserdata, or string, got %s)",
+                index,
+                api_name,
+                api_name,
+                lua_typename(L, lua_type(L, index))
+            );
     }
     return nullptr;
 }
@@ -166,16 +198,16 @@ static int lmoon_send(lua_State* L) {
     lua_service* S = lua_service::get(L);
 
     auto type = (uint8_t)luaL_checkinteger(L, 1);
-    luaL_argcheck(L, type > 0, 1, "PTYPE must > 0");
+    luaL_argcheck(L, type > 0, 1, "moon.send: message type must be greater than 0");
 
     auto receiver = (uint32_t)luaL_checkinteger(L, 2);
-    luaL_argcheck(L, receiver > 0, 2, "receiver must > 0");
+    luaL_argcheck(L, receiver > 0, 2, "moon.send: receiver must be greater than 0");
 
     int64_t session = luaL_opt(L, luaL_checkinteger, 4, S->next_sequence());
 
     auto sender = (uint32_t)luaL_opt(L, luaL_checkinteger, 5, S->id());
 
-    S->get_server()->send(sender, receiver, moon_to_buffer(L, 3), session, type);
+    S->get_server()->send(sender, receiver, moon_to_buffer(L, 3, "send"), session, type);
 
     lua_pushinteger(L, session);
     lua_pushinteger(L, receiver);
@@ -353,7 +385,7 @@ static int lmoon_exit(lua_State* L) {
 static int lmoon_now(lua_State* L) {
     const lua_service* S = lua_service::get(L);
     auto ratio = luaL_optinteger(L, 1, 1);
-    luaL_argcheck(L, ratio > 0, 1, "must >0");
+    luaL_argcheck(L, ratio > 0, 1, "moon.now: ratio must be greater than 0");
     time_t t = (S->get_server()->now() / ratio);
     lua_pushinteger(L, t);
     return 1;
@@ -369,9 +401,17 @@ static int lmoon_adjtime(lua_State* L) {
 }
 
 static int message_decode(lua_State* L) {
+    if (lua_type(L, 1) != LUA_TLIGHTUSERDATA) {
+        return luaL_error(
+            L,
+            "bad argument #1 to 'decode' (moon.decode: expected message lightuserdata, got %s)",
+            lua_typename(L, lua_type(L, 1))
+        );
+    }
+
     auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
+        return luaL_argerror(L, 1, "moon.decode: expected message lightuserdata, got null pointer");
     size_t len = 0;
     const char* sz = luaL_checklstring(L, 2, &len);
     int top = lua_gettop(L);
@@ -415,7 +455,11 @@ static int message_decode(lua_State* L) {
                 break;
             }
             default:
-                return luaL_error(L, "invalid format option '%c'", sz[i]);
+                return luaL_error(
+                    L,
+                    "moon.decode: invalid format option '%c', valid options are: 'S' (sender), 'R' (receiver), 'E' (session), 'Z' (payload string), 'N' (payload size), 'B' (buffer pointer), 'L' (transfer buffer ownership), 'C' (raw pointer and size)",
+                    sz[i]
+                );
         }
     }
     return lua_gettop(L) - top;
@@ -423,12 +467,20 @@ static int message_decode(lua_State* L) {
 
 static int message_redirect(lua_State* L) {
     int top = lua_gettop(L);
+    if (lua_type(L, 1) != LUA_TLIGHTUSERDATA) {
+        return luaL_error(
+            L,
+            "bad argument #1 to 'redirect' (moon.redirect: expected message lightuserdata, got %s)",
+            lua_typename(L, lua_type(L, 1))
+        );
+    }
+
     auto* m = (message*)lua_touserdata(L, 1);
     if (nullptr == m)
-        return luaL_argerror(L, 1, "lightuserdata(message*) expected");
+        return luaL_argerror(L, 1, "moon.redirect: expected message lightuserdata, got null pointer");
     m->receiver = (uint32_t)luaL_checkinteger(L, 2);
     if (m->receiver == 0)
-        return luaL_argerror(L, 2, "receiver must > 0");
+        return luaL_argerror(L, 2, "moon.redirect: receiver must be greater than 0");
     m->type = (uint8_t)luaL_checkinteger(L, 3);
     if (top > 3) {
         m->sender = (uint32_t)luaL_checkinteger(L, 4);
@@ -543,7 +595,7 @@ static int lasio_accept(lua_State* L) {
     int64_t session = luaL_opt(L, luaL_checkinteger, 3, S->next_sequence());
     if (!sock.accept(fd, session, owner)) {
         lua_pushboolean(L, 0);
-        lua_pushfstring(L, "socket.accept error: fd(%I) not open or not found.", fd);
+        lua_pushfstring(L, "asio.accept: fd(%I) is not open or was not found", fd);
         return 2;
     }
     lua_pushinteger(L, session);
@@ -598,7 +650,7 @@ static int lasio_write(lua_State* L) {
         L,
         n >= 0 && n < static_cast<int>(moon::socket_send_mask::max_mask),
         3,
-        "invalid mask"
+        "asio.write: invalid send mask"
     );
     auto mask = static_cast<moon::socket_send_mask>(n);
 
@@ -607,7 +659,7 @@ static int lasio_write(lua_State* L) {
         bool ok = sock.write(fd, std::move(shr), mask);
         lua_pushboolean(L, ok ? 1 : 0);
     } else {
-        bool ok = sock.write(fd, moon_to_shr_buffer(L, 2), mask);
+        bool ok = sock.write(fd, moon_to_shr_buffer(L, 2, "write"), mask);
         lua_pushboolean(L, ok ? 1 : 0);
     }
     return 1;
@@ -617,9 +669,16 @@ static int lasio_write_message(lua_State* L) {
     const lua_service* S = lua_service::get(L);
     auto& sock = S->get_worker()->socket_server();
     auto fd = (uint32_t)luaL_checkinteger(L, 1);
+    if (lua_type(L, 2) != LUA_TLIGHTUSERDATA) {
+        return luaL_error(
+            L,
+            "bad argument #2 to 'write_message' (asio.write_message: expected message lightuserdata, got %s)",
+            lua_typename(L, lua_type(L, 2))
+        );
+    }
     auto* m = (message*)lua_touserdata(L, 2);
     if (nullptr == m)
-        return luaL_argerror(L, 2, "lightuserdata(message*) expected");
+        return luaL_argerror(L, 2, "asio.write_message: expected message lightuserdata, got null pointer");
     bool ok = sock.write(fd, m->into_buffer());
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
@@ -728,7 +787,7 @@ static int lasio_sendto(lua_State* L) {
     auto& sock = S->get_worker()->socket_server();
     auto fd = (uint32_t)luaL_checkinteger(L, 1);
     std::string_view address = lua_check<std::string_view>(L, 2);
-    bool ok = sock.send_to(fd, address, moon_to_shr_buffer(L, 3));
+    bool ok = sock.send_to(fd, address, moon_to_shr_buffer(L, 3, "sendto"));
     lua_pushboolean(L, ok ? 1 : 0);
     return 1;
 }

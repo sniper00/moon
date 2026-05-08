@@ -18,6 +18,26 @@ static int udp_output(const char* buf, int len, ikcpcb*, void* user) {
     return 0;
 }
 
+static ikcpcb* get_kcp(lua_State* L, int index) {
+    int tp = lua_type(L, index);
+    if (tp != LUA_TLIGHTUSERDATA) {
+        luaL_error(
+            L,
+            "bad argument #%d to 'kcp' (kcp: expected ikcp lightuserdata, got %s)",
+            index,
+            lua_typename(L, tp)
+        );
+        return nullptr;
+    }
+
+    auto* kcp = static_cast<ikcpcb*>(lua_touserdata(L, index));
+    if (kcp == nullptr) {
+        luaL_argerror(L, index, "kcp: expected ikcp lightuserdata, got null pointer");
+        return nullptr;
+    }
+    return kcp;
+}
+
 static int lua_ikcp_create(lua_State* L) {
     IUINT32 conv = (IUINT32)luaL_checkinteger(L, 1);
     ikcpcb* kcp = ikcp_create(conv, new box {});
@@ -31,10 +51,7 @@ static int lua_ikcp_create(lua_State* L) {
 }
 
 static int lua_ikcp_release(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     box* ud = (box*)kcp->user;
     delete ud;
     kcp->user = nullptr;
@@ -47,10 +64,7 @@ inline static IUINT32 current() {
 }
 
 static int lua_ikcp_update(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     ikcp_update(kcp, current());
     IUINT32 millisec = ikcp_check(kcp, current());
     lua_pushinteger(L, millisec);
@@ -58,10 +72,7 @@ static int lua_ikcp_update(lua_State* L) {
 }
 
 static int lua_ikcp_input(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     size_t size = 0;
     const char* str = nullptr;
     if (lua_type(L, 2) == LUA_TSTRING) {
@@ -78,10 +89,7 @@ static int lua_ikcp_input(lua_State* L) {
 }
 
 static int lua_ikcp_output(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     box* ud = (box*)kcp->user;
     if (ud->wqueue.empty())
         return 0;
@@ -92,10 +100,7 @@ static int lua_ikcp_output(lua_State* L) {
 }
 
 static int lua_ikcp_send(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     size_t size = 0;
     const char* str = nullptr;
     if (lua_type(L, 2) == LUA_TSTRING) {
@@ -112,10 +117,7 @@ static int lua_ikcp_send(lua_State* L) {
 }
 
 static int lua_ikcp_poll_read(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     box* ud = (box*)kcp->user;
     auto space = ud->rbuf.prepare(2048);
     int len = ikcp_recv(kcp, space.first, static_cast<int>(space.second));
@@ -134,17 +136,14 @@ static int lua_ikcp_poll_read(lua_State* L) {
 }
 
 static int lua_ikcp_read(lua_State* L) {
-    ikcpcb* kcp = (ikcpcb*)(lua_touserdata(L, 1));
-    if (kcp == NULL) {
-        return luaL_error(L, "null kcp pointer");
-    }
+    ikcpcb* kcp = get_kcp(L, 1);
     box* ud = (box*)kcp->user;
     if (ud->session != 0)
-        return luaL_error(L, "already has a read request!");
+        return luaL_error(L, "kcp.read: another read request is already pending");
     ud->session = (int64_t)luaL_checkinteger(L, 2);
     auto n = luaL_checkinteger(L, 3);
     if (n <= 0)
-        return luaL_error(L, "invalid read size!");
+        return luaL_error(L, "kcp.read: size must be greater than 0, got %I", n);
     ud->readn = n;
     return 0;
 }
