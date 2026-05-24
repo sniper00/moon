@@ -5,7 +5,7 @@
 #include "server.h"
 #include "services/lua_service.h"
 #include <csignal>
-#include <print>
+#include <iostream>
 
 static std::weak_ptr<moon::server> wk_server;
 
@@ -101,10 +101,10 @@ void print_mem_stats() {}
 #endif
 
 static void usage(void) {
-    std::println("Usage:");
-    std::println("        moon script [args]");
-    std::println("Examples:");
-    std::println("        moon main.lua hello");
+    std::cout << "Usage:\n";
+    std::cout << "        moon script [args]\n";
+    std::cout << "Examples:\n";
+    std::cout << "        moon main.lua hello\n";
 }
 
 int main(int argc, char* argv[]) {
