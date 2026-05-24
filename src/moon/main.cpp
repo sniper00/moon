@@ -236,8 +236,7 @@ int main(int argc, char* argv[]) {
                     std::format(
                         "package.cpath='{}/clib/{};'..package.cpath;",
                         strpath.data(),
-                        ext->data(),
-                        strpath.data()
+                        ext->data()
                     )
                 );
             }
