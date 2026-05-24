@@ -4,8 +4,11 @@
 #include "config.hpp"
 #include "message.hpp"
 #include "service.hpp"
+#include <asio/as_tuple.hpp>
+#include <asio/experimental/awaitable_operators.hpp>
 
 using namespace asio::ip;
+
 
 namespace moon {
 class worker;
@@ -121,6 +124,18 @@ public:
     std::time_t time() const;
 
 private:
+    asio::awaitable<std::string>
+    do_connect(std::string host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid);
+
+    asio::awaitable<void> connect_with_timeout(
+        std::string host,
+        uint16_t port,
+        uint32_t owner,
+        uint8_t type,
+        int64_t sessionid,
+        uint32_t millseconds
+    );
+
     connection_ptr_t make_connection(uint32_t serviceid, uint8_t type, tcp::socket&& sock);
 
     void response(

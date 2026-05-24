@@ -8,8 +8,7 @@
 #include "network/stream_connection.hpp"
 #include "network/ws_connection.hpp"
 
-#include <asio/as_tuple.hpp>
-#include <asio/experimental/awaitable_operators.hpp>
+
 
 using namespace moon;
 using asio::awaitable;
@@ -191,62 +190,61 @@ void socket_server::connect(
     int64_t sessionid,
     uint32_t millseconds
 ) {
-    auto do_connect =
-        [this](std::string host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid)
-        -> awaitable<std::string> {
-        try {
-            tcp::resolver resolver(context_.get_executor());
-            auto results =
-                co_await resolver.async_resolve(host, std::to_string(port), asio::use_awaitable);
-            auto conn = make_connection(owner, type, tcp::socket(context_));
-            co_await asio::async_connect(conn->socket(), results, asio::use_awaitable);
-            conn->fd(server_->nextfd());
-            connections_.try_emplace(conn->fd(), conn);
-            conn->start(false);
-            handle_message(owner, message { PTYPE_INTEGER, 0, 0, sessionid, conn->fd() });
-        } catch (const std::exception& e) {
-            co_return e.what();
-        }
-        co_return std::string {};
-    };
-
-    auto connect_with_timeout = [this, do_connect](
-                                    std::string host,
-                                    uint16_t port,
-                                    uint32_t owner,
-                                    uint8_t type,
-                                    int64_t sessionid,
-                                    uint32_t millseconds
-                                ) -> awaitable<void> {
-        try {
-            if (millseconds > 0) {
-                auto res = co_await (
-                    do_connect(host, port, owner, type, sessionid)
-                    || co_timeout(std::chrono::milliseconds(millseconds))
-                );
-                if (auto err = res.index() == 0 ? std::get<0>(res) : std::get<1>(res); !err.empty())
-                    throw std::runtime_error(err);
-            } else {
-                auto err = co_await do_connect(host, port, owner, type, sessionid);
-                if (!err.empty())
-                    throw std::runtime_error(err);
-            }
-        } catch (const std::exception& e) {
-            response(
-                0,
-                owner,
-                std::format("connect {}:{} failed: {}", host, port, e.what()),
-                sessionid,
-                PTYPE_ERROR
-            );
-        }
-    };
-
     co_spawn(
         context_.get_executor(),
         connect_with_timeout(host, port, owner, type, sessionid, millseconds),
         detached
     );
+}
+
+awaitable<std::string>
+socket_server::do_connect(std::string host, uint16_t port, uint32_t owner, uint8_t type, int64_t sessionid) {
+    try {
+        tcp::resolver resolver(context_.get_executor());
+        auto results =
+            co_await resolver.async_resolve(host, std::to_string(port), asio::use_awaitable);
+        auto conn = make_connection(owner, type, tcp::socket(context_));
+        co_await asio::async_connect(conn->socket(), results, asio::use_awaitable);
+        conn->fd(server_->nextfd());
+        connections_.try_emplace(conn->fd(), conn);
+        conn->start(false);
+        handle_message(owner, message { PTYPE_INTEGER, 0, 0, sessionid, conn->fd() });
+    } catch (const std::exception& e) {
+        co_return e.what();
+    }
+    co_return std::string {};
+}
+
+awaitable<void> socket_server::connect_with_timeout(
+    std::string host,
+    uint16_t port,
+    uint32_t owner,
+    uint8_t type,
+    int64_t sessionid,
+    uint32_t millseconds
+) {
+    try {
+        if (millseconds > 0) {
+            auto res = co_await (
+                do_connect(host, port, owner, type, sessionid)
+                || co_timeout(std::chrono::milliseconds(millseconds))
+            );
+            if (auto err = res.index() == 0 ? std::get<0>(res) : std::get<1>(res); !err.empty())
+                throw std::runtime_error(err);
+        } else {
+            auto err = co_await do_connect(host, port, owner, type, sessionid);
+            if (!err.empty())
+                throw std::runtime_error(err);
+        }
+    } catch (const std::exception& e) {
+        response(
+            0,
+            owner,
+            std::format("connect {}:{} failed: {}", host, port, e.what()),
+            sessionid,
+            PTYPE_ERROR
+        );
+    }
 }
 
 direct_read_result

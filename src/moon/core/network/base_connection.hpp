@@ -204,7 +204,7 @@ protected:
             str.append(additional);
             str.append(")");
         }
-        // JSON 花括号需要转义：{{ 和 }} 表示字面量 { 和 }
+        // Escape JSON braces for std::format: use {{ and }} for literal braces.
         std::string content = std::format(
             R"({{"addr":"{}","code":{},"message":"{}"}})",
             address(),

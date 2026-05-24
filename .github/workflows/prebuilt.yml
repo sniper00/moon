@@ -6,7 +6,7 @@ on: [push, pull_request]
 
 jobs:
   init:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/github-script@v7 
       with: 
