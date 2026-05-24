@@ -141,7 +141,7 @@ namespace crypto {
                 }
 
                 server_nonce_ = r_it->second;
-                if (server_nonce_.rfind(client_nonce_, 0) != 0)
+                if (!server_nonce_.starts_with(client_nonce_))
                 { // Check if server nonce starts with client nonce
                     state_ = State::ERROR;
                     throw std::runtime_error("Server nonce does not match client nonce prefix.");

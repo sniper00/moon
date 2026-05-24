@@ -55,8 +55,8 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize) {
             log::instance().logstring(
                 true,
                 moon::LogLevel::Error,
-                moon::format(
-                    "%s Memory error current %.2f M, limit %.2f M",
+                std::format(
+                    "{} Memory error current {:.2f} M, limit {:.2f} M",
                     l->name().data(),
                     (float)(l->mem) / mb_memory,
                     (float)l->mem_limit / mb_memory
@@ -70,7 +70,7 @@ void* lua_service::lalloc(void* ud, void* ptr, size_t osize, size_t nsize) {
         log::instance().logstring(
             true,
             moon::LogLevel::Warn,
-            moon::format("%s Memory warning %.2f M", l->name().data(), (float)l->mem / mb_memory),
+            std::format("{} Memory warning {:.2f} M", l->name().data(), (float)l->mem / mb_memory),
             l->id()
         );
     }
@@ -95,7 +95,7 @@ lua_service::~lua_service() {
     log::instance().logstring(
         true,
         moon::LogLevel::Info,
-        moon::format("[WORKER %u] destroy service [%s] ", worker_->id(), name().data()),
+        std::format("[WORKER {}] destroy service [{}] ", worker_->id(), name()),
         id()
     );
 }
@@ -128,7 +128,7 @@ bool lua_service::init(const moon::service_conf& conf) {
     log::instance().logstring(
         true,
         moon::LogLevel::Info,
-        moon::format("[WORKER %u] new service [%s]", worker_->id(), name().data()),
+        std::format("[WORKER {}] new service [{}]", worker_->id(), name()),
         id()
     );
 
@@ -144,14 +144,14 @@ bool lua_service::init(const moon::service_conf& conf) {
     lua_pushlightuserdata(L, (void*)&conf);
 
     if (lua_pcall(L, 1, LUA_MULTRET, trace_fn) != LUA_OK || lua_gettop(L) > 1) {
-        CONSOLE_ERROR("new_service lua_error:\n%s.", lua_tostring(L, -1));
+        CONSOLE_ERROR("new_service lua_error:\n{}.", lua_tostring(L, -1));
         return false;
     }
 
     lua_pop(L, 1);
 
     if (unique_ && !server_->set_unique_service(name_, id_)) {
-        CONSOLE_ERROR("duplicate unique service name '%s'.", name_.data());
+        CONSOLE_ERROR("duplicate unique service name '{}'.", name_);
         return false;
     }
 
@@ -228,13 +228,13 @@ void lua_service::dispatch(message* m) {
 
         switch (r) {
             case LUA_ERRRUN:
-                error = moon::format("dispatch %s error:\n%s", name().data(), lua_tostring(L, -1));
+                error = std::format("dispatch {} error:\n{}", name(), lua_tostring(L, -1));
                 break;
             case LUA_ERRMEM:
-                error = moon::format("dispatch %s memory error", name().data());
+                error = std::format("dispatch {} memory error", name());
                 break;
             case LUA_ERRERR:
-                error = moon::format("dispatch %s error in error", name().data());
+                error = std::format("dispatch {} error in error", name());
                 break;
         }
 
@@ -249,7 +249,7 @@ void lua_service::dispatch(message* m) {
     } catch (const std::exception& e) {
         luaL_traceback(L, L, e.what(), 1);
         const char* trace = lua_tostring(L, -1);
-        CONSOLE_ERROR("dispatch:\n%s", (trace != nullptr) ? trace : "");
+        CONSOLE_ERROR("dispatch:\n{}", (trace != nullptr) ? trace : "");
         lua_pop(L, 1);
     }
 }
@@ -259,7 +259,7 @@ void signal_hook(lua_State * L, lua_Debug*);
 void lua_service::signal(int val) {
 
     log::instance()
-        .logstring(true, moon::LogLevel::Info, moon::format("recv a signal %d", val), id());
+        .logstring(true, moon::LogLevel::Info, std::format("recv a signal {}", val), id());
 
     if (val == 0) {
         if (trap.load(std::memory_order_acquire) == 0) {
@@ -277,7 +277,7 @@ void lua_service::signal(int val) {
         log::instance().logstring(
             true,
             moon::LogLevel::Info,
-            moon::format("Current Memory %.3fK", (float)mem / 1024),
+            std::format("Current Memory {:.3f}K", (float)mem / 1024),
             id()
         );
     }

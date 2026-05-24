@@ -118,8 +118,8 @@ public:
     }
 
     static int timezone() {
-        static int tz = 0;
-        if (tz == 0) {
+        static int tz = INT_MAX;
+        if (tz == INT_MAX) {
             auto t = std::time(nullptr);
             auto gm_tm = time::gmtime(t);
             std::tm local_tm;

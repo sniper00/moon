@@ -84,13 +84,9 @@ class lua_json_error: public std::runtime_error {
 public:
     using runtime_error::runtime_error;
 
-    static lua_json_error format(const char* fmt, ...) {
-        va_list args;
-        va_start(args, fmt);
-        char buffer[1024];
-        vsnprintf(buffer, sizeof(buffer), fmt, args);
-        va_end(args);
-        return lua_json_error(buffer);
+    template<typename... Args>
+    static lua_json_error format(std::format_string<Args...> fmt, Args&&... args) {
+        return lua_json_error(std::format(fmt, std::forward<Args>(args)...));
     }
 };
 

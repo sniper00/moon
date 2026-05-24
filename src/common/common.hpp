@@ -47,13 +47,7 @@
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
     #include <WinSock2.h>
     #include <process.h> //  _get_pid support
-    #include <stdarg.h>
-    #include <stdio.h>
     #define strnicmp _strnicmp
-
-inline int moon_vsnprintf(char* buffer, size_t count, const char* format, va_list argptr) {
-    return vsnprintf_s(buffer, count, _TRUNCATE, format, argptr);
-}
 
     #ifdef _WIN64
 typedef __int64 ssize_t;
@@ -64,7 +58,6 @@ typedef _W64 int ssize_t;
 #else
     #include <sys/syscall.h>
     #include <unistd.h>
-    #define moon_vsnprintf vsnprintf
     #define MOON_EXPORT
 #endif
 
@@ -108,6 +101,7 @@ typedef _W64 int ssize_t;
 
 #include <memory>
 #include <utility>
+#include <format>
 
 #include "exception.hpp"
 
@@ -264,34 +258,32 @@ struct enum_enable_bitmask_operators {
 };
 
 template<typename Enum>
-inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum>
-operator|(Enum a, Enum b) {
+    requires enum_enable_bitmask_operators<Enum>::enable
+inline Enum operator|(Enum a, Enum b) {
     return static_cast<Enum>(
-        static_cast<std::underlying_type_t<Enum>>(a) | static_cast<std::underlying_type_t<Enum>>(b)
+        std::to_underlying(a) | std::to_underlying(b)
     );
 }
 
 template<typename Enum>
-inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum>
-operator&(Enum a, Enum b) {
+    requires enum_enable_bitmask_operators<Enum>::enable
+inline Enum operator&(Enum a, Enum b) {
     return static_cast<Enum>(
-        static_cast<std::underlying_type_t<Enum>>(a) & static_cast<std::underlying_type_t<Enum>>(b)
+        std::to_underlying(a) & std::to_underlying(b)
     );
 }
 
 template<typename Enum>
-inline typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, Enum>
-enum_unset_bitmask(Enum mask, Enum value) {
+    requires enum_enable_bitmask_operators<Enum>::enable
+inline Enum enum_unset_bitmask(Enum mask, Enum value) {
     return static_cast<Enum>(
-        static_cast<std::underlying_type_t<Enum>>(mask) & ~static_cast<std::underlying_type_t<Enum>>(value)
+        std::to_underlying(mask) & ~std::to_underlying(value)
     );
 }
 
-template<
-    typename Enum,
-    typename std::enable_if_t<enum_enable_bitmask_operators<Enum>::enable, int> = 0>
+template<typename Enum>
+    requires enum_enable_bitmask_operators<Enum>::enable
 inline bool enum_has_any_bitmask(Enum v, Enum contains) {
-    using under_type = typename std::underlying_type<Enum>::type;
-    return (static_cast<under_type>(v) & static_cast<under_type>(contains)) != 0;
+    return (std::to_underlying(v) & std::to_underlying(contains)) != 0;
 }
 } // namespace moon

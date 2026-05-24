@@ -213,7 +213,7 @@ private:
         handle_message(
             message { type_,
                       0,
-                      static_cast<uint8_t>(socket_data_type::socket_accept),
+                      std::to_underlying(socket_data_type::socket_accept),
                       0,
                       std::string_view { cache_.data(), n } }
         );
@@ -430,15 +430,15 @@ private:
         uint8_t sub_type = 0;
         switch (fh.op) {
             case ws::opcode::ping: {
-                sub_type = static_cast<uint8_t>(socket_data_type::socket_ping);
+                sub_type = std::to_underlying(socket_data_type::socket_ping);
                 break;
             }
             case ws::opcode::pong: {
-                sub_type = static_cast<uint8_t>(socket_data_type::socket_pong);
+                sub_type = std::to_underlying(socket_data_type::socket_pong);
                 break;
             }
             default:
-                sub_type = static_cast<uint8_t>(socket_data_type::socket_recv);
+                sub_type = std::to_underlying(socket_data_type::socket_recv);
                 break;
         }
 
@@ -522,14 +522,14 @@ private:
 
         always_ok = payload.write_front(&payload_len, 1);
 
-        uint8_t opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::binary);
+        uint8_t opcode = FIN_FRAME_FLAG | std::to_underlying(ws::opcode::binary);
 
         if (data->has_bitmask(socket_send_mask::ws_text)) {
-            opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::text);
+            opcode = FIN_FRAME_FLAG | std::to_underlying(ws::opcode::text);
         } else if (data->has_bitmask(socket_send_mask::ws_ping)) {
-            opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::ping);
+            opcode = FIN_FRAME_FLAG | std::to_underlying(ws::opcode::ping);
         } else if (data->has_bitmask(socket_send_mask::ws_pong)) {
-            opcode = FIN_FRAME_FLAG | static_cast<uint8_t>(ws::opcode::pong);
+            opcode = FIN_FRAME_FLAG | std::to_underlying(ws::opcode::pong);
         }
 
         always_ok = payload.write_front(&opcode, 1);

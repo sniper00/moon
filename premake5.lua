@@ -209,7 +209,7 @@ workspace "Server"
     -- Common flags for all projects
     flags{"NoPCH","RelativeLinks"}
     -- C++ standard
-    cppdialect "C++17"
+    cppdialect "C++23"
     -- Output location for generated project files (e.g., .sln, Makefile)
     location "./target"
 

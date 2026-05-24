@@ -5,6 +5,7 @@
 #include "server.h"
 #include "services/lua_service.h"
 #include <csignal>
+#include <print>
 
 static std::weak_ptr<moon::server> wk_server;
 
@@ -93,17 +94,17 @@ void print_mem_stats() {
 
     mi_collect(true);
     mi_stats_print_out(fn, &stats);
-    CONSOLE_INFO(stats.data());
+    CONSOLE_INFO("{}", stats.data());
 }
 #else
 void print_mem_stats() {}
 #endif
 
 static void usage(void) {
-    std::cout << "Usage:\n";
-    std::cout << "        moon script [args]\n";
-    std::cout << "Examples:\n";
-    std::cout << "        moon main.lua hello\n";
+    std::println("Usage:");
+    std::println("        moon script [args]");
+    std::println("Examples:");
+    std::println("        moon main.lua hello");
 }
 
 int main(int argc, char* argv[]) {
@@ -171,12 +172,12 @@ int main(int argc, char* argv[]) {
             assert(lua_gettop(L) == 1);
 
             int r = luaL_loadstring(L, content.data());
-            MOON_CHECK(r == LUA_OK, moon::format("loadfile %s", lua_tostring(L, -1)));
+            MOON_CHECK(r == LUA_OK, std::format("loadfile {}", lua_tostring(L, -1)));
 
             r = luaL_dostring(L, arg.data());
-            MOON_CHECK(r == LUA_OK, moon::format("%s", lua_tostring(L, -1)));
+            MOON_CHECK(r == LUA_OK, std::format("{}", lua_tostring(L, -1)));
             r = lua_pcall(L, 1, 1, 1);
-            MOON_CHECK(r == LUA_OK, moon::format("%s", lua_tostring(L, -1)));
+            MOON_CHECK(r == LUA_OK, std::format("{}", lua_tostring(L, -1)));
             MOON_CHECK(lua_type(L, -1) == LUA_TTABLE, "init must return conf table");
 
             thread_count = lua_opt_field<uint32_t>(L, -1, "thread", thread_count);
@@ -188,7 +189,7 @@ int main(int argc, char* argv[]) {
             if (!cpath.empty()) {
                 server_->set_env(
                     "CPATH",
-                    moon::format("package.cpath='%s;'..package.cpath;", cpath.data())
+                    std::format("package.cpath='{};'..package.cpath;", cpath.data())
                 );
             }
         }
@@ -204,13 +205,13 @@ int main(int argc, char* argv[]) {
             if (!lua_search_path.empty() && lua_search_path.back() != ';')
                 lua_search_path.append(";");
             lua_search_path.append(
-                moon::format("%s/lualib/?.lua;%s/service/?.lua;", strpath.data(), strpath.data())
+                std::format("{}/lualib/?.lua;{}/service/?.lua;", strpath.data(), strpath.data())
             );
         }
 
         server_->set_env(
             "PATH",
-            moon::format("package.path='%s;'..package.path;", lua_search_path.data())
+            std::format("package.path='{};'..package.path;", lua_search_path.data())
         );
 
 #if TARGET_PLATFORM == PLATFORM_WINDOWS
@@ -232,8 +233,8 @@ int main(int argc, char* argv[]) {
                 auto ext = server_->get_env("LUA_CPATH_EXT");
                 server_->set_env(
                     "CPATH",
-                    moon::format(
-                        "package.cpath='%s/clib/%s;'..package.cpath;",
+                    std::format(
+                        "package.cpath='{}/clib/{};'..package.cpath;",
                         strpath.data(),
                         ext->data(),
                         strpath.data()
@@ -279,7 +280,7 @@ int main(int argc, char* argv[]) {
             log::instance().init("");
         }
         exitcode = -1;
-        CONSOLE_ERROR("ERROR:%s", e.what());
+        CONSOLE_ERROR("ERROR: {}", e.what());
     }
     CONSOLE_INFO("STOP");
     while (log::instance().size() > 0)

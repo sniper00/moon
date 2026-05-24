@@ -34,12 +34,12 @@ public:
 
     direct_read_result read(size_t size, std::string_view delim, int64_t session) override {
         if (!is_open()) {
-            CONSOLE_ERROR("Connection closed. fd=%u", fd_);
+            CONSOLE_ERROR("Connection closed. fd={}", fd_);
             return direct_read_result { false, { "Connection closed" } };
         }
 
         if (enum_has_any_bitmask(mask_, connection_mask::reading)) {
-            CONSOLE_ERROR("Already reading. fd=%u", fd_);
+            CONSOLE_ERROR("Already reading. fd={}", fd_);
             return direct_read_result { false, { "Already reading" } };
         }
 
@@ -141,11 +141,11 @@ private:
 
         if (e) {
             if (e == moon::error::read_timeout) {
-                b->write_back(moon::format("TIMEOUT %s.(%d)", e.message().data(), e.value()));
+                b->write_back(std::format("TIMEOUT {}.({})", e.message(), e.value()));
             } else if (e == asio::error::eof) {
-                b->write_back(moon::format("EOF %s.(%d)", e.message().data(), e.value()));
+                b->write_back(std::format("EOF {}.({})", e.message(), e.value()));
             } else {
-                b->write_back(moon::format("SOCKET_ERROR %s.(%d)", e.message().data(), e.value()));
+                b->write_back(std::format("SOCKET_ERROR {}.({})", e.message(), e.value()));
             }
         }
 

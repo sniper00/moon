@@ -37,18 +37,21 @@ public:
     }
 
     template<typename T>
-    std::enable_if_t<!std::is_same_v<T, bool> && !std::is_same_v<T, std::string>, T> read() {
+        requires (!std::is_same_v<T, bool> && !std::is_same_v<T, std::string>)
+    T read() {
         static_assert(std::is_trivially_copyable<T>::value, "type T must be trivially copyable.");
         return _read<T>();
     }
 
     template<typename T>
-    std::enable_if_t<std::is_same_v<T, bool>, T> read() {
+        requires std::is_same_v<T, bool>
+    T read() {
         return (_read<uint8_t>() != 0) ? true : false;
     }
 
     template<typename T>
-    std::enable_if_t<std::is_same_v<T, std::string>, T> read() {
+        requires std::is_same_v<T, std::string>
+    T read() {
         std::string tmp;
         while (readpos_ < size_) {
             char c = _read<char>();

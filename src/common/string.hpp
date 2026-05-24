@@ -2,7 +2,8 @@
 #include "common.hpp"
 
 namespace moon {
-template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+template<typename T>
+    requires std::is_floating_point_v<T>
 inline T string_convert(const std::string_view& s, std::errc& ec) {
     T result;
     auto res = std::from_chars(s.data(), s.data() + s.size(), result);
@@ -10,16 +11,18 @@ inline T string_convert(const std::string_view& s, std::errc& ec) {
     return result;
 }
 
-template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+template<typename T>
+    requires std::is_floating_point_v<T>
 inline T string_convert(const std::string_view& s) {
     T result;
     if (auto [p, ec] = std::from_chars(s.data(), s.data() + s.size(), result); ec != std::errc()) {
-        throw std::runtime_error(std::to_string(static_cast<int>(ec)));
+        throw std::runtime_error(std::to_string(std::to_underlying(ec)));
     }
     return result;
 }
 
-template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+template<typename T>
+    requires std::is_integral_v<T>
 inline T string_convert(const std::string_view& s, std::errc& ec, int base = 10) {
     T result {};
     auto res = std::from_chars(s.data(), s.data() + s.size(), result, base);
@@ -27,23 +30,26 @@ inline T string_convert(const std::string_view& s, std::errc& ec, int base = 10)
     return result;
 }
 
-template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+template<typename T>
+    requires std::is_integral_v<T>
 inline T string_convert(const std::string_view& s, int base = 10) {
     T result;
     if (auto [p, ec] = std::from_chars(s.data(), s.data() + s.size(), result, base);
         ec != std::errc())
     {
-        throw std::runtime_error(std::to_string(static_cast<int>(ec)));
+        throw std::runtime_error(std::to_string(std::to_underlying(ec)));
     }
     return result;
 }
 
-template<typename T, std::enable_if_t<std::is_same_v<T, std::string>, int> = 0>
+template<typename T>
+    requires std::is_same_v<T, std::string>
 inline std::string string_convert(const std::string_view& s) {
     return std::string(s);
 }
 
-template<typename T, std::enable_if_t<std::is_same_v<T, std::string_view>, int> = 0>
+template<typename T>
+    requires std::is_same_v<T, std::string_view>
 inline std::string_view string_convert(const std::string_view& s) {
     return s;
 }
@@ -168,35 +174,6 @@ std::vector<T> split(const std::string_view& src, const std::string_view& sep) {
     return r;
 }
 
-inline std::string format(const char* fmt, ...) {
-    if (!fmt)
-        return std::string("");
-
-    std::string res;
-    res.resize(1024);
-
-    va_list ap;
-    va_start(ap, fmt);
-    int len = moon_vsnprintf(res.data(), res.size(), fmt, ap);
-    va_end(ap);
-
-    if (len < 0) {
-        return std::string("");
-    }
-
-    if (len < static_cast<int>(res.size())) {
-        res.resize(len);
-        return res;
-    }
-
-    // Buffer was too small, resize to exact size needed
-    res.resize(len + 1);
-    va_start(ap, fmt);
-    moon_vsnprintf(res.data(), res.size(), fmt, ap);
-    va_end(ap);
-    res.resize(len);
-    return res;
-}
 
 //return left n char
 inline std::string left(const std::string& str, size_t n) {

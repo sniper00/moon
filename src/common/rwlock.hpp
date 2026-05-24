@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <cstdint>
+#include <thread>
 
 /* RWSpinLock */
 namespace moon {

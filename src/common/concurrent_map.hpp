@@ -28,10 +28,7 @@ public:
     template<class TKey, class TValue>
     void set(TKey&& key, TValue&& value) {
         std::unique_lock lck(lock_);
-        auto res = data_.try_emplace(std::forward<TKey>(key), value);
-        if (!res.second) {
-            res.first->second = std::forward<TValue>(value);
-        }
+        data_.insert_or_assign(std::forward<TKey>(key), std::forward<TValue>(value));
     }
 
     template<class TKey, class TValue>

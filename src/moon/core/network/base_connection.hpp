@@ -53,7 +53,7 @@ public:
     }
 
     virtual direct_read_result read(size_t, std::string_view, int64_t) {
-        CONSOLE_ERROR("Unsupported read operation for PTYPE %d", (int)type_);
+        CONSOLE_ERROR("Unsupported read operation for PTYPE {}", static_cast<int>(type_));
         parent_->close(fd_);
         parent_ = nullptr;
         return direct_read_result { false, { "Unsupported read operation" } };
@@ -65,7 +65,7 @@ public:
         }
 
         if (wq_warn_size_ != 0 && wqueue_.writeable() >= wq_warn_size_) {
-            CONSOLE_WARN("network send queue too long. size:%zu", wqueue_.writeable());
+            CONSOLE_WARN("network send queue too long. size: {}", wqueue_.writeable());
             if (wq_error_size_ != 0 && wqueue_.writeable() >= wq_error_size_) {
                 asio::post(socket_.get_executor(), [this, self = shared_from_this()]() {
                     error(make_error_code(moon::error::send_queue_too_big));
@@ -204,16 +204,17 @@ protected:
             str.append(additional);
             str.append(")");
         }
-        std::string content = moon::format(
-            R"({"addr":"%s","code":%d,"message":"%s"})",
-            address().data(),
+        // JSON 花括号需要转义：{{ 和 }} 表示字面量 { 和 }
+        std::string content = std::format(
+            R"({{"addr":"{}","code":{},"message":"{}"}})",
+            address(),
             e.value(),
-            str.data()
+            str
         );
 
         parent_->close(fd_);
         handle_message(message{
-            type_, 0, static_cast<uint8_t>(socket_data_type::socket_close), 0, content
+            type_, 0, std::to_underlying(socket_data_type::socket_close), 0, content
         });
         parent_ = nullptr;
     }

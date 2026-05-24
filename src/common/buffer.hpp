@@ -262,13 +262,15 @@ public:
         pair_.writepos += data.size();
     }
 
-    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    template<typename T>
+        requires std::is_arithmetic_v<T>
     void write_back(T val) {
         pair_.prepare(sizeof(T));
         unsafe_write_back(val);
     }
 
-    template<typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+    template<typename T>
+        requires std::is_arithmetic_v<T>
     void unsafe_write_back(T val) {
         constexpr size_t n = sizeof(T);
         assert(pair_.writepos + n <= pair_.capacity);
@@ -333,7 +335,8 @@ public:
         return true;
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    template<typename T>
+        requires std::is_arithmetic_v<T>
     void write_chars(T value) {
         /*
         ** Maximum length of the conversion of a number to a string. Must be
@@ -346,19 +349,10 @@ public:
         static constexpr size_t MAX_NUMBER_2_STR = 44;
         auto space = pair_.prepare(MAX_NUMBER_2_STR);
         auto* b = space.first;
-#ifndef _MSC_VER //std::to_chars in C++17: gcc and clang only integral types supported
-        if constexpr (std::is_floating_point_v<T>) {
-            int len = std::snprintf(b, MAX_NUMBER_2_STR, "%.16g", value);
-            assert(len >= 0);
-            commit_unchecked(len);
-        } else
-#endif
-        {
-            auto* e = b + MAX_NUMBER_2_STR;
-            auto res = std::to_chars(b, e, value);
-            assert(res.ec == std::errc());
-            commit_unchecked(res.ptr - b);
-        }
+        auto* e = b + MAX_NUMBER_2_STR;
+        auto res = std::to_chars(b, e, value);
+        assert(res.ec == std::errc());
+        commit_unchecked(res.ptr - b);
     }
 
     template<typename T>
@@ -495,7 +489,7 @@ public:
             "Enum type must be an enum with uint8_t as its underlying type to fit in the 8-bit bitmask"
         );
         auto v = (uint8_t)pair_.bitmask;
-        v |= (uint8_t)e;
+        v |= std::to_underlying(e);
         pair_.bitmask = v;
     }
 
@@ -506,7 +500,7 @@ public:
             "Enum type must be an enum with uint8_t as its underlying type to fit in the 8-bit bitmask"
         );
         uint8_t v = (uint8_t)pair_.bitmask;
-        return ((v & (uint8_t)e) != 0);
+        return ((v & std::to_underlying(e)) != 0);
     }
 
     template<typename Enum>
@@ -516,7 +510,7 @@ public:
             "Enum type must be an enum with uint8_t as its underlying type to fit in the 8-bit bitmask"
         );
         uint8_t v = (uint8_t)pair_.bitmask;
-        v &= ~(uint8_t)e;
+        v &= ~std::to_underlying(e);
         pair_.bitmask = v;
     }
 

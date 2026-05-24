@@ -11,7 +11,7 @@ server::~server() {
 void server::init(uint32_t worker_num) {
     worker_num = (worker_num == 0) ? 1 : worker_num;
 
-    CONSOLE_INFO("INIT with %d workers.", worker_num);
+    CONSOLE_INFO("INIT with {} workers.", worker_num);
 
     for (uint32_t i = 0; i != worker_num; i++) {
         workers_.emplace_back(std::make_unique<worker>(this, i + 1));
@@ -43,7 +43,7 @@ int server::run() {
 
         if (current_exitcode != std::numeric_limits<int>::max() && !stop_once) {
             stop_once = true;
-            CONSOLE_WARN("Received signal code %d", current_exitcode);
+            CONSOLE_WARN("Received signal code {}", current_exitcode);
             for (auto iter = workers_.rbegin(); iter != workers_.rend(); ++iter) {
                 (*iter)->stop();
             }
@@ -180,7 +180,7 @@ void server::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
     if (nullptr != w) {
         w->remove_service(serviceid, sender, sessionid);
     } else {
-        auto content = moon::format("server::remove_service invalid service id %u.", serviceid);
+        auto content = std::format("server::remove_service invalid service id {}.", serviceid);
         response(sender, content, sessionid, PTYPE_ERROR);
     }
 }
@@ -197,7 +197,7 @@ bool server::scan_services(uint32_t sender, uint32_t workerid, int64_t sessionid
 bool server::send_message(message&& m) const {
     worker* w = get_worker(0, m.receiver);
     if (nullptr == w) {
-        CONSOLE_ERROR("Invalid message receiver id: %X", m.receiver);
+        CONSOLE_ERROR("Invalid message receiver id: {:X}", m.receiver);
         return false;
     }
     w->send(std::move(m));
@@ -227,7 +227,7 @@ void server::broadcast(uint32_t sender, const buffer& buf, uint8_t type) const {
 
 bool server::register_service(const std::string& type, register_func f) {
     auto ret = regservices_.try_emplace(type, f);
-    MOON_ASSERT(ret.second, moon::format("already registed service type[%s].", type.data()).data());
+    MOON_ASSERT(ret.second, std::format("already registed service type[{}].", type).data());
     return ret.second;
 }
 
@@ -269,7 +269,7 @@ void server::response(uint32_t to, std::string_view content, int64_t sessionid, 
     const {
     if (to == 0 || sessionid == 0) {
         if (get_state() == state::ready && mtype == PTYPE_ERROR && !content.empty()) {
-            CONSOLE_DEBUG("%s", std::string(content).data());
+            CONSOLE_DEBUG("{}", content);
         }
         return;
     }
@@ -288,8 +288,8 @@ std::string server::info() const {
     std::string req;
     req.reserve(256 + workers_.size() * 128);
     req.append("[\n");
-    req.append(moon::format(
-        R"({"id":0, "socket":%zu, "timer":%zu, "log":%zu, "service":%u, "error":%zu})",
+    req.append(std::format(
+        R"({{"id":0, "socket":{}, "timer":{}, "log":{}, "service":{}, "error":{}}})",
         socket_num(),
         timer_size,
         log::instance().size(),
@@ -298,8 +298,8 @@ std::string server::info() const {
     ));
     for (const auto& w: workers_) {
         req.append(",\n");
-        req.append(moon::format(
-            R"({"id":%u, "cpu":%f, "mqsize":%u, "service":%u, "timer":%zu, "alive":%u})",
+        req.append(std::format(
+            R"({{"id":{}, "cpu":{}, "mqsize":{}, "service":{}, "timer":{}, "alive":{}}})",
             w->id(),
             w->cpu(),
             w->mq_size(),

@@ -6,6 +6,7 @@
 #include "common/termcolor.hpp"
 #include "common/time.hpp"
 #include "config.hpp"
+#include <format>
 
 namespace moon {
 enum class LogLevel : char { Error = 1, Warn, Info, Debug, Max };
@@ -51,7 +52,7 @@ public:
 #endif
             MOON_CHECK(
                 !err,
-                moon::format("open log file '%s' failed. errno %d.", logfile.data(), err)
+                std::format("open log file '{}' failed. errno {}.", logfile.data(), err)
             )
             fp_.reset(fp);
         }
@@ -63,15 +64,12 @@ public:
     }
 
     template<typename... Args>
-    void logfmt(bool console, LogLevel level, const char* fmt, Args&&... args) {
+    void logfmt(bool console, LogLevel level, std::format_string<Args...> fmt, Args&&... args) {
         if (level_ < level) {
             return;
         }
 
-        if (nullptr == fmt)
-            return;
-
-        std::string str = moon::format(fmt, std::forward<Args>(args)...);
+        std::string str = std::format(fmt, std::forward<Args>(args)...);
         logstring(console, level, std::string_view { str });
     }
 
@@ -85,7 +83,7 @@ public:
         auto line = buffer { (datasize > 0) ? (64 + datasize) : 128 };
         auto it = line.begin();
         *(it++) = static_cast<char>(enable_stdout);
-        *(it++) = static_cast<char>(level);
+        *(it++) = std::to_underlying(level);
         size_t offset = format_header(std::addressof(*it), level, serviceid);
         line.commit_unchecked(2 + offset);
         return line;
@@ -106,7 +104,7 @@ public:
             log_queue_.push_back(std::move(line));
             ++size_;
         } catch (const std::exception& e) {
-            std::cerr << "logstring exception:" << e.what() << std::endl;
+            std::cerr << "logstring exception:" << e.what() << '\n';
         }
     }
 
@@ -186,12 +184,12 @@ private:
     }
 
     void do_write(const queue_type::container_type& lines) {
+        std::ostream* stream = nullptr;
         for (auto& it: lines) {
             auto p = it.data();
             auto bconsole = static_cast<bool>(*(p++));
             auto level = static_cast<LogLevel>(*(p++));
             auto str = std::string_view { p, it.size() - 2 };
-            std::ostream* stream = nullptr;
             if (bconsole) {
                 switch (level) {
                     case LogLevel::Error:
@@ -225,7 +223,7 @@ private:
                 if (str.back() != '\n')
                     std::fputc('\n', fp_.get());
                 if (level <= LogLevel::Error) {
-                    std::cout << std::endl;
+                    std::cout << '\n';
                     std::fflush(fp_.get());
                 }
             }
@@ -234,7 +232,10 @@ private:
         if (fp_) {
             std::fflush(fp_.get());
         }
-        std::cout.flush();
+
+        if(stream != nullptr) {
+            stream->flush();
+        }
     }
 
     void write() {
@@ -292,28 +293,45 @@ private:
     std::thread thread_;
     queue_type log_queue_;
 };
+namespace detail {
+    template<typename... Args>
+    std::string format_with_location(
+        std::string_view file, int line,
+        std::format_string<Args...> fmt, Args&&... args
+    ) {
+        std::string result;
+        result.reserve(256);
+        std::format_to(std::back_inserter(result), fmt, std::forward<Args>(args)...);
+        std::format_to(std::back_inserter(result), " ({}:{})", file, line);
+        return result;
+    }
+} // namespace detail
+
 } // namespace moon
 
 #define CONSOLE_INFO(fmt, ...) \
     moon::log::instance().logfmt(true, moon::LogLevel::Info, fmt, ##__VA_ARGS__)
+
 #define CONSOLE_WARN(fmt, ...) \
-    moon::log::instance() \
-        .logfmt(true, moon::LogLevel::Warn, fmt " (%s:%d)", ##__VA_ARGS__, __FILENAME__, __LINE__)
+    do { \
+        auto& __log = moon::log::instance(); \
+        if (__log.get_level() >= moon::LogLevel::Warn) \
+            __log.logstring(true, moon::LogLevel::Warn, \
+                moon::detail::format_with_location(__FILENAME__, __LINE__, fmt, ##__VA_ARGS__)); \
+    } while(0)
+
 #define CONSOLE_ERROR(fmt, ...) \
-    moon::log::instance().logfmt( \
-        true, \
-        moon::LogLevel::Error, \
-        fmt " (%s:%d)", \
-        ##__VA_ARGS__, \
-        __FILENAME__, \
-        __LINE__ \
-    )
+    do { \
+        auto& __log = moon::log::instance(); \
+        if (__log.get_level() >= moon::LogLevel::Error) \
+            __log.logstring(true, moon::LogLevel::Error, \
+                moon::detail::format_with_location(__FILENAME__, __LINE__, fmt, ##__VA_ARGS__)); \
+    } while(0)
+
 #define CONSOLE_DEBUG(fmt, ...) \
-    moon::log::instance().logfmt( \
-        true, \
-        moon::LogLevel::Debug, \
-        fmt " (%s:%d)", \
-        ##__VA_ARGS__, \
-        __FILENAME__, \
-        __LINE__ \
-    )
+    do { \
+        auto& __log = moon::log::instance(); \
+        if (__log.get_level() >= moon::LogLevel::Debug) \
+            __log.logstring(true, moon::LogLevel::Debug, \
+                moon::detail::format_with_location(__FILENAME__, __LINE__, fmt, ##__VA_ARGS__)); \
+    } while(0)

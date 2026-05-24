@@ -106,24 +106,24 @@ static void check_field_type(
         std::string value = luaL_tolstring(L, index, nullptr);
         lua_pop(L, 1);
         if (name.empty()) {
-            throw lua_schema_error { moon::format(
-                "'%s.%s' %s expected, got %s, value '%s'. trace: %s",
-                proto_name.data(),
-                field_name.data(),
-                type.data(),
+            throw lua_schema_error { std::format(
+                "'{}.{}' {} expected, got {}, value '{}'. trace: {}",
+                proto_name,
+                field_name,
+                type,
                 luaL_typename(L, index),
-                value.data(),
-                trace_to_string(trace).data()
+                value,
+                trace_to_string(trace)
             ) };
         } else {
-            throw lua_schema_error { moon::format(
-                "'%s.%s.%s' %s expected, got %s. trace: %s",
-                proto_name.data(),
-                field_name.data(),
-                name.data(),
-                type.data(),
+            throw lua_schema_error { std::format(
+                "'{}.{}.{}' {} expected, got {}. trace: {}",
+                proto_name,
+                field_name,
+                name,
+                type,
                 luaL_typename(L, index),
-                trace_to_string(trace).data()
+                trace_to_string(trace)
             ) };
         }
     }
@@ -142,33 +142,33 @@ static void verify_field(
     trace.emplace_back(field_name);
 
     if (auto field_iter = proto.find(field_name); field_iter == proto.end()) {
-        throw lua_schema_error { moon::format(
-            "Attemp to index undefined field: '%s.%s'. trace: %s",
-            proto_name.data(),
+        throw lua_schema_error { std::format(
+            "Attemp to index undefined field: '{}.{}'. trace: {}",
+            proto_name,
             field_name,
-            trace_to_string(trace).data()
+            trace_to_string(trace)
         ) };
     } else {
         const auto& field = field_iter->second;
         switch (field.container_type) {
             case compose_type::T_ARRAY: {
                 if (lua_type(L, index) != LUA_TTABLE) {
-                    throw lua_schema_error { moon::format(
-                        "'%s.%s' table expected, got %s. trace: %s",
-                        proto_name.data(),
+                    throw lua_schema_error { std::format(
+                        "'{}.{}' table expected, got {}. trace: {}",
+                        proto_name,
                         field_name,
                         luaL_typename(L, index),
-                        trace_to_string(trace).data()
+                        trace_to_string(trace)
                     ) };
                 }
 
                 auto size = array_size(L, index);
                 if (size == std::numeric_limits<size_t>::max()) {
-                    throw lua_schema_error { moon::format(
-                        "'%s.%s' not meet lua array requirements. trace: %s",
-                        proto_name.data(),
+                    throw lua_schema_error { std::format(
+                        "'{}.{}' not meet lua array requirements. trace: {}",
+                        proto_name,
                         field_name,
-                        trace_to_string(trace).data()
+                        trace_to_string(trace)
                     ) };
                 }
 
@@ -191,12 +191,12 @@ static void verify_field(
             }
             case compose_type::T_OBJECT: {
                 if (lua_type(L, index) != LUA_TTABLE) {
-                    throw lua_schema_error { moon::format(
-                        "'%s.%s' table expected, got %s. trace: %s",
-                        proto_name.data(),
+                    throw lua_schema_error { std::format(
+                        "'{}.{}' table expected, got {}. trace: {}",
+                        proto_name,
                         field_name,
                         luaL_typename(L, index),
-                        trace_to_string(trace).data()
+                        trace_to_string(trace)
                     ) };
                 }
                 lua_pushnil(L);
@@ -205,11 +205,11 @@ static void verify_field(
                     if (lua_isinteger(L, -2) && lua_tointeger(L, -2) == 1) {
                         if (luaL_getmetafield(L, index, "__object") == LUA_TNIL)
                         {
-                            throw lua_schema_error { moon::format(
-                                "'%s.%s': table of type 'object' uses integer key=1, but missing required metafield '__object'. Trace: %s",
-                                proto_name.data(),
+                            throw lua_schema_error { std::format(
+                                "'{}.{}': table of type 'object' uses integer key=1, but missing required metafield '__object'. Trace: {}",
+                                proto_name,
                                 field_name,
-                                trace_to_string(trace).data()
+                                trace_to_string(trace)
                             ) };
                         }
                         lua_pop(L, 1); // pop metafield
@@ -252,20 +252,20 @@ static void do_verify(
     index = lua_absindex(L, index);
 
     if (!lua_istable(L, index)) {
-        throw lua_schema_error { moon::format(
-            "'%s' table expected, got %s. trace: %s",
-            proto_name.data(),
+        throw lua_schema_error { std::format(
+            "'{}' table expected, got {}. trace: {}",
+            proto_name,
             luaL_typename(L, index),
-            trace_to_string(trace).data()
+            trace_to_string(trace)
         ) };
     }
 
     auto iter = schema_define.find(std::string { proto_name });
     if (iter == schema_define.end()) {
-        throw lua_schema_error { moon::format(
-            "Attemp using undefined proto: %s. trace: %s",
-            proto_name.data(),
-            trace_to_string(trace).data()
+        throw lua_schema_error { std::format(
+            "Attemp using undefined proto: {}. trace: {}",
+            proto_name,
+            trace_to_string(trace)
         ) };
     }
 

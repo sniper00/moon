@@ -27,11 +27,11 @@ void worker::run() {
     socket_server_ = std::make_unique<moon::socket_server>(server_, this, io_ctx_);
 
     thread_ = std::thread([this]() {
-        CONSOLE_INFO("WORKER-%u START", workerid_);
+        CONSOLE_INFO("WORKER-{} START", workerid_);
         io_ctx_.run();
         socket_server_->close_all();
         services_.clear();
-        CONSOLE_INFO("WORKER-%u STOP", workerid_);
+        CONSOLE_INFO("WORKER-{} STOP", workerid_);
     });
 }
 
@@ -62,7 +62,7 @@ uint32_t worker::allocate_service_id(uint32_t opt_service_id) {
     if (opt_service_id != 0) {
         if (services_.find(opt_service_id) != services_.end()) {
             CONSOLE_ERROR(
-                "new service failed: serviceid[%08X] already exists, worker[%u] service num[%zu].",
+                "new service failed: serviceid[{:08X}] already exists, worker[{}] service num[{}].",
                 opt_service_id,
                 id(),
                 services_.size()
@@ -79,7 +79,7 @@ uint32_t worker::allocate_service_id(uint32_t opt_service_id) {
     do {
         if (counter >= WORKER_MAX_SERVICE) {
             CONSOLE_ERROR(
-                "new service failed: can not get more service id. worker[%u] service num[%zu].",
+                "new service failed: can not get more service id. worker[{}] service num[{}].",
                 id(),
                 services_.size()
             );
@@ -117,8 +117,8 @@ void worker::new_service(std::unique_ptr<service_conf> conf) {
         auto s = server_->make_service(conf->type);
         if (!s) {
             CONSOLE_ERROR(
-                "new service failed: service type[%s] was not registered",
-                conf->type.data()
+                "new service failed: service type[{}] was not registered",
+                conf->type
             );
             count_.fetch_sub(1, std::memory_order_relaxed);
             if (services_.empty()) {
@@ -167,7 +167,7 @@ void worker::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
         if (nullptr == s) {
             server_->response(
                 sender,
-                moon::format("worker::remove_service [%08X] not found", serviceid),
+                std::format("worker::remove_service [{:08X}] not found", serviceid),
                 sessionid,
                 PTYPE_ERROR
             );
@@ -188,7 +188,7 @@ void worker::remove_service(uint32_t serviceid, uint32_t sender, int64_t session
 
         // Broadcast service exit notification (only if server is ready)
         if (server_->get_state() == state::ready) {
-            auto content = moon::format("_service_exit,name:%s serviceid:%08X", name.data(), id);
+            auto content = std::format("_service_exit,name:{} serviceid:{:08X}", name.data(), id);
             auto buf = buffer { content.size() };
             buf.write_back(content);
             server_->broadcast(serviceid, buf, PTYPE_SYSTEM);
@@ -221,8 +221,8 @@ void worker::scan(uint32_t sender, int64_t sessionid) {
             first = false;
 
             content.append(
-                moon::format(
-                    R"({"name":"%s","serviceid":"%X"})",
+                std::format(
+                    R"({{"name":"{}","serviceid":"{:08X}"}})",
                     v->name().data(),
                     v->id()
                 )
@@ -293,14 +293,14 @@ service* worker::handle_one(service* s, message&& msg) {
                 if (sender != 0 && msg.type != PTYPE_TIMER) {
                     if (msg.session >= 0) {
                         CONSOLE_DEBUG(
-                            "Dead service [%08X] recv message from [%08X]: %s.",
+                            "Dead service [{:08X}] recv message from [{:08X}]: {}.",
                             receiver,
                             sender,
                             moon::escape_print({ msg.data(), msg.size() }).data()
                         );
                     } else {
-                        std::string str = moon::format(
-                            "Attemp call dead service [%08X]: %s.",
+                        std::string str = std::format(
+                            "Attemp call dead service [{:08X}]: {}.",
                             receiver,
                             moon::escape_print({ msg.data(), msg.size() }).data()
                         );
@@ -320,7 +320,7 @@ service* worker::handle_one(service* s, message&& msg) {
         cpu_ += diff_time;
         if (diff_time > 0.1) {
             CONSOLE_WARN(
-                "worker %u handle one message(%d) cost %f, from %08X to %08X",
+                "worker {} handle one message({}) cost {}, from {:08X} to {:08X}",
                 id(),
                 type,
                 diff_time,

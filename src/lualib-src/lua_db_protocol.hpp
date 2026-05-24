@@ -19,13 +19,9 @@ class lua_pq_error: public std::runtime_error {
 public:
     using runtime_error::runtime_error;
 
-    static lua_pq_error format(const char* fmt, ...) {
-        va_list args;
-        va_start(args, fmt);
-        char buffer[1024];
-        vsnprintf(buffer, sizeof(buffer), fmt, args);
-        va_end(args);
-        return lua_pq_error(buffer);
+    template<typename... Args>
+    static lua_pq_error format(std::format_string<Args...> fmt, Args&&... args) {
+        return lua_pq_error(std::format(fmt, std::forward<Args>(args)...));
     }
 };
 
@@ -119,7 +115,7 @@ struct lua_db_protocol {
                 }
             default:
                 throw lua_pq_error::format(
-                    "lua_pq_query: unsupported parameter type: %s",
+                    "lua_pq_query: unsupported parameter type: {}",
                     lua_typename(L, type)
                 );
         }
@@ -138,7 +134,7 @@ struct lua_db_protocol {
             lua_rawgeti(L, index, 1);
             if (lua_type(L, -1) != LUA_TSTRING) {
                 lua_pop(L, 1);
-                throw lua_pq_error::format("lua_pq_query: expected SQL string at index 1");
+                throw lua_pq_error("lua_pq_query: expected SQL string at index 1");
             }
             sql = moon::lua_check<std::string_view>(L, -1);
             lua_pop(L, 1);
@@ -222,7 +218,7 @@ struct lua_db_protocol {
             for (int i = 0; i < len; i++) {
                 lua_rawgeti(L, 1, i + 1);
                 if (lua_type(L, -1) != LUA_TTABLE)
-                    throw lua_pq_error::format("pq_transaction: expected table at index %d", i + 1);
+                    throw lua_pq_error::format("pq_transaction: expected table at index {}", i + 1);
                 append_pq_query(pqbuf, std::string_view {}, L, -1);
                 lua_pop(L, 1);
             }
@@ -263,7 +259,7 @@ struct lua_db_protocol {
                 }
             default:
                 throw lua_json_error::format(
-                    "json concat: unsupported value type: %s",
+                    "json concat: unsupported value type: {}",
                     lua_typename(L, t)
                 );
         }
@@ -359,7 +355,7 @@ struct lua_db_protocol {
             }
             default:
                 throw lua_json_error::format(
-                    "concat_resp_one: unsupported value type: %s",
+                    "concat_resp_one: unsupported value type: {}",
                     lua_typename(L, t)
                 );
         }

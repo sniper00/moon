@@ -57,6 +57,36 @@ local function test_insert_without_index()
 
 	ok, err, ret = db.testcoll:safe_insert({test_key = 1});
 	assert(ok and ret and ret.n == 1, err)
+
+	local col = db.testcoll
+	local bt = moon.clock()
+	for i=1,10000 do
+		col:safe_insert({
+        cc      = 300,
+        gpsname = "gps1",
+        track   = {
+            segments = {
+                [1] = {
+                    HR        = 73,
+                    location  = {
+                        [1] = 47.763,
+                        [2] = 13.4034,
+                    },
+                    starttime = "2018-10-14 10:05:14",
+                },
+                [2] = {
+                    HR        = 130,
+                    location  = {
+                        [1] = 47.706,
+                        [2] = 13.2635,
+                    },
+                    starttime = "2018-10-14 10:39:21",
+                },
+            },
+        },
+	})
+	end
+	print("insert 10000 use time", moon.clock() - bt)
 end
 
 local function test_insert_with_index()

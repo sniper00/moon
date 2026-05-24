@@ -26,7 +26,7 @@ public:
             message {
                 type_,
                 0,
-                static_cast<uint8_t>(
+                std::to_underlying(
                     server ? socket_data_type::socket_accept : socket_data_type::socket_connect
                 ),
                 0,
@@ -168,7 +168,7 @@ private:
             handle_message(
                 message { type_,
                           0,
-                          static_cast<uint8_t>(socket_data_type::socket_recv),
+                          std::to_underlying(socket_data_type::socket_recv),
                           0,
                           std::move(data_) }
             );

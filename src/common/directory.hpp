@@ -25,7 +25,7 @@ public:
         char temp[MAX_PATH];
         auto len = GetModuleFileName(NULL, temp, MAX_PATH);
         if (0 == len)
-            throw std::runtime_error(moon::format("module_path error: %u", GetLastError()));
+            throw std::runtime_error(std::format("module_path error: {}", GetLastError()));
         fs::path p = fs::path(std::string_view(temp, len));
 #elif TARGET_PLATFORM == PLATFORM_MAC
         char temp[1024];
@@ -37,7 +37,7 @@ public:
         char temp[1024];
         auto len = readlink("/proc/self/exe", temp, sizeof(temp) - 1);
         if (len<0 || (len >= static_cast<ssize_t>(sizeof(temp) - 1)))
-            throw std::runtime_error(moon::format("module_path error %d", errno));
+            throw std::runtime_error(std::format("module_path error {}", errno));
         temp[len] = '\0';
         fs::path p = fs::canonical(fs::path(temp));
 #endif

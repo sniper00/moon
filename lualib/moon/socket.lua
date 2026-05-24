@@ -182,8 +182,8 @@ end
 ---Close a socket and clean up associated resources
 ---@param fd integer The socket file descriptor to close
 function socket.close(fd)
-    close(fd)
     udp_callbacks[fd] = nil
+    return close(fd)
 end
 
 return socket
