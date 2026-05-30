@@ -215,7 +215,7 @@ struct lua_db_protocol {
             append_pq_query(pqbuf, "BEGIN", nullptr, 0);
 
             auto len = lua_rawlen(L, 1);
-            for (int i = 0; i < len; i++) {
+            for (lua_Integer i = 0; i < len; i++) {
                 lua_rawgeti(L, 1, i + 1);
                 if (lua_type(L, -1) != LUA_TTABLE)
                     throw lua_pq_error::format("pq_transaction: expected table at index {}", i + 1);
