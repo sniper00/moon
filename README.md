@@ -76,7 +76,7 @@ Moon is a lightweight game server framework based on the actor model. One worker
 
 # Build
 
-1. Make sure your compiler(vs2022 17.5+, gcc 13+, clang 16+) support C++23 or [Install `C++23` Compiler.](https://github.com/sniper00/moon/wiki/Build#%E5%AE%89%E8%A3%85c17%E7%BC%96%E8%AF%91%E5%99%A8)。
+1. Make sure your compiler(vs2022 17.5+, gcc 13+, clang 16+) support C++23。
 
 2. Install **premake5** and ensure that the **premake5** executable location is included in your system path.
 
