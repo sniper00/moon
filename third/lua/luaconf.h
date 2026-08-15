@@ -79,7 +79,7 @@
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* macOS does not need -ldl */
-#define LUA_USE_READLINE
+#define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #endif
 
 

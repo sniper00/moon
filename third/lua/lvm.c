@@ -927,7 +927,7 @@ void luaV_finishOp (lua_State *L) {
 ** Macros for arithmetic/bitwise/comparison opcodes in 'luaV_execute'
 **
 ** All these macros are to be used exclusively inside the main
-** iterpreter loop (function luaV_execute) and may access directly
+** interpreter loop (function luaV_execute) and may access directly
 ** the local variables of that function (L, i, pc, ci, etc.).
 ** ===================================================================
 */

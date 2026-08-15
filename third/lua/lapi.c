@@ -1256,7 +1256,7 @@ LUA_API int lua_gc (lua_State *L, int what, ...) {
       else if (g->GCdebt >= n - MAX_LMEM)  /* no overflow? */
         newdebt = g->GCdebt - n;
       else  /* overflow */
-        newdebt = -MAX_LMEM;  /* set debt to miminum value */
+        newdebt = -MAX_LMEM;  /* set debt to mininum value */
       luaE_setdebt(g, newdebt);
       luaC_condGC(L, (void)0, work = 1);
       if (work && g->gcstate == GCSpause)  /* end of cycle? */
@@ -1345,8 +1345,8 @@ LUA_API void lua_toclose (lua_State *L, int idx) {
 
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
-  api_checknelems(L, n);
   if (n > 0) {
+    api_checkpop(L, n);
     luaV_concat(L, n);
     luaC_checkGC(L);
   }
@@ -1464,7 +1464,7 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   TValue *fi;
   lua_lock(L);
   fi = index2value(L, funcindex);
-  api_checknelems(L, 1);
+  api_checkpop(L, 1);
   name = aux_upvalue(fi, n, &val, &owner);
   if (name) {
     L->top.p--;
