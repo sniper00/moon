@@ -654,10 +654,9 @@ static void reinserthash (lua_State *L, Table *ot, Table *t) {
 
 
 /*
-** Exchange the hash part of 't1' and 't2'. (In 'flags', only the
-** dummy bit must be exchanged: The 'isrealasize' is not related
-** to the hash part, and the metamethod bits do not change during
-** a resize, so the "real" table can keep their values.)
+** Exchange the hash part of 't1' and 't2'. (In 'flags', only the dummy
+** bit must be exchanged:  The metamethod bits do not change during a
+** resize, so the "real" table can keep their values.)
 */
 static void exchangehashpart (Table *t1, Table *t2) {
   lu_byte lsizenode = t1->lsizenode;
@@ -1163,14 +1162,15 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
     luaG_runerror(L, "attempt to change a shared table");
   if (hres == HNOTFOUND) {
     TValue aux;
+    const TValue *actk = key;  /* actual key to insert */
     if (l_unlikely(ttisnil(key)))
       luaG_runerror(L, "table index is nil");
     else if (ttisfloat(key)) {
       lua_Number f = fltvalue(key);
       lua_Integer k;
-      if (luaV_flttointeger(f, &k, F2Ieq)) {
-        setivalue(&aux, k);  /* key is equal to an integer */
-        key = &aux;  /* insert it as an integer */
+      if (luaV_flttointeger(f, &k, F2Ieq)) {  /* is key equal to an integer? */
+        setivalue(&aux, k);
+        actk = &aux;  /* use the integer as the key */
       }
       else if (l_unlikely(luai_numisnan(f)))
         luaG_runerror(L, "table index is NaN");
@@ -1183,7 +1183,7 @@ void luaH_finishset (lua_State *L, Table *t, const TValue *key,
       L->top.p--;
       return;
     }
-    luaH_newkey(L, t, key, value);
+    luaH_newkey(L, t, actk, value);
   }
   else if (hres > 0) {  /* regular Node? */
     setobj2t(L, gval(gnode(t, hres - HFIRSTNODE)), value);
